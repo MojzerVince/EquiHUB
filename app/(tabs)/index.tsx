@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Card } from "@rneui/themed";
 
 const MyHorsesScreen = () => {
   return (
@@ -12,7 +11,7 @@ const MyHorsesScreen = () => {
       <View style={styles.viewPort}>
         <Text style={styles.saved}>You have x horses saved</Text>
         <View style={styles.line}></View>
-        <Card></Card>
+        <View style={styles.card}></View>
       </View>
     </View>
     /*<View style={styles.container}>
@@ -69,14 +68,14 @@ const data = [
 const styles = StyleSheet.create({
   top_bar: {
     backgroundColor: "#335C67",
-    height: "20%",
+    height: "18%",
   },
   header: {
     fontSize: 30,
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: -4,
   },
   viewPort: {
     backgroundColor: "#FFFFFF",
@@ -100,14 +99,23 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   card: {
-    backgroundColor: "#d4e4e4",
-    borderRadius: 15,
+    width: "90%",
+    height: 200,
+    marginTop: 20,
+    marginLeft: "auto",
+    marginRight: "auto",
+    backgroundColor: "#669BBC",
+    borderRadius: 25,
     flexDirection: "row",
     padding: 10,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 4,
+      height: 4,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 8,
   },
   horseImage: {
     width: 100,
