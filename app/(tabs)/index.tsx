@@ -62,7 +62,7 @@ const data = [
     gender: "Gelding",
     age: 12,
     height: 168,
-    img: 
+    img: "../assets/images/horses/falko.png",
   },
 ];
 
