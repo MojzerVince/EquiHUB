@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const MyHorsesScreen = () => {
@@ -11,7 +11,9 @@ const MyHorsesScreen = () => {
       <View style={styles.viewPort}>
         <Text style={styles.saved}>You have x horses saved</Text>
         <View style={styles.line}></View>
-        <View style={styles.card}></View>
+        <View style={styles.card}>
+          <Image style={styles.horseImage}></Image>
+        </View>
       </View>
     </View>
     /*<View style={styles.container}>
@@ -106,9 +108,7 @@ const styles = StyleSheet.create({
     marginRight: "auto",
     backgroundColor: "#669BBC",
     borderRadius: 25,
-    flexDirection: "row",
     padding: 10,
-    shadowColor: "#000000",
     shadowOffset: {
       width: 4,
       height: 4,
