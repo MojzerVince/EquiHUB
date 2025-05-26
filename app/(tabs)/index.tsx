@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, Image, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { If } from "jsx-control-statements";
 
 const MyHorsesScreen = () => {
   return (
@@ -8,13 +9,27 @@ const MyHorsesScreen = () => {
       <SafeAreaView style={styles.top_bar}>
         <Text style={styles.header}>My horses</Text>
       </SafeAreaView>
-      <View style={styles.viewPort}>
-        <Text style={styles.saved}>You have x horses saved</Text>
+      <ScrollView style={styles.viewPort}>
+        <If></If>
         <View style={styles.line}></View>
-        <View style={styles.card}>
-          <Image style={styles.horseImage}></Image>
-        </View>
-      </View>
+        {data.map((u, i) => {
+          return (
+            <View style={styles.card} key={i}>
+              <Image
+                style={styles.horseImage}
+                resizeMode="cover"
+                source={u.img}
+              />
+              <View style={styles.cardInfo}>
+                <Text>{u.name}</Text>
+                <Text>Gender: {u.gender}</Text>
+                <Text>Age: {u.age}</Text>
+                <Text>Height: {u.height}</Text>
+              </View>
+            </View>
+          );
+        })}
+      </ScrollView>
     </View>
     /*<View style={styles.container}>
       <Text style={styles.header}>My Horses</Text>
@@ -63,7 +78,7 @@ const data = [
     gender: "Gelding",
     age: 12,
     height: 168,
-    img: "../assets/images/horses/falko.png",
+    img: require("../../assets/images/horses/falko.png"),
   },
 ];
 
@@ -108,7 +123,8 @@ const styles = StyleSheet.create({
     marginRight: "auto",
     backgroundColor: "#669BBC",
     borderRadius: 25,
-    padding: 10,
+    paddingTop: 10,
+    paddingBottom: 10,
     shadowOffset: {
       width: 4,
       height: 4,
@@ -116,11 +132,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 8,
+
+    flex: 1,
+    flexDirection: "row",
   },
   horseImage: {
-    width: 100,
-    height: 100,
+    width: 98,
+    height: 150,
     borderRadius: 10,
+    marginLeft: 10,
+    marginTop: "auto",
+    marginBottom: "auto",
+  },
+  cardInfo: {
+    backgroundColor: "#708D81",
+    borderRadius: 15,
+    width: "65%",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: "auto",
+    marginRight: "auto",
   },
   infoContainer: {
     marginLeft: 10,
