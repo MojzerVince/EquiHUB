@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, Image, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { If } from "jsx-control-statements";
 
 const MyHorsesScreen = () => {
   return (
@@ -10,7 +9,7 @@ const MyHorsesScreen = () => {
         <Text style={styles.header}>My horses</Text>
       </SafeAreaView>
       <ScrollView style={styles.viewPort}>
-        <If></If>
+        <Text style={styles.saved}>You have {data.length} saves</Text>
         <View style={styles.line}></View>
         {data.map((u, i) => {
           return (
