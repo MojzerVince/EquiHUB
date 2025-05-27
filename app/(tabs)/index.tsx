@@ -18,6 +18,8 @@ const MyHorsesScreen = () => {
                 style={styles.horseImage}
                 resizeMode="cover"
                 source={u.img}
+                width={98}
+                height={150}
               />
               <View style={styles.cardInfo}>
                 <Text>{u.name}</Text>
