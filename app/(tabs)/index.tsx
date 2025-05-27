@@ -103,6 +103,7 @@ const MyHorsesScreen = () => {
 
 const data = [
   {
+    id: 0,
     name: "Favory Falkó",
     gender: "Gelding",
     year: 2012,
@@ -111,6 +112,7 @@ const data = [
     img: require("../../assets/images/horses/falko.png"),
   },
   {
+    id: 1,
     name: "Yamina",
     gender: "Mare", //többnek kell lennie mint 3 karakter, különben szétkúrja a flexboxot
     year: 2018,
@@ -119,6 +121,7 @@ const data = [
     img: require("../../assets/images/horses/yamina.png"),
   },
   {
+    id: 2,
     name: "Random1",
     gender: "Random1",
     year: 2000,
@@ -127,6 +130,7 @@ const data = [
     img: require("../../assets/images/horses/pony.jpg"),
   },
   {
+    id: 3,
     name: "Random2",
     gender: "Random2",
     year: 1999,
