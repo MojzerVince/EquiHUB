@@ -33,44 +33,50 @@ const MyHorsesScreen = () => {
                 width={98}
                 height={150}
               />
-              <View style={styles.cardInfo}>
-                <Text>{u.name}</Text>
-                <Text>Gender: {u.gender}</Text>
-                <Text>Age: {u.age}</Text>
-                <Text>Height: {u.height}</Text>
+              <View>
+                <View style={styles.cardInfo}>
+                  <Text style={styles.cardName}>{u.name}</Text>
+                  <Text style={styles.cardGender}>Gender: {u.gender}</Text>
+                  <Text style={styles.cardAge}>Age: {u.age}</Text>
+                  <Text style={styles.cardHeight}>Height: {u.height}</Text>
+                  <Text style={styles.cardType}>Type: {u.type}</Text>
+                </View>
+                <View>
+                  <TouchableOpacity
+                    style={styles.cardEditButton}
+                    onPress={() => AlertStuff("Edit Button")}
+                  >
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        fontFamily: "Inder",
+                        fontSize: 18,
+                        textAlign: "center",
+                      }}
+                    >
+                      Edit Horse
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.cardDeleteButton}
+                    onPress={() => AlertStuff("Delete Button")}
+                  >
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        fontFamily: "Inder",
+                        fontSize: 18,
+                        textAlign: "center",
+                      }}
+                    >
+                      Delete Horse
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           );
         })}
-      </ScrollView>
-    </View>
-    /*<View style={styles.container}>
-      <Text style={styles.header}>My Horses</Text>
-      <Text style={styles.subHeader}>You have x horses saved</Text>
-      
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.card}>
-          <Image
-            source={{ uri: 'https://example.com/horse.jpg' }} // Replace with actual image URL
-            style={styles.horseImage}
-          />
-          <View style={styles.infoContainer}>
-            <Text style={styles.horseName}>Favory Falkó</Text>
-            <View style={styles.detailsRow}>
-              <Text style={styles.detail}>Gender: Gelding</Text>
-              <Text style={styles.detail}>Age: 12</Text>
-            </View>
-            <Text style={styles.detail}>Height: 168cm</Text>
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.editButton}>
-                <Text style={styles.buttonText}>Edit Horse</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.archiveButton}>
-                <Text style={styles.buttonText}>Archive Horse</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
       </ScrollView>
     </View>
     /*<View style={styles.bottomNav}>
@@ -239,26 +245,38 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: "Inder",
   },
-  archiveButton: {
-    backgroundColor: "#97b7b7",
-    padding: 6,
-    borderRadius: 6,
+  cardEditButton: {
+    backgroundColor: "#708D81",
+    width: "80%",
+    marginLeft: "auto",
+    marginRight: "auto",
+    marginTop: 5,
+    marginBottom: 8,
+    borderRadius: 10,
+
+    shadowOffset: {
+      width: 4,
+      height: 4,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  buttonText: {
-    fontSize: 12,
-    color: "#000",
-  },
-  bottomNav: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#1e5b5f",
-    paddingVertical: 10,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-  },
-  navItem: {
-    fontSize: 24,
-    color: "#fff",
+  cardDeleteButton: {
+    backgroundColor: "#708D81",
+    width: "80%",
+    marginLeft: "auto",
+    marginRight: "auto",
+    marginBottom: 5,
+    borderRadius: 10,
+
+    shadowOffset: {
+      width: 2,
+      height: 2,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });
 
