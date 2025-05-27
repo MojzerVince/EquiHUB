@@ -36,10 +36,20 @@ const MyHorsesScreen = () => {
               <View>
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardName}>{u.name}</Text>
-                  <Text style={styles.cardGender}>Gender: {u.gender}</Text>
-                  <Text style={styles.cardYear}>Year: {u.year}</Text>
-                  <Text style={styles.cardHeight}>Height: {u.height}</Text>
-                  <Text style={styles.cardBreed}>Breed: {u.breed}</Text>
+                  <Text style={styles.cardGender}>
+                    <Text style={{ fontWeight: "bold" }}>Gender:</Text>{" "}
+                    {u.gender}
+                  </Text>
+                  <Text style={styles.cardYear}>
+                    <Text style={{ fontWeight: "bold" }}>Year:</Text> {u.year}
+                  </Text>
+                  <Text style={styles.cardHeight}>
+                    <Text style={{ fontWeight: "bold" }}>Height:</Text>{" "}
+                    {u.height}
+                  </Text>
+                  <Text style={styles.cardBreed}>
+                    <Text style={{ fontWeight: "bold" }}>Breed:</Text> {u.breed}
+                  </Text>
                 </View>
                 <View>
                   <TouchableOpacity
