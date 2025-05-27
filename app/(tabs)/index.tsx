@@ -128,7 +128,7 @@ const data = [
 const styles = StyleSheet.create({
   top_bar: {
     backgroundColor: "#335C67",
-    height: "18%",
+    height: "15.5%",
   },
   header: {
     fontSize: 30,
@@ -142,13 +142,14 @@ const styles = StyleSheet.create({
     height: "100%",
     marginTop: -80,
     borderRadius: 50,
+    marginBottom: 50,
   },
   saved: {
     fontSize: 25,
     fontFamily: "Inder",
     color: "#000000",
     textAlign: "center",
-    marginTop: 20,
+    marginTop: 14,
   },
   line: {
     height: 4,
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
     marginRight: "auto",
     backgroundColor: "#D9D9D9",
-    marginTop: 20,
+    marginTop: 10,
   },
   card: {
     width: "90%",
