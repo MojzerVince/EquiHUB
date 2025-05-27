@@ -77,6 +77,7 @@ const data = [
     gender: "Gelding",
     age: 12,
     height: 168,
+    type: "Lili mondta but idk",
     img: require("../../assets/images/horses/falko.png"),
   },
   {
@@ -84,6 +85,7 @@ const data = [
     gender: "IDKIDK", //többnek kell lennie mint 3 karakter, különben szétkúrja a flexboxot
     age: 8,
     height: 160,
+    type: "Magyar Sportló",
     img: require("../../assets/images/horses/yamina.png"),
   },
   {
@@ -91,6 +93,7 @@ const data = [
     gender: "Random1",
     age: 99,
     height: 99,
+    type: "Shitlandi póni",
     img: require("../../assets/images/horses/pony.jpg"),
   },
   {
@@ -98,6 +101,7 @@ const data = [
     gender: "Random2",
     age: 0,
     height: 200,
+    type: "Random2",
     img: require("../../assets/images/horses/random2.jpg"),
   },
 ];
