@@ -90,14 +90,6 @@ const MyHorsesScreen = () => {
         <View style={styles.bottom}></View>
       </ScrollView>
     </View>
-    /*<View style={styles.bottomNav}>
-        <Text style={styles.navItem}>👤</Text>
-        <Text style={styles.navItem}>📘</Text>
-        <Text style={styles.navItem}>➕</Text>
-        <Text style={styles.navItem}>🏇</Text>
-        <Text style={styles.navItem}>🛒</Text>
-        <Text style={styles.navItem}>✏️</Text>
-      </View>*/
   );
 };
 
