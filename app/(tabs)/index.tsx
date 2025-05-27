@@ -37,7 +37,7 @@ const MyHorsesScreen = () => {
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardName}>{u.name}</Text>
                   <Text style={styles.cardGender}>Gender: {u.gender}</Text>
-                  <Text style={styles.cardAge}>Age: {u.age}</Text>
+                  <Text style={styles.cardYear}>Year: {u.year}</Text>
                   <Text style={styles.cardHeight}>Height: {u.height}</Text>
                   <Text style={styles.cardBreed}>Breed: {u.breed}</Text>
                 </View>
@@ -95,7 +95,7 @@ const data = [
   {
     name: "Favory Falkó",
     gender: "Gelding",
-    age: 12,
+    year: 2012,
     height: 168,
     breed: "Lipicai",
     img: require("../../assets/images/horses/falko.png"),
@@ -103,7 +103,7 @@ const data = [
   {
     name: "Yamina",
     gender: "Mare", //többnek kell lennie mint 3 karakter, különben szétkúrja a flexboxot
-    age: 8,
+    year: 2018,
     height: 160,
     breed: "Magyar Sportló",
     img: require("../../assets/images/horses/yamina.png"),
@@ -111,7 +111,7 @@ const data = [
   {
     name: "Random1",
     gender: "Random1",
-    age: 99,
+    year: 2000,
     height: 99,
     breed: "Shitlandi póni",
     img: require("../../assets/images/horses/pony.jpg"),
@@ -119,7 +119,7 @@ const data = [
   {
     name: "Random2",
     gender: "Random2",
-    age: 0,
+    year: 1999,
     height: 200,
     breed: "Random2",
     img: require("../../assets/images/horses/random2.jpg"),
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontFamily: "Inder",
   },
-  cardAge: {
+  cardYear: {
     color: "#FFFFFF",
     fontSize: 16,
     marginLeft: 8,
