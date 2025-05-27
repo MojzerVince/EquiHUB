@@ -79,6 +79,27 @@ const data = [
     height: 168,
     img: require("../../assets/images/horses/falko.png"),
   },
+  {
+    name: "Yamina",
+    gender: "IDK",
+    age: 8,
+    height: 160,
+    img: require("../../assets/images/horses/yamina.png"),
+  },
+  {
+    name: "Random1",
+    gender: "Random1",
+    age: 99,
+    height: 99,
+    img: require("../../assets/images/horses/pony.jpg"),
+  },
+  {
+    name: "Random2",
+    gender: "Random2",
+    age: 0,
+    height: 200,
+    img: require("../../assets/images/horses/random2.jpg"),
+  },
 ];
 
 const styles = StyleSheet.create({
