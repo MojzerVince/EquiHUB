@@ -39,7 +39,7 @@ const MyHorsesScreen = () => {
                   <Text style={styles.cardGender}>Gender: {u.gender}</Text>
                   <Text style={styles.cardAge}>Age: {u.age}</Text>
                   <Text style={styles.cardHeight}>Height: {u.height}</Text>
-                  <Text style={styles.cardType}>Type: {u.type}</Text>
+                  <Text style={styles.cardBreed}>Breed: {u.breed}</Text>
                 </View>
                 <View>
                   <TouchableOpacity
@@ -96,15 +96,15 @@ const data = [
     gender: "Gelding",
     age: 12,
     height: 168,
-    type: "Lili mondta but idk",
+    breed: "Lipicai",
     img: require("../../assets/images/horses/falko.png"),
   },
   {
     name: "Yamina",
-    gender: "IDKIDK", //többnek kell lennie mint 3 karakter, különben szétkúrja a flexboxot
+    gender: "Mare", //többnek kell lennie mint 3 karakter, különben szétkúrja a flexboxot
     age: 8,
     height: 160,
-    type: "Magyar Sportló",
+    breed: "Magyar Sportló",
     img: require("../../assets/images/horses/yamina.png"),
   },
   {
@@ -112,7 +112,7 @@ const data = [
     gender: "Random1",
     age: 99,
     height: 99,
-    type: "Shitlandi póni",
+    breed: "Shitlandi póni",
     img: require("../../assets/images/horses/pony.jpg"),
   },
   {
@@ -120,7 +120,7 @@ const data = [
     gender: "Random2",
     age: 0,
     height: 200,
-    type: "Random2",
+    breed: "Random2",
     img: require("../../assets/images/horses/random2.jpg"),
   },
 ];
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontFamily: "Inder",
   },
-  cardType: {
+  cardBreed: {
     color: "#FFFFFF",
     fontSize: 16,
     marginLeft: 8,
