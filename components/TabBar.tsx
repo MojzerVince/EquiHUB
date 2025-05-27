@@ -12,33 +12,37 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     club: (props: any) => (
       <Image
         source={require("../assets/UI_resources/UI_white/club_white.png")}
-        width={0.01}
-        height={0.01}
+        style={{ width: 48, height: 48 }}
       ></Image>
     ),
     coach: () => (
       <Image
         source={require("../assets/UI_resources/UI_white/coach_white.png")}
+        style={{ width: 48, height: 48 }}
       ></Image>
     ),
     map: () => (
       <Image
         source={require("../assets/UI_resources/UI_white/map_white.png")}
+        style={{ width: 48, height: 48 }}
       ></Image>
     ),
     index: () => (
       <Image
         source={require("../assets/UI_resources/UI_white/horse_white.png")}
+        style={{ width: 48, height: 48 }}
       ></Image>
     ),
     market: () => (
       <Image
         source={require("../assets/UI_resources/UI_white/shop_white.png")}
+        style={{ width: 48, height: 48 }}
       ></Image>
     ),
     profile: () => (
       <Image
         source={require("../assets/UI_resources/UI_white/user_white.png")}
+        style={{ width: 48, height: 48 }}
       ></Image>
     ),
   };
@@ -88,7 +92,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           >
             {icons[route.name]({})}
             <Text style={{ color: isFocused ? colors.primary : colors.text }}>
-              {label}
+              {}
             </Text>
           </PlatformPressable>
         );
@@ -99,18 +103,18 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
 const styles = StyleSheet.create({
   tabBar: {
-    position: "absolute",
-    top: "90%",
+    width: "100%",
+    height: "12%",
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     backgroundColor: "#335C67",
-    marginHorizontal: "0%",
+    justifyContent: "center",
+    alignItems: "center",
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
   },
   tabBarItem: {
     flex: 1,
+    paddingBottom: 16,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
