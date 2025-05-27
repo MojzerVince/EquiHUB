@@ -1,5 +1,13 @@
 import React from "react";
-import { View, Text, Image, ScrollView, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const MyHorsesScreen = () => {
