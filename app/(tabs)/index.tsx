@@ -10,6 +10,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+function AlertStuff(text: any) {
+  Alert.alert(text);
+}
+
 const MyHorsesScreen = () => {
   return (
     <View>
