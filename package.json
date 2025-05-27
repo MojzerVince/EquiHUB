@@ -45,9 +45,11 @@
     "@babel/cli": "^7.27.2",
     "@babel/core": "^7.27.1",
     "@types/react": "~19.0.10",
+    "@types/react-native-button": "^3.0.5",
     "babel-plugin-jsx-control-statements": "^4.1.2",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
+    "react-native-button": "^3.1.0",
     "typescript": "~5.8.3"
   },
   "private": true
