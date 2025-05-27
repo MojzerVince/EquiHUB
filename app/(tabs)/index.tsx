@@ -77,6 +77,7 @@ const MyHorsesScreen = () => {
             </View>
           );
         })}
+        <View style={styles.bottom}></View>
       </ScrollView>
     </View>
     /*<View style={styles.bottomNav}>
@@ -128,7 +129,7 @@ const data = [
 const styles = StyleSheet.create({
   top_bar: {
     backgroundColor: "#335C67",
-    height: "17%",
+    height: "16%",
   },
   header: {
     fontSize: 30,
@@ -142,7 +143,6 @@ const styles = StyleSheet.create({
     height: "100%",
     marginTop: -80,
     borderRadius: 50,
-    marginBottom: 50,
   },
   saved: {
     fontSize: 25,
@@ -278,6 +278,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 4,
+  },
+  bottom: {
+    marginTop: 16,
+    height: 164,
+    backgroundColor: "#FFFFFF",
   },
 });
 

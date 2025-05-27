@@ -103,18 +103,19 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
 const styles = StyleSheet.create({
   tabBar: {
-    width: "100%",
-    height: "12%",
+    position: "absolute",
+    paddingTop: 12,
+    bottom: 0,
     flexDirection: "row",
     backgroundColor: "#335C67",
     justifyContent: "center",
     alignItems: "center",
-    borderTopLeftRadius: 50,
-    borderTopRightRadius: 50,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
   },
   tabBarItem: {
     flex: 1,
-    paddingBottom: 16,
+    marginBottom: 20,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
