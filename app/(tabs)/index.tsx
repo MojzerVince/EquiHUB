@@ -60,16 +60,15 @@ const MyHorsesScreen = () => {
           </View>
         </View>
       </ScrollView>
-
-      <View style={styles.bottomNav}>
+    </View>
+    /*<View style={styles.bottomNav}>
         <Text style={styles.navItem}>👤</Text>
         <Text style={styles.navItem}>📘</Text>
         <Text style={styles.navItem}>➕</Text>
         <Text style={styles.navItem}>🏇</Text>
         <Text style={styles.navItem}>🛒</Text>
         <Text style={styles.navItem}>✏️</Text>
-      </View>
-    </View>*/
+      </View>*/
   );
 };
 
