@@ -81,7 +81,7 @@ const data = [
   },
   {
     name: "Yamina",
-    gender: "IDK",
+    gender: "IDKIDK", //többnek kell lennie mint 3 karakter, különben szétkúrja a flexboxot
     age: 8,
     height: 160,
     img: require("../../assets/images/horses/yamina.png"),
