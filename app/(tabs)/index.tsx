@@ -147,8 +147,9 @@ const styles = StyleSheet.create({
     marginRight: "auto",
     backgroundColor: "#669BBC",
     borderRadius: 25,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingTop: 6,
+    paddingBottom: 6,
+
     shadowOffset: {
       width: 4,
       height: 4,
@@ -167,25 +168,30 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     marginTop: "auto",
     marginBottom: "auto",
+
+    shadowOffset: {
+      width: 8,
+      height: 8,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 7,
   },
   cardInfo: {
     backgroundColor: "#708D81",
     borderRadius: 15,
-    width: "65%",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: "auto",
-    marginRight: "auto",
-  },
-  infoContainer: {
+    width: 238,
+    height: "70%",
     marginLeft: 10,
-    flex: 1,
-  },
-  horseName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#235B5E",
-    marginBottom: 5,
+    marginRight: -10,
+
+    shadowOffset: {
+      width: 4,
+      height: 4,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 4,
   },
   detailsRow: {
     flexDirection: "row",
