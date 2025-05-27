@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-function AlertStuff(text: any) {
-  Alert.alert(text);
+function AlertStuff(text: any, text2: any) {
+  Alert.alert(text, text2);
 }
 
 const MyHorsesScreen = () => {
@@ -54,7 +54,7 @@ const MyHorsesScreen = () => {
                 <View>
                   <TouchableOpacity
                     style={styles.cardEditButton}
-                    onPress={() => AlertStuff("Edit Button")}
+                    onPress={() => AlertStuff("Edit Button", "Edit Horse")}
                   >
                     <Text
                       style={{
@@ -69,7 +69,7 @@ const MyHorsesScreen = () => {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.cardDeleteButton}
-                    onPress={() => AlertStuff("Delete Button")}
+                    onPress={() => AlertStuff("Delete Button", "Delete Horse")}
                   >
                     <Text
                       style={{
