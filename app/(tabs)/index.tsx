@@ -128,7 +128,7 @@ const data = [
 const styles = StyleSheet.create({
   top_bar: {
     backgroundColor: "#335C67",
-    height: "15.5%",
+    height: "17%",
   },
   header: {
     fontSize: 30,
