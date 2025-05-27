@@ -193,23 +193,38 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  detailsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  cardName: {
+    color: "#FFFFFF",
+    textDecorationLine: "underline",
+    fontSize: 26,
+    marginLeft: 8,
+    marginBottom: 6,
+    fontFamily: "Inder",
   },
-  detail: {
-    fontSize: 14,
-    color: "#333",
+  cardGender: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    marginLeft: 8,
+    fontFamily: "Inder",
   },
-  buttonRow: {
-    flexDirection: "row",
-    marginTop: 10,
-    justifyContent: "space-between",
+  cardAge: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    marginLeft: 8,
+    fontFamily: "Inder",
   },
-  editButton: {
-    backgroundColor: "#b1d0d0",
-    padding: 6,
-    borderRadius: 6,
+  cardHeight: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    marginLeft: 8,
+    fontFamily: "Inder",
+  },
+  cardType: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    marginLeft: 8,
+    marginBottom: 4,
+    fontFamily: "Inder",
   },
   archiveButton: {
     backgroundColor: "#97b7b7",
