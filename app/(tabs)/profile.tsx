@@ -12,7 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const ProfileScreen = () => {
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.top_bar}>
+      <SafeAreaView>
         <Text style={styles.header}>My Profile</Text>
       </SafeAreaView>
       
@@ -61,20 +61,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#335C67",
   },
-  top_bar: {
-    position: "relative",
-    width: "100%",
-    backgroundColor: "#335C67",
-    height: 50,
-    justifyContent: "center",
-    paddingBottom: 10,
-  },
   header: {
     fontSize: 30,
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",
-    marginTop: -4,
+    marginTop: 6,
+    marginBottom: -16,
   },
   viewPort: {
     backgroundColor: "#FFFFFF",
