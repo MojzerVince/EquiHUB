@@ -1,9 +1,8 @@
-import { View, Platform, Image, Text } from "react-native";
-import { useLinkBuilder, useTheme } from "@react-navigation/native";
-import { PlatformPressable } from "@react-navigation/elements";
-import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { StyleSheet } from "react-native";
 import { icons } from "@/components/icon";
+import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { PlatformPressable } from "@react-navigation/elements";
+import { useLinkBuilder, useTheme } from "@react-navigation/native";
+import { StyleSheet, Text, View } from "react-native";
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { colors } = useTheme();
@@ -66,6 +65,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 const styles = StyleSheet.create({
   tabBar: {
     position: "absolute",
+    width: "100%",
     paddingTop: 12,
     bottom: 0,
     flexDirection: "row",
