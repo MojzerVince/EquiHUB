@@ -1,12 +1,12 @@
 import React from "react";
 import {
-  View,
-  Text,
+  Alert,
   Image,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
-  Alert,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -135,14 +135,14 @@ const data = [
 const styles = StyleSheet.create({
   top_bar: {
     backgroundColor: "#335C67",
-    height: "16%",
+    height: "12%",
   },
   header: {
     fontSize: 30,
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",
-    marginTop: -4,
+    marginTop: 2,
   },
   viewPort: {
     backgroundColor: "#FFFFFF",
