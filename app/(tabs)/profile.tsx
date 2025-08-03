@@ -31,6 +31,9 @@ const ProfileScreen = () => {
   // State for custom success modal
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  // State for custom image picker modal
+  const [showImagePickerModal, setShowImagePickerModal] = useState(false);
+
   // State for profile image
   const [profileImage, setProfileImage] = useState(
     require("../../assets/images/horses/falko.png")
@@ -56,28 +59,12 @@ const ProfileScreen = () => {
       return;
     }
 
-    // Show action sheet for camera or gallery
-    Alert.alert(
-      "Select Image",
-      "Choose how you want to select your profile picture",
-      [
-        {
-          text: "Camera",
-          onPress: () => openCamera(),
-        },
-        {
-          text: "Gallery",
-          onPress: () => openImageLibrary(),
-        },
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-      ]
-    );
+    // Show custom image picker modal instead of Alert
+    setShowImagePickerModal(true);
   };
 
   const openCamera = async () => {
+    setShowImagePickerModal(false);
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
     if (permissionResult.granted === false) {
@@ -101,6 +88,7 @@ const ProfileScreen = () => {
   };
 
   const openImageLibrary = async () => {
+    setShowImagePickerModal(false);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -163,6 +151,47 @@ const ProfileScreen = () => {
             onPress={() => setShowSuccessModal(false)}
           >
             <Text style={styles.modalButtonText}>OK</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const ImagePickerModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={showImagePickerModal}
+      onRequestClose={() => setShowImagePickerModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.imagePickerIcon}>
+            <Text style={styles.cameraIcon}>📷</Text>
+          </View>
+          <Text style={styles.modalTitle}>Select Image</Text>
+          <Text style={styles.modalMessage}>
+            Choose how you want to select your profile picture
+          </Text>
+          <View style={styles.imagePickerButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.imagePickerButton]}
+              onPress={openCamera}
+            >
+              <Text style={styles.modalButtonText}>📸 Camera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.imagePickerButton]}
+              onPress={openImageLibrary}
+            >
+              <Text style={styles.modalButtonText}>🖼️ Gallery</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.cancelModalButton]}
+            onPress={() => setShowImagePickerModal(false)}
+          >
+            <Text style={styles.cancelModalButtonText}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -271,6 +300,9 @@ const ProfileScreen = () => {
 
       {/* Custom Success Modal */}
       <SuccessModal />
+
+      {/* Custom Image Picker Modal */}
+      <ImagePickerModal />
     </View>
   );
 };
@@ -513,6 +545,40 @@ const styles = StyleSheet.create({
     minWidth: 100,
   },
   modalButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  // Image Picker Modal styles
+  imagePickerIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#335C67",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  cameraIcon: {
+    fontSize: 40,
+    color: "#fff",
+  },
+  imagePickerButtons: {
+    flexDirection: "row",
+    gap: 15,
+    marginBottom: 15,
+  },
+  imagePickerButton: {
+    backgroundColor: "#335C67",
+    flex: 1,
+  },
+  cancelModalButton: {
+    backgroundColor: "#FF6B6B",
+    minWidth: 120,
+  },
+  cancelModalButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
