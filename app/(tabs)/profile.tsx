@@ -242,7 +242,6 @@ const ProfileScreen = () => {
                 >
                   <Image source={profileImage} style={styles.profileImage} />
                   <View style={styles.editImageOverlay}>
-                    <Text style={styles.editImageText}>📷</Text>
                     <Text style={styles.editImageLabel}>Edit</Text>
                   </View>
                 </TouchableOpacity>
@@ -428,10 +427,6 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     justifyContent: "center",
     alignItems: "center",
-  },
-  editImageText: {
-    fontSize: 24,
-    marginBottom: 2,
   },
   editImageLabel: {
     color: "#fff",
