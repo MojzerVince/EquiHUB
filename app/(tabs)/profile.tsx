@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
@@ -53,6 +54,9 @@ const ProfileScreen = () => {
   const { isLoading, error, setLoading, setError, clearError } =
     useLoadingState();
 
+  // Refresh state
+  const [refreshing, setRefreshing] = useState(false);
+
   // Load profile data on component mount
   useEffect(() => {
     loadProfile();
@@ -90,12 +94,53 @@ const ProfileScreen = () => {
       if (profile.profile_image_url) {
         setProfileImage({ uri: profile.profile_image_url });
         setSavedProfileImage({ uri: profile.profile_image_url });
+      } else {
+        // Reset to default image if no profile image URL
+        setProfileImage(require("../../assets/images/horses/falko.png"));
+        setSavedProfileImage(require("../../assets/images/horses/falko.png"));
       }
     } catch (err) {
       setError("Failed to load profile");
       console.error("Error loading profile:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Refresh function for pull-to-refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    clearError();
+
+    try {
+      console.log("Refreshing profile data...");
+      let profile = await ProfileAPIBase64.getProfile(USER_ID);
+
+      if (profile) {
+        // Update state with refreshed profile data
+        setUserName(profile.name);
+        setUserAge(profile.age.toString());
+        setUserDescription(profile.description);
+        setSavedUserName(profile.name);
+        setSavedUserAge(profile.age.toString());
+        setSavedUserDescription(profile.description);
+
+        if (profile.profile_image_url) {
+          setProfileImage({ uri: profile.profile_image_url });
+          setSavedProfileImage({ uri: profile.profile_image_url });
+        } else {
+          // Reset to default image if no profile image URL
+          setProfileImage(require("../../assets/images/horses/falko.png"));
+          setSavedProfileImage(require("../../assets/images/horses/falko.png"));
+        }
+
+        console.log("Profile refreshed successfully");
+      }
+    } catch (err) {
+      setError("Failed to refresh profile");
+      console.error("Error refreshing profile:", err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -351,7 +396,12 @@ const ProfileScreen = () => {
         <Text style={styles.header}>My Profile</Text>
       </SafeAreaView>
 
-      <ScrollView style={styles.viewPort}>
+      <ScrollView
+        style={styles.viewPort}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={styles.profileContainer}>
           {/* Profile Section */}
           <View style={styles.profileSection}>
