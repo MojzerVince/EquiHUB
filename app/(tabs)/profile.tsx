@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Image,
   ScrollView,
@@ -9,11 +9,18 @@ import {
   View,
   Alert,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import { ProfileAPI } from "../../lib/profileAPI";
+import { useLoadingState } from "../../hooks/useLoadingState";
 
 const ProfileScreen = () => {
+  // For demo purposes, using a hardcoded user ID
+  // In a real app, this would come from authentication
+  const USER_ID = "demo-user-123";
+  
   const [isEditing, setIsEditing] = useState(false);
   const [userName, setUserName] = useState("Vince Mojzer");
   const [userAge, setUserAge] = useState("18");
@@ -41,6 +48,41 @@ const ProfileScreen = () => {
   const [savedProfileImage, setSavedProfileImage] = useState(
     require("../../assets/images/horses/falko.png")
   );
+
+  // Loading state
+  const { isLoading, error, setLoading, setError, clearError } = useLoadingState();
+
+  // Load profile data on component mount
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    setLoading(true);
+    clearError();
+    
+    try {
+      const profile = await ProfileAPI.getProfile(USER_ID);
+      if (profile) {
+        setUserName(profile.name);
+        setUserAge(profile.age.toString());
+        setUserDescription(profile.description);
+        setSavedUserName(profile.name);
+        setSavedUserAge(profile.age.toString());
+        setSavedUserDescription(profile.description);
+        
+        if (profile.profile_image_url) {
+          setProfileImage({ uri: profile.profile_image_url });
+          setSavedProfileImage({ uri: profile.profile_image_url });
+        }
+      }
+    } catch (err) {
+      setError("Failed to load profile");
+      console.error("Error loading profile:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEditPress = () => {
     setIsEditing(true);
@@ -101,7 +143,7 @@ const ProfileScreen = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (userName.trim() === "") {
       Alert.alert("Error", "Name cannot be empty");
       return;
@@ -111,14 +153,51 @@ const ProfileScreen = () => {
       return;
     }
 
-    // Update the saved values with the current edited values
-    setSavedUserName(userName);
-    setSavedUserAge(userAge);
-    setSavedUserDescription(userDescription);
-    setSavedProfileImage(profileImage);
+    setLoading(true);
+    clearError();
 
-    setIsEditing(false);
-    setShowSuccessModal(true);
+    try {
+      // Upload profile image if it's a new image (has uri)
+      let profileImageUrl = null;
+      if (profileImage && 'uri' in profileImage) {
+        profileImageUrl = await ProfileAPI.uploadProfileImage(USER_ID, profileImage.uri);
+        if (!profileImageUrl) {
+          throw new Error("Failed to upload profile image");
+        }
+      }
+
+      // Update profile data
+      const success = await ProfileAPI.updateProfile(USER_ID, {
+        name: userName,
+        age: parseInt(userAge),
+        description: userDescription,
+        ...(profileImageUrl && { profile_image_url: profileImageUrl })
+      });
+
+      if (!success) {
+        throw new Error("Failed to update profile");
+      }
+
+      // Update saved values with the current edited values
+      setSavedUserName(userName);
+      setSavedUserAge(userAge);
+      setSavedUserDescription(userDescription);
+      if (profileImageUrl) {
+        setSavedProfileImage({ uri: profileImageUrl });
+        setProfileImage({ uri: profileImageUrl });
+      } else {
+        setSavedProfileImage(profileImage);
+      }
+
+      setIsEditing(false);
+      setShowSuccessModal(true);
+    } catch (err) {
+      setError("Failed to save profile");
+      Alert.alert("Error", "Failed to save profile. Please try again.");
+      console.error("Error saving profile:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -212,6 +291,7 @@ const ProfileScreen = () => {
               <TouchableOpacity
                 style={styles.editButton}
                 onPress={handleEditPress}
+                disabled={isLoading}
               >
                 <Text style={styles.editButtonText}>Edit Profile</Text>
               </TouchableOpacity>
@@ -220,14 +300,20 @@ const ProfileScreen = () => {
                 <TouchableOpacity
                   style={styles.cancelButton}
                   onPress={handleCancel}
+                  disabled={isLoading}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.saveButton}
+                  style={[styles.saveButton, isLoading && styles.disabledButton]}
                   onPress={handleSave}
+                  disabled={isLoading}
                 >
-                  <Text style={styles.saveButtonText}>Save</Text>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Save</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             )}
@@ -302,6 +388,26 @@ const ProfileScreen = () => {
 
       {/* Custom Image Picker Modal */}
       <ImagePickerModal />
+
+      {/* Loading Overlay */}
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#335C67" />
+            <Text style={styles.loadingText}>Saving...</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Error Display */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={clearError} style={styles.errorButton}>
+            <Text style={styles.errorButtonText}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -578,6 +684,68 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     textAlign: "center",
+    fontFamily: "Inder",
+  },
+  // Loading and Error styles
+  disabledButton: {
+    opacity: 0.6,
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  loadingContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 20,
+    alignItems: "center",
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#335C67",
+    fontFamily: "Inder",
+  },
+  errorContainer: {
+    position: "absolute",
+    top: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: "#FF6B6B",
+    borderRadius: 10,
+    padding: 15,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    zIndex: 999,
+  },
+  errorText: {
+    color: "#fff",
+    fontSize: 14,
+    fontFamily: "Inder",
+    flex: 1,
+  },
+  errorButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  errorButtonText: {
+    color: "#fff",
+    fontSize: 12,
     fontFamily: "Inder",
   },
 });
