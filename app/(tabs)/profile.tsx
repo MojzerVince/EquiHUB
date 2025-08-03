@@ -19,6 +19,13 @@ const ProfileScreen = () => {
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore"
   );
 
+  // Store the saved values to revert to when canceling
+  const [savedUserName, setSavedUserName] = useState("Vince Mojzer");
+  const [savedUserAge, setSavedUserAge] = useState("18");
+  const [savedUserDescription, setSavedUserDescription] = useState(
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore"
+  );
+
   const handleEditPress = () => {
     setIsEditing(true);
   };
@@ -32,17 +39,21 @@ const ProfileScreen = () => {
       Alert.alert("Error", "Please enter a valid age");
       return;
     }
+
+    // Update the saved values with the current edited values
+    setSavedUserName(userName);
+    setSavedUserAge(userAge);
+    setSavedUserDescription(userDescription);
+
     setIsEditing(false);
     Alert.alert("Success", "Profile updated successfully!");
   };
 
   const handleCancel = () => {
-    // Reset to original values
-    setUserName("Vince Mojzer");
-    setUserAge("18");
-    setUserDescription(
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore"
-    );
+    // Reset to the last saved values instead of hardcoded original values
+    setUserName(savedUserName);
+    setUserAge(savedUserAge);
+    setUserDescription(savedUserDescription);
     setIsEditing(false);
   };
   return (
