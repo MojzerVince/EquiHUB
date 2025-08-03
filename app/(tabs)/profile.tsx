@@ -5,7 +5,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -15,7 +15,7 @@ const ProfileScreen = () => {
       <SafeAreaView>
         <Text style={styles.header}>My Profile</Text>
       </SafeAreaView>
-      
+
       <ScrollView style={styles.viewPort}>
         <View style={styles.profileContainer}>
           {/* Profile Section */}
@@ -23,21 +23,22 @@ const ProfileScreen = () => {
             <TouchableOpacity style={styles.editButton}>
               <Text style={styles.editButtonText}>Edit Profile</Text>
             </TouchableOpacity>
-            
+
             <View style={styles.profileImageContainer}>
-              <Image 
-                source={require('../../assets/images/horses/falko.png')} // Using placeholder image
+              <Image
+                source={require("../../assets/images/horses/falko.png")} // Using placeholder image
                 style={styles.profileImage}
               />
             </View>
-            
+
             <Text style={styles.userName}>Vince Mojzer</Text>
             <Text style={styles.userAge}>18</Text>
             <Text style={styles.userDescription}>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+              eiusmod tempor incididunt ut labore
             </Text>
           </View>
-          
+
           {/* Photo Gallery Section */}
           <View style={styles.gallerySection}>
             <Text style={styles.galleryTitle}>Photo Gallery</Text>
@@ -66,13 +67,11 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",
-    marginTop: 6,
-    marginBottom: -16,
+    marginBottom: -30,
   },
   viewPort: {
     backgroundColor: "#FFFFFF",
     flex: 1,
-    marginTop: 30,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     paddingTop: 30,
@@ -150,14 +149,14 @@ const styles = StyleSheet.create({
   galleryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
     backgroundColor: "#E9F5F0",
     borderRadius: 20,
     padding: 20,
   },
   galleryItem: {
-    width: "48%",
-    aspectRatio: 1,
+    width: 150,
+    height: 150,
     backgroundColor: "#C5D9D1",
     borderRadius: 15,
     marginBottom: 10,
