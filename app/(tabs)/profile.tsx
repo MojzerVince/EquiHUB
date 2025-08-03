@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { ProfileAPI } from "../../lib/profileAPI";
+import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { useLoadingState } from "../../hooks/useLoadingState";
 
 const ProfileScreen = () => {
@@ -63,12 +63,12 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      let profile = await ProfileAPI.getProfile(USER_ID);
+      let profile = await ProfileAPIBase64.getProfile(USER_ID);
 
       // If profile doesn't exist, create it with default values
       if (!profile) {
         console.log("Profile not found, creating new profile...");
-        profile = await ProfileAPI.createProfile(USER_ID, {
+        profile = await ProfileAPIBase64.createProfile(USER_ID, {
           name: userName,
           age: parseInt(userAge),
           description: userDescription,
@@ -200,15 +200,15 @@ const ProfileScreen = () => {
       console.log("Has new image:", hasNewImage);
 
       if (hasNewImage) {
-        console.log("Uploading new image:", profileImage.uri);
-        profileImageUrl = await ProfileAPI.uploadProfileImage(
+        console.log("Converting image to Base64:", profileImage.uri);
+        profileImageUrl = await ProfileAPIBase64.uploadProfileImageBase64(
           USER_ID,
           profileImage.uri
         );
         if (!profileImageUrl) {
           throw new Error("Failed to upload profile image");
         }
-        console.log("New image uploaded, URL:", profileImageUrl);
+        console.log("New image converted to Base64 and saved");
       }
 
       // Prepare profile data - preserve existing image URL if no new image uploaded
@@ -234,7 +234,7 @@ const ProfileScreen = () => {
       console.log("Update data:", updateData);
 
       // Update profile data
-      const success = await ProfileAPI.updateProfile(USER_ID, updateData);
+      const success = await ProfileAPIBase64.updateProfile(USER_ID, updateData);
 
       if (!success) {
         throw new Error("Failed to update profile");
