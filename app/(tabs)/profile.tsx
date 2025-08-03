@@ -1,15 +1,50 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Image,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const ProfileScreen = () => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [userName, setUserName] = useState("Vince Mojzer");
+  const [userAge, setUserAge] = useState("18");
+  const [userDescription, setUserDescription] = useState(
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore"
+  );
+
+  const handleEditPress = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    if (userName.trim() === "") {
+      Alert.alert("Error", "Name cannot be empty");
+      return;
+    }
+    if (userAge.trim() === "" || isNaN(Number(userAge))) {
+      Alert.alert("Error", "Please enter a valid age");
+      return;
+    }
+    setIsEditing(false);
+    Alert.alert("Success", "Profile updated successfully!");
+  };
+
+  const handleCancel = () => {
+    // Reset to original values
+    setUserName("Vince Mojzer");
+    setUserAge("18");
+    setUserDescription(
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore"
+    );
+    setIsEditing(false);
+  };
   return (
     <View style={styles.container}>
       <SafeAreaView>
@@ -20,9 +55,29 @@ const ProfileScreen = () => {
         <View style={styles.profileContainer}>
           {/* Profile Section */}
           <View style={styles.profileSection}>
-            <TouchableOpacity style={styles.editButton}>
-              <Text style={styles.editButtonText}>Edit Profile</Text>
-            </TouchableOpacity>
+            {!isEditing ? (
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={handleEditPress}
+              >
+                <Text style={styles.editButtonText}>Edit Profile</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.editButtonsContainer}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={handleCancel}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSave}
+                >
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <View style={styles.profileImageContainer}>
               <Image
@@ -31,12 +86,40 @@ const ProfileScreen = () => {
               />
             </View>
 
-            <Text style={styles.userName}>Vince Mojzer</Text>
-            <Text style={styles.userAge}>18</Text>
-            <Text style={styles.userDescription}>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-              eiusmod tempor incididunt ut labore
-            </Text>
+            {!isEditing ? (
+              <>
+                <Text style={styles.userName}>{userName}</Text>
+                <Text style={styles.userAge}>{userAge}</Text>
+                <Text style={styles.userDescription}>{userDescription}</Text>
+              </>
+            ) : (
+              <>
+                <TextInput
+                  style={styles.editInput}
+                  value={userName}
+                  onChangeText={setUserName}
+                  placeholder="Enter your name"
+                  placeholderTextColor="#999"
+                />
+                <TextInput
+                  style={styles.editInput}
+                  value={userAge}
+                  onChangeText={setUserAge}
+                  placeholder="Enter your age"
+                  placeholderTextColor="#999"
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  style={[styles.editInput, styles.editDescriptionInput]}
+                  value={userDescription}
+                  onChangeText={setUserDescription}
+                  placeholder="Enter your description"
+                  placeholderTextColor="#999"
+                  multiline
+                  numberOfLines={4}
+                />
+              </>
+            )}
           </View>
 
           {/* Photo Gallery Section */}
@@ -102,6 +185,55 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontFamily: "Inder",
+  },
+  editButtonsContainer: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+    flexDirection: "row",
+    gap: 10,
+    zIndex: 1,
+  },
+  cancelButton: {
+    backgroundColor: "#FF6B6B",
+    borderRadius: 15,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+  },
+  cancelButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontFamily: "Inder",
+  },
+  saveButton: {
+    backgroundColor: "#4CAF50",
+    borderRadius: 15,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontFamily: "Inder",
+  },
+  editInput: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#335C67",
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginBottom: 15,
+    fontSize: 16,
+    fontFamily: "Inder",
+    color: "#335C67",
+    textAlign: "center",
+    minWidth: 200,
+  },
+  editDescriptionInput: {
+    textAlign: "left",
+    minHeight: 80,
+    textAlignVertical: "top",
   },
   profileImageContainer: {
     marginTop: 20,
