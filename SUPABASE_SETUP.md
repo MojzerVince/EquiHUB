@@ -58,10 +58,20 @@ CREATE POLICY "Allow all operations on profiles" ON profiles
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('profile-images', 'profile-images', true);
 
--- Create policy for storage bucket
+-- Create policies for storage bucket (IMPORTANT!)
 CREATE POLICY "Allow public access to profile images" ON storage.objects
-  FOR ALL USING (bucket_id = 'profile-images');
+  FOR SELECT USING (bucket_id = 'profile-images');
+CREATE POLICY "Allow public upload to profile images" ON storage.objects
+  FOR INSERT WITH CHECK (bucket_id = 'profile-images');
+CREATE POLICY "Allow public update to profile images" ON storage.objects
+  FOR UPDATE USING (bucket_id = 'profile-images');
 ```
+
+**IMPORTANT**: If you get storage errors, make sure:
+
+1. The bucket `profile-images` exists and is **public**
+2. The policies above are created
+3. See `STORAGE_SETUP.md` for detailed troubleshooting
 
 ## 5. Test the Integration
 
@@ -88,7 +98,14 @@ CREATE POLICY "Allow public access to profile images" ON storage.objects
 
 ## 8. Troubleshooting
 
+- **UUID Error**: Make sure the user ID is a valid UUID format (e.g., "550e8400-e29b-41d4-a716-446655440000")
 - **CORS Issues**: Make sure your app URL is added to Supabase project settings
 - **Storage Issues**: Check that storage bucket policies are correctly set
 - **Network Issues**: Ensure your device/emulator has internet access
 - **API Errors**: Check Supabase dashboard logs for detailed error messages
+
+## 9. Important Notes
+
+- **User ID Format**: The app uses a hardcoded UUID for demo purposes. In production, this should come from authentication
+- **Profile Creation**: The app automatically creates a profile if one doesn't exist for the user ID
+- **Data Persistence**: All profile changes are saved to the Supabase database and will persist between app sessions

@@ -6,6 +6,9 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+// Export URL and key for direct API calls
+export { supabaseUrl, supabaseAnonKey }
+
 // Database Types
 export interface Profile {
   id: string

@@ -17,9 +17,9 @@ import { ProfileAPI } from "../../lib/profileAPI";
 import { useLoadingState } from "../../hooks/useLoadingState";
 
 const ProfileScreen = () => {
-  // For demo purposes, using a hardcoded user ID
+  // Generate a consistent UUID for demo purposes
   // In a real app, this would come from authentication
-  const USER_ID = "demo-user-123";
+  const USER_ID = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID format
 
   const [isEditing, setIsEditing] = useState(false);
   const [userName, setUserName] = useState("Vince Mojzer");
@@ -63,19 +63,33 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      const profile = await ProfileAPI.getProfile(USER_ID);
-      if (profile) {
-        setUserName(profile.name);
-        setUserAge(profile.age.toString());
-        setUserDescription(profile.description);
-        setSavedUserName(profile.name);
-        setSavedUserAge(profile.age.toString());
-        setSavedUserDescription(profile.description);
+      let profile = await ProfileAPI.getProfile(USER_ID);
 
-        if (profile.profile_image_url) {
-          setProfileImage({ uri: profile.profile_image_url });
-          setSavedProfileImage({ uri: profile.profile_image_url });
+      // If profile doesn't exist, create it with default values
+      if (!profile) {
+        console.log("Profile not found, creating new profile...");
+        profile = await ProfileAPI.createProfile(USER_ID, {
+          name: userName,
+          age: parseInt(userAge),
+          description: userDescription,
+        });
+
+        if (!profile) {
+          throw new Error("Failed to create profile");
         }
+      }
+
+      // Update state with loaded/created profile data
+      setUserName(profile.name);
+      setUserAge(profile.age.toString());
+      setUserDescription(profile.description);
+      setSavedUserName(profile.name);
+      setSavedUserAge(profile.age.toString());
+      setSavedUserDescription(profile.description);
+
+      if (profile.profile_image_url) {
+        setProfileImage({ uri: profile.profile_image_url });
+        setSavedProfileImage({ uri: profile.profile_image_url });
       }
     } catch (err) {
       setError("Failed to load profile");
@@ -119,7 +133,7 @@ const ProfileScreen = () => {
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -133,7 +147,7 @@ const ProfileScreen = () => {
   const openImageLibrary = async () => {
     setShowImagePickerModal(false);
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -158,9 +172,35 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      // Upload profile image if it's a new image (has uri)
+      console.log("Save profile called");
+      console.log("Current profileImage:", profileImage);
+      console.log("Current profileImage type:", typeof profileImage);
+      console.log("Saved profileImage:", savedProfileImage);
+      console.log("Saved profileImage type:", typeof savedProfileImage);
+
+      // Upload profile image if it's a new image (different from saved)
       let profileImageUrl = null;
-      if (profileImage && "uri" in profileImage) {
+
+      // Check if profileImage is a URI object (not a require() number)
+      const isCurrentImageUri =
+        profileImage && typeof profileImage === "object" && profileImage.uri;
+      const isSavedImageUri =
+        savedProfileImage &&
+        typeof savedProfileImage === "object" &&
+        savedProfileImage.uri;
+
+      console.log("Is current image URI:", isCurrentImageUri);
+      console.log("Is saved image URI:", isSavedImageUri);
+
+      // Determine if we have a new image to upload
+      const hasNewImage =
+        isCurrentImageUri &&
+        (!isSavedImageUri || profileImage.uri !== savedProfileImage.uri);
+
+      console.log("Has new image:", hasNewImage);
+
+      if (hasNewImage) {
+        console.log("Uploading new image:", profileImage.uri);
         profileImageUrl = await ProfileAPI.uploadProfileImage(
           USER_ID,
           profileImage.uri
@@ -168,28 +208,52 @@ const ProfileScreen = () => {
         if (!profileImageUrl) {
           throw new Error("Failed to upload profile image");
         }
+        console.log("New image uploaded, URL:", profileImageUrl);
       }
 
-      // Update profile data
-      const success = await ProfileAPI.updateProfile(USER_ID, {
+      // Prepare profile data - preserve existing image URL if no new image uploaded
+      const updateData: any = {
         name: userName,
         age: parseInt(userAge),
         description: userDescription,
-        ...(profileImageUrl && { profile_image_url: profileImageUrl }),
-      });
+      };
+
+      // Include image URL: new uploaded URL or existing URL
+      if (profileImageUrl) {
+        // New image was uploaded
+        updateData.profile_image_url = profileImageUrl;
+        console.log("Using new image URL:", profileImageUrl);
+      } else if (isSavedImageUri) {
+        // Keep existing image URL if user hasn't changed the image
+        updateData.profile_image_url = savedProfileImage.uri;
+        console.log("Preserving existing image URL:", savedProfileImage.uri);
+      } else {
+        console.log("No image URL to save (using default local image)");
+      }
+
+      console.log("Update data:", updateData);
+
+      // Update profile data
+      const success = await ProfileAPI.updateProfile(USER_ID, updateData);
 
       if (!success) {
         throw new Error("Failed to update profile");
       }
 
+      console.log("Profile updated successfully");
+
       // Update saved values with the current edited values
       setSavedUserName(userName);
       setSavedUserAge(userAge);
       setSavedUserDescription(userDescription);
+
+      // Update saved image: use new uploaded URL or keep current image
       if (profileImageUrl) {
+        console.log("Setting saved image to new URL:", profileImageUrl);
         setSavedProfileImage({ uri: profileImageUrl });
         setProfileImage({ uri: profileImageUrl });
       } else {
+        console.log("Keeping current image as saved:", profileImage);
         setSavedProfileImage(profileImage);
       }
 
