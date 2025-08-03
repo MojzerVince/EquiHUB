@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 
 const ProfileScreen = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -26,8 +28,89 @@ const ProfileScreen = () => {
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore"
   );
 
+  // State for custom success modal
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // State for profile image
+  const [profileImage, setProfileImage] = useState(
+    require("../../assets/images/horses/falko.png")
+  );
+  const [savedProfileImage, setSavedProfileImage] = useState(
+    require("../../assets/images/horses/falko.png")
+  );
+
   const handleEditPress = () => {
     setIsEditing(true);
+  };
+
+  const pickImage = async () => {
+    // Request permission to access media library
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+      Alert.alert(
+        "Permission Required",
+        "You need to grant camera roll permissions to change your profile picture."
+      );
+      return;
+    }
+
+    // Show action sheet for camera or gallery
+    Alert.alert(
+      "Select Image",
+      "Choose how you want to select your profile picture",
+      [
+        {
+          text: "Camera",
+          onPress: () => openCamera(),
+        },
+        {
+          text: "Gallery",
+          onPress: () => openImageLibrary(),
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
+  const openCamera = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+      Alert.alert(
+        "Permission Required",
+        "You need to grant camera permissions to take a photo."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setProfileImage({ uri: result.assets[0].uri });
+    }
+  };
+
+  const openImageLibrary = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setProfileImage({ uri: result.assets[0].uri });
+    }
   };
 
   const handleSave = () => {
@@ -44,9 +127,10 @@ const ProfileScreen = () => {
     setSavedUserName(userName);
     setSavedUserAge(userAge);
     setSavedUserDescription(userDescription);
+    setSavedProfileImage(profileImage);
 
     setIsEditing(false);
-    Alert.alert("Success", "Profile updated successfully!");
+    setShowSuccessModal(true);
   };
 
   const handleCancel = () => {
@@ -54,8 +138,37 @@ const ProfileScreen = () => {
     setUserName(savedUserName);
     setUserAge(savedUserAge);
     setUserDescription(savedUserDescription);
+    setProfileImage(savedProfileImage);
     setIsEditing(false);
   };
+
+  const SuccessModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={showSuccessModal}
+      onRequestClose={() => setShowSuccessModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalIcon}>
+            <Text style={styles.checkIcon}>✓</Text>
+          </View>
+          <Text style={styles.modalTitle}>Success!</Text>
+          <Text style={styles.modalMessage}>
+            Your profile has been updated successfully
+          </Text>
+          <TouchableOpacity
+            style={styles.modalButton}
+            onPress={() => setShowSuccessModal(false)}
+          >
+            <Text style={styles.modalButtonText}>OK</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.container}>
       <SafeAreaView>
@@ -91,10 +204,20 @@ const ProfileScreen = () => {
             )}
 
             <View style={styles.profileImageContainer}>
-              <Image
-                source={require("../../assets/images/horses/falko.png")} // Using placeholder image
-                style={styles.profileImage}
-              />
+              {!isEditing ? (
+                <Image source={profileImage} style={styles.profileImage} />
+              ) : (
+                <TouchableOpacity
+                  onPress={pickImage}
+                  style={styles.editImageContainer}
+                >
+                  <Image source={profileImage} style={styles.profileImage} />
+                  <View style={styles.editImageOverlay}>
+                    <Text style={styles.editImageText}>📷</Text>
+                    <Text style={styles.editImageLabel}>Edit</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
             </View>
 
             {!isEditing ? (
@@ -145,6 +268,9 @@ const ProfileScreen = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Custom Success Modal */}
+      <SuccessModal />
     </View>
   );
 };
@@ -257,6 +383,30 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: "#335C67",
   },
+  editImageContainer: {
+    position: "relative",
+  },
+  editImageOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    borderRadius: 50,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  editImageText: {
+    fontSize: 24,
+    marginBottom: 2,
+  },
+  editImageLabel: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inder",
+    fontWeight: "bold",
+  },
   userName: {
     fontSize: 24,
     fontWeight: "bold",
@@ -303,6 +453,71 @@ const styles = StyleSheet.create({
     backgroundColor: "#C5D9D1",
     borderRadius: 15,
     marginBottom: 10,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 25,
+    padding: 30,
+    alignItems: "center",
+    marginHorizontal: 40,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#4CAF50",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  checkIcon: {
+    fontSize: 40,
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#335C67",
+    marginBottom: 10,
+    fontFamily: "Inder",
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 25,
+    lineHeight: 22,
+    fontFamily: "Inder",
+  },
+  modalButton: {
+    backgroundColor: "#335C67",
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    minWidth: 100,
+  },
+  modalButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    fontFamily: "Inder",
   },
 });
 
