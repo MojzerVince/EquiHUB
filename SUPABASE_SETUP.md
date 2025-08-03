@@ -1,24 +1,27 @@
 # Supabase Setup Instructions for EquiHUB
 
 ## 1. Install Supabase Package
+
 ```bash
 npm install @supabase/supabase-js
 ```
 
 ## 2. Create Supabase Project
+
 1. Go to https://supabase.com
 2. Create a new account or sign in
 3. Create a new project
 4. Wait for the project to be ready
 
 ## 3. Get Your Credentials
+
 1. Go to Project Settings > API
 2. Copy your project URL and anon public key
 3. Update `lib/supabase.ts` with your credentials:
 
 ```typescript
-const supabaseUrl = 'YOUR_PROJECT_URL_HERE'
-const supabaseAnonKey = 'YOUR_ANON_KEY_HERE'
+const supabaseUrl = "YOUR_PROJECT_URL_HERE";
+const supabaseAnonKey = "YOUR_ANON_KEY_HERE";
 ```
 
 ## 4. Create Database Tables
@@ -26,6 +29,7 @@ const supabaseAnonKey = 'YOUR_ANON_KEY_HERE'
 Go to SQL Editor in your Supabase dashboard and run these commands:
 
 ### Create Profiles Table
+
 ```sql
 -- Create profiles table
 CREATE TABLE profiles (
@@ -48,9 +52,10 @@ CREATE POLICY "Allow all operations on profiles" ON profiles
 ```
 
 ### Create Storage Bucket for Images
+
 ```sql
 -- Create storage bucket for profile images
-INSERT INTO storage.buckets (id, name, public) 
+INSERT INTO storage.buckets (id, name, public)
 VALUES ('profile-images', 'profile-images', true);
 
 -- Create policy for storage bucket

@@ -20,7 +20,7 @@ const ProfileScreen = () => {
   // For demo purposes, using a hardcoded user ID
   // In a real app, this would come from authentication
   const USER_ID = "demo-user-123";
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [userName, setUserName] = useState("Vince Mojzer");
   const [userAge, setUserAge] = useState("18");
@@ -50,7 +50,8 @@ const ProfileScreen = () => {
   );
 
   // Loading state
-  const { isLoading, error, setLoading, setError, clearError } = useLoadingState();
+  const { isLoading, error, setLoading, setError, clearError } =
+    useLoadingState();
 
   // Load profile data on component mount
   useEffect(() => {
@@ -60,7 +61,7 @@ const ProfileScreen = () => {
   const loadProfile = async () => {
     setLoading(true);
     clearError();
-    
+
     try {
       const profile = await ProfileAPI.getProfile(USER_ID);
       if (profile) {
@@ -70,7 +71,7 @@ const ProfileScreen = () => {
         setSavedUserName(profile.name);
         setSavedUserAge(profile.age.toString());
         setSavedUserDescription(profile.description);
-        
+
         if (profile.profile_image_url) {
           setProfileImage({ uri: profile.profile_image_url });
           setSavedProfileImage({ uri: profile.profile_image_url });
@@ -159,8 +160,11 @@ const ProfileScreen = () => {
     try {
       // Upload profile image if it's a new image (has uri)
       let profileImageUrl = null;
-      if (profileImage && 'uri' in profileImage) {
-        profileImageUrl = await ProfileAPI.uploadProfileImage(USER_ID, profileImage.uri);
+      if (profileImage && "uri" in profileImage) {
+        profileImageUrl = await ProfileAPI.uploadProfileImage(
+          USER_ID,
+          profileImage.uri
+        );
         if (!profileImageUrl) {
           throw new Error("Failed to upload profile image");
         }
@@ -171,7 +175,7 @@ const ProfileScreen = () => {
         name: userName,
         age: parseInt(userAge),
         description: userDescription,
-        ...(profileImageUrl && { profile_image_url: profileImageUrl })
+        ...(profileImageUrl && { profile_image_url: profileImageUrl }),
       });
 
       if (!success) {
@@ -305,7 +309,10 @@ const ProfileScreen = () => {
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.saveButton, isLoading && styles.disabledButton]}
+                  style={[
+                    styles.saveButton,
+                    isLoading && styles.disabledButton,
+                  ]}
                   onPress={handleSave}
                   disabled={isLoading}
                 >
