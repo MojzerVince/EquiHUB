@@ -64,10 +64,33 @@ const ProfileScreen = () => {
   // Refresh state
   const [refreshing, setRefreshing] = useState(false);
 
+  // Function to determine membership status based on database value only
+  const determineMembershipStatus = (databaseProStatus: boolean) => {
+    // Logic: Pro member only if database explicitly says true
+    return databaseProStatus === true;
+  };
+
+  // Function to get membership display text
+  const getMembershipDisplayText = (isProMember: boolean) => {
+    return isProMember ? "PRO MEMBER" : "RIDER";
+  };
+
   // Load profile data on component mount
   useEffect(() => {
-    loadProfile();
+    initializeProfile();
   }, []);
+
+  const initializeProfile = async () => {
+    // First verify database connection
+    const isConnected = await ProfileAPIBase64.verifyDatabaseConnection();
+    if (!isConnected) {
+      setError("Database connection failed. Please check your internet connection.");
+      return;
+    }
+    
+    // Then load profile data
+    await loadProfile();
+  };
 
   const loadProfile = async () => {
     setLoading(true);
@@ -79,12 +102,15 @@ const ProfileScreen = () => {
       // If profile doesn't exist, create it with default values
       if (!profile) {
         console.log("Profile not found, creating new profile...");
+        const experienceValue = parseInt(userExperience);
+        const calculatedProStatus = ProfileAPIBase64.determineMembershipStatus(experienceValue, isProMember);
+        
         profile = await ProfileAPIBase64.createProfile(USER_ID, {
           name: userName,
           age: parseInt(userAge),
           description: userDescription,
-          experience: parseInt(userExperience),
-          is_pro_member: isProMember,
+          experience: experienceValue,
+          is_pro_member: calculatedProStatus,
         });
 
         if (!profile) {
@@ -93,16 +119,22 @@ const ProfileScreen = () => {
       }
 
       // Update state with loaded/created profile data
+      const loadedExperience = profile.experience || 0;
+      const loadedProStatus = profile.is_pro_member || false;
+      
+      // Determine final membership status based on database value
+      const finalProStatus = determineMembershipStatus(loadedProStatus);
+      
       setUserName(profile.name);
       setUserAge(profile.age.toString());
       setUserDescription(profile.description);
-      setUserExperience(profile.experience?.toString() || "0");
-      setIsProMember(profile.is_pro_member || false);
+      setUserExperience(loadedExperience.toString());
+      setIsProMember(finalProStatus);
       setSavedUserName(profile.name);
       setSavedUserAge(profile.age.toString());
       setSavedUserDescription(profile.description);
-      setSavedUserExperience(profile.experience?.toString() || "0");
-      setSavedIsProMember(profile.is_pro_member || false);
+      setSavedUserExperience(loadedExperience.toString());
+      setSavedIsProMember(finalProStatus);
 
       if (profile.profile_image_url) {
         setProfileImage({ uri: profile.profile_image_url });
@@ -131,16 +163,22 @@ const ProfileScreen = () => {
 
       if (profile) {
         // Update state with refreshed profile data
+        const loadedExperience = profile.experience || 0;
+        const loadedProStatus = profile.is_pro_member || false;
+        
+        // Determine final membership status based on database value
+        const finalProStatus = determineMembershipStatus(loadedProStatus);
+        
         setUserName(profile.name);
         setUserAge(profile.age.toString());
         setUserDescription(profile.description);
-        setUserExperience(profile.experience?.toString() || "0");
-        setIsProMember(profile.is_pro_member || false);
+        setUserExperience(loadedExperience.toString());
+        setIsProMember(finalProStatus);
         setSavedUserName(profile.name);
         setSavedUserAge(profile.age.toString());
         setSavedUserDescription(profile.description);
-        setSavedUserExperience(profile.experience?.toString() || "0");
-        setSavedIsProMember(profile.is_pro_member || false);
+        setSavedUserExperience(loadedExperience.toString());
+        setSavedIsProMember(finalProStatus);
 
         if (profile.profile_image_url) {
           setProfileImage({ uri: profile.profile_image_url });
@@ -150,8 +188,6 @@ const ProfileScreen = () => {
           setProfileImage(require("../../assets/images/horses/falko.png"));
           setSavedProfileImage(require("../../assets/images/horses/falko.png"));
         }
-
-        console.log("Profile refreshed successfully");
       }
     } catch (err) {
       setError("Failed to refresh profile");
@@ -238,12 +274,6 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      console.log("Save profile called");
-      console.log("Current profileImage:", profileImage);
-      console.log("Current profileImage type:", typeof profileImage);
-      console.log("Saved profileImage:", savedProfileImage);
-      console.log("Saved profileImage type:", typeof savedProfileImage);
-
       // Upload profile image if it's a new image (different from saved)
       let profileImageUrl = null;
 
@@ -255,18 +285,12 @@ const ProfileScreen = () => {
         typeof savedProfileImage === "object" &&
         savedProfileImage.uri;
 
-      console.log("Is current image URI:", isCurrentImageUri);
-      console.log("Is saved image URI:", isSavedImageUri);
-
       // Determine if we have a new image to upload
       const hasNewImage =
         isCurrentImageUri &&
         (!isSavedImageUri || profileImage.uri !== savedProfileImage.uri);
 
-      console.log("Has new image:", hasNewImage);
-
       if (hasNewImage) {
-        console.log("Converting image to Base64:", profileImage.uri);
         profileImageUrl = await ProfileAPIBase64.uploadProfileImageBase64(
           USER_ID,
           profileImage.uri
@@ -274,56 +298,55 @@ const ProfileScreen = () => {
         if (!profileImageUrl) {
           throw new Error("Failed to upload profile image");
         }
-        console.log("New image converted to Base64 and saved");
       }
 
       // Prepare profile data - preserve existing image URL if no new image uploaded
+      const experienceValue = parseInt(userExperience);
+      // Keep the current pro status from state (which came from database)
+      const finalProStatus = isProMember;
+      
       const updateData: any = {
         name: userName,
         age: parseInt(userAge),
         description: userDescription,
-        experience: parseInt(userExperience),
-        is_pro_member: isProMember,
+        experience: experienceValue,
+        is_pro_member: finalProStatus,
       };
 
       // Include image URL: new uploaded URL or existing URL
       if (profileImageUrl) {
         // New image was uploaded
         updateData.profile_image_url = profileImageUrl;
-        console.log("Using new image URL:", profileImageUrl);
       } else if (isSavedImageUri) {
         // Keep existing image URL if user hasn't changed the image
         updateData.profile_image_url = savedProfileImage.uri;
-        console.log("Preserving existing image URL:", savedProfileImage.uri);
-      } else {
-        console.log("No image URL to save (using default local image)");
       }
 
-      console.log("Update data:", updateData);
+      // First, let's test a simple experience update
+      const simpleUpdateSuccess = await ProfileAPIBase64.updateExperienceOnly(USER_ID, experienceValue);
 
-      // Update profile data
-      const success = await ProfileAPIBase64.updateProfile(USER_ID, updateData);
+      // Update profile data using the enhanced function with membership logic
+      const success = await ProfileAPIBase64.updateProfileWithMembershipLogic(USER_ID, updateData);
 
       if (!success) {
         throw new Error("Failed to update profile");
       }
-
-      console.log("Profile updated successfully");
 
       // Update saved values with the current edited values
       setSavedUserName(userName);
       setSavedUserAge(userAge);
       setSavedUserDescription(userDescription);
       setSavedUserExperience(userExperience);
-      setSavedIsProMember(isProMember);
+      setSavedIsProMember(finalProStatus);
+      
+      // Also update current state to reflect the calculated pro status
+      setIsProMember(finalProStatus);
 
       // Update saved image: use new uploaded URL or keep current image
       if (profileImageUrl) {
-        console.log("Setting saved image to new URL:", profileImageUrl);
         setSavedProfileImage({ uri: profileImageUrl });
         setProfileImage({ uri: profileImageUrl });
       } else {
-        console.log("Keeping current image as saved:", profileImage);
         setSavedProfileImage(profileImage);
       }
 
@@ -502,7 +525,7 @@ const ProfileScreen = () => {
                 <View style={styles.badgeContainer}>
                   <View style={[styles.badge, isProMember ? styles.proBadge : styles.regularBadge]}>
                     <Text style={[styles.badgeText, isProMember ? styles.proBadgeText : styles.regularBadgeText]}>
-                      {isProMember ? "PRO MEMBER" : "MEMBER"}
+                      {getMembershipDisplayText(isProMember)}
                     </Text>
                   </View>
                 </View>
@@ -541,15 +564,6 @@ const ProfileScreen = () => {
                   placeholderTextColor="#999"
                   keyboardType="numeric"
                 />
-                <View style={styles.proMemberToggle}>
-                  <Text style={styles.proMemberLabel}>Pro Member</Text>
-                  <TouchableOpacity
-                    style={[styles.toggleButton, isProMember ? styles.toggleActive : styles.toggleInactive]}
-                    onPress={() => setIsProMember(!isProMember)}
-                  >
-                    <View style={[styles.toggleThumb, isProMember ? styles.thumbActive : styles.thumbInactive]} />
-                  </TouchableOpacity>
-                </View>
               </>
             )}
           </View>
@@ -892,8 +906,8 @@ const styles = StyleSheet.create({
     borderColor: "#FFA500",
   },
   regularBadge: {
-    backgroundColor: "#E9F5F0",
-    borderColor: "#335C67",
+    backgroundColor: "#E3F2FD",
+    borderColor: "#2196F3",
   },
   badgeText: {
     fontSize: 12,
@@ -905,7 +919,7 @@ const styles = StyleSheet.create({
     color: "#B8860B",
   },
   regularBadgeText: {
-    color: "#335C67",
+    color: "#1976D2",
   },
   gallerySection: {
     marginBottom: 30,
@@ -1093,57 +1107,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 12,
     fontFamily: "Inder",
-  },
-  // Pro Member Toggle styles
-  proMemberToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#335C67",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    marginBottom: 15,
-    minWidth: 200,
-  },
-  proMemberLabel: {
-    fontSize: 16,
-    fontFamily: "Inder",
-    color: "#335C67",
-    fontWeight: "500",
-  },
-  toggleButton: {
-    width: 50,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: "center",
-    position: "relative",
-  },
-  toggleActive: {
-    backgroundColor: "#4CAF50",
-  },
-  toggleInactive: {
-    backgroundColor: "#ccc",
-  },
-  toggleThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    position: "absolute",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-  },
-  thumbActive: {
-    right: 2,
-  },
-  thumbInactive: {
-    left: 2,
   },
 });
 
