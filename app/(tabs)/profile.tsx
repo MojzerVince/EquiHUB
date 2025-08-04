@@ -428,7 +428,7 @@ const ProfileScreen = () => {
                 <Text style={styles.editButtonText}>Edit Profile</Text>
               </TouchableOpacity>
             ) : (
-              <View style={styles.editButtonsContainer}>
+              <>
                 <TouchableOpacity
                   style={styles.cancelButton}
                   onPress={handleCancel}
@@ -437,10 +437,7 @@ const ProfileScreen = () => {
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[
-                    styles.saveButton,
-                    isLoading && styles.disabledButton,
-                  ]}
+                  style={styles.saveButton}
                   onPress={handleSave}
                   disabled={isLoading}
                 >
@@ -450,7 +447,7 @@ const ProfileScreen = () => {
                     <Text style={styles.saveButtonText}>Save</Text>
                   )}
                 </TouchableOpacity>
-              </View>
+              </>
             )}
 
             <View style={styles.profileImageContainer}>
@@ -711,6 +708,9 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   cancelButton: {
+    position: "absolute",
+    left: 20,
+    top: 20,
     backgroundColor: "#FF6B6B",
     borderRadius: 15,
     paddingHorizontal: 15,
@@ -722,6 +722,9 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
   },
   saveButton: {
+    position: "absolute",
+    right: 20,
+    top: 20,
     backgroundColor: "#4CAF50",
     borderRadius: 15,
     paddingHorizontal: 15,
