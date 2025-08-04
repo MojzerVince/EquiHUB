@@ -1,13 +1,16 @@
+import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
 import {
   Alert,
   Image,
+  Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -15,8 +18,110 @@ function AlertStuff(text: any, text2: any) {
   Alert.alert(text, text2);
 }
 
+// Dropdown options
+const genderOptions = [
+  "Stallion",
+  "Mare", 
+  "Gelding",
+  "Filly",
+  "Colt"
+];
+
+const breedOptions = [
+  "Arabian",
+  "Thoroughbred",
+  "Quarter Horse",
+  "Paint Horse", 
+  "Appaloosa",
+  "Friesian",
+  "Clydesdale",
+  "Percheron",
+  "Belgian",
+  "Shire",
+  "Mustang",
+  "Morgan",
+  "Tennessee Walker",
+  "Standardbred",
+  "Andalusian",
+  "Hanoverian",
+  "Warmblood",
+  "Lipicai",
+  "Magyar Sportló",
+  "Shagya Araber",
+  "Gidran",
+  "Nonius",
+  "Furioso-North Star",
+  "Shitlandi póni",
+  "Shetland Pony",
+  "Welsh Pony",
+  "Haflinger",
+  "Icelandic Horse",
+  "Fjord",
+  "Akhal-Teke",
+  "Barb",
+  "Lusitano",
+  "Paso Fino",
+  "Criollo",
+  "Mangalarga",
+  "Camargue",
+  "Connemara",
+  "Dartmoor",
+  "Exmoor",
+  "New Forest",
+  "Fell Pony",
+  "Dales Pony",
+  "Highland Pony",
+  "Eriskay Pony",
+  "Przewalski's Horse",
+  "Døle Gudbrandsdal",
+  "Nordlandshest",
+  "Finnhorse",
+  "Gotland Pony",
+  "Östermalm",
+  "Žemaitukas",
+  "Estonian Native",
+  "Latvian",
+  "Trakehner",
+  "Oldenburg",
+  "Holstein",
+  "Württemberger",
+  "Bavarian Warmblood",
+  "Rheinland-Pfalz-Saar",
+  "Brandenburger",
+  "Mecklenburg",
+  "Sachsen-Anhaltiner",
+  "Thüringer",
+  "Other"
+];
+
 const MyHorsesScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
+  const [horses, setHorses] = useState(data);
+  
+  // Edit modal state
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingHorse, setEditingHorse] = useState<any>(null);
+  const [editName, setEditName] = useState("");
+  const [editGender, setEditGender] = useState("");
+  const [editYear, setEditYear] = useState("");
+  const [editHeight, setEditHeight] = useState("");
+  const [editBreed, setEditBreed] = useState("");
+
+  // Dropdown state
+  const [genderDropdownVisible, setGenderDropdownVisible] = useState(false);
+  const [breedDropdownVisible, setBreedDropdownVisible] = useState(false);
+  
+  // Number picker state
+  const [yearPickerVisible, setYearPickerVisible] = useState(false);
+  const [heightPickerVisible, setHeightPickerVisible] = useState(false);
+  
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  
+  // Image picker state
+  const [editImage, setEditImage] = useState<any>(null);
+  const [showImagePickerModal, setShowImagePickerModal] = useState(false);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -24,6 +129,464 @@ const MyHorsesScreen = () => {
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
+  };
+
+  const openEditModal = (horse: any) => {
+    setEditingHorse(horse);
+    setEditName(horse.name);
+    setEditGender(horse.gender);
+    setEditYear(horse.year.toString());
+    setEditHeight(horse.height.toString());
+    setEditBreed(horse.breed);
+    setEditImage(horse.img);
+    setGenderDropdownVisible(false);
+    setBreedDropdownVisible(false);
+    setYearPickerVisible(false);
+    setHeightPickerVisible(false);
+    setShowImagePickerModal(false);
+    setEditModalVisible(true);
+  };
+
+  const closeEditModal = () => {
+    setEditModalVisible(false);
+    setEditingHorse(null);
+    setEditName("");
+    setEditGender("");
+    setEditYear("");
+    setEditHeight("");
+    setEditBreed("");
+    setEditImage(null);
+    setGenderDropdownVisible(false);
+    setBreedDropdownVisible(false);
+    setYearPickerVisible(false);
+    setHeightPickerVisible(false);
+    setShowImagePickerModal(false);
+  };
+
+  const saveHorseEdit = () => {
+    // Normalize and trim input values to handle UTF-8 properly
+    const normalizedName = editName.normalize('NFC').trim();
+    const normalizedGender = editGender.normalize('NFC').trim();
+    const normalizedBreed = editBreed.normalize('NFC').trim();
+    const normalizedYear = editYear.trim();
+    const normalizedHeight = editHeight.trim();
+
+    if (!normalizedName || !normalizedGender || !normalizedYear || !normalizedHeight || !normalizedBreed) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    // Validate name contains only valid characters (letters, spaces, hyphens, apostrophes, and UTF-8 characters)
+    const namePattern = /^[\p{L}\p{M}\s\-'\.]+$/u;
+    if (!namePattern.test(normalizedName)) {
+      Alert.alert("Error", "Horse name contains invalid characters");
+      return;
+    }
+
+    // Validate name length
+    if (normalizedName.length < 2 || normalizedName.length > 50) {
+      Alert.alert("Error", "Horse name must be between 2 and 50 characters");
+      return;
+    }
+
+    const yearNum = parseInt(normalizedYear);
+    const heightNum = parseInt(normalizedHeight);
+
+    if (isNaN(yearNum) || yearNum < 1900 || yearNum > new Date().getFullYear()) {
+      Alert.alert("Error", "Please enter a valid birth year");
+      return;
+    }
+
+    if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
+      Alert.alert("Error", "Please enter a valid height (50-250 cm)");
+      return;
+    }
+
+    const updatedHorses = horses.map(horse => 
+      horse.id === editingHorse.id 
+        ? {
+            ...horse,
+            name: normalizedName,
+            gender: normalizedGender,
+            year: yearNum,
+            height: heightNum,
+            breed: normalizedBreed,
+            img: editImage || horse.img
+          }
+        : horse
+    );
+
+    setHorses(updatedHorses);
+    closeEditModal();
+    setSuccessMessage(`${normalizedName} has been updated!`);
+    setShowSuccessModal(true);
+  };
+
+  // Image picker functions
+  const pickImageFromLibrary = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert("Permission Required", "Permission to access camera roll is required!");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setEditImage({ uri: result.assets[0].uri });
+      setShowImagePickerModal(false);
+    }
+  };
+
+  const takePhoto = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert("Permission Required", "Permission to access camera is required!");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setEditImage({ uri: result.assets[0].uri });
+      setShowImagePickerModal(false);
+    }
+  };
+
+  // Custom Dropdown Component
+  const CustomDropdown = ({ 
+    value, 
+    placeholder, 
+    options, 
+    onSelect, 
+    isVisible, 
+    setVisible 
+  }: {
+    value: string;
+    placeholder: string;
+    options: string[];
+    onSelect: (option: string) => void;
+    isVisible: boolean;
+    setVisible: (visible: boolean) => void;
+  }) => {
+    return (
+      <View style={{ marginBottom: 20 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#2D5A66',
+            borderRadius: 8,
+            paddingVertical: 15,
+            paddingHorizontal: 16,
+            borderWidth: 1,
+            borderColor: '#4A9BB7',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+          onPress={() => setVisible(!isVisible)}
+        >
+          <Text style={{
+            color: value ? '#FFFFFF' : '#B0B0B0',
+            fontSize: 16,
+            fontFamily: "Inder",
+            includeFontPadding: false,
+          }}>
+            {value || placeholder}
+          </Text>
+          <Text style={{ color: '#FFFFFF', fontSize: 16 }}>
+            {isVisible ? '▲' : '▼'}
+          </Text>
+        </TouchableOpacity>
+        
+        {isVisible && (
+          <Modal
+            transparent={true}
+            visible={isVisible}
+            animationType="fade"
+            onRequestClose={() => setVisible(false)}
+          >
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={() => setVisible(false)}
+            >
+              <View style={{
+                backgroundColor: '#1C3A42',
+                borderRadius: 12,
+                padding: 20,
+                maxHeight: 300,
+                width: '80%',
+                borderWidth: 1,
+                borderColor: '#4A9BB7',
+              }}>
+                <ScrollView style={{ maxHeight: 250 }}>
+                  {options.map((option, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={{
+                        paddingVertical: 15,
+                        paddingHorizontal: 10,
+                        borderBottomWidth: index < options.length - 1 ? 1 : 0,
+                        borderBottomColor: '#335C67',
+                      }}
+                      onPress={() => {
+                        onSelect(option);
+                        setVisible(false);
+                      }}
+                    >
+                      <Text style={{
+                        color: value === option ? '#4A9BB7' : '#FFFFFF',
+                        fontSize: 16,
+                        fontWeight: value === option ? 'bold' : 'normal',
+                        fontFamily: "Inder",
+                        textAlign: "left",
+                        includeFontPadding: false,
+                      }}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        )}
+      </View>
+    );
+  };
+
+  // Custom Number Picker Component
+  const NumberPicker = ({
+    value,
+    placeholder,
+    minValue,
+    maxValue,
+    onSelect,
+    isVisible,
+    setVisible,
+    unit = ""
+  }: {
+    value: string;
+    placeholder: string;
+    minValue: number;
+    maxValue: number;
+    onSelect: (value: string) => void;
+    isVisible: boolean;
+    setVisible: (visible: boolean) => void;
+    unit?: string;
+  }) => {
+    const generateNumbers = () => {
+      const numbers = [];
+      for (let i = minValue; i <= maxValue; i++) {
+        numbers.push(i);
+      }
+      return numbers;
+    };
+
+    const numbers = generateNumbers();
+
+    return (
+      <View style={{ marginBottom: 20 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#2D5A66',
+            borderRadius: 8,
+            paddingVertical: 15,
+            paddingHorizontal: 16,
+            borderWidth: 1,
+            borderColor: '#4A9BB7',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+          onPress={() => setVisible(!isVisible)}
+        >
+          <Text style={{
+            color: value ? '#FFFFFF' : '#B0B0B0',
+            fontSize: 16,
+            fontFamily: "Inder",
+            includeFontPadding: false,
+          }}>
+            {value ? `${value}${unit}` : placeholder}
+          </Text>
+          <Text style={{ color: '#FFFFFF', fontSize: 16 }}>
+            {isVisible ? '▲' : '▼'}
+          </Text>
+        </TouchableOpacity>
+        
+        {isVisible && (
+          <Modal
+            transparent={true}
+            visible={isVisible}
+            animationType="fade"
+            onRequestClose={() => setVisible(false)}
+          >
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={() => setVisible(false)}
+            >
+              <View style={{
+                backgroundColor: '#1C3A42',
+                borderRadius: 12,
+                padding: 20,
+                maxHeight: 400,
+                width: '80%',
+                borderWidth: 1,
+                borderColor: '#4A9BB7',
+              }}>
+                <ScrollView style={{ maxHeight: 350 }}>
+                  {numbers.map((number, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={{
+                        paddingVertical: 15,
+                        paddingHorizontal: 10,
+                        borderBottomWidth: index < numbers.length - 1 ? 1 : 0,
+                        borderBottomColor: '#335C67',
+                      }}
+                      onPress={() => {
+                        onSelect(number.toString());
+                        setVisible(false);
+                      }}
+                    >
+                      <Text style={{
+                        color: value === number.toString() ? '#4A9BB7' : '#FFFFFF',
+                        fontSize: 16,
+                        fontWeight: value === number.toString() ? 'bold' : 'normal',
+                        textAlign: 'center',
+                        fontFamily: "Inder",
+                        includeFontPadding: false,
+                      }}>
+                        {number}{unit}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        )}
+      </View>
+    );
+  };
+
+  // Custom Success Modal Component
+  const SuccessModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={showSuccessModal}
+      onRequestClose={() => setShowSuccessModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.successModalContainer}>
+          <View style={styles.modalIcon}>
+            <Text style={styles.checkIcon}>✓</Text>
+          </View>
+          <Text style={styles.successModalTitle}>Success!</Text>
+          <Text style={styles.successModalMessage}>
+            {successMessage}
+          </Text>
+          <TouchableOpacity
+            style={styles.successModalButton}
+            onPress={() => setShowSuccessModal(false)}
+          >
+            <Text style={styles.successModalButtonText}>OK</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Custom Image Picker Modal Component
+  const ImagePickerModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={showImagePickerModal}
+      onRequestClose={() => setShowImagePickerModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.imagePickerModalContainer}>
+          <View style={styles.imagePickerIcon}>
+            <Text style={styles.cameraIcon}>📷</Text>
+          </View>
+          <Text style={styles.imagePickerTitle}>Update Photo</Text>
+          <Text style={styles.imagePickerMessage}>
+            Choose how you'd like to update the horse's photo
+          </Text>
+          
+          <View style={styles.imagePickerButtons}>
+            <TouchableOpacity
+              style={styles.imagePickerButton}
+              onPress={takePhoto}
+            >
+              <View style={styles.imagePickerButtonIcon}>
+                <Text style={styles.imagePickerButtonEmoji}>📷</Text>
+              </View>
+              <Text style={styles.imagePickerButtonText}>Take Photo</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.imagePickerButton}
+              onPress={pickImageFromLibrary}
+            >
+              <View style={styles.imagePickerButtonIcon}>
+                <Text style={styles.imagePickerButtonEmoji}>🖼️</Text>
+              </View>
+              <Text style={styles.imagePickerButtonText}>Choose from Library</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.imagePickerButton, styles.cancelImageButton]}
+              onPress={() => setShowImagePickerModal(false)}
+            >
+              <Text style={styles.cancelImageButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const deleteHorse = (horse: any) => {
+    Alert.alert(
+      "Delete Horse",
+      `Are you sure you want to delete ${horse.name}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: () => {
+            const updatedHorses = horses.filter(h => h.id !== horse.id);
+            setHorses(updatedHorses);
+            setSuccessMessage(`${horse.name} has been deleted`);
+            setShowSuccessModal(true);
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -44,10 +607,10 @@ const MyHorsesScreen = () => {
         >
           <View style={styles.horsesContainer}>
             <View style={styles.statsHeader}>
-              <Text style={styles.statsText}>You have {data.length} horses</Text>
+              <Text style={styles.statsText}>You have {horses.length} horses</Text>
             </View>
             
-            {data.map((horse, index) => (
+            {horses.map((horse, index) => (
               <View style={styles.horseCard} key={horse.id}>
                 <View style={styles.horseImageContainer}>
                   <Image
@@ -83,13 +646,13 @@ const MyHorsesScreen = () => {
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.editButton]}
-                      onPress={() => AlertStuff("Edit Horse", `Edit ${horse.name}`)}
+                      onPress={() => openEditModal(horse)}
                     >
                       <Text style={styles.editButtonText}>✏️ Edit</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.deleteButton]}
-                      onPress={() => AlertStuff("Delete Horse", `Delete ${horse.name}?`)}
+                      onPress={() => deleteHorse(horse)}
                     >
                       <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
                     </TouchableOpacity>
@@ -98,7 +661,7 @@ const MyHorsesScreen = () => {
               </View>
             ))}
             
-            {data.length === 0 && (
+            {horses.length === 0 && (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateEmoji}>🐴</Text>
                 <Text style={styles.emptyStateText}>No horses yet!</Text>
@@ -110,6 +673,140 @@ const MyHorsesScreen = () => {
           </View>
         </ScrollView>
       </View>
+
+      {/* Edit Horse Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={closeEditModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Horse</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={closeEditModal}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Photo</Text>
+                <View style={styles.imageContainer}>
+                  <Image
+                    style={styles.selectedImage}
+                    source={editImage || editingHorse?.img}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    style={styles.changePhotoButton}
+                    onPress={() => setShowImagePickerModal(true)}
+                  >
+                    <View style={styles.cameraIconContainer}>
+                      <Text style={styles.cameraIconText}>📷</Text>
+                    </View>
+                    <Text style={styles.changePhotoText}>Change Photo</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Name</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Horse name"
+                  placeholderTextColor="#999"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  textContentType="none"
+                  keyboardType="default"
+                  returnKeyType="next"
+                  maxLength={50}
+                  multiline={false}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Gender</Text>
+                <CustomDropdown
+                  value={editGender}
+                  placeholder="Select gender"
+                  options={genderOptions}
+                  onSelect={setEditGender}
+                  isVisible={genderDropdownVisible}
+                  setVisible={setGenderDropdownVisible}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Birth Year</Text>
+                <NumberPicker
+                  value={editYear}
+                  placeholder="Select birth year"
+                  minValue={1980}
+                  maxValue={new Date().getFullYear()}
+                  onSelect={setEditYear}
+                  isVisible={yearPickerVisible}
+                  setVisible={setYearPickerVisible}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Height (cm)</Text>
+                <NumberPicker
+                  value={editHeight}
+                  placeholder="Select height"
+                  minValue={100}
+                  maxValue={220}
+                  onSelect={setEditHeight}
+                  isVisible={heightPickerVisible}
+                  setVisible={setHeightPickerVisible}
+                  unit=" cm"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Breed</Text>
+                <CustomDropdown
+                  value={editBreed}
+                  placeholder="Select breed"
+                  options={breedOptions}
+                  onSelect={setEditBreed}
+                  isVisible={breedDropdownVisible}
+                  setVisible={setBreedDropdownVisible}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={closeEditModal}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={saveHorseEdit}
+              >
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Success Modal */}
+      <SuccessModal />
+      
+      {/* Image Picker Modal */}
+      <ImagePickerModal />
     </View>
   );
 };
@@ -135,20 +832,20 @@ const data = [
   },
   {
     id: 2,
-    name: "Random1",
-    gender: "Random1",
+    name: "Éva-Mária",
+    gender: "Mare",
     year: 2000,
-    height: 99,
+    height: 155,
     breed: "Shitlandi póni",
     img: require("../../assets/images/horses/pony.jpg"),
   },
   {
     id: 3,
-    name: "Random2",
-    gender: "Random2",
+    name: "Árpád-Viktor",
+    gender: "Stallion",
     year: 1999,
-    height: 200,
-    breed: "Random2",
+    height: 172,
+    breed: "Magyar Sportló",
     img: require("../../assets/images/horses/random2.jpg"),
   },
 ];
@@ -325,6 +1022,309 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "center",
     lineHeight: 24,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    width: "95%",
+    maxWidth: 500,
+    maxHeight: "90%",
+    minHeight: "70%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 25,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  modalTitle: {
+    fontSize: 26,
+    fontFamily: "Inder",
+    fontWeight: "bold",
+    color: "#335C67",
+  },
+  modalCloseButton: {
+    backgroundColor: "#666",
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCloseText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  modalContent: {
+    flex: 1,
+    padding: 25,
+  },
+  inputGroup: {
+    marginBottom: 25,
+  },
+  inputLabel: {
+    fontSize: 18,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    color: "#335C67",
+    marginBottom: 10,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 15,
+    padding: 18,
+    fontSize: 17,
+    fontFamily: "Inder",
+    backgroundColor: "#f9f9f9",
+    color: "#333",
+    minHeight: 55,
+    textAlignVertical: "center",
+    includeFontPadding: false,
+    textAlign: "left",
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 25,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    gap: 20,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 18,
+    borderRadius: 15,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#f0f0f0",
+  },
+  saveButton: {
+    backgroundColor: "#335C67",
+  },
+  cancelButtonText: {
+    color: "#666",
+    fontSize: 17,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 17,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  // Success Modal styles
+  successModalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 30,
+    alignItems: "center",
+    maxWidth: 300,
+    width: "90%",
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#4CAF50",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  checkIcon: {
+    fontSize: 40,
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  successModalTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#335C67",
+    marginBottom: 10,
+    fontFamily: "Inder",
+  },
+  successModalMessage: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 25,
+    lineHeight: 22,
+    fontFamily: "Inder",
+  },
+  successModalButton: {
+    backgroundColor: "#335C67",
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    minWidth: 100,
+  },
+  successModalButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  // Image Picker Modal styles
+  imagePickerModalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 30,
+    alignItems: "center",
+    maxWidth: 350,
+    width: "90%",
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  imagePickerIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#335C67",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  cameraIcon: {
+    fontSize: 40,
+    color: "#fff",
+  },
+  imagePickerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#335C67",
+    marginBottom: 10,
+    fontFamily: "Inder",
+  },
+  imagePickerMessage: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 25,
+    lineHeight: 22,
+    fontFamily: "Inder",
+  },
+  imagePickerButtons: {
+    width: "100%",
+    gap: 15,
+  },
+  imagePickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#335C67",
+    borderRadius: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    gap: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  imagePickerButtonIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imagePickerButtonEmoji: {
+    fontSize: 18,
+  },
+  imagePickerButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    flex: 1,
+  },
+  cancelImageButton: {
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+  },
+  cancelImageButtonText: {
+    color: "#666",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  // Image selector styles
+  imageContainer: {
+    alignItems: "center",
+    gap: 15,
+  },
+  selectedImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    borderColor: "#335C67",
+  },
+  changePhotoButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#335C67",
+    borderRadius: 25,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    gap: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cameraIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cameraIconText: {
+    fontSize: 14,
+  },
+  changePhotoText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
   },
 });
 
