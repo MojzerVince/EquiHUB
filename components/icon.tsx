@@ -37,4 +37,10 @@ export const icons = {
       style={{ width: 48, height: 48 }}
     ></Image>
   ),
+  settings: () => (
+    <Image
+      source={require("../assets/UI_resources/UI_white/settings_white.png")}
+      style={{ width: 48, height: 48 }}
+    ></Image>
+  ),
 };
