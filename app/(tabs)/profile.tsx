@@ -1,23 +1,26 @@
-import React, { useState, useEffect } from "react";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
+  Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  Alert,
-  Modal,
-  ActivityIndicator,
-  RefreshControl,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as ImagePicker from "expo-image-picker";
-import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { useLoadingState } from "../../hooks/useLoadingState";
+import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 
 const ProfileScreen = () => {
+  const router = useRouter();
+  
   // Generate a consistent UUID for demo purposes
   // In a real app, this would come from authentication
   const USER_ID = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID format
@@ -392,8 +395,19 @@ const ProfileScreen = () => {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView>
-        <Text style={styles.header}>My Profile</Text>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.header}>My Profile</Text>
+          <TouchableOpacity 
+            style={styles.optionsButton}
+            onPress={() => router.push("/(tabs)/options")}
+          >
+            <Image 
+              source={require("../../assets/UI_resources/UI_white/settings_white.png")}
+              style={styles.optionsIcon}
+            />
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
 
       <ScrollView
@@ -540,18 +554,125 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#335C67",
   },
+  safeArea: {
+    backgroundColor: "#335C67",
+    paddingBottom: 5,
+  },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    marginBottom: -20,
+  },
   header: {
     fontSize: 30,
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",
-    marginBottom: -30,
+    flex: 1,
+    fontWeight: "600",
+  },
+  optionsButton: {
+    position: "absolute",
+    right: 20,
+    padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    zIndex: 10,
+  },
+  optionsIcon: {
+    width: 24,
+    height: 24,
+    tintColor: "#fff",
+  },
+  backButton: {
+    position: "absolute",
+    left: 20,
+    padding: 5,
+  },
+  backIcon: {
+    fontSize: 24,
+    color: "#fff",
+  },
+  optionsContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+  section: {
+    marginBottom: 30,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#335C67",
+    marginBottom: 15,
+    fontFamily: "Inder",
+  },
+  sectionContent: {
+    backgroundColor: "#E9F5F0",
+    borderRadius: 20,
+    padding: 5,
+  },
+  settingItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#C5D9D1",
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: 15,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#335C67",
+    fontFamily: "Inder",
+    marginBottom: 2,
+  },
+  settingSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    fontFamily: "Inder",
+  },
+  actionButton: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#C5D9D1",
+  },
+  actionButtonText: {
+    fontSize: 16,
+    color: "#335C67",
+    fontFamily: "Inder",
+    fontWeight: "500",
+  },
+  logoutButton: {
+    backgroundColor: "#FF9800",
+    borderRadius: 15,
+    marginVertical: 5,
+    borderBottomWidth: 0,
+  },
+  logoutButtonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "bold",
   },
   viewPort: {
     backgroundColor: "#FFFFFF",
     flex: 1,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
+    marginTop: 5,
     paddingTop: 30,
   },
   profileContainer: {
