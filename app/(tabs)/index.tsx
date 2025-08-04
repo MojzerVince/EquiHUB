@@ -106,13 +106,14 @@ const MyHorsesScreen = () => {
   const [editYear, setEditYear] = useState("");
   const [editHeight, setEditHeight] = useState("");
   const [editBreed, setEditBreed] = useState("");
+  const [editBirthDate, setEditBirthDate] = useState<Date | null>(null);
 
   // Dropdown state
   const [genderDropdownVisible, setGenderDropdownVisible] = useState(false);
   const [breedDropdownVisible, setBreedDropdownVisible] = useState(false);
   
   // Number picker state
-  const [yearPickerVisible, setYearPickerVisible] = useState(false);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [heightPickerVisible, setHeightPickerVisible] = useState(false);
   
   // Success modal state
@@ -139,9 +140,19 @@ const MyHorsesScreen = () => {
     setEditHeight(horse.height.toString());
     setEditBreed(horse.breed);
     setEditImage(horse.img);
+    
+    // Set birth date from year (assume January 1st if only year is available)
+    if (horse.birthDate) {
+      setEditBirthDate(new Date(horse.birthDate));
+    } else if (horse.year) {
+      setEditBirthDate(new Date(horse.year, 0, 1)); // January 1st of the year
+    } else {
+      setEditBirthDate(null);
+    }
+    
     setGenderDropdownVisible(false);
     setBreedDropdownVisible(false);
-    setYearPickerVisible(false);
+    setDatePickerVisible(false);
     setHeightPickerVisible(false);
     setShowImagePickerModal(false);
     setEditModalVisible(true);
@@ -156,9 +167,10 @@ const MyHorsesScreen = () => {
     setEditHeight("");
     setEditBreed("");
     setEditImage(null);
+    setEditBirthDate(null);
     setGenderDropdownVisible(false);
     setBreedDropdownVisible(false);
-    setYearPickerVisible(false);
+    setDatePickerVisible(false);
     setHeightPickerVisible(false);
     setShowImagePickerModal(false);
   };
@@ -168,10 +180,9 @@ const MyHorsesScreen = () => {
     const normalizedName = editName.normalize('NFC').trim();
     const normalizedGender = editGender.normalize('NFC').trim();
     const normalizedBreed = editBreed.normalize('NFC').trim();
-    const normalizedYear = editYear.trim();
     const normalizedHeight = editHeight.trim();
 
-    if (!normalizedName || !normalizedGender || !normalizedYear || !normalizedHeight || !normalizedBreed) {
+    if (!normalizedName || !normalizedGender || !editBirthDate || !normalizedHeight || !normalizedBreed) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
@@ -189,13 +200,15 @@ const MyHorsesScreen = () => {
       return;
     }
 
-    const yearNum = parseInt(normalizedYear);
-    const heightNum = parseInt(normalizedHeight);
-
-    if (isNaN(yearNum) || yearNum < 1900 || yearNum > new Date().getFullYear()) {
-      Alert.alert("Error", "Please enter a valid birth year");
+    // Validate birth date
+    const currentDate = new Date();
+    const minDate = new Date(1980, 0, 1);
+    if (editBirthDate < minDate || editBirthDate > currentDate) {
+      Alert.alert("Error", "Please enter a valid birth date");
       return;
     }
+
+    const heightNum = parseInt(normalizedHeight);
 
     if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
       Alert.alert("Error", "Please enter a valid height (50-250 cm)");
@@ -208,7 +221,8 @@ const MyHorsesScreen = () => {
             ...horse,
             name: normalizedName,
             gender: normalizedGender,
-            year: yearNum,
+            year: editBirthDate.getFullYear(),
+            birthDate: editBirthDate.toISOString(),
             height: heightNum,
             breed: normalizedBreed,
             img: editImage || horse.img
@@ -370,7 +384,259 @@ const MyHorsesScreen = () => {
     );
   };
 
-  // Custom Number Picker Component
+  // Custom Date Picker Component
+  const DatePicker = ({
+    value,
+    placeholder,
+    onSelect,
+    isVisible,
+    setVisible
+  }: {
+    value: Date | null;
+    placeholder: string;
+    onSelect: (date: Date) => void;
+    isVisible: boolean;
+    setVisible: (visible: boolean) => void;
+  }) => {
+    const [selectedDay, setSelectedDay] = useState(value?.getDate() || 1);
+    const [selectedMonth, setSelectedMonth] = useState(value?.getMonth() || 0);
+    const [selectedYear, setSelectedYear] = useState(value?.getFullYear() || new Date().getFullYear());
+
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    const generateYears = () => {
+      const years = [];
+      const currentYear = new Date().getFullYear();
+      for (let i = currentYear; i >= 1980; i--) {
+        years.push(i);
+      }
+      return years;
+    };
+
+    const getDaysInMonth = (month: number, year: number) => {
+      return new Date(year, month + 1, 0).getDate();
+    };
+
+    const generateDays = () => {
+      const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
+      const days = [];
+      for (let i = 1; i <= daysInMonth; i++) {
+        days.push(i);
+      }
+      return days;
+    };
+
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    };
+
+    const handleConfirm = () => {
+      const newDate = new Date(selectedYear, selectedMonth, selectedDay);
+      onSelect(newDate);
+      setVisible(false);
+    };
+
+    return (
+      <View style={{ marginBottom: 20 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#2D5A66',
+            borderRadius: 8,
+            paddingVertical: 15,
+            paddingHorizontal: 16,
+            borderWidth: 1,
+            borderColor: '#4A9BB7',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+          onPress={() => setVisible(!isVisible)}
+        >
+          <Text style={{
+            color: value ? '#FFFFFF' : '#B0B0B0',
+            fontSize: 16,
+            fontFamily: "Inder",
+            includeFontPadding: false,
+          }}>
+            {value ? formatDate(value) : placeholder}
+          </Text>
+          <Text style={{ color: '#FFFFFF', fontSize: 16 }}>
+            {isVisible ? '▲' : '▼'}
+          </Text>
+        </TouchableOpacity>
+        
+        {isVisible && (
+          <Modal
+            transparent={true}
+            visible={isVisible}
+            animationType="fade"
+            onRequestClose={() => setVisible(false)}
+          >
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={() => setVisible(false)}
+            >
+              <View style={{
+                backgroundColor: '#1C3A42',
+                borderRadius: 12,
+                padding: 20,
+                width: '90%',
+                maxWidth: 400,
+                borderWidth: 1,
+                borderColor: '#4A9BB7',
+              }}>
+                <Text style={{
+                  color: '#FFFFFF',
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  marginBottom: 20,
+                  fontFamily: "Inder",
+                }}>
+                  Select Birth Date
+                </Text>
+                
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                  {/* Month Picker */}
+                  <View style={{ flex: 1, marginRight: 10 }}>
+                    <Text style={{ color: '#FFFFFF', marginBottom: 10, textAlign: 'center', fontFamily: "Inder" }}>Month</Text>
+                    <ScrollView style={{ maxHeight: 150, backgroundColor: '#2D5A66', borderRadius: 8 }}>
+                      {months.map((month, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={{
+                            paddingVertical: 12,
+                            paddingHorizontal: 10,
+                            backgroundColor: selectedMonth === index ? '#4A9BB7' : 'transparent',
+                          }}
+                          onPress={() => setSelectedMonth(index)}
+                        >
+                          <Text style={{
+                            color: '#FFFFFF',
+                            textAlign: 'center',
+                            fontFamily: "Inder",
+                            fontWeight: selectedMonth === index ? 'bold' : 'normal',
+                          }}>
+                            {month}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                  
+                  {/* Day Picker */}
+                  <View style={{ flex: 0.6, marginRight: 10 }}>
+                    <Text style={{ color: '#FFFFFF', marginBottom: 10, textAlign: 'center', fontFamily: "Inder" }}>Day</Text>
+                    <ScrollView style={{ maxHeight: 150, backgroundColor: '#2D5A66', borderRadius: 8 }}>
+                      {generateDays().map((day) => (
+                        <TouchableOpacity
+                          key={day}
+                          style={{
+                            paddingVertical: 12,
+                            paddingHorizontal: 10,
+                            backgroundColor: selectedDay === day ? '#4A9BB7' : 'transparent',
+                          }}
+                          onPress={() => setSelectedDay(day)}
+                        >
+                          <Text style={{
+                            color: '#FFFFFF',
+                            textAlign: 'center',
+                            fontFamily: "Inder",
+                            fontWeight: selectedDay === day ? 'bold' : 'normal',
+                          }}>
+                            {day}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                  
+                  {/* Year Picker */}
+                  <View style={{ flex: 0.8 }}>
+                    <Text style={{ color: '#FFFFFF', marginBottom: 10, textAlign: 'center', fontFamily: "Inder" }}>Year</Text>
+                    <ScrollView style={{ maxHeight: 150, backgroundColor: '#2D5A66', borderRadius: 8 }}>
+                      {generateYears().map((year) => (
+                        <TouchableOpacity
+                          key={year}
+                          style={{
+                            paddingVertical: 12,
+                            paddingHorizontal: 10,
+                            backgroundColor: selectedYear === year ? '#4A9BB7' : 'transparent',
+                          }}
+                          onPress={() => setSelectedYear(year)}
+                        >
+                          <Text style={{
+                            color: '#FFFFFF',
+                            textAlign: 'center',
+                            fontFamily: "Inder",
+                            fontWeight: selectedYear === year ? 'bold' : 'normal',
+                          }}>
+                            {year}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                </View>
+                
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#666',
+                      borderRadius: 8,
+                      paddingVertical: 12,
+                    }}
+                    onPress={() => setVisible(false)}
+                  >
+                    <Text style={{
+                      color: '#FFFFFF',
+                      textAlign: 'center',
+                      fontSize: 16,
+                      fontFamily: "Inder",
+                    }}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#4A9BB7',
+                      borderRadius: 8,
+                      paddingVertical: 12,
+                    }}
+                    onPress={handleConfirm}
+                  >
+                    <Text style={{
+                      color: '#FFFFFF',
+                      textAlign: 'center',
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                      fontFamily: "Inder",
+                    }}>
+                      Confirm
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        )}
+      </View>
+    );
+  };
   const NumberPicker = ({
     value,
     placeholder,
@@ -630,7 +896,16 @@ const MyHorsesScreen = () => {
                       </View>
                       <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Born:</Text>
-                        <Text style={styles.detailValue}>{horse.year}</Text>
+                        <Text style={styles.detailValue}>
+                          {horse.birthDate 
+                            ? new Date(horse.birthDate).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                            : horse.year
+                          }
+                        </Text>
                       </View>
                       <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Height:</Text>
@@ -745,15 +1020,13 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Birth Year</Text>
-                <NumberPicker
-                  value={editYear}
-                  placeholder="Select birth year"
-                  minValue={1980}
-                  maxValue={new Date().getFullYear()}
-                  onSelect={setEditYear}
-                  isVisible={yearPickerVisible}
-                  setVisible={setYearPickerVisible}
+                <Text style={styles.inputLabel}>Birth Date</Text>
+                <DatePicker
+                  value={editBirthDate}
+                  placeholder="Select birth date"
+                  onSelect={setEditBirthDate}
+                  isVisible={datePickerVisible}
+                  setVisible={setDatePickerVisible}
                 />
               </View>
 
@@ -817,6 +1090,7 @@ const data = [
     name: "Favory Falkó",
     gender: "Gelding",
     year: 2012,
+    birthDate: "2012-03-15T00:00:00.000Z",
     height: 168,
     breed: "Lipicai",
     img: require("../../assets/images/horses/falko.png"),
@@ -826,6 +1100,7 @@ const data = [
     name: "Yamina",
     gender: "Mare", //többnek kell lennie mint 3 karakter, különben szétkúrja a flexboxot
     year: 2018,
+    birthDate: "2018-06-22T00:00:00.000Z",
     height: 160,
     breed: "Magyar Sportló",
     img: require("../../assets/images/horses/yamina.png"),
@@ -835,6 +1110,7 @@ const data = [
     name: "Éva-Mária",
     gender: "Mare",
     year: 2000,
+    birthDate: "2000-09-08T00:00:00.000Z",
     height: 155,
     breed: "Shitlandi póni",
     img: require("../../assets/images/horses/pony.jpg"),
@@ -844,6 +1120,7 @@ const data = [
     name: "Árpád-Viktor",
     gender: "Stallion",
     year: 1999,
+    birthDate: "1999-12-01T00:00:00.000Z",
     height: 172,
     breed: "Magyar Sportló",
     img: require("../../assets/images/horses/random2.jpg"),
