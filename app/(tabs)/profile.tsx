@@ -77,6 +77,10 @@ const ProfileScreen = () => {
     categories: {} as { [key: string]: number }
   });
 
+  // Badge dialog state
+  const [selectedBadge, setSelectedBadge] = useState<UserBadgeWithDetails | null>(null);
+  const [badgeDialogVisible, setBadgeDialogVisible] = useState(false);
+
   // Function to determine membership status based on database value only
   const determineMembershipStatus = (databaseProStatus: boolean) => {
     // Logic: Pro member only if database explicitly says true
@@ -260,6 +264,16 @@ const ProfileScreen = () => {
 
   const handleEditPress = () => {
     setIsEditing(true);
+  };
+
+  const handleBadgePress = (badge: UserBadgeWithDetails) => {
+    setSelectedBadge(badge);
+    setBadgeDialogVisible(true);
+  };
+
+  const closeBadgeDialog = () => {
+    setBadgeDialogVisible(false);
+    setSelectedBadge(null);
   };
 
   const pickImage = async () => {
@@ -504,6 +518,56 @@ const ProfileScreen = () => {
     </Modal>
   );
 
+  const renderBadgeDialog = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={badgeDialogVisible}
+      onRequestClose={closeBadgeDialog}
+    >
+      <View style={styles.badgeDialogOverlay}>
+        <View style={styles.badgeDialogContainer}>
+          {selectedBadge && (
+            <>
+              <View style={styles.badgeDialogHeader}>
+                <View style={[
+                  styles.badgeDialogIcon,
+                  selectedBadge.badge.rarity === 'legendary' && styles.legendaryBadge,
+                  selectedBadge.badge.rarity === 'epic' && styles.epicBadge,
+                  selectedBadge.badge.rarity === 'rare' && styles.rareBadge,
+                  selectedBadge.badge.rarity === 'common' && styles.commonBadge
+                ]}>
+                  <Text style={styles.badgeDialogEmoji}>{selectedBadge.badge.icon_emoji}</Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.badgeDialogCloseButton}
+                  onPress={closeBadgeDialog}
+                >
+                  <Text style={styles.badgeDialogCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.badgeDialogTitle}>{selectedBadge.badge.name}</Text>
+              <Text style={styles.badgeDialogRarity}>
+                {selectedBadge.badge.rarity.toUpperCase()} • {selectedBadge.badge.category.toUpperCase()}
+              </Text>
+              
+              <Text style={styles.badgeDialogDescription}>
+                {selectedBadge.badge.description}
+              </Text>
+              
+              <View style={styles.badgeDialogFooter}>
+                <Text style={styles.badgeDialogEarnedText}>
+                  Earned on {new Date(selectedBadge.earned_at).toLocaleDateString()}
+                </Text>
+              </View>
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -651,7 +715,12 @@ const ProfileScreen = () => {
             ) : userBadges.length > 0 ? (
               <View style={styles.badgesGrid}>
                 {userBadges.map((userBadge, index) => (
-                  <View key={userBadge.id} style={styles.badgeItem}>
+                  <TouchableOpacity 
+                    key={userBadge.id} 
+                    style={styles.badgeItem}
+                    onPress={() => handleBadgePress(userBadge)}
+                    activeOpacity={0.7}
+                  >
                     <View style={[
                       styles.badgeIcon, 
                       userBadge.badge.rarity === 'legendary' && styles.legendaryBadge,
@@ -667,7 +736,7 @@ const ProfileScreen = () => {
                     <Text style={styles.badgeRarity}>
                       {userBadge.badge.rarity.toUpperCase()}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             ) : (
@@ -708,6 +777,9 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Badge Dialog */}
+      {renderBadgeDialog()}
     </View>
   );
 };
@@ -1313,6 +1385,92 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     fontFamily: "Inder",
+  },
+  badgeDialogOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  badgeDialogContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    width: "90%",
+    maxWidth: 400,
+    alignItems: "center",
+  },
+  badgeDialogHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    marginBottom: 15,
+    position: "relative",
+  },
+  badgeDialogIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeDialogEmoji: {
+    fontSize: 40,
+  },
+  badgeDialogCloseButton: {
+    position: "absolute",
+    top: -10,
+    right: -10,
+    backgroundColor: "#666",
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeDialogCloseText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  badgeDialogTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginBottom: 5,
+    color: "#335C67",
+  },
+  badgeDialogRarity: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginBottom: 15,
+    color: "#666",
+    fontWeight: "bold",
+  },
+  badgeDialogDescription: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    textAlign: "center",
+    lineHeight: 24,
+    color: "#333",
+    marginBottom: 20,
+  },
+  badgeDialogFooter: {
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    paddingTop: 15,
+    width: "100%",
+  },
+  badgeDialogEarnedText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    textAlign: "center",
+    color: "#666",
+    fontStyle: "italic",
   },
 });
 
