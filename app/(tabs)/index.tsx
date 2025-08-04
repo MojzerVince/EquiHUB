@@ -105,6 +105,7 @@ const MyHorsesScreen = () => {
   const [editGender, setEditGender] = useState("");
   const [editYear, setEditYear] = useState("");
   const [editHeight, setEditHeight] = useState("");
+  const [editWeight, setEditWeight] = useState("");
   const [editBreed, setEditBreed] = useState("");
   const [editBirthDate, setEditBirthDate] = useState<Date | null>(null);
 
@@ -138,6 +139,7 @@ const MyHorsesScreen = () => {
     setEditGender(horse.gender);
     setEditYear(horse.year.toString());
     setEditHeight(horse.height.toString());
+    setEditWeight(horse.weight ? horse.weight.toString() : "");
     setEditBreed(horse.breed);
     setEditImage(horse.img);
     
@@ -165,6 +167,7 @@ const MyHorsesScreen = () => {
     setEditGender("");
     setEditYear("");
     setEditHeight("");
+    setEditWeight("");
     setEditBreed("");
     setEditImage(null);
     setEditBirthDate(null);
@@ -181,9 +184,10 @@ const MyHorsesScreen = () => {
     const normalizedGender = editGender.normalize('NFC').trim();
     const normalizedBreed = editBreed.normalize('NFC').trim();
     const normalizedHeight = editHeight.trim();
+    const normalizedWeight = editWeight.trim();
 
     if (!normalizedName || !normalizedGender || !editBirthDate || !normalizedHeight || !normalizedBreed) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert("Error", "Please fill in all required fields");
       return;
     }
 
@@ -215,6 +219,16 @@ const MyHorsesScreen = () => {
       return;
     }
 
+    // Validate weight (optional field)
+    let weightNum = null;
+    if (normalizedWeight) {
+      weightNum = parseInt(normalizedWeight);
+      if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
+        Alert.alert("Error", "Please enter a valid weight (50-2000 kg)");
+        return;
+      }
+    }
+
     const updatedHorses = horses.map(horse => 
       horse.id === editingHorse.id 
         ? {
@@ -224,6 +238,7 @@ const MyHorsesScreen = () => {
             year: editBirthDate.getFullYear(),
             birthDate: editBirthDate.toISOString(),
             height: heightNum,
+            weight: weightNum || undefined,
             breed: normalizedBreed,
             img: editImage || horse.img
           }
@@ -911,6 +926,12 @@ const MyHorsesScreen = () => {
                         <Text style={styles.detailLabel}>Height:</Text>
                         <Text style={styles.detailValue}>{horse.height} cm</Text>
                       </View>
+                      {horse.weight && (
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Weight:</Text>
+                          <Text style={styles.detailValue}>{horse.weight} kg</Text>
+                        </View>
+                      )}
                       <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Breed:</Text>
                         <Text style={styles.detailValue}>{horse.breed}</Text>
@@ -1045,6 +1066,20 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Weight (kg) - Optional</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editWeight}
+                  onChangeText={setEditWeight}
+                  placeholder="Enter weight (50-2000 kg)"
+                  placeholderTextColor="#999"
+                  keyboardType="numeric"
+                  returnKeyType="next"
+                  maxLength={4}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Breed</Text>
                 <CustomDropdown
                   value={editBreed}
@@ -1092,6 +1127,7 @@ const data = [
     year: 2012,
     birthDate: "2012-03-15T00:00:00.000Z",
     height: 168,
+    weight: 520,
     breed: "Lipicai",
     img: require("../../assets/images/horses/falko.png"),
   },
@@ -1102,6 +1138,7 @@ const data = [
     year: 2018,
     birthDate: "2018-06-22T00:00:00.000Z",
     height: 160,
+    weight: 480,
     breed: "Magyar Sportló",
     img: require("../../assets/images/horses/yamina.png"),
   },
@@ -1122,6 +1159,7 @@ const data = [
     year: 1999,
     birthDate: "1999-12-01T00:00:00.000Z",
     height: 172,
+    weight: 580,
     breed: "Magyar Sportló",
     img: require("../../assets/images/horses/random2.jpg"),
   },
