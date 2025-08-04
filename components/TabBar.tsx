@@ -2,6 +2,7 @@ import { icons } from "@/components/icon";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { PlatformPressable } from "@react-navigation/elements";
 import { useLinkBuilder, useTheme } from "@react-navigation/native";
+import type { JSX } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -51,7 +52,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             onLongPress={onLongPress}
             style={styles.tabBarItem}
           >
-            {icons[route.name]({})}
+            {(icons as Record<string, (props: any) => JSX.Element>)[route.name]?.({})}
             <Text style={{ color: isFocused ? colors.primary : colors.text }}>
               {}
             </Text>

@@ -16,10 +16,11 @@ function AlertStuff(text: any, text2: any) {
 
 const MyHorsesScreen = () => {
   return (
-    <View>
-      <SafeAreaView style={styles.top_bar}>
-        <Text style={styles.header}>My horses</Text>
+    <View style={styles.container}>
+      <SafeAreaView>
+        <Text style={styles.header}>My Horses</Text>
       </SafeAreaView>
+
       <ScrollView style={styles.viewPort}>
         <Text style={styles.saved}>You have {data.length} saves</Text>
         <View style={styles.line}></View>
@@ -133,22 +134,22 @@ const data = [
 ];
 
 const styles = StyleSheet.create({
-  top_bar: {
+  container: {
+    flex: 1,
     backgroundColor: "#335C67",
-    height: "12%",
   },
   header: {
     fontSize: 30,
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",
-    marginTop: 2,
+    marginBottom: -30,
   },
   viewPort: {
     backgroundColor: "#FFFFFF",
-    height: "100%",
-    marginTop: -80,
-    borderRadius: 50,
+    flex: 1,
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
   },
   saved: {
     fontSize: 25,

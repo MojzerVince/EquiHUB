@@ -1,6 +1,6 @@
-import React from "react";
-import { Tabs } from "expo-router";
 import { TabBar } from "@/components/TabBar";
+import { Tabs } from "expo-router";
+import React from "react";
 
 const TabLayout = () => {
   return (
@@ -16,6 +16,13 @@ const TabLayout = () => {
       <Tabs.Screen name="index" options={{ title: "My Horses" }} />
       <Tabs.Screen name="market" options={{ title: "Marketplace" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+      <Tabs.Screen 
+        name="options" 
+        options={{ 
+          title: "Options",
+          href: null // Hide from tab bar but keep as route
+        }} 
+      />
     </Tabs>
   );
 };
