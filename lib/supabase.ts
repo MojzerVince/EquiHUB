@@ -28,3 +28,30 @@ export interface GalleryImage {
   image_url: string
   created_at: string
 }
+
+export interface Badge {
+  id: string
+  name: string
+  description: string
+  icon_emoji: string
+  icon_url?: string
+  category: string
+  rarity: string
+  points_value: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface UserBadge {
+  id: string
+  user_id: string
+  badge_id: string
+  earned_at: string
+  progress: number
+  metadata?: any
+}
+
+export interface UserBadgeWithDetails extends UserBadge {
+  badge: Badge
+}

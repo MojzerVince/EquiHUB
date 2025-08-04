@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLoadingState } from "../../hooks/useLoadingState";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
+import { UserBadgeWithDetails } from "../../lib/supabase";
 
 const ProfileScreen = () => {
   const router = useRouter();
@@ -64,6 +65,18 @@ const ProfileScreen = () => {
   // Refresh state
   const [refreshing, setRefreshing] = useState(false);
 
+  // Badges state
+  const [userBadges, setUserBadges] = useState<UserBadgeWithDetails[]>([]);
+  const [badgesLoading, setBadgesLoading] = useState(false);
+  const [badgeStats, setBadgeStats] = useState({
+    totalBadges: 0,
+    legendaryBadges: 0,
+    epicBadges: 0,
+    rareBadges: 0,
+    commonBadges: 0,
+    categories: {} as { [key: string]: number }
+  });
+
   // Function to determine membership status based on database value only
   const determineMembershipStatus = (databaseProStatus: boolean) => {
     // Logic: Pro member only if database explicitly says true
@@ -90,6 +103,51 @@ const ProfileScreen = () => {
     
     // Then load profile data
     await loadProfile();
+    
+    // Load user badges and check eligibility
+    await loadUserBadges();
+  };
+
+  const loadUserBadges = async () => {
+    setBadgesLoading(true);
+    try {
+      console.log('Loading badges for user:', USER_ID);
+      
+      // Load user badges
+      const badges = await ProfileAPIBase64.getUserBadges(USER_ID);
+      console.log('Loaded badges:', badges);
+      setUserBadges(badges);
+
+      // Load badge statistics
+      const stats = await ProfileAPIBase64.getUserBadgeStats(USER_ID);
+      console.log('Loaded badge stats:', stats);
+      setBadgeStats(stats);
+
+      // Check for new badge eligibility
+      const newBadges = await ProfileAPIBase64.checkBadgeEligibility(USER_ID);
+      if (newBadges.length > 0) {
+        console.log('New badges awarded:', newBadges);
+        
+        // Reload badges if new ones were awarded
+        const updatedBadges = await ProfileAPIBase64.getUserBadges(USER_ID);
+        setUserBadges(updatedBadges);
+        
+        const updatedStats = await ProfileAPIBase64.getUserBadgeStats(USER_ID);
+        setBadgeStats(updatedStats);
+
+        // Show alert for new badges
+        Alert.alert(
+          "New Badge Earned! 🎉",
+          `Congratulations! You earned: ${newBadges.join(', ')}`,
+          [{ text: "Awesome!", style: "default" }]
+        );
+      }
+    } catch (error) {
+      console.error('Error loading user badges:', error);
+      setError('Failed to load badges. Please try again.');
+    } finally {
+      setBadgesLoading(false);
+    }
   };
 
   const loadProfile = async () => {
@@ -188,6 +246,9 @@ const ProfileScreen = () => {
           setProfileImage(require("../../assets/images/horses/falko.png"));
           setSavedProfileImage(require("../../assets/images/horses/falko.png"));
         }
+        
+        // Reload badges after refreshing profile
+        await loadUserBadges();
       }
     } catch (err) {
       setError("Failed to refresh profile");
@@ -352,6 +413,9 @@ const ProfileScreen = () => {
 
       setIsEditing(false);
       setShowSuccessModal(true);
+      
+      // Check for new badges after successful save
+      await loadUserBadges();
     } catch (err) {
       setError("Failed to save profile");
       Alert.alert("Error", "Failed to save profile. Please try again.");
@@ -568,15 +632,53 @@ const ProfileScreen = () => {
             )}
           </View>
 
-          {/* Photo Gallery Section */}
-          <View style={styles.gallerySection}>
-            <Text style={styles.galleryTitle}>Photo Gallery</Text>
-            <View style={styles.galleryGrid}>
-              <View style={styles.galleryItem}></View>
-              <View style={styles.galleryItem}></View>
-              <View style={styles.galleryItem}></View>
-              <View style={styles.galleryItem}></View>
+          {/* Badges Section */}
+          <View style={styles.badgesSection}>
+            <View style={styles.badgesHeader}>
+              <Text style={styles.badgesTitle}>Achievements & Badges</Text>
+              <View style={styles.badgeStatsContainer}>
+                <Text style={styles.badgeStatsText}>
+                  {badgeStats.totalBadges} badges earned
+                </Text>
+              </View>
             </View>
+            
+            {badgesLoading ? (
+              <View style={styles.badgesLoadingContainer}>
+                <ActivityIndicator size="large" color="#335C67" />
+                <Text style={styles.badgesLoadingText}>Loading badges...</Text>
+              </View>
+            ) : userBadges.length > 0 ? (
+              <View style={styles.badgesGrid}>
+                {userBadges.map((userBadge, index) => (
+                  <View key={userBadge.id} style={styles.badgeItem}>
+                    <View style={[
+                      styles.badgeIcon, 
+                      userBadge.badge.rarity === 'legendary' && styles.legendaryBadge,
+                      userBadge.badge.rarity === 'epic' && styles.epicBadge,
+                      userBadge.badge.rarity === 'rare' && styles.rareBadge,
+                      userBadge.badge.rarity === 'common' && styles.commonBadge
+                    ]}>
+                      <Text style={styles.badgeEmoji}>{userBadge.badge.icon_emoji}</Text>
+                    </View>
+                    <Text style={styles.badgeLabel} numberOfLines={2}>
+                      {userBadge.badge.name}
+                    </Text>
+                    <Text style={styles.badgeRarity}>
+                      {userBadge.badge.rarity.toUpperCase()}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.noBadgesContainer}>
+                <Text style={styles.noBadgesEmoji}>🏆</Text>
+                <Text style={styles.noBadgesText}>No badges yet!</Text>
+                <Text style={styles.noBadgesSubtext}>
+                  Complete your profile and participate in activities to earn badges.
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -921,31 +1023,124 @@ const styles = StyleSheet.create({
   regularBadgeText: {
     color: "#1976D2",
   },
-  gallerySection: {
+  badgesSection: {
     marginBottom: 30,
   },
-  galleryTitle: {
+  badgesHeader: {
+    marginBottom: 20,
+  },
+  badgesTitle: {
     fontSize: 22,
     fontWeight: "bold",
     color: "#335C67",
-    marginBottom: 20,
     textAlign: "center",
     fontFamily: "Inder",
+    marginBottom: 8,
   },
-  galleryGrid: {
+  badgeStatsContainer: {
+    alignItems: "center",
+  },
+  badgeStatsText: {
+    fontSize: 14,
+    color: "#666",
+    fontFamily: "Inder",
+    textAlign: "center",
+  },
+  badgesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-around",
     backgroundColor: "#E9F5F0",
     borderRadius: 20,
     padding: 20,
+    gap: 15,
   },
-  galleryItem: {
-    width: 150,
-    height: 150,
-    backgroundColor: "#C5D9D1",
-    borderRadius: 15,
-    marginBottom: 10,
+  badgeItem: {
+    alignItems: "center",
+    width: 90,
+    marginBottom: 15,
+  },
+  badgeIcon: {
+    width: 60,
+    height: 60,
+    backgroundColor: "#335C67",
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+  },
+  legendaryBadge: {
+    backgroundColor: "#FFD700",
+    borderWidth: 2,
+    borderColor: "#FFA500",
+  },
+  epicBadge: {
+    backgroundColor: "#9C27B0",
+    borderWidth: 2,
+    borderColor: "#7B1FA2",
+  },
+  rareBadge: {
+    backgroundColor: "#2196F3",
+    borderWidth: 2,
+    borderColor: "#1976D2",
+  },
+  commonBadge: {
+    backgroundColor: "#4CAF50",
+    borderWidth: 2,
+    borderColor: "#388E3C",
+  },
+  badgeEmoji: {
+    fontSize: 24,
+    color: "#fff",
+  },
+  badgeLabel: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#335C67",
+    fontFamily: "Inder",
+    textAlign: "center",
+    lineHeight: 14,
+    marginBottom: 2,
+  },
+  badgeRarity: {
+    fontSize: 8,
+    color: "#666",
+    fontFamily: "Inder",
+    textAlign: "center",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  noBadgesContainer: {
+    backgroundColor: "#E9F5F0",
+    borderRadius: 20,
+    padding: 40,
+    alignItems: "center",
+  },
+  noBadgesEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  noBadgesText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#335C67",
+    fontFamily: "Inder",
+    marginBottom: 8,
+  },
+  noBadgesSubtext: {
+    fontSize: 14,
+    color: "#666",
+    fontFamily: "Inder",
+    textAlign: "center",
+    lineHeight: 20,
   },
   // Modal styles
   modalOverlay: {
@@ -1106,6 +1301,17 @@ const styles = StyleSheet.create({
   errorButtonText: {
     color: "#fff",
     fontSize: 12,
+    fontFamily: "Inder",
+  },
+  badgesLoadingContainer: {
+    paddingVertical: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgesLoadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: "#666",
     fontFamily: "Inder",
   },
 });

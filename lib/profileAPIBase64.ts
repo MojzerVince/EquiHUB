@@ -1,4 +1,4 @@
-import { Profile, supabase } from './supabase';
+import { Badge, Profile, supabase, UserBadgeWithDetails } from './supabase';
 
 export class ProfileAPIBase64 {
   // Get user profile
@@ -353,5 +353,248 @@ export class ProfileAPIBase64 {
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
+  }
+
+  // Badge-related functions
+
+  // Get all badges for a user
+  static async getUserBadges(userId: string): Promise<UserBadgeWithDetails[]> {
+    try {
+      console.log('Fetching badges for user:', userId);
+
+      const { data, error } = await supabase
+        .from('user_badges')
+        .select(`
+          *,
+          badge:badges!user_badges_badge_id_fkey(*)
+        `)
+        .eq('user_id', userId)
+        .order('earned_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching user badges:', error);
+        return [];
+      }
+
+      console.log('Retrieved user badges:', data);
+      return data || [];
+    } catch (error) {
+      console.error('Error in getUserBadges:', error);
+      return [];
+    }
+  }
+
+  // Award a badge to a user
+  static async awardBadge(userId: string, badgeId: string, metadata?: any): Promise<boolean> {
+    try {
+      console.log('Awarding badge to user:', { userId, badgeId, metadata });
+
+      // Check if user already has this badge
+      const { data: existingBadge } = await supabase
+        .from('user_badges')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('badge_id', badgeId)
+        .single();
+
+      if (existingBadge) {
+        console.log('User already has this badge');
+        return false;
+      }
+
+      const { data, error } = await supabase
+        .from('user_badges')
+        .insert([{
+          user_id: userId,
+          badge_id: badgeId,
+          earned_at: new Date().toISOString(),
+          progress: 100,
+          metadata: metadata || {}
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error awarding badge:', error);
+        return false;
+      }
+
+      console.log('Badge awarded successfully:', data);
+      return true;
+    } catch (error) {
+      console.error('Error in awardBadge:', error);
+      return false;
+    }
+  }
+
+  // Get all available badge definitions
+  static async getBadgeDefinitions(): Promise<Badge[]> {
+    try {
+      const { data, error } = await supabase
+        .from('badges')
+        .select('*')
+        .eq('is_active', true)
+        .order('category', { ascending: true })
+        .order('rarity', { ascending: false })
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching badge definitions:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getBadgeDefinitions:', error);
+      return [];
+    }
+  }
+
+  // Get user badge statistics
+  static async getUserBadgeStats(userId: string): Promise<{
+    totalBadges: number;
+    legendaryBadges: number;
+    epicBadges: number;
+    rareBadges: number;
+    commonBadges: number;
+    categories: { [key: string]: number };
+  }> {
+    try {
+      const userBadges = await this.getUserBadges(userId);
+      
+      const stats = {
+        totalBadges: userBadges.length,
+        legendaryBadges: 0,
+        epicBadges: 0,
+        rareBadges: 0,
+        commonBadges: 0,
+        categories: {} as { [key: string]: number }
+      };
+
+      userBadges.forEach(userBadge => {
+        const badge = userBadge.badge;
+
+        // Count by rarity
+        switch (badge.rarity) {
+          case 'legendary':
+            stats.legendaryBadges++;
+            break;
+          case 'epic':
+            stats.epicBadges++;
+            break;
+          case 'rare':
+            stats.rareBadges++;
+            break;
+          case 'common':
+            stats.commonBadges++;
+            break;
+        }
+
+        // Count by category
+        stats.categories[badge.category] = (stats.categories[badge.category] || 0) + 1;
+      });
+
+      return stats;
+    } catch (error) {
+      console.error('Error in getUserBadgeStats:', error);
+      return {
+        totalBadges: 0,
+        legendaryBadges: 0,
+        epicBadges: 0,
+        rareBadges: 0,
+        commonBadges: 0,
+        categories: {}
+      };
+    }
+  }
+
+  // Check badge eligibility and award automatic badges
+  static async checkBadgeEligibility(userId: string): Promise<string[]> {
+    try {
+      console.log('Checking badge eligibility for user:', userId);
+      
+      const awardedBadges: string[] = [];
+      const profile = await this.getProfile(userId);
+      
+      if (!profile) {
+        console.log('Profile not found for badge eligibility check');
+        return awardedBadges;
+      }
+
+      // Get available badges
+      const badges = await this.getBadgeDefinitions();
+      const userBadges = await this.getUserBadges(userId);
+      const userBadgeIds = userBadges.map(ub => ub.badge_id);
+
+      // Check eligibility for each badge
+      for (const badge of badges) {
+        // Skip if user already has this badge
+        if (userBadgeIds.includes(badge.id)) {
+          continue;
+        }
+
+        let shouldAward = false;
+        const metadata: any = {};
+
+        // Badge eligibility logic
+        switch (badge.name) {
+          case 'Newcomer':
+            // Award when profile is complete
+            shouldAward = !!(profile.name && profile.age && profile.description);
+            metadata.reason = 'Profile completed';
+            break;
+
+          case 'Veteran':
+            // Award for 5+ years experience
+            shouldAward = (profile.experience || 0) >= 5;
+            metadata.reason = `${profile.experience} years of experience`;
+            break;
+
+          case 'Trainer':
+            // Award for pro members
+            shouldAward = profile.is_pro_member === true;
+            metadata.reason = 'Pro member status achieved';
+            break;
+
+          // Add more badge logic here as needed
+        }
+
+        if (shouldAward) {
+          const success = await this.awardBadge(userId, badge.id, metadata);
+          if (success) {
+            awardedBadges.push(badge.name);
+            console.log('Auto-awarded badge:', badge.name);
+          }
+        }
+      }
+
+      console.log('Badge eligibility check complete. Awarded:', awardedBadges);
+      return awardedBadges;
+    } catch (error) {
+      console.error('Error in checkBadgeEligibility:', error);
+      return [];
+    }
+  }
+
+  // Remove a badge from a user (admin function)
+  static async removeBadge(userId: string, badgeId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('user_badges')
+        .delete()
+        .eq('user_id', userId)
+        .eq('badge_id', badgeId);
+
+      if (error) {
+        console.error('Error removing badge:', error);
+        return false;
+      }
+
+      console.log('Badge removed successfully');
+      return true;
+    } catch (error) {
+      console.error('Error in removeBadge:', error);
+      return false;
+    }
   }
 }
