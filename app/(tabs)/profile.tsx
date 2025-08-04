@@ -31,6 +31,8 @@ const ProfileScreen = () => {
   const [userDescription, setUserDescription] = useState(
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore"
   );
+  const [userExperience, setUserExperience] = useState("3");
+  const [isProMember, setIsProMember] = useState(true);
 
   // Store the saved values to revert to when canceling
   const [savedUserName, setSavedUserName] = useState("Vince Mojzer");
@@ -38,6 +40,8 @@ const ProfileScreen = () => {
   const [savedUserDescription, setSavedUserDescription] = useState(
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore"
   );
+  const [savedUserExperience, setSavedUserExperience] = useState("3");
+  const [savedIsProMember, setSavedIsProMember] = useState(true);
 
   // State for custom success modal
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -79,6 +83,8 @@ const ProfileScreen = () => {
           name: userName,
           age: parseInt(userAge),
           description: userDescription,
+          experience: parseInt(userExperience),
+          is_pro_member: isProMember,
         });
 
         if (!profile) {
@@ -90,9 +96,13 @@ const ProfileScreen = () => {
       setUserName(profile.name);
       setUserAge(profile.age.toString());
       setUserDescription(profile.description);
+      setUserExperience(profile.experience?.toString() || "0");
+      setIsProMember(profile.is_pro_member || false);
       setSavedUserName(profile.name);
       setSavedUserAge(profile.age.toString());
       setSavedUserDescription(profile.description);
+      setSavedUserExperience(profile.experience?.toString() || "0");
+      setSavedIsProMember(profile.is_pro_member || false);
 
       if (profile.profile_image_url) {
         setProfileImage({ uri: profile.profile_image_url });
@@ -124,9 +134,13 @@ const ProfileScreen = () => {
         setUserName(profile.name);
         setUserAge(profile.age.toString());
         setUserDescription(profile.description);
+        setUserExperience(profile.experience?.toString() || "0");
+        setIsProMember(profile.is_pro_member || false);
         setSavedUserName(profile.name);
         setSavedUserAge(profile.age.toString());
         setSavedUserDescription(profile.description);
+        setSavedUserExperience(profile.experience?.toString() || "0");
+        setSavedIsProMember(profile.is_pro_member || false);
 
         if (profile.profile_image_url) {
           setProfileImage({ uri: profile.profile_image_url });
@@ -215,6 +229,10 @@ const ProfileScreen = () => {
       Alert.alert("Error", "Please enter a valid age");
       return;
     }
+    if (userExperience.trim() === "" || isNaN(Number(userExperience))) {
+      Alert.alert("Error", "Please enter a valid experience number");
+      return;
+    }
 
     setLoading(true);
     clearError();
@@ -264,6 +282,8 @@ const ProfileScreen = () => {
         name: userName,
         age: parseInt(userAge),
         description: userDescription,
+        experience: parseInt(userExperience),
+        is_pro_member: isProMember,
       };
 
       // Include image URL: new uploaded URL or existing URL
@@ -294,6 +314,8 @@ const ProfileScreen = () => {
       setSavedUserName(userName);
       setSavedUserAge(userAge);
       setSavedUserDescription(userDescription);
+      setSavedUserExperience(userExperience);
+      setSavedIsProMember(isProMember);
 
       // Update saved image: use new uploaded URL or keep current image
       if (profileImageUrl) {
@@ -321,6 +343,8 @@ const ProfileScreen = () => {
     setUserName(savedUserName);
     setUserAge(savedUserAge);
     setUserDescription(savedUserDescription);
+    setUserExperience(savedUserExperience);
+    setIsProMember(savedIsProMember);
     setProfileImage(savedProfileImage);
     setIsEditing(false);
   };
@@ -471,6 +495,17 @@ const ProfileScreen = () => {
                 <Text style={styles.userName}>{userName}</Text>
                 <Text style={styles.userAge}>{userAge}</Text>
                 <Text style={styles.userDescription}>{userDescription}</Text>
+                <View style={styles.experienceContainer}>
+                  <Text style={styles.experienceLabel}>Experience</Text>
+                  <Text style={styles.experienceValue}>{userExperience} years</Text>
+                </View>
+                <View style={styles.badgeContainer}>
+                  <View style={[styles.badge, isProMember ? styles.proBadge : styles.regularBadge]}>
+                    <Text style={[styles.badgeText, isProMember ? styles.proBadgeText : styles.regularBadgeText]}>
+                      {isProMember ? "PRO MEMBER" : "MEMBER"}
+                    </Text>
+                  </View>
+                </View>
               </>
             ) : (
               <>
@@ -498,6 +533,23 @@ const ProfileScreen = () => {
                   multiline
                   numberOfLines={4}
                 />
+                <TextInput
+                  style={styles.editInput}
+                  value={userExperience}
+                  onChangeText={setUserExperience}
+                  placeholder="Years of experience"
+                  placeholderTextColor="#999"
+                  keyboardType="numeric"
+                />
+                <View style={styles.proMemberToggle}>
+                  <Text style={styles.proMemberLabel}>Pro Member</Text>
+                  <TouchableOpacity
+                    style={[styles.toggleButton, isProMember ? styles.toggleActive : styles.toggleInactive]}
+                    onPress={() => setIsProMember(!isProMember)}
+                  >
+                    <View style={[styles.toggleThumb, isProMember ? styles.thumbActive : styles.thumbInactive]} />
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </View>
@@ -805,6 +857,55 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     paddingHorizontal: 10,
     fontFamily: "Inder",
+    marginBottom: 15,
+  },
+  experienceContainer: {
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  experienceLabel: {
+    fontSize: 12,
+    color: "#666",
+    fontFamily: "Inder",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  experienceValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#335C67",
+    fontFamily: "Inder",
+    marginTop: 2,
+  },
+  badgeContainer: {
+    alignItems: "center",
+    marginTop: 5,
+  },
+  badge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+    borderWidth: 1,
+  },
+  proBadge: {
+    backgroundColor: "#FFD700",
+    borderColor: "#FFA500",
+  },
+  regularBadge: {
+    backgroundColor: "#E9F5F0",
+    borderColor: "#335C67",
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    letterSpacing: 0.5,
+  },
+  proBadgeText: {
+    color: "#B8860B",
+  },
+  regularBadgeText: {
+    color: "#335C67",
   },
   gallerySection: {
     marginBottom: 30,
@@ -992,6 +1093,57 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 12,
     fontFamily: "Inder",
+  },
+  // Pro Member Toggle styles
+  proMemberToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#335C67",
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    marginBottom: 15,
+    minWidth: 200,
+  },
+  proMemberLabel: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    color: "#335C67",
+    fontWeight: "500",
+  },
+  toggleButton: {
+    width: 50,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    position: "relative",
+  },
+  toggleActive: {
+    backgroundColor: "#4CAF50",
+  },
+  toggleInactive: {
+    backgroundColor: "#ccc",
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    position: "absolute",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
+  thumbActive: {
+    right: 2,
+  },
+  thumbInactive: {
+    left: 2,
   },
 });
 

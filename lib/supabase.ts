@@ -7,7 +7,7 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Export URL and key for direct API calls
-export { supabaseUrl, supabaseAnonKey }
+export { supabaseAnonKey, supabaseUrl }
 
 // Database Types
 export interface Profile {
@@ -15,6 +15,8 @@ export interface Profile {
   name: string
   age: number
   description: string
+  experience?: number
+  is_pro_member?: boolean
   profile_image_url?: string
   created_at: string
   updated_at: string
