@@ -26,6 +26,7 @@ const RegisterScreen = () => {
     name: "",
     age: 18,
     description: "",
+    riding_experience: 0,
   });
   
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -76,6 +77,12 @@ const RegisterScreen = () => {
     // Age validation
     if (!formData.age || formData.age < 13 || formData.age > 120) {
       newErrors.age = "Age must be between 13 and 120";
+    }
+
+    // Riding experience validation
+    if (formData.riding_experience !== undefined && 
+        (formData.riding_experience < 0 || formData.riding_experience > 80)) {
+      newErrors.riding_experience = "Riding experience must be between 0 and 80 years";
     }
 
     setErrors(newErrors);
@@ -219,6 +226,24 @@ const RegisterScreen = () => {
               {errors.age ? <Text style={styles.errorText}>{errors.age}</Text> : null}
             </View>
 
+            {/* Riding Experience Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Riding Experience (Years)</Text>
+              <TextInput
+                style={[styles.textInput, errors.riding_experience ? styles.inputError : null]}
+                value={formData.riding_experience?.toString() || "0"}
+                onChangeText={(text) => {
+                  const experience = parseInt(text) || 0;
+                  handleInputChange('riding_experience', experience);
+                }}
+                placeholder="Years of riding experience"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+                maxLength={2}
+              />
+              {errors.riding_experience ? <Text style={styles.errorText}>{errors.riding_experience}</Text> : null}
+            </View>
+
             {/* Email Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email Address</Text>
@@ -340,18 +365,17 @@ const RegisterScreen = () => {
               )}
             </TouchableOpacity>
 
-            <View style={styles.loginLinkContainer}>
+            <TouchableOpacity 
+              style={styles.loginLinkContainer}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.replace("/login");
+              }}
+              activeOpacity={0.7}
+            >
               <Text style={styles.loginLinkText}>Already have an account? </Text>
-              <TouchableOpacity 
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.replace("/login");
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.loginLink}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
+              <Text style={styles.loginLink}>Sign In</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Terms */}
@@ -535,17 +559,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
   },
   loginLinkText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: "Inder",
-    color: "#666",
+    color: "#fff",
   },
   loginLink: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: "Inder",
     fontWeight: "600",
-    color: "#335C67",
+    color: "#fff",
   },
   termsContainer: {
     paddingHorizontal: 30,
@@ -556,15 +583,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   termsText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: "Inder",
-    color: "#666",
-    lineHeight: 20,
+    color: "#fff",
+    lineHeight: 22,
   },
   termsLink: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: "Inder",
-    color: "#335C67",
+    color: "#fff",
     fontWeight: "600",
     textDecorationLine: 'underline',
   },

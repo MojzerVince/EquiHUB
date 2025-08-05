@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -210,33 +211,19 @@ const LoginScreen = () => {
               )}
             </TouchableOpacity>
 
-            <View style={styles.registerLinkContainer}>
-              <Text style={styles.registerLinkText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.replace("/register")}>
-                <Text style={styles.registerLink}>Create Account</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Demo Account Info */}
-          <View style={styles.demoContainer}>
-            <Text style={styles.demoTitle}>Demo Account</Text>
-            <Text style={styles.demoText}>
-              Email: demo@equihub.com{"\n"}
-              Password: demo123
-            </Text>
-            <TouchableOpacity
-              style={styles.demoButton}
+            <TouchableOpacity 
+              style={styles.registerLinkContainer}
               onPress={() => {
-                setFormData({
-                  email: "demo@equihub.com",
-                  password: "demo123"
-                });
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.replace("/register");
               }}
+              activeOpacity={0.7}
             >
-              <Text style={styles.demoButtonText}>Use Demo Account</Text>
+              <Text style={styles.registerLinkText}>Don't have an account? </Text>
+              <Text style={styles.registerLink}>Create Account</Text>
             </TouchableOpacity>
           </View>
+
         </ScrollView>
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -402,51 +389,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
   },
   registerLinkText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: "Inder",
-    color: "#666",
+    color: "#fff",
   },
   registerLink: {
-    fontSize: 16,
-    fontFamily: "Inder",
-    fontWeight: "600",
-    color: "#335C67",
-  },
-  demoContainer: {
-    paddingHorizontal: 30,
-    paddingTop: 30,
-    alignItems: "center",
-  },
-  demoTitle: {
     fontSize: 18,
     fontFamily: "Inder",
     fontWeight: "600",
-    color: "#335C67",
-    marginBottom: 10,
-  },
-  demoText: {
-    fontSize: 14,
-    fontFamily: "Inder",
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 15,
-    lineHeight: 20,
-  },
-  demoButton: {
-    backgroundColor: "#E9F5F0",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    borderColor: "#335C67",
-  },
-  demoButtonText: {
-    color: "#335C67",
-    fontSize: 14,
-    fontFamily: "Inder",
-    fontWeight: "600",
+    color: "#fff",
   },
 });
 

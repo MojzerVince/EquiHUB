@@ -14,8 +14,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../contexts/AuthContext";
 import { HorseAPI } from "../../lib/horseAPI";
-import { Horse, supabase } from "../../lib/supabase";
+import { Horse } from "../../lib/supabase";
 
 // Dropdown options
 const genderOptions = [
@@ -94,10 +95,10 @@ const breedOptions = [
 ];
 
 const MyHorsesScreen = () => {
+  const { user, loading: authLoading } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [horses, setHorses] = useState<Horse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -144,41 +145,18 @@ const MyHorsesScreen = () => {
   const [editImage, setEditImage] = useState<any>(null);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
 
-  // Load user and horses on component mount
+  // Load horses when user is authenticated
   useEffect(() => {
-    loadUserAndHorses();
-  }, []);
-
-  const loadUserAndHorses = async () => {
-    try {
-      console.log('Loading user and horses...');
-      
-      // Check if user is authenticated
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        Alert.alert('Authentication Error', 'Please log in again');
-        setLoading(false);
-        return;
-      }
-
-      if (!session || !session.user) {
-        console.log('No active session found');
-        Alert.alert('Not Authenticated', 'Please log in to view your horses');
-        setLoading(false);
-        return;
-      }
-
-      console.log('User authenticated:', session.user.id);
-      setCurrentUserId(session.user.id);
-      await loadHorses(session.user.id);
-    } catch (error) {
-      console.error('Error loading user and horses:', error);
-      Alert.alert('Error', 'Failed to load user data');
+    console.log('useEffect triggered:', { authLoading, userId: user?.id });
+    if (!authLoading && user?.id) {
+      console.log('Loading horses for authenticated user');
+      loadHorses(user.id);
+    } else if (!authLoading && !user?.id) {
+      // User is not authenticated, set loading to false
+      console.log('User not authenticated, stopping loading');
       setLoading(false);
     }
-  };
+  }, [user, authLoading]);
 
   const loadHorses = async (userId: string) => {
     try {
@@ -196,13 +174,9 @@ const MyHorsesScreen = () => {
   };
 
   const onRefresh = async () => {
-    if (currentUserId) {
+    if (user?.id) {
       setRefreshing(true);
-      await loadHorses(currentUserId);
-      setRefreshing(false);
-    } else {
-      // Try to reload user if no current user
-      await loadUserAndHorses();
+      await loadHorses(user.id);
       setRefreshing(false);
     }
   };
@@ -284,7 +258,7 @@ const MyHorsesScreen = () => {
   };
 
   const saveHorseEdit = async () => {
-    if (!currentUserId || !editingHorse) {
+    if (!user?.id || !editingHorse) {
       Alert.alert("Error", "User not authenticated");
       return;
     }
@@ -347,10 +321,10 @@ const MyHorsesScreen = () => {
         image: editImage && editImage.uri !== editingHorse.image_url ? editImage : undefined,
       };
 
-      const updatedHorse = await HorseAPI.updateHorse(editingHorse.id, currentUserId, updates);
+      const updatedHorse = await HorseAPI.updateHorse(editingHorse.id, user?.id, updates);
 
       if (updatedHorse) {
-        await loadHorses(currentUserId);
+        await loadHorses(user?.id);
         closeEditModal();
         setSuccessMessage(`${normalizedName} has been updated!`);
         setShowSuccessModal(true);
@@ -366,12 +340,11 @@ const MyHorsesScreen = () => {
   };
 
   const saveHorseAdd = async () => {
-    console.log('Attempting to save horse, currentUserId:', currentUserId);
+    console.log('Attempting to save horse, user?.id:', user?.id);
     
-    if (!currentUserId) {
+    if (!user?.id) {
       console.error('No current user ID');
       Alert.alert("Authentication Error", "Please log in again to add horses");
-      await loadUserAndHorses(); // Try to reload user
       return;
     }
 
@@ -433,11 +406,11 @@ const MyHorsesScreen = () => {
         image: addImage,
       };
 
-      console.log('Calling HorseAPI.addHorse with:', { userId: currentUserId, horseData });
-      const newHorse = await HorseAPI.addHorse(currentUserId, horseData);
+      console.log('Calling HorseAPI.addHorse with:', { userId: user?.id, horseData });
+      const newHorse = await HorseAPI.addHorse(user?.id, horseData);
 
       if (newHorse) {
-        await loadHorses(currentUserId);
+        await loadHorses(user?.id);
         closeAddModal();
         setSuccessMessage(`${normalizedName} has been added!`);
         setShowSuccessModal(true);
@@ -462,17 +435,17 @@ const MyHorsesScreen = () => {
           text: "Delete", 
           style: "destructive",
           onPress: async () => {
-            if (!currentUserId) {
+            if (!user?.id) {
               Alert.alert("Error", "User not authenticated");
               return;
             }
 
             try {
               setLoading(true);
-              const success = await HorseAPI.deleteHorse(horse.id, currentUserId);
+              const success = await HorseAPI.deleteHorse(horse.id, user?.id);
               
               if (success) {
-                await loadHorses(currentUserId);
+                await loadHorses(user?.id);
                 setSuccessMessage(`${horse.name} has been deleted`);
                 setShowSuccessModal(true);
               } else {
@@ -1164,7 +1137,7 @@ const MyHorsesScreen = () => {
   };
 
   // Show authentication message if no user
-  if (!currentUserId && !loading) {
+  if (!authLoading && !user?.id) {
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
@@ -1181,7 +1154,7 @@ const MyHorsesScreen = () => {
             </Text>
             <TouchableOpacity
               style={styles.addHorseButton}
-              onPress={loadUserAndHorses}
+              onPress={() => user?.id && loadHorses(user.id)}
             >
               <Text style={styles.addHorseButtonText}>Try Again</Text>
             </TouchableOpacity>
@@ -1191,7 +1164,7 @@ const MyHorsesScreen = () => {
     );
   }
 
-  if (loading && horses.length === 0) {
+  if (authLoading || (loading && horses.length === 0)) {
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
@@ -1202,7 +1175,9 @@ const MyHorsesScreen = () => {
         <View style={styles.viewPort}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#335C67" />
-            <Text style={styles.loadingText}>Loading horses...</Text>
+            <Text style={styles.loadingText}>
+              {authLoading ? "Loading..." : "Loading horses..."}
+            </Text>
           </View>
         </View>
       </View>

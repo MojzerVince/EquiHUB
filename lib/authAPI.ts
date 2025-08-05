@@ -13,6 +13,7 @@ export interface RegisterData {
   name: string;
   age: number;
   description?: string;
+  riding_experience?: number;
 }
 
 export interface LoginData {
@@ -39,6 +40,10 @@ export class AuthAPI {
         return { user: null, error: 'Age must be between 13 and 120' };
       }
 
+      if (data.riding_experience !== undefined && (data.riding_experience < 0 || data.riding_experience > 80)) {
+        return { user: null, error: 'Riding experience must be between 0 and 80 years' };
+      }
+
       // Email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(data.email)) {
@@ -59,7 +64,8 @@ export class AuthAPI {
           data: {
             name: data.name.trim(),
             age: data.age,
-            description: data.description?.trim() || 'Equestrian enthusiast'
+            description: data.description?.trim() || 'Equestrian enthusiast',
+            riding_experience: data.riding_experience || 0
           }
         }
       });
