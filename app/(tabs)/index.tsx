@@ -1,6 +1,7 @@
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -13,10 +14,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-function AlertStuff(text: any, text2: any) {
-  Alert.alert(text, text2);
-}
+import { HorseAPI } from "../../lib/horseAPI";
+import { Horse, supabase } from "../../lib/supabase";
 
 // Dropdown options
 const genderOptions = [
@@ -96,7 +95,9 @@ const breedOptions = [
 
 const MyHorsesScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
-  const [horses, setHorses] = useState(data);
+  const [horses, setHorses] = useState<Horse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -109,13 +110,31 @@ const MyHorsesScreen = () => {
   const [editBreed, setEditBreed] = useState("");
   const [editBirthDate, setEditBirthDate] = useState<Date | null>(null);
 
+  // Add horse modal state
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addGender, setAddGender] = useState("");
+  const [addHeight, setAddHeight] = useState("");
+  const [addWeight, setAddWeight] = useState("");
+  const [addBreed, setAddBreed] = useState("");
+  const [addBirthDate, setAddBirthDate] = useState<Date | null>(null);
+  const [addImage, setAddImage] = useState<any>(null);
+
   // Dropdown state
   const [genderDropdownVisible, setGenderDropdownVisible] = useState(false);
   const [breedDropdownVisible, setBreedDropdownVisible] = useState(false);
   
+  // Add modal dropdown state
+  const [addGenderDropdownVisible, setAddGenderDropdownVisible] = useState(false);
+  const [addBreedDropdownVisible, setAddBreedDropdownVisible] = useState(false);
+  
   // Number picker state
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [heightPickerVisible, setHeightPickerVisible] = useState(false);
+  
+  // Add modal picker state
+  const [addDatePickerVisible, setAddDatePickerVisible] = useState(false);
+  const [addHeightPickerVisible, setAddHeightPickerVisible] = useState(false);
   
   // Success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -125,33 +144,87 @@ const MyHorsesScreen = () => {
   const [editImage, setEditImage] = useState<any>(null);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    // Simulate data refresh
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+  // Load user and horses on component mount
+  useEffect(() => {
+    loadUserAndHorses();
+  }, []);
+
+  const loadUserAndHorses = async () => {
+    try {
+      console.log('Loading user and horses...');
+      
+      // Check if user is authenticated
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        Alert.alert('Authentication Error', 'Please log in again');
+        setLoading(false);
+        return;
+      }
+
+      if (!session || !session.user) {
+        console.log('No active session found');
+        Alert.alert('Not Authenticated', 'Please log in to view your horses');
+        setLoading(false);
+        return;
+      }
+
+      console.log('User authenticated:', session.user.id);
+      setCurrentUserId(session.user.id);
+      await loadHorses(session.user.id);
+    } catch (error) {
+      console.error('Error loading user and horses:', error);
+      Alert.alert('Error', 'Failed to load user data');
+      setLoading(false);
+    }
   };
 
-  const openEditModal = (horse: any) => {
+  const loadHorses = async (userId: string) => {
+    try {
+      console.log('Loading horses for user:', userId);
+      setLoading(true);
+      const horsesData = await HorseAPI.getHorses(userId);
+      console.log('Loaded horses:', horsesData);
+      setHorses(horsesData);
+    } catch (error) {
+      console.error('Error loading horses:', error);
+      Alert.alert('Error', 'Failed to load horses');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    if (currentUserId) {
+      setRefreshing(true);
+      await loadHorses(currentUserId);
+      setRefreshing(false);
+    } else {
+      // Try to reload user if no current user
+      await loadUserAndHorses();
+      setRefreshing(false);
+    }
+  };
+
+  const openEditModal = (horse: Horse) => {
     setEditingHorse(horse);
     setEditName(horse.name);
     setEditGender(horse.gender);
-    setEditYear(horse.year.toString());
     setEditHeight(horse.height.toString());
     setEditWeight(horse.weight ? horse.weight.toString() : "");
     setEditBreed(horse.breed);
-    setEditImage(horse.img);
+    // Fix image source - use image_url from database, not img property
+    setEditImage(horse.image_url ? { uri: horse.image_url } : null);
     
-    // Set birth date from year (assume January 1st if only year is available)
-    if (horse.birthDate) {
-      setEditBirthDate(new Date(horse.birthDate));
-    } else if (horse.year) {
-      setEditBirthDate(new Date(horse.year, 0, 1)); // January 1st of the year
+    // Set birth date
+    if (horse.birth_date) {
+      setEditBirthDate(new Date(horse.birth_date));
     } else {
       setEditBirthDate(null);
     }
     
+    // Reset dropdown states
     setGenderDropdownVisible(false);
     setBreedDropdownVisible(false);
     setDatePickerVisible(false);
@@ -178,8 +251,45 @@ const MyHorsesScreen = () => {
     setShowImagePickerModal(false);
   };
 
-  const saveHorseEdit = () => {
-    // Normalize and trim input values to handle UTF-8 properly
+  const openAddModal = () => {
+    setAddName("");
+    setAddGender("");
+    setAddHeight("");
+    setAddWeight("");
+    setAddBreed("");
+    setAddBirthDate(null);
+    setAddImage(null);
+    setAddGenderDropdownVisible(false);
+    setAddBreedDropdownVisible(false);
+    setAddDatePickerVisible(false);
+    setAddHeightPickerVisible(false);
+    setShowImagePickerModal(false);
+    setAddModalVisible(true);
+  };
+
+  const closeAddModal = () => {
+    setAddModalVisible(false);
+    setAddName("");
+    setAddGender("");
+    setAddHeight("");
+    setAddWeight("");
+    setAddBreed("");
+    setAddBirthDate(null);
+    setAddImage(null);
+    setAddGenderDropdownVisible(false);
+    setAddBreedDropdownVisible(false);
+    setAddDatePickerVisible(false);
+    setAddHeightPickerVisible(false);
+    setShowImagePickerModal(false);
+  };
+
+  const saveHorseEdit = async () => {
+    if (!currentUserId || !editingHorse) {
+      Alert.alert("Error", "User not authenticated");
+      return;
+    }
+
+    // Validation logic (same as before)
     const normalizedName = editName.normalize('NFC').trim();
     const normalizedGender = editGender.normalize('NFC').trim();
     const normalizedBreed = editBreed.normalize('NFC').trim();
@@ -191,20 +301,17 @@ const MyHorsesScreen = () => {
       return;
     }
 
-    // Validate name contains only valid characters (letters, spaces, hyphens, apostrophes, and UTF-8 characters)
     const namePattern = /^[\p{L}\p{M}\s\-'\.]+$/u;
     if (!namePattern.test(normalizedName)) {
       Alert.alert("Error", "Horse name contains invalid characters");
       return;
     }
 
-    // Validate name length
     if (normalizedName.length < 2 || normalizedName.length > 50) {
       Alert.alert("Error", "Horse name must be between 2 and 50 characters");
       return;
     }
 
-    // Validate birth date
     const currentDate = new Date();
     const minDate = new Date(1980, 0, 1);
     if (editBirthDate < minDate || editBirthDate > currentDate) {
@@ -213,14 +320,12 @@ const MyHorsesScreen = () => {
     }
 
     const heightNum = parseInt(normalizedHeight);
-
     if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
       Alert.alert("Error", "Please enter a valid height (50-250 cm)");
       return;
     }
 
-    // Validate weight (optional field)
-    let weightNum = null;
+    let weightNum = undefined;
     if (normalizedWeight) {
       weightNum = parseInt(normalizedWeight);
       if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
@@ -229,26 +334,160 @@ const MyHorsesScreen = () => {
       }
     }
 
-    const updatedHorses = horses.map(horse => 
-      horse.id === editingHorse.id 
-        ? {
-            ...horse,
-            name: normalizedName,
-            gender: normalizedGender,
-            year: editBirthDate.getFullYear(),
-            birthDate: editBirthDate.toISOString(),
-            height: heightNum,
-            weight: weightNum || undefined,
-            breed: normalizedBreed,
-            img: editImage || horse.img
-          }
-        : horse
-    );
+    try {
+      setLoading(true);
 
-    setHorses(updatedHorses);
-    closeEditModal();
-    setSuccessMessage(`${normalizedName} has been updated!`);
-    setShowSuccessModal(true);
+      const updates = {
+        name: normalizedName,
+        gender: normalizedGender,
+        birth_date: editBirthDate.toISOString(),
+        height: heightNum,
+        weight: weightNum,
+        breed: normalizedBreed,
+        image: editImage && editImage.uri !== editingHorse.image_url ? editImage : undefined,
+      };
+
+      const updatedHorse = await HorseAPI.updateHorse(editingHorse.id, currentUserId, updates);
+
+      if (updatedHorse) {
+        await loadHorses(currentUserId);
+        closeEditModal();
+        setSuccessMessage(`${normalizedName} has been updated!`);
+        setShowSuccessModal(true);
+      } else {
+        Alert.alert("Error", "Failed to update horse");
+      }
+    } catch (error) {
+      console.error('Error updating horse:', error);
+      Alert.alert("Error", "Failed to update horse");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveHorseAdd = async () => {
+    console.log('Attempting to save horse, currentUserId:', currentUserId);
+    
+    if (!currentUserId) {
+      console.error('No current user ID');
+      Alert.alert("Authentication Error", "Please log in again to add horses");
+      await loadUserAndHorses(); // Try to reload user
+      return;
+    }
+
+    // Validation logic (same as before)
+    const normalizedName = addName.normalize('NFC').trim();
+    const normalizedGender = addGender.normalize('NFC').trim();
+    const normalizedBreed = addBreed.normalize('NFC').trim();
+    const normalizedHeight = addHeight.trim();
+    const normalizedWeight = addWeight.trim();
+
+    if (!normalizedName || !normalizedGender || !addBirthDate || !normalizedHeight || !normalizedBreed) {
+      Alert.alert("Error", "Please fill in all required fields");
+      return;
+    }
+
+    const namePattern = /^[\p{L}\p{M}\s\-'\.]+$/u;
+    if (!namePattern.test(normalizedName)) {
+      Alert.alert("Error", "Horse name contains invalid characters");
+      return;
+    }
+
+    if (normalizedName.length < 2 || normalizedName.length > 50) {
+      Alert.alert("Error", "Horse name must be between 2 and 50 characters");
+      return;
+    }
+
+    const currentDate = new Date();
+    const minDate = new Date(1980, 0, 1);
+    if (addBirthDate < minDate || addBirthDate > currentDate) {
+      Alert.alert("Error", "Please enter a valid birth date");
+      return;
+    }
+
+    const heightNum = parseInt(normalizedHeight);
+    if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
+      Alert.alert("Error", "Please enter a valid height (50-250 cm)");
+      return;
+    }
+
+    let weightNum = undefined;
+    if (normalizedWeight) {
+      weightNum = parseInt(normalizedWeight);
+      if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
+        Alert.alert("Error", "Please enter a valid weight (50-2000 kg)");
+        return;
+      }
+    }
+
+    try {
+      setLoading(true);
+
+      const horseData = {
+        name: normalizedName,
+        gender: normalizedGender,
+        birth_date: addBirthDate.toISOString(),
+        height: heightNum,
+        weight: weightNum,
+        breed: normalizedBreed,
+        image: addImage,
+      };
+
+      console.log('Calling HorseAPI.addHorse with:', { userId: currentUserId, horseData });
+      const newHorse = await HorseAPI.addHorse(currentUserId, horseData);
+
+      if (newHorse) {
+        await loadHorses(currentUserId);
+        closeAddModal();
+        setSuccessMessage(`${normalizedName} has been added!`);
+        setShowSuccessModal(true);
+      } else {
+        Alert.alert("Error", "Failed to add horse. Please try again.");
+      }
+    } catch (error) {
+      console.error('Error adding horse:', error);
+      Alert.alert("Error", "Failed to add horse. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteHorse = (horse: Horse) => {
+    Alert.alert(
+      "Delete Horse",
+      `Are you sure you want to delete ${horse.name}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            if (!currentUserId) {
+              Alert.alert("Error", "User not authenticated");
+              return;
+            }
+
+            try {
+              setLoading(true);
+              const success = await HorseAPI.deleteHorse(horse.id, currentUserId);
+              
+              if (success) {
+                await loadHorses(currentUserId);
+                setSuccessMessage(`${horse.name} has been deleted`);
+                setShowSuccessModal(true);
+              } else {
+                Alert.alert("Error", "Failed to delete horse");
+              }
+            } catch (error) {
+              console.error('Error deleting horse:', error);
+              Alert.alert("Error", "Failed to delete horse");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   // Image picker functions
@@ -268,7 +507,12 @@ const MyHorsesScreen = () => {
     });
 
     if (!result.canceled && result.assets[0]) {
-      setEditImage({ uri: result.assets[0].uri });
+      const newImage = { uri: result.assets[0].uri };
+      if (editModalVisible) {
+        setEditImage(newImage);
+      } else if (addModalVisible) {
+        setAddImage(newImage);
+      }
       setShowImagePickerModal(false);
     }
   };
@@ -288,7 +532,12 @@ const MyHorsesScreen = () => {
     });
 
     if (!result.canceled && result.assets[0]) {
-      setEditImage({ uri: result.assets[0].uri });
+      const newImage = { uri: result.assets[0].uri };
+      if (editModalVisible) {
+        setEditImage(newImage);
+      } else if (addModalVisible) {
+        setAddImage(newImage);
+      }
       setShowImagePickerModal(false);
     }
   };
@@ -652,6 +901,8 @@ const MyHorsesScreen = () => {
       </View>
     );
   };
+
+  // Custom Number Picker Component
   const NumberPicker = ({
     value,
     placeholder,
@@ -671,6 +922,8 @@ const MyHorsesScreen = () => {
     setVisible: (visible: boolean) => void;
     unit?: string;
   }) => {
+    const [selectedValue, setSelectedValue] = useState(parseInt(value) || minValue);
+
     const generateNumbers = () => {
       const numbers = [];
       for (let i = minValue; i <= maxValue; i++) {
@@ -679,7 +932,10 @@ const MyHorsesScreen = () => {
       return numbers;
     };
 
-    const numbers = generateNumbers();
+    const handleConfirm = () => {
+      onSelect(selectedValue.toString());
+      setVisible(false);
+    };
 
     return (
       <View style={{ marginBottom: 20 }}>
@@ -730,39 +986,87 @@ const MyHorsesScreen = () => {
                 backgroundColor: '#1C3A42',
                 borderRadius: 12,
                 padding: 20,
-                maxHeight: 400,
                 width: '80%',
+                maxWidth: 300,
                 borderWidth: 1,
                 borderColor: '#4A9BB7',
               }}>
-                <ScrollView style={{ maxHeight: 350 }}>
-                  {numbers.map((number, index) => (
+                <Text style={{
+                  color: '#FFFFFF',
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  marginBottom: 20,
+                  fontFamily: "Inder",
+                }}>
+                  Select {placeholder.toLowerCase()}
+                </Text>
+                
+                <ScrollView style={{ maxHeight: 200, backgroundColor: '#2D5A66', borderRadius: 8 }}>
+                  {generateNumbers().map((num) => (
                     <TouchableOpacity
-                      key={index}
+                      key={num}
                       style={{
                         paddingVertical: 15,
                         paddingHorizontal: 10,
-                        borderBottomWidth: index < numbers.length - 1 ? 1 : 0,
+                        backgroundColor: selectedValue === num ? '#4A9BB7' : 'transparent',
+                        borderBottomWidth: 1,
                         borderBottomColor: '#335C67',
                       }}
-                      onPress={() => {
-                        onSelect(number.toString());
-                        setVisible(false);
-                      }}
+                      onPress={() => setSelectedValue(num)}
                     >
                       <Text style={{
-                        color: value === number.toString() ? '#4A9BB7' : '#FFFFFF',
+                        color: '#FFFFFF',
                         fontSize: 16,
-                        fontWeight: value === number.toString() ? 'bold' : 'normal',
                         textAlign: 'center',
                         fontFamily: "Inder",
-                        includeFontPadding: false,
+                        fontWeight: selectedValue === num ? 'bold' : 'normal',
                       }}>
-                        {number}{unit}
+                        {num}{unit}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
+                
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#666',
+                      borderRadius: 8,
+                      paddingVertical: 12,
+                    }}
+                    onPress={() => setVisible(false)}
+                  >
+                    <Text style={{
+                      color: '#FFFFFF',
+                      textAlign: 'center',
+                      fontSize: 16,
+                      fontFamily: "Inder",
+                    }}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#4A9BB7',
+                      borderRadius: 8,
+                      paddingVertical: 12,
+                    }}
+                    onPress={handleConfirm}
+                  >
+                    <Text style={{
+                      color: '#FFFFFF',
+                      textAlign: 'center',
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                      fontFamily: "Inder",
+                    }}>
+                      Confirm
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </TouchableOpacity>
           </Modal>
@@ -850,25 +1154,60 @@ const MyHorsesScreen = () => {
     </Modal>
   );
 
-  const deleteHorse = (horse: any) => {
-    Alert.alert(
-      "Delete Horse",
-      `Are you sure you want to delete ${horse.name}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
-          style: "destructive",
-          onPress: () => {
-            const updatedHorses = horses.filter(h => h.id !== horse.id);
-            setHorses(updatedHorses);
-            setSuccessMessage(`${horse.name} has been deleted`);
-            setShowSuccessModal(true);
-          }
-        }
-      ]
-    );
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
+
+  // Show authentication message if no user
+  if (!currentUserId && !loading) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.headerContainer}>
+            <Text style={styles.header}>My Horses</Text>
+          </View>
+        </SafeAreaView>
+        <View style={styles.viewPort}>
+          <View style={styles.loadingContainer}>
+            <Text style={styles.emptyStateEmoji}>🔒</Text>
+            <Text style={styles.emptyStateText}>Please log in</Text>
+            <Text style={styles.emptyStateSubtext}>
+              You need to be logged in to manage your horses.
+            </Text>
+            <TouchableOpacity
+              style={styles.addHorseButton}
+              onPress={loadUserAndHorses}
+            >
+              <Text style={styles.addHorseButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (loading && horses.length === 0) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.headerContainer}>
+            <Text style={styles.header}>My Horses</Text>
+          </View>
+        </SafeAreaView>
+        <View style={styles.viewPort}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#335C67" />
+            <Text style={styles.loadingText}>Loading horses...</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -891,13 +1230,25 @@ const MyHorsesScreen = () => {
               <Text style={styles.statsText}>You have {horses.length} horses</Text>
             </View>
             
+            <TouchableOpacity
+              style={styles.addHorseButton}
+              onPress={openAddModal}
+            >
+              <Text style={styles.addHorseButtonIcon}>🐴</Text>
+              <Text style={styles.addHorseButtonText}>Add New Horse</Text>
+            </TouchableOpacity>
+            
             {horses.map((horse, index) => (
               <View style={styles.horseCard} key={horse.id}>
                 <View style={styles.horseImageContainer}>
                   <Image
                     style={styles.horseImage}
                     resizeMode="cover"
-                    source={horse.img}
+                    source={
+                      horse.image_url 
+                        ? { uri: horse.image_url }
+                        : require("../../assets/images/horses/pony.jpg")
+                    }
                   />
                 </View>
                 
@@ -912,14 +1263,7 @@ const MyHorsesScreen = () => {
                       <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Born:</Text>
                         <Text style={styles.detailValue}>
-                          {horse.birthDate 
-                            ? new Date(horse.birthDate).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })
-                            : horse.year
-                          }
+                          {formatDate(horse.birth_date)}
                         </Text>
                       </View>
                       <View style={styles.detailRow}>
@@ -957,7 +1301,7 @@ const MyHorsesScreen = () => {
               </View>
             ))}
             
-            {horses.length === 0 && (
+            {horses.length === 0 && !loading && (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateEmoji}>🐴</Text>
                 <Text style={styles.emptyStateText}>No horses yet!</Text>
@@ -969,6 +1313,16 @@ const MyHorsesScreen = () => {
           </View>
         </ScrollView>
       </View>
+
+      {/* Loading overlay */}
+      {loading && horses.length > 0 && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingModal}>
+            <ActivityIndicator size="large" color="#335C67" />
+            <Text style={styles.loadingModalText}>Updating...</Text>
+          </View>
+        </View>
+      )}
 
       {/* Edit Horse Modal */}
       <Modal
@@ -995,7 +1349,13 @@ const MyHorsesScreen = () => {
                 <View style={styles.imageContainer}>
                   <Image
                     style={styles.selectedImage}
-                    source={editImage || editingHorse?.img}
+                    source={
+                      editImage 
+                        ? editImage
+                        : editingHorse?.image_url 
+                        ? { uri: editingHorse.image_url }
+                        : require("../../assets/images/horses/pony.jpg")
+                    }
                     resizeMode="cover"
                   />
                   <TouchableOpacity
@@ -1110,6 +1470,146 @@ const MyHorsesScreen = () => {
         </View>
       </Modal>
 
+      {/* Add Horse Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={addModalVisible}
+        onRequestClose={closeAddModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New Horse</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={closeAddModal}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Photo</Text>
+                <View style={styles.imageContainer}>
+                  <Image
+                    style={styles.selectedImage}
+                    source={addImage || require("../../assets/images/horses/pony.jpg")}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    style={styles.changePhotoButton}
+                    onPress={() => setShowImagePickerModal(true)}
+                  >
+                    <View style={styles.cameraIconContainer}>
+                      <Text style={styles.cameraIconText}>📷</Text>
+                    </View>
+                    <Text style={styles.changePhotoText}>Add Photo</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Name</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={addName}
+                  onChangeText={setAddName}
+                  placeholder="Horse name"
+                  placeholderTextColor="#999"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  textContentType="none"
+                  keyboardType="default"
+                  returnKeyType="next"
+                  maxLength={50}
+                  multiline={false}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Gender</Text>
+                <CustomDropdown
+                  value={addGender}
+                  placeholder="Select gender"
+                  options={genderOptions}
+                  onSelect={setAddGender}
+                  isVisible={addGenderDropdownVisible}
+                  setVisible={setAddGenderDropdownVisible}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Birth Date</Text>
+                <DatePicker
+                  value={addBirthDate}
+                  placeholder="Select birth date"
+                  onSelect={setAddBirthDate}
+                  isVisible={addDatePickerVisible}
+                  setVisible={setAddDatePickerVisible}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Height (cm)</Text>
+                <NumberPicker
+                  value={addHeight}
+                  placeholder="Select height"
+                  minValue={100}
+                  maxValue={220}
+                  onSelect={setAddHeight}
+                  isVisible={addHeightPickerVisible}
+                  setVisible={setAddHeightPickerVisible}
+                  unit=" cm"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Weight (kg) - Optional</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={addWeight}
+                  onChangeText={setAddWeight}
+                  placeholder="Enter weight (50-2000 kg)"
+                  placeholderTextColor="#999"
+                  keyboardType="numeric"
+                  returnKeyType="next"
+                  maxLength={4}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Breed</Text>
+                <CustomDropdown
+                  value={addBreed}
+                  placeholder="Select breed"
+                  options={breedOptions}
+                  onSelect={setAddBreed}
+                  isVisible={addBreedDropdownVisible}
+                  setVisible={setAddBreedDropdownVisible}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={closeAddModal}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={saveHorseAdd}
+              >
+                <Text style={styles.saveButtonText}>Add Horse</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Success Modal */}
       <SuccessModal />
       
@@ -1118,52 +1618,6 @@ const MyHorsesScreen = () => {
     </View>
   );
 };
-
-const data = [
-  {
-    id: 0,
-    name: "Favory Falkó",
-    gender: "Gelding",
-    year: 2012,
-    birthDate: "2012-03-15T00:00:00.000Z",
-    height: 168,
-    weight: 520,
-    breed: "Lipicai",
-    img: require("../../assets/images/horses/falko.png"),
-  },
-  {
-    id: 1,
-    name: "Yamina",
-    gender: "Mare", //többnek kell lennie mint 3 karakter, különben szétkúrja a flexboxot
-    year: 2018,
-    birthDate: "2018-06-22T00:00:00.000Z",
-    height: 160,
-    weight: 480,
-    breed: "Magyar Sportló",
-    img: require("../../assets/images/horses/yamina.png"),
-  },
-  {
-    id: 2,
-    name: "Éva-Mária",
-    gender: "Mare",
-    year: 2000,
-    birthDate: "2000-09-08T00:00:00.000Z",
-    height: 155,
-    breed: "Shitlandi póni",
-    img: require("../../assets/images/horses/pony.jpg"),
-  },
-  {
-    id: 3,
-    name: "Árpád-Viktor",
-    gender: "Stallion",
-    year: 1999,
-    birthDate: "1999-12-01T00:00:00.000Z",
-    height: 172,
-    weight: 580,
-    breed: "Magyar Sportló",
-    img: require("../../assets/images/horses/random2.jpg"),
-  },
-];
 
 const styles = StyleSheet.create({
   container: {
@@ -1195,7 +1649,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: 5,
-    paddingTop: 30,
+    paddingTop: 20,
   },
   scrollContainer: {
     flex: 1,
@@ -1208,7 +1662,7 @@ const styles = StyleSheet.create({
   },
   statsHeader: {
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 10,
     backgroundColor: "#E9F5F0",
     borderRadius: 20,
     paddingVertical: 15,
@@ -1218,6 +1672,35 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "Inder",
     color: "#335C67",
+    fontWeight: "600",
+  },
+  addHorseButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#335C67",
+    borderRadius: 20,
+    paddingVertical: 15,
+    paddingHorizontal: 25,
+    marginTop: 10, // Add this line
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    gap: 10,
+  },
+  addHorseButtonIcon: {
+    fontSize: 20,
+  },
+  addHorseButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontFamily: "Inder",
     fontWeight: "600",
   },
   horseCard: {
@@ -1516,7 +1999,7 @@ const styles = StyleSheet.create({
       height: 4,
     },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowRadius: 4, // Complete this property
   },
   imagePickerIcon: {
     width: 80,
@@ -1640,6 +2123,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     fontFamily: "Inder",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: "#666",
+    fontFamily: "Inder",
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingModal: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  loadingModalText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#335C67',
+    fontFamily: 'Inder',
   },
 });
 
