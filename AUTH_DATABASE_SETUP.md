@@ -211,7 +211,7 @@ After running all the above SQL, test your setup:
 - **Access Denied**: Verify RLS policies are correctly set up
 - **Storage Issues**: Make sure storage bucket exists and policies are correct
 - **Auth Errors**: Check Supabase Auth logs in the dashboard
-- **RLS Policy Violation during Registration**: 
+- **RLS Policy Violation during Registration**:
   - Make sure the `handle_new_user()` function is created with `SECURITY DEFINER`
   - Verify the INSERT policy allows `auth.role() = 'service_role'`
   - Check that the trigger is properly created and enabled

@@ -2,29 +2,41 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../contexts/AuthContext";
 import { useLoadingState } from "../../hooks/useLoadingState";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { UserBadgeWithDetails } from "../../lib/supabase";
 
 const ProfileScreen = () => {
   const router = useRouter();
+  const { user } = useAuth();
   
-  // Generate a consistent UUID for demo purposes
-  // In a real app, this would come from authentication
-  const USER_ID = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID format
+  // Get the user ID from the authenticated user
+  const USER_ID = user?.id;
+
+  // If no user is authenticated, we shouldn't be on this page
+  if (!USER_ID) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>No user authenticated</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const [isEditing, setIsEditing] = useState(false);
   const [userName, setUserName] = useState("Vince Mojzer");
@@ -892,17 +904,6 @@ const styles = StyleSheet.create({
     color: "#335C67",
     fontFamily: "Inder",
     fontWeight: "500",
-  },
-  logoutButton: {
-    backgroundColor: "#FF9800",
-    borderRadius: 15,
-    marginVertical: 5,
-    borderBottomWidth: 0,
-  },
-  logoutButtonText: {
-    color: "#fff",
-    textAlign: "center",
-    fontWeight: "bold",
   },
   viewPort: {
     backgroundColor: "#FFFFFF",

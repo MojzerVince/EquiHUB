@@ -26,23 +26,28 @@ const OptionsScreen = () => {
 
   const handleLogout = () => {
     Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
+      "Sign Out",
+      "Are you sure you want to sign out?",
       [
         {
           text: "Cancel",
           style: "cancel",
         },
         {
-          text: "Logout",
+          text: "Sign Out",
           style: "destructive",
           onPress: async () => {
             try {
+              console.log("Starting logout process for user:", user?.email);
               await signOut();
               console.log("User logged out successfully");
+              // Force navigation after a brief delay to ensure state is updated
+              setTimeout(() => {
+                router.replace("/login");
+              }, 100);
             } catch (error) {
               console.error("Logout error:", error);
-              Alert.alert("Error", "Failed to logout. Please try again.");
+              Alert.alert("Error", "Failed to sign out. Please try again.");
             }
           },
         },

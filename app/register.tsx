@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
 import * as Haptics from 'expo-haptics';
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
@@ -105,7 +105,7 @@ const RegisterScreen = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(
           "Registration Successful!",
-          "Your account has been created successfully. Please check your email to verify your account before logging in.",
+          "Your account has been created successfully. Please check your email to verify your account before logging in. Once logged in, you'll stay signed in automatically on this device.",
           [
             {
               text: "OK",

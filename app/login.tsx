@@ -186,6 +186,14 @@ const LoginScreen = () => {
             >
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
+
+            {/* Session Persistence Info */}
+            <View style={styles.persistenceInfoContainer}>
+              <Text style={styles.persistenceInfoIcon}>🔒</Text>
+              <Text style={styles.persistenceInfoText}>
+                You'll stay signed in until you log out
+              </Text>
+            </View>
           </View>
 
           {/* Buttons */}
@@ -339,6 +347,28 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     color: "#335C67",
     fontWeight: "600",
+  },
+  persistenceInfoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#E8F4F8",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#B8D4DA",
+  },
+  persistenceInfoIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  persistenceInfoText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    color: "#335C67",
+    fontWeight: "500",
   },
   buttonContainer: {
     paddingHorizontal: 30,

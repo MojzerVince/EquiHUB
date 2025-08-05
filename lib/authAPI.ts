@@ -1,3 +1,4 @@
+import { SessionManager } from './sessionManager';
 import { supabase } from './supabase';
 
 export interface AuthUser {
@@ -112,6 +113,9 @@ export class AuthAPI {
       if (!authData.user) {
         return { user: null, error: 'Login failed. Please try again.' };
       }
+
+      // Store last login time for session tracking
+      await SessionManager.storeLastLoginTime();
 
       console.log('User logged in successfully:', authData.user.id);
 

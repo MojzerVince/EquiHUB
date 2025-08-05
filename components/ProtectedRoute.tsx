@@ -16,11 +16,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     if (loading) return;
 
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
-    const onWelcome = !segments[0] || segments[0] === 'index';
+    const onWelcome = !segments[0]; // Root level (welcome page)
 
     if (!user && !inAuthGroup && !onWelcome) {
-      // User is not authenticated and not in auth group or welcome, redirect to welcome
-      router.replace('/');
+      // User is not authenticated and not in auth group or welcome, redirect to login
+      router.replace('/login');
     } else if (user && (inAuthGroup || onWelcome)) {
       // User is authenticated and in auth group or welcome, redirect to main app
       router.replace('/(tabs)');
