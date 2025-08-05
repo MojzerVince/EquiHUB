@@ -1,27 +1,40 @@
-import { Horse, supabase } from './supabase';
 import * as FileSystem from 'expo-file-system';
+import { Horse, supabase } from './supabase';
 
 export class HorseAPI {
   // Get all horses for a user
   static async getHorses(userId: string): Promise<Horse[]> {
     try {
-      console.log('Fetching horses for user:', userId);
+      console.log('🔥 HorseAPI: Fetching horses for user:', userId);
+      
+      // Use direct REST API (Supabase client has compatibility issues)
+      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
+      const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
+      
+      const apiUrl = `${supabaseUrl}/rest/v1/horses?user_id=eq.${userId}&order=created_at.desc`;
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-      const { data, error } = await supabase
-        .from('horses')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching horses:', error);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔥 HorseAPI: API error:', response.status, errorText);
         return [];
       }
 
-      console.log('Retrieved horses:', data);
+      const data = await response.json();
+      console.log('🔥 HorseAPI: ✅ Successfully retrieved', data.length, 'horses');
+      
       return data || [];
+      
     } catch (error) {
-      console.error('Error in getHorses:', error);
+      console.error('🔥 HorseAPI: Error fetching horses:', error);
       return [];
     }
   }

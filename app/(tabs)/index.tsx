@@ -147,29 +147,58 @@ const MyHorsesScreen = () => {
 
   // Load horses when user is authenticated
   useEffect(() => {
-    console.log('useEffect triggered:', { authLoading, userId: user?.id });
-    if (!authLoading && user?.id) {
+    console.log('useEffect triggered:', { authLoading, userId: user?.id, currentlyLoading: loading });
+    if (!authLoading && user?.id && !loading) {
       console.log('Loading horses for authenticated user');
       loadHorses(user.id);
     } else if (!authLoading && !user?.id) {
       // User is not authenticated, set loading to false
       console.log('User not authenticated, stopping loading');
       setLoading(false);
+    } else if (loading) {
+      console.log('Already loading horses, skipping duplicate call');
     }
   }, [user, authLoading]);
 
   const loadHorses = async (userId: string) => {
     try {
-      console.log('Loading horses for user:', userId);
+      console.log('🐎 Starting loadHorses for user:', userId);
+      console.log('🐎 Setting loading to true');
       setLoading(true);
-      const horsesData = await HorseAPI.getHorses(userId);
-      console.log('Loaded horses:', horsesData);
+      
+      console.log('🐎 Calling HorseAPI.getHorses...');
+      
+      // Add timeout to detect hanging API calls
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('API call timeout after 10 seconds')), 10000);
+      });
+      
+      const apiPromise = HorseAPI.getHorses(userId);
+      
+      console.log('🐎 Racing API call against timeout...');
+      const horsesData = await Promise.race([apiPromise, timeoutPromise]);
+      
+      console.log('🐎 API Response received:', horsesData);
+      console.log('🐎 Number of horses:', Array.isArray(horsesData) ? horsesData.length : 0);
+      console.log('🐎 Horses data type:', typeof horsesData);
+      console.log('🐎 Is array:', Array.isArray(horsesData));
+      
+      console.log('🐎 Setting horses state...');
       setHorses(horsesData);
+      console.log('🐎 Horses state updated');
+      
     } catch (error) {
-      console.error('Error loading horses:', error);
-      Alert.alert('Error', 'Failed to load horses');
+      console.error('🐎 Error loading horses:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('timeout')) {
+        Alert.alert('Timeout', 'The request took too long. Please check your internet connection.');
+      } else {
+        Alert.alert('Error', 'Failed to load horses');
+      }
     } finally {
+      console.log('🐎 Setting loading to false');
       setLoading(false);
+      console.log('🐎 loadHorses completed');
     }
   };
 
@@ -1164,7 +1193,16 @@ const MyHorsesScreen = () => {
     );
   }
 
-  if (authLoading || (loading && horses.length === 0)) {
+  // Debug current state
+  console.log('🎯 Render state:', { 
+    authLoading, 
+    loading, 
+    horsesLength: horses.length, 
+    userId: user?.id,
+    showLoadingScreen: authLoading || loading
+  });
+
+  if (authLoading || loading) {
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.safeArea}>

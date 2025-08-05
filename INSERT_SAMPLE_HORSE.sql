@@ -6,24 +6,22 @@ INSERT INTO horses (
   user_id,
   name,
   gender,
-  year_of_birth,
+  birth_date,
   breed,
   height,
   weight,
-  description,
   image_url,
   created_at,
   updated_at
 ) VALUES (
-  'efab7495-b514-4c6d-9c83-f17c3afdf3ae',
-  (SELECT id FROM auth.users LIMIT 1), -- Uses the first available user ID
+  'a7b8c9d0-e1f2-4a5b-8c9d-0e1f2a3b4c5d',
+  'efab7495-b514-4c6d-9c83-f17c3afdf3ae', -- Use the actual user UUID
   'Thunder',
   'Stallion',
-  2018,
+  '2018-03-15'::date,
   'Arabian',
-  15.2,
+  152, -- Height in cm (over 100 as integer)
   1100,
-  'A magnificent Arabian stallion with a spirited personality and excellent jumping abilities. Thunder has won several regional competitions and is known for his intelligence and strong bond with riders.',
   'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=800', -- Sample horse image
   NOW(),
   NOW()
@@ -37,24 +35,22 @@ INSERT INTO horses (
   user_id,
   name,
   gender,
-  year_of_birth,
+  birth_date,
   breed,
   height,
   weight,
-  description,
   image_url,
   created_at,
   updated_at
 ) VALUES (
-  'efab7495-b514-4c6d-9c83-f17c3afdf3ae',
+  'a7b8c9d0-e1f2-4a5b-8c9d-0e1f2a3b4c5d',
   'YOUR_USER_ID_HERE',
   'Thunder',
   'Stallion',
-  2018,
+  '2018-03-15'::date,
   'Arabian',
-  15.2,
+  152,
   1100,
-  'A magnificent Arabian stallion with a spirited personality and excellent jumping abilities. Thunder has won several regional competitions and is known for his intelligence and strong bond with riders.',
   'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=800',
   NOW(),
   NOW()
@@ -62,4 +58,4 @@ INSERT INTO horses (
 */
 
 -- Verify the insert was successful
-SELECT * FROM horses WHERE id = 'efab7495-b514-4c6d-9c83-f17c3afdf3ae';
+SELECT * FROM horses WHERE id = 'a7b8c9d0-e1f2-4a5b-8c9d-0e1f2a3b4c5d';
