@@ -137,7 +137,7 @@ Create a demo user for testing:
 -- Alternatively, you can create a demo profile manually if the user exists:
 -- INSERT INTO profiles (id, name, age, description, experience, is_pro_member)
 -- VALUES (
---   'demo-user-uuid-here',
+--   'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
 --   'Demo User',
 --   25,
 --   'This is a demo account for testing EquiHUB features.',

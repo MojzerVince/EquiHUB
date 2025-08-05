@@ -83,6 +83,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 30,
+    marginTop: -90,
     justifyContent: "space-between",
   },
   headerSection: {
@@ -91,14 +92,14 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 80,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   title: {
     fontSize: 48,
     fontFamily: "Inder",
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 10,
+    marginBottom: 0,
     textAlign: "center",
   },
   subtitle: {
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   featuresSection: {
-    marginTop: 40,
+    marginTop: 20,
     marginBottom: 40,
   },
   featureItem: {
@@ -142,6 +143,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 30,
     alignItems: "center",
+    marginTop: -30,
     marginBottom: 15,
     shadowColor: "#000",
     shadowOffset: {

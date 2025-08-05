@@ -16,7 +16,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     if (loading) return;
 
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
-    const onWelcome = segments.length === 0 || (segments.length === 1 && segments[0] === undefined);
+    const onWelcome = !segments[0] || segments[0] === 'index';
 
     if (!user && !inAuthGroup && !onWelcome) {
       // User is not authenticated and not in auth group or welcome, redirect to welcome
