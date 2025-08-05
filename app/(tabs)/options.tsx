@@ -1,3 +1,4 @@
+import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -14,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const OptionsScreen = () => {
   const router = useRouter();
+  const { signOut, user } = useAuth();
   
   // Settings state
   const [notifications, setNotifications] = useState(true);
@@ -34,9 +36,14 @@ const OptionsScreen = () => {
         {
           text: "Logout",
           style: "destructive",
-          onPress: () => {
-            // Handle logout logic here
-            console.log("User logged out");
+          onPress: async () => {
+            try {
+              await signOut();
+              console.log("User logged out successfully");
+            } catch (error) {
+              console.error("Logout error:", error);
+              Alert.alert("Error", "Failed to logout. Please try again.");
+            }
           },
         },
       ]

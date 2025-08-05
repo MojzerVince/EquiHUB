@@ -29,6 +29,20 @@ export interface GalleryImage {
   created_at: string
 }
 
+export interface Horse {
+  id: string
+  user_id: string
+  name: string
+  gender: string
+  birth_date: string
+  height: number
+  weight?: number
+  breed: string
+  image_url?: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Badge {
   id: string
   name: string
