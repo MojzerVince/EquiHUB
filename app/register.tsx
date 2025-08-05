@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import * as Haptics from 'expo-haptics';
 import React, { useState } from "react";
 import {
     ActivityIndicator,
@@ -83,9 +84,11 @@ const RegisterScreen = () => {
 
   const handleRegister = async () => {
     if (!validateForm()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
     setErrors({});
 
@@ -93,11 +96,13 @@ const RegisterScreen = () => {
       const { user, error } = await AuthAPI.register(formData);
 
       if (error) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert("Registration Error", error);
         return;
       }
 
       if (user) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(
           "Registration Successful!",
           "Your account has been created successfully. Please check your email to verify your account before logging in.",
@@ -111,6 +116,7 @@ const RegisterScreen = () => {
       }
     } catch (error) {
       console.error("Registration error:", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Error", "An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -130,6 +136,34 @@ const RegisterScreen = () => {
         [field as string]: ""
       }));
     }
+  };
+
+  const handleTermsPress = (type: 'terms' | 'privacy') => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    const title = type === 'terms' ? 'Terms of Service' : 'Privacy Policy';
+    const message = type === 'terms' 
+      ? 'Our Terms of Service outline the rules and regulations for using EquiHUB. This would typically open a detailed terms page or web view.'
+      : 'Our Privacy Policy explains how we collect, use, and protect your personal information. This would typically open a detailed privacy page or web view.';
+    
+    Alert.alert(
+      title,
+      message,
+      [
+        {
+          text: 'Close',
+          style: 'cancel'
+        },
+        {
+          text: 'View Full Document',
+          onPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            // TODO: In a real app, this would open a web view or navigate to a dedicated page
+            Alert.alert('Coming Soon', 'Full document viewer will be available in a future update.');
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -219,7 +253,11 @@ const RegisterScreen = () => {
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowPassword(!showPassword);
+                  }}
+                  activeOpacity={0.6}
                 >
                   <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁️"}</Text>
                 </TouchableOpacity>
@@ -252,7 +290,11 @@ const RegisterScreen = () => {
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowConfirmPassword(!showConfirmPassword);
+                  }}
+                  activeOpacity={0.6}
                 >
                   <Text style={styles.eyeIcon}>{showConfirmPassword ? "🙈" : "👁️"}</Text>
                 </TouchableOpacity>
@@ -286,9 +328,13 @@ const RegisterScreen = () => {
               style={[styles.registerButton, loading ? styles.disabledButton : null]}
               onPress={handleRegister}
               disabled={loading}
+              activeOpacity={0.8}
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.loadingText}>Creating Account...</Text>
+                </View>
               ) : (
                 <Text style={styles.registerButtonText}>Create Account</Text>
               )}
@@ -296,7 +342,13 @@ const RegisterScreen = () => {
 
             <View style={styles.loginLinkContainer}>
               <Text style={styles.loginLinkText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => router.replace("/login")}>
+              <TouchableOpacity 
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.replace("/login");
+                }}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.loginLink}>Sign In</Text>
               </TouchableOpacity>
             </View>
@@ -306,9 +358,20 @@ const RegisterScreen = () => {
           <View style={styles.termsContainer}>
             <Text style={styles.termsText}>
               By creating an account, you agree to our{" "}
-              <Text style={styles.termsLink}>Terms of Service</Text> and{" "}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
             </Text>
+            <TouchableOpacity 
+              onPress={() => handleTermsPress('terms')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.termsLink}>Terms of Service</Text>
+            </TouchableOpacity>
+            <Text style={styles.termsText}> and </Text>
+            <TouchableOpacity 
+              onPress={() => handleTermsPress('privacy')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.termsLink}>Privacy Policy</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -457,6 +520,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     fontWeight: "600",
   },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: "#fff",
+    fontSize: 16,
+    fontFamily: "Inder",
+    marginLeft: 10,
+  },
   loginLinkContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -476,17 +550,23 @@ const styles = StyleSheet.create({
   termsContainer: {
     paddingHorizontal: 30,
     paddingTop: 20,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   termsText: {
     fontSize: 14,
     fontFamily: "Inder",
     color: "#666",
-    textAlign: "center",
     lineHeight: 20,
   },
   termsLink: {
+    fontSize: 14,
+    fontFamily: "Inder",
     color: "#335C67",
     fontWeight: "600",
+    textDecorationLine: 'underline',
   },
 });
 

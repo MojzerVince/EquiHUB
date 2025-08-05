@@ -50,10 +50,17 @@ export class AuthAPI {
         return { user: null, error: 'Name must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes' };
       }
 
-      // Register the user with Supabase Auth
+      // Register the user with Supabase Auth and include metadata for the trigger
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          data: {
+            name: data.name.trim(),
+            age: data.age,
+            description: data.description?.trim() || 'Equestrian enthusiast'
+          }
+        }
       });
 
       if (authError) {
@@ -63,27 +70,6 @@ export class AuthAPI {
 
       if (!authData.user) {
         return { user: null, error: 'Registration failed. Please try again.' };
-      }
-
-      // Create profile in our custom profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([{
-          id: authData.user.id,
-          name: data.name.trim(),
-          age: data.age,
-          description: data.description?.trim() || 'Equestrian enthusiast',
-          experience: 1, // Default to beginner
-          is_pro_member: false, // Default to regular member
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }]);
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        // If profile creation fails, we should clean up the auth user
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        return { user: null, error: 'Failed to create user profile. Please try again.' };
       }
 
       console.log('User registered successfully:', authData.user.id);

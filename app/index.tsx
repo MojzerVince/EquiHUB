@@ -66,9 +66,29 @@ const WelcomeScreen = () => {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
+          <View style={styles.footerDivider} />
+          <Text style={styles.footerMainText}>
             Join thousands of equestrians worldwide
           </Text>
+          <Text style={styles.footerSubText}>
+            Connect • Learn • Grow • Compete
+          </Text>
+          <View style={styles.footerStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>10K+</Text>
+              <Text style={styles.statLabel}>Riders</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>25K+</Text>
+              <Text style={styles.statLabel}>Horses</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>50+</Text>
+              <Text style={styles.statLabel}>Countries</Text>
+            </View>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -178,6 +198,62 @@ const styles = StyleSheet.create({
   footer: {
     alignItems: "center",
     marginBottom: 30,
+  },
+  footerDivider: {
+    width: 50,
+    height: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    marginBottom: 20,
+    borderRadius: 1,
+  },
+  footerMainText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  footerSubText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    color: "#B8D4DA",
+    textAlign: "center",
+    marginBottom: 25,
+    letterSpacing: 1,
+  },
+  footerStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 20,
+    paddingVertical: 15,
+    paddingHorizontal: 25,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  statItem: {
+    alignItems: "center",
+    paddingHorizontal: 15,
+  },
+  statNumber: {
+    fontSize: 20,
+    fontFamily: "Inder",
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    color: "#B8D4DA",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  statDivider: {
+    width: 1,
+    height: 35,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
   },
   footerText: {
     fontSize: 14,

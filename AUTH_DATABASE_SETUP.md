@@ -40,6 +40,7 @@ DROP POLICY IF EXISTS "Allow all operations on profiles" ON profiles;
 DROP POLICY IF EXISTS "Users can view all profiles" ON profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+DROP POLICY IF EXISTS "Enable profile creation during registration" ON profiles;
 
 -- Allow users to view all profiles (for social features)
 CREATE POLICY "Users can view all profiles" ON profiles
@@ -47,7 +48,7 @@ CREATE POLICY "Users can view all profiles" ON profiles
 
 -- Allow users to insert their own profile
 CREATE POLICY "Users can insert own profile" ON profiles
-  FOR INSERT WITH CHECK (auth.uid() = id);
+  FOR INSERT WITH CHECK (auth.uid() = id OR auth.role() = 'service_role');
 
 -- Allow users to update their own profile
 CREATE POLICY "Users can update own profile" ON profiles
@@ -210,6 +211,27 @@ After running all the above SQL, test your setup:
 - **Access Denied**: Verify RLS policies are correctly set up
 - **Storage Issues**: Make sure storage bucket exists and policies are correct
 - **Auth Errors**: Check Supabase Auth logs in the dashboard
+- **RLS Policy Violation during Registration**: 
+  - Make sure the `handle_new_user()` function is created with `SECURITY DEFINER`
+  - Verify the INSERT policy allows `auth.role() = 'service_role'`
+  - Check that the trigger is properly created and enabled
+  - Ensure the profiles table has RLS enabled but allows the trigger function to bypass it
+
+### Common RLS Error Fix
+
+If you get "new row violates row-level security policy for table 'profiles'", run this:
+
+```sql
+-- Temporarily disable RLS to test
+ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
+
+-- Test registration, then re-enable with proper policies
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Make sure this policy exists
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id OR auth.role() = 'service_role');
+```
 
 ## 10. Security Considerations
 
