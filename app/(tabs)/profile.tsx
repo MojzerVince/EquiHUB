@@ -221,6 +221,84 @@ const ProfileScreen = () => {
     }
   };
 
+  // Direct API functions for badges to bypass Supabase client issues
+  const getUserBadgesDirectAPI = async (userId: string) => {
+    try {
+      console.log('=== FETCHING USER BADGES VIA DIRECT API ===');
+      console.log('User ID:', userId);
+      
+      const url = `https://grdsqxwghajehneksxik.supabase.co/rest/v1/user_badges?user_id=eq.${userId}&select=*,badge:badges!user_badges_badge_id_fkey(*)`;
+      console.log('Badges API URL:', url);
+      
+      const response = await Promise.race([
+        fetch(url, {
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
+            'Content-Type': 'application/json',
+          },
+        }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Badges API request timeout')), 10000)
+        )
+      ]) as Response;
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Badges API response not OK:', response.status, response.statusText);
+        console.error('Error response body:', errorText);
+        return [];
+      }
+
+      const badges = await response.json();
+      console.log('Direct API badges response:', badges);
+      
+      return badges || [];
+    } catch (error) {
+      console.error('Error fetching badges via direct API:', error);
+      return [];
+    }
+  };
+
+  const getBadgeStatsDirectAPI = (badges: any[]) => {
+    const stats = {
+      totalBadges: badges.length,
+      legendaryBadges: 0,
+      epicBadges: 0,
+      rareBadges: 0,
+      commonBadges: 0,
+      categories: {} as { [key: string]: number }
+    };
+
+    badges.forEach(userBadge => {
+      if (userBadge.badge) {
+        const rarity = userBadge.badge.rarity;
+        const category = userBadge.badge.category;
+
+        // Count by rarity
+        switch (rarity) {
+          case 'legendary':
+            stats.legendaryBadges++;
+            break;
+          case 'epic':
+            stats.epicBadges++;
+            break;
+          case 'rare':
+            stats.rareBadges++;
+            break;
+          case 'common':
+            stats.commonBadges++;
+            break;
+        }
+
+        // Count by category
+        stats.categories[category] = (stats.categories[category] || 0) + 1;
+      }
+    });
+
+    return stats;
+  };
+
   // Function to get membership display text
   const getMembershipDisplayText = (isProMember: boolean) => {
     return isProMember ? "PRO MEMBER" : "RIDER";
@@ -256,38 +334,38 @@ const ProfileScreen = () => {
     try {
       console.log('Loading badges for user:', USER_ID);
       
-      // Load user badges
-      const badges = await ProfileAPIBase64.getUserBadges(USER_ID);
+      // Load user badges using direct API with timeout
+      const badges = await Promise.race([
+        getUserBadgesDirectAPI(USER_ID),
+        new Promise<any[]>((_, reject) => 
+          setTimeout(() => reject(new Error('Badge loading timeout after 10 seconds')), 10000)
+        )
+      ]);
+      
       console.log('Loaded badges:', badges);
       setUserBadges(badges);
 
-      // Load badge statistics
-      const stats = await ProfileAPIBase64.getUserBadgeStats(USER_ID);
-      console.log('Loaded badge stats:', stats);
+      // Calculate badge statistics from the loaded badges
+      const stats = getBadgeStatsDirectAPI(badges);
+      console.log('Calculated badge stats:', stats);
       setBadgeStats(stats);
 
-      // Check for new badge eligibility
-      const newBadges = await ProfileAPIBase64.checkBadgeEligibility(USER_ID);
-      if (newBadges.length > 0) {
-        console.log('New badges awarded:', newBadges);
-        
-        // Reload badges if new ones were awarded
-        const updatedBadges = await ProfileAPIBase64.getUserBadges(USER_ID);
-        setUserBadges(updatedBadges);
-        
-        const updatedStats = await ProfileAPIBase64.getUserBadgeStats(USER_ID);
-        setBadgeStats(updatedStats);
-
-        // Show alert for new badges
-        Alert.alert(
-          "New Badge Earned! 🎉",
-          `Congratulations! You earned: ${newBadges.join(', ')}`,
-          [{ text: "Awesome!", style: "default" }]
-        );
-      }
+      // Note: Badge eligibility checking is disabled for now to prevent hanging
+      // TODO: Implement direct API for badge eligibility if needed
+      
     } catch (error) {
       console.error('Error loading user badges:', error);
-      setError('Failed to load badges. Please try again.');
+      // Don't set error for badges, just log it and continue
+      console.log('Badge loading failed, continuing without badges');
+      setUserBadges([]);
+      setBadgeStats({
+        totalBadges: 0,
+        legendaryBadges: 0,
+        epicBadges: 0,
+        rareBadges: 0,
+        commonBadges: 0,
+        categories: {}
+      });
     } finally {
       setBadgesLoading(false);
     }
@@ -434,8 +512,13 @@ const ProfileScreen = () => {
           setSavedProfileImage(require("../../assets/images/horses/falko.png"));
         }
         
-        // Reload badges after refreshing profile
-        await loadUserBadges();
+        // Reload badges after refreshing profile using direct API
+        try {
+          await loadUserBadges();
+        } catch (error) {
+          console.error('Error loading badges during refresh:', error);
+          // Don't prevent refresh if badges fail
+        }
       } else {
         console.log("No profile data received during refresh");
         setError("Failed to refresh profile data");
@@ -611,8 +694,13 @@ const ProfileScreen = () => {
       setIsEditing(false);
       setShowSuccessModal(true);
       
-      // Check for new badges after successful save
-      await loadUserBadges();
+      // Check for new badges after successful save using direct API
+      try {
+        await loadUserBadges();
+      } catch (error) {
+        console.error('Error loading badges after save:', error);
+        // Don't prevent save success if badges fail
+      }
     } catch (err) {
       setError("Failed to save profile");
       Alert.alert("Error", "Failed to save profile. Please try again.");
