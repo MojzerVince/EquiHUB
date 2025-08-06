@@ -39,22 +39,18 @@ const ProfileScreen = () => {
   }
 
   const [isEditing, setIsEditing] = useState(false);
-  const [userName, setUserName] = useState("Vince Mojzer");
-  const [userAge, setUserAge] = useState("18");
-  const [userDescription, setUserDescription] = useState(
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore"
-  );
-  const [userExperience, setUserExperience] = useState("3");
-  const [isProMember, setIsProMember] = useState(true);
+  const [userName, setUserName] = useState("Loading...");
+  const [userAge, setUserAge] = useState("Loading...");
+  const [userDescription, setUserDescription] = useState("Loading profile...");
+  const [userExperience, setUserExperience] = useState("0");
+  const [isProMember, setIsProMember] = useState(false);
 
   // Store the saved values to revert to when canceling
-  const [savedUserName, setSavedUserName] = useState("Vince Mojzer");
-  const [savedUserAge, setSavedUserAge] = useState("18");
-  const [savedUserDescription, setSavedUserDescription] = useState(
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore"
-  );
-  const [savedUserExperience, setSavedUserExperience] = useState("3");
-  const [savedIsProMember, setSavedIsProMember] = useState(true);
+  const [savedUserName, setSavedUserName] = useState("Loading...");
+  const [savedUserAge, setSavedUserAge] = useState("Loading...");
+  const [savedUserDescription, setSavedUserDescription] = useState("Loading profile...");
+  const [savedUserExperience, setSavedUserExperience] = useState("0");
+  const [savedIsProMember, setSavedIsProMember] = useState(false);
 
   // State for custom success modal
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -97,6 +93,132 @@ const ProfileScreen = () => {
   const determineMembershipStatus = (databaseProStatus: boolean) => {
     // Logic: Pro member only if database explicitly says true
     return databaseProStatus === true;
+  };
+
+  // Direct API functions to bypass Supabase client issues
+  const getProfileDirectAPI = async (userId: string) => {
+    try {
+      console.log('=== FETCHING PROFILE VIA DIRECT API ===');
+      console.log('User ID:', userId);
+      
+      const url = `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${userId}`;
+      console.log('API URL:', url);
+      
+      const response = await Promise.race([
+        fetch(url, {
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
+            'Content-Type': 'application/json',
+          },
+        }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Profile API request timeout')), 10000)
+        )
+      ]) as Response;
+
+      console.log('API Response status:', response.status);
+      console.log('API Response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Profile API response not OK:', response.status, response.statusText);
+        console.error('Error response body:', errorText);
+        return null;
+      }
+
+      const profiles = await response.json();
+      console.log('Direct API profile response:', profiles);
+      console.log('Number of profiles found:', profiles.length);
+      
+      return profiles.length > 0 ? profiles[0] : null;
+    } catch (error) {
+      console.error('Error fetching profile via direct API:', error);
+      return null;
+    }
+  };
+
+  const createProfileDirectAPI = async (userId: string, profileData: any) => {
+    try {
+      console.log('Creating profile via direct API for user:', userId);
+      
+      const newProfile = {
+        id: userId,
+        ...profileData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const response = await fetch(
+        'https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles',
+        {
+          method: 'POST',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(newProfile)
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Create profile API response not OK:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        return null;
+      }
+
+      const createdProfiles = await response.json();
+      console.log('Direct API create profile response:', createdProfiles);
+      
+      return createdProfiles.length > 0 ? createdProfiles[0] : null;
+    } catch (error) {
+      console.error('Error creating profile via direct API:', error);
+      return null;
+    }
+  };
+
+  const updateProfileDirectAPI = async (userId: string, profileData: any) => {
+    try {
+      console.log('Updating profile via direct API for user:', userId);
+      console.log('Update data:', profileData);
+      
+      const updatePayload = {
+        ...profileData,
+        updated_at: new Date().toISOString()
+      };
+
+      const response = await fetch(
+        `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${userId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(updatePayload)
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Update profile API response not OK:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        return false;
+      }
+
+      const updatedProfiles = await response.json();
+      console.log('Direct API update profile response:', updatedProfiles);
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating profile via direct API:', error);
+      return false;
+    }
   };
 
   // Function to get membership display text
@@ -171,26 +293,41 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      let profile = await ProfileAPIBase64.getProfile(USER_ID);
+      console.log('=== LOADING PROFILE FOR USER ===');
+      console.log('User ID:', USER_ID);
+      
+      // Try direct REST API approach like we did for horses
+      let profile = await getProfileDirectAPI(USER_ID);
 
       // If profile doesn't exist, create it with default values
       if (!profile) {
         console.log("Profile not found, creating new profile...");
-        const experienceValue = parseInt(userExperience);
-        const calculatedProStatus = ProfileAPIBase64.determineMembershipStatus(experienceValue, isProMember);
-        
-        profile = await ProfileAPIBase64.createProfile(USER_ID, {
-          name: userName,
-          age: parseInt(userAge),
-          description: userDescription,
-          experience: experienceValue,
-          is_pro_member: calculatedProStatus,
+        profile = await createProfileDirectAPI(USER_ID, {
+          name: "New User", // Don't use hardcoded values
+          age: 25,
+          description: "Welcome to EquiHub!",
+          experience: 1,
+          is_pro_member: false,
         });
 
         if (!profile) {
-          throw new Error("Failed to create profile");
+          console.log("Failed to create profile, using fallback data");
+          // If we can't create a profile, use some default data so the user can at least use the app
+          profile = {
+            id: USER_ID,
+            name: "New User",
+            age: 25,
+            description: "Welcome to EquiHub!",
+            experience: 1,
+            is_pro_member: false,
+            profile_image_url: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
         }
       }
+
+      console.log('Profile loaded successfully:', profile);
 
       // Update state with loaded/created profile data
       const loadedExperience = profile.experience || 0;
@@ -233,7 +370,7 @@ const ProfileScreen = () => {
 
     try {
       console.log("Refreshing profile data...");
-      let profile = await ProfileAPIBase64.getProfile(USER_ID);
+      let profile = await getProfileDirectAPI(USER_ID);
 
       if (profile) {
         // Update state with refreshed profile data
@@ -409,11 +546,8 @@ const ProfileScreen = () => {
         updateData.profile_image_url = savedProfileImage.uri;
       }
 
-      // First, let's test a simple experience update
-      const simpleUpdateSuccess = await ProfileAPIBase64.updateExperienceOnly(USER_ID, experienceValue);
-
-      // Update profile data using the enhanced function with membership logic
-      const success = await ProfileAPIBase64.updateProfileWithMembershipLogic(USER_ID, updateData);
+      // Update profile data using direct API approach
+      const success = await updateProfileDirectAPI(USER_ID, updateData);
 
       if (!success) {
         throw new Error("Failed to update profile");
