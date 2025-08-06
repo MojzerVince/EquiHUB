@@ -2,17 +2,17 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -232,18 +232,23 @@ const ProfileScreen = () => {
   }, []);
 
   const initializeProfile = async () => {
-    // First verify database connection
-    const isConnected = await ProfileAPIBase64.verifyDatabaseConnection();
-    if (!isConnected) {
-      setError("Database connection failed. Please check your internet connection.");
-      return;
+    console.log('=== INITIALIZING PROFILE ===');
+    
+    try {
+      // Load profile data with timeout
+      await loadProfile();
+      
+      // Load user badges and check eligibility (don't block if this fails)
+      try {
+        await loadUserBadges();
+      } catch (error) {
+        console.error('Error loading badges during initialization:', error);
+        // Don't prevent profile loading if badges fail
+      }
+    } catch (error) {
+      console.error('Error during profile initialization:', error);
+      setError("Failed to load profile. Please try refreshing.");
     }
-    
-    // Then load profile data
-    await loadProfile();
-    
-    // Load user badges and check eligibility
-    await loadUserBadges();
   };
 
   const loadUserBadges = async () => {
@@ -296,13 +301,18 @@ const ProfileScreen = () => {
       console.log('=== LOADING PROFILE FOR USER ===');
       console.log('User ID:', USER_ID);
       
-      // Try direct REST API approach like we did for horses
-      let profile = await getProfileDirectAPI(USER_ID);
+      // Try direct REST API approach with timeout like in refresh
+      let profile = await Promise.race([
+        getProfileDirectAPI(USER_ID),
+        new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('Profile loading timeout after 15 seconds')), 15000)
+        )
+      ]);
 
       // If profile doesn't exist, create it with default values
       if (!profile) {
         console.log("Profile not found, creating new profile...");
-        profile = await createProfileDirectAPI(USER_ID, {
+        const newProfile = await createProfileDirectAPI(USER_ID, {
           name: "New User", // Don't use hardcoded values
           age: 25,
           description: "Welcome to EquiHub!",
@@ -310,10 +320,10 @@ const ProfileScreen = () => {
           is_pro_member: false,
         });
 
-        if (!profile) {
+        if (!newProfile) {
           console.log("Failed to create profile, using fallback data");
           // If we can't create a profile, use some default data so the user can at least use the app
-          profile = {
+          const fallbackProfile = {
             id: USER_ID,
             name: "New User",
             age: 25,
@@ -324,7 +334,24 @@ const ProfileScreen = () => {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
+          
+          // Update state with fallback data
+          setUserName(fallbackProfile.name);
+          setUserAge(fallbackProfile.age.toString());
+          setUserDescription(fallbackProfile.description);
+          setUserExperience(fallbackProfile.experience.toString());
+          setIsProMember(false);
+          setSavedUserName(fallbackProfile.name);
+          setSavedUserAge(fallbackProfile.age.toString());
+          setSavedUserDescription(fallbackProfile.description);
+          setSavedUserExperience(fallbackProfile.experience.toString());
+          setSavedIsProMember(false);
+          
+          return; // Exit early with fallback data
         }
+        
+        // Use the newly created profile
+        profile = newProfile;
       }
 
       console.log('Profile loaded successfully:', profile);
@@ -370,7 +397,14 @@ const ProfileScreen = () => {
 
     try {
       console.log("Refreshing profile data...");
-      let profile = await getProfileDirectAPI(USER_ID);
+      
+      // Add 15-second timeout to profile refresh
+      const profile = await Promise.race([
+        getProfileDirectAPI(USER_ID),
+        new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('Profile refresh timeout after 15 seconds')), 15000)
+        )
+      ]);
 
       if (profile) {
         // Update state with refreshed profile data
@@ -402,6 +436,9 @@ const ProfileScreen = () => {
         
         // Reload badges after refreshing profile
         await loadUserBadges();
+      } else {
+        console.log("No profile data received during refresh");
+        setError("Failed to refresh profile data");
       }
     } catch (err) {
       setError("Failed to refresh profile");
