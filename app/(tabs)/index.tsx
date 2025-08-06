@@ -1426,15 +1426,15 @@ const MyHorsesScreen = () => {
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Height (cm)</Text>
-                <NumberPicker
+                <TextInput
+                  style={styles.textInput}
                   value={editHeight}
-                  placeholder="Select height"
-                  minValue={100}
-                  maxValue={220}
-                  onSelect={setEditHeight}
-                  isVisible={heightPickerVisible}
-                  setVisible={setHeightPickerVisible}
-                  unit=" cm"
+                  onChangeText={setEditHeight}
+                  placeholder="Enter height (100-220 cm)"
+                  placeholderTextColor="#999"
+                  keyboardType="default"
+                  returnKeyType="next"
+                  maxLength={3}
                 />
               </View>
 
@@ -1444,7 +1444,7 @@ const MyHorsesScreen = () => {
                   style={styles.textInput}
                   value={editWeight}
                   onChangeText={setEditWeight}
-                  placeholder="Enter weight (50-2000 kg)"
+                  placeholder="Enter weight"
                   placeholderTextColor="#999"
                   keyboardType="numeric"
                   returnKeyType="next"
@@ -1566,15 +1566,15 @@ const MyHorsesScreen = () => {
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Height (cm)</Text>
-                <NumberPicker
+                <TextInput
+                  style={styles.textInput}
                   value={addHeight}
-                  placeholder="Select height"
-                  minValue={100}
-                  maxValue={220}
-                  onSelect={setAddHeight}
-                  isVisible={addHeightPickerVisible}
-                  setVisible={setAddHeightPickerVisible}
-                  unit=" cm"
+                  onChangeText={setAddHeight}
+                  placeholder="Enter height (100-220 cm)"
+                  placeholderTextColor="#999"
+                  keyboardType="default"
+                  returnKeyType="next"
+                  maxLength={3}
                 />
               </View>
 
@@ -1584,7 +1584,7 @@ const MyHorsesScreen = () => {
                   style={styles.textInput}
                   value={addWeight}
                   onChangeText={setAddWeight}
-                  placeholder="Enter weight (50-2000 kg)"
+                  placeholder="Enter weight"
                   placeholderTextColor="#999"
                   keyboardType="numeric"
                   returnKeyType="next"
