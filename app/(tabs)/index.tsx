@@ -1433,7 +1433,7 @@ const MyHorsesScreen = () => {
                   onChangeText={setEditHeight}
                   placeholder="Enter height (100-220 cm)"
                   placeholderTextColor="#999"
-                  keyboardType="default"
+                  keyboardType="numeric"
                   returnKeyType="next"
                   maxLength={3}
                 />
@@ -1573,7 +1573,7 @@ const MyHorsesScreen = () => {
                   onChangeText={setAddHeight}
                   placeholder="Enter height (100-220 cm)"
                   placeholderTextColor="#999"
-                  keyboardType="default"
+                  keyboardType="numeric"
                   returnKeyType="next"
                   maxLength={3}
                 />
