@@ -1697,11 +1697,10 @@ const styles = StyleSheet.create({
   },
   statsHeader: {
     alignItems: "center",
-    marginBottom: 10,
     backgroundColor: "#E9F5F0",
     borderRadius: 20,
-    paddingVertical: 15,
     paddingHorizontal: 20,
+    marginBottom: 5,
   },
   statsText: {
     fontSize: 18,
