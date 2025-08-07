@@ -50,13 +50,22 @@ export class HorseAPI {
     image?: any;
   }): Promise<Horse | null> {
     try {
-      console.log('🔥 HorseAPI: Adding horse for user:', userId, horseData);
+      console.log('🔥 HorseAPI: Adding horse for user:', userId);
+      console.log('🔥 HorseAPI: Horse data:', horseData);
+      console.log('🔥 HorseAPI: Image provided:', !!horseData.image);
+      console.log('🔥 HorseAPI: Image URI:', horseData.image?.uri);
 
-      let imageUrl = null;
+      let imageBase64 = null;
 
-      // Upload image if provided
+      // Convert image to base64 if provided
       if (horseData.image && horseData.image.uri) {
-        imageUrl = await this.uploadImage(horseData.image.uri, userId);
+        console.log('🔥 HorseAPI: Converting image to base64...');
+        imageBase64 = await FileSystem.readAsStringAsync(horseData.image.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        console.log('🔥 HorseAPI: Base64 conversion successful, length:', imageBase64.length);
+      } else {
+        console.log('🔥 HorseAPI: No image provided for conversion');
       }
 
       // Use direct REST API (Supabase client has compatibility issues)
@@ -71,10 +80,12 @@ export class HorseAPI {
         height: horseData.height,
         weight: horseData.weight || null,
         breed: horseData.breed,
-        image_url: imageUrl,
+        image_url: imageBase64 ? `data:image/jpeg;base64,${imageBase64}` : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+
+      console.log('🔥 HorseAPI: Prepared horse data with base64 in image_url:', !!newHorse.image_url);
 
       const response = await fetch(`${supabaseUrl}/rest/v1/horses`, {
         method: 'POST',
@@ -115,21 +126,32 @@ export class HorseAPI {
     image?: any;
   }): Promise<Horse | null> {
     try {
-      console.log('🔥 HorseAPI: Updating horse:', horseId, updates);
+      console.log('🔥 HorseAPI: Updating horse:', horseId);
+      console.log('🔥 HorseAPI: Updates:', updates);
+      console.log('🔥 HorseAPI: Image provided:', !!updates.image);
+      console.log('🔥 HorseAPI: Image URI:', updates.image?.uri);
 
-      let imageUrl = undefined;
+      let imageBase64 = undefined;
 
-      // Upload new image if provided
+      // Convert new image to base64 if provided
       if (updates.image && updates.image.uri) {
-        imageUrl = await this.uploadImage(updates.image.uri, userId);
+        console.log('🔥 HorseAPI: Converting image to base64...');
+        imageBase64 = await FileSystem.readAsStringAsync(updates.image.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        console.log('🔥 HorseAPI: Base64 conversion successful, length:', imageBase64.length);
+      } else {
+        console.log('🔥 HorseAPI: No new image provided for conversion');
       }
 
       const updateData: any = { ...updates };
       delete updateData.image; // Remove image from updates
-      if (imageUrl) {
-        updateData.image_url = imageUrl;
+      if (imageBase64) {
+        updateData.image_url = `data:image/jpeg;base64,${imageBase64}`;
       }
       updateData.updated_at = new Date().toISOString();
+
+      console.log('🔥 HorseAPI: Prepared update data with base64 in image_url:', !!updateData.image_url);
 
       // Use direct REST API (Supabase client has compatibility issues)
       const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
@@ -218,18 +240,25 @@ export class HorseAPI {
   // Upload image to Supabase Storage
   static async uploadImage(imageUri: string, userId: string): Promise<string | null> {
     try {
+      console.log('🔥 HorseAPI: Starting image upload for user:', userId);
+      console.log('🔥 HorseAPI: Image URI:', imageUri);
+      
       const timestamp = Date.now();
       const fileName = `${userId}/horses/${timestamp}.jpg`;
+      console.log('🔥 HorseAPI: Generated filename:', fileName);
 
       // Read file as base64
       const base64 = await FileSystem.readAsStringAsync(imageUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
+      console.log('🔥 HorseAPI: File read as base64, length:', base64.length);
 
-      // Convert base64 to blob
+      // Convert base64 to blob using the standard approach
       const response = await fetch(`data:image/jpeg;base64,${base64}`);
       const blob = await response.blob();
+      console.log('🔥 HorseAPI: Blob created, size:', blob.size);
 
+      // Try to upload using Supabase client
       const { data, error } = await supabase.storage
         .from('horse-images')
         .upload(fileName, blob, {
@@ -238,18 +267,26 @@ export class HorseAPI {
         });
 
       if (error) {
-        console.error('Error uploading image:', error);
+        console.error('🔥 HorseAPI: Supabase upload error:', error);
+        
+        // For now, if storage fails, we'll save without image
+        // This prevents the entire horse creation from failing
+        console.log('🔥 HorseAPI: Storage upload failed, saving horse without image');
         return null;
       }
+
+      console.log('🔥 HorseAPI: Upload successful:', data);
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('horse-images')
         .getPublicUrl(fileName);
 
+      console.log('🔥 HorseAPI: ✅ Image uploaded successfully, public URL:', publicUrl);
       return publicUrl;
     } catch (error) {
-      console.error('Error in uploadImage:', error);
+      console.error('🔥 HorseAPI: Error in uploadImage:', error);
+      // Return null instead of throwing error to allow horse creation without image
       return null;
     }
   }

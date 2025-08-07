@@ -218,7 +218,7 @@ const MyHorsesScreen = () => {
     setEditHeight(horse.height.toString());
     setEditWeight(horse.weight ? horse.weight.toString() : "");
     setEditBreed(horse.breed);
-    // Fix image source - use image_url from database, not img property
+    // Check if image_url contains base64 data or is a regular URL
     setEditImage(horse.image_url ? { uri: horse.image_url } : null);
     
     // Set birth date
@@ -356,7 +356,13 @@ const MyHorsesScreen = () => {
       if (updatedHorse) {
         await loadHorses(user?.id);
         closeEditModal();
-        setSuccessMessage(`${normalizedName} has been updated!`);
+        
+        // Check if image was provided but not saved
+        if (editImage && editImage.uri !== editingHorse.image_url && !updatedHorse.image_url) {
+          setSuccessMessage(`${normalizedName} has been updated! (Note: Image processing failed, but other changes were saved)`);
+        } else {
+          setSuccessMessage(`${normalizedName} has been updated!`);
+        }
         setShowSuccessModal(true);
       } else {
         Alert.alert("Error", "Failed to update horse");
@@ -438,7 +444,13 @@ const MyHorsesScreen = () => {
       if (newHorse) {
         await loadHorses(user?.id);
         closeAddModal();
-        setSuccessMessage(`${normalizedName} has been added!`);
+        
+        // Check if image was provided but not saved
+        if (addImage && !newHorse.image_url) {
+          setSuccessMessage(`${normalizedName} has been added! (Note: Image processing failed, but horse was saved successfully)`);
+        } else {
+          setSuccessMessage(`${normalizedName} has been added!`);
+        }
         setShowSuccessModal(true);
       } else {
         Alert.alert("Error", "Failed to add horse. Please try again.");
