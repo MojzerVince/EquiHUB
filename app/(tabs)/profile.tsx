@@ -969,7 +969,7 @@ const ProfileScreen = () => {
                 <Text style={styles.badgesLoadingText}>Loading badges...</Text>
               </View>
             ) : userBadges.length > 0 ? (
-              <View style={styles.badgesGrid}>
+              <View style={[styles.badgesGrid, { backgroundColor: currentTheme.colors.background }]}>
                 {userBadges.map((userBadge, index) => (
                   <TouchableOpacity 
                     key={userBadge.id} 
@@ -996,7 +996,7 @@ const ProfileScreen = () => {
                 ))}
               </View>
             ) : (
-              <View style={styles.noBadgesContainer}>
+              <View style={[styles.noBadgesContainer, { backgroundColor: currentTheme.colors.background }]}>
                 <Text style={styles.noBadgesEmoji}>🏆</Text>
                 <Text style={styles.noBadgesText}>No badges yet!</Text>
                 <Text style={styles.noBadgesSubtext}>
@@ -1367,7 +1367,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-around",
-    backgroundColor: "#E9F5F0",
     borderRadius: 20,
     padding: 20,
     gap: 15,
@@ -1436,7 +1435,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   noBadgesContainer: {
-    backgroundColor: "#E9F5F0",
     borderRadius: 20,
     padding: 40,
     alignItems: "center",
