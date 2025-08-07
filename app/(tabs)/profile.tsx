@@ -17,7 +17,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useLoadingState } from "../../hooks/useLoadingState";
-import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { UserBadgeWithDetails } from "../../lib/supabase";
 
 const ProfileScreen = () => {
@@ -190,7 +189,12 @@ const ProfileScreen = () => {
         updated_at: new Date().toISOString()
       };
 
-      const response = await fetch(
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Profile update timeout after 15 seconds')), 15000);
+      });
+
+      const fetchPromise = fetch(
         `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${userId}`,
         {
           method: 'PATCH',
@@ -203,6 +207,8 @@ const ProfileScreen = () => {
           body: JSON.stringify(updatePayload)
         }
       );
+
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (!response.ok) {
         console.error('Update profile API response not OK:', response.status, response.statusText);
@@ -618,9 +624,6 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      // Upload profile image if it's a new image (different from saved)
-      let profileImageUrl = null;
-
       // Check if profileImage is a URI object (not a require() number)
       const isCurrentImageUri =
         profileImage && typeof profileImage === "object" && profileImage.uri;
@@ -633,16 +636,6 @@ const ProfileScreen = () => {
       const hasNewImage =
         isCurrentImageUri &&
         (!isSavedImageUri || profileImage.uri !== savedProfileImage.uri);
-
-      if (hasNewImage) {
-        profileImageUrl = await ProfileAPIBase64.uploadProfileImageBase64(
-          USER_ID,
-          profileImage.uri
-        );
-        if (!profileImageUrl) {
-          throw new Error("Failed to upload profile image");
-        }
-      }
 
       // Prepare profile data - preserve existing image URL if no new image uploaded
       const experienceValue = parseInt(userExperience);
@@ -657,16 +650,51 @@ const ProfileScreen = () => {
         is_pro_member: finalProStatus,
       };
 
-      // Include image URL: new uploaded URL or existing URL
-      if (profileImageUrl) {
-        // New image was uploaded
-        updateData.profile_image_url = profileImageUrl;
+      // Handle image upload if there's a new image
+      if (hasNewImage) {
+        try {
+          console.log('Converting new image to base64...');
+          
+          // Convert image to base64 directly here instead of using separate upload function
+          const response = await fetch(profileImage.uri);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.status}`);
+          }
+
+          const blob = await response.blob();
+          console.log('Image blob size:', blob.size, 'type:', blob.type);
+
+          // Convert blob to Base64
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              if (reader.result) {
+                const base64 = (reader.result as string).split(',')[1];
+                resolve(base64);
+              } else {
+                reject(new Error('Failed to convert blob to Base64'));
+              }
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          // Create data URL
+          const mimeType = blob.type || 'image/jpeg';
+          const dataUrl = `data:${mimeType};base64,${base64}`;
+          
+          console.log('Base64 conversion successful, data URL created');
+          updateData.profile_image_url = dataUrl;
+        } catch (imageError) {
+          console.error('Image upload failed:', imageError);
+          Alert.alert("Warning", "Image upload failed, but other changes will be saved.");
+        }
       } else if (isSavedImageUri) {
         // Keep existing image URL if user hasn't changed the image
         updateData.profile_image_url = savedProfileImage.uri;
       }
 
-      // Update profile data using direct API approach
+      // Update profile data using direct API approach (single update call)
       const success = await updateProfileDirectAPI(USER_ID, updateData);
 
       if (!success) {
@@ -683,13 +711,8 @@ const ProfileScreen = () => {
       // Also update current state to reflect the calculated pro status
       setIsProMember(finalProStatus);
 
-      // Update saved image: use new uploaded URL or keep current image
-      if (profileImageUrl) {
-        setSavedProfileImage({ uri: profileImageUrl });
-        setProfileImage({ uri: profileImageUrl });
-      } else {
-        setSavedProfileImage(profileImage);
-      }
+      // Update saved image: use the current profileImage (which might have new base64 URL)
+      setSavedProfileImage(profileImage);
 
       setIsEditing(false);
       setShowSuccessModal(true);
