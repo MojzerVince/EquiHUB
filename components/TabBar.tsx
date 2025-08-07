@@ -12,7 +12,12 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
   return (
     <View style={[styles.tabBar, { backgroundColor: currentTheme.colors.card }]}>
-      {state.routes.map((route, index) => {
+      {state.routes
+        .filter((route) => {
+          // Filter out routes that don't have corresponding icons
+          return (icons as Record<string, (props: any) => JSX.Element>)[route.name] !== undefined;
+        })
+        .map((route) => {
         const { options } = descriptors[route.key];
         const label =
           options.tabBarLabel !== undefined
@@ -21,7 +26,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             ? options.title
             : route.name;
 
-        const isFocused = state.index === index;
+        const isFocused = state.index === state.routes.findIndex(r => r.key === route.key);
 
         const onPress = () => {
           const event = navigation.emit({
