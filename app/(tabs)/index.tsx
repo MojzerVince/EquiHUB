@@ -99,6 +99,7 @@ const MyHorsesScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [horses, setHorses] = useState<Horse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [horsesLoaded, setHorsesLoaded] = useState(false);
   
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -154,17 +155,18 @@ const MyHorsesScreen = () => {
       }
     }, 15000); // 15 second timeout
 
-    if (!authLoading && user?.id && !loading) {
+    if (!authLoading && user?.id && !loading && !horsesLoaded) {
       loadHorses(user.id);
     } else if (!authLoading && !user?.id) {
       // User is not authenticated, set loading to false
       setLoading(false);
+      setHorsesLoaded(false);
     }
 
     return () => {
       clearTimeout(loadingTimeout);
     };
-  }, [user, authLoading]);
+  }, [user, authLoading, loading, horsesLoaded]);
 
   const loadHorses = async (userId: string) => {
     try {
@@ -186,12 +188,15 @@ const MyHorsesScreen = () => {
         setHorses([]);
       }
       
+      setHorsesLoaded(true);
+      
     } catch (error) {
       console.error('Error loading horses:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       
       // Set empty array on error to prevent UI issues
       setHorses([]);
+      setHorsesLoaded(true);
       
       if (errorMessage.includes('timeout')) {
         Alert.alert('Timeout', 'The request took too long. Please check your internet connection.');
@@ -206,6 +211,7 @@ const MyHorsesScreen = () => {
   const onRefresh = async () => {
     if (user?.id) {
       setRefreshing(true);
+      setHorsesLoaded(false); // Reset the loaded flag to allow reloading
       await loadHorses(user.id);
       setRefreshing(false);
     }
@@ -354,6 +360,7 @@ const MyHorsesScreen = () => {
       const updatedHorse = await HorseAPI.updateHorse(editingHorse.id, user?.id, updates);
 
       if (updatedHorse) {
+        setHorsesLoaded(false); // Reset flag to allow reloading
         await loadHorses(user?.id);
         closeEditModal();
         
@@ -442,6 +449,7 @@ const MyHorsesScreen = () => {
       const newHorse = await HorseAPI.addHorse(user?.id, horseData);
 
       if (newHorse) {
+        setHorsesLoaded(false); // Reset flag to allow reloading
         await loadHorses(user?.id);
         closeAddModal();
         
@@ -483,6 +491,7 @@ const MyHorsesScreen = () => {
               const success = await HorseAPI.deleteHorse(horse.id, user?.id);
               
               if (success) {
+                setHorsesLoaded(false); // Reset flag to allow reloading
                 await loadHorses(user?.id);
                 setSuccessMessage(`${horse.name} has been deleted`);
                 setShowSuccessModal(true);
