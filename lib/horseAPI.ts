@@ -42,7 +42,7 @@ export class HorseAPI {
     gender: string;
     birth_date: string;
     height: number;
-    weight?: number;
+    weight?: number | null; // Allow null values for weight
     breed: string;
     image?: any;
   }): Promise<Horse | null> {
@@ -106,7 +106,7 @@ export class HorseAPI {
     gender?: string;
     birth_date?: string;
     height?: number;
-    weight?: number;
+    weight?: number | null; // Allow null to delete weight
     breed?: string;
     image?: any;
   }): Promise<Horse | null> {

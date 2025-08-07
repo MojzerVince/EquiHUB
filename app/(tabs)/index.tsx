@@ -335,7 +335,7 @@ const MyHorsesScreen = () => {
       return;
     }
 
-    let weightNum = undefined;
+    let weightNum = null; // Use null instead of undefined for proper deletion
     if (normalizedWeight) {
       weightNum = parseInt(normalizedWeight);
       if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
@@ -352,7 +352,7 @@ const MyHorsesScreen = () => {
         gender: normalizedGender,
         birth_date: editBirthDate.toISOString(),
         height: heightNum,
-        weight: weightNum,
+        weight: weightNum, // This will be null if weight field is cleared
         breed: normalizedBreed,
         image: editImage && editImage.uri !== editingHorse.image_url ? editImage : undefined,
       };
@@ -424,7 +424,7 @@ const MyHorsesScreen = () => {
       return;
     }
 
-    let weightNum = undefined;
+    let weightNum = null; // Use null instead of undefined for consistency
     if (normalizedWeight) {
       weightNum = parseInt(normalizedWeight);
       if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
