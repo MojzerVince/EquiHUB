@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export type ThemeName = 'Greenish' | 'Pinky' | 'Sunset';
 
@@ -29,12 +29,12 @@ const themes: Record<ThemeName, Theme> = {
       primary: '#335C67',
       primaryDark: '#2D5A66',
       secondary: '#4A9BB7',
-      background: '#FFFFFF',
-      surface: '#E9F5F0',
-      text: '#335C67',
+      background: '#E9F5F0',
+      surface: '#FFFFFF',
+      text: '#1C3A42',
       textSecondary: '#666666',
-      accent: '#C5D9D1',
-      border: '#4A9BB7',
+      accent: '#4A9BB7',
+      border: '#335C67',
       card: '#1C3A42',
       success: '#4CAF50',
       warning: '#FF9800',

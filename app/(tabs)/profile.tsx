@@ -16,12 +16,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTheme } from "../../contexts/ThemeContext";
 import { useLoadingState } from "../../hooks/useLoadingState";
 import { UserBadgeWithDetails } from "../../lib/supabase";
 
 const ProfileScreen = () => {
   const router = useRouter();
   const { user } = useAuth();
+  const { currentTheme } = useTheme();
   
   // Get the user ID from the authenticated user
   const USER_ID = user?.id;
@@ -29,9 +31,9 @@ const ProfileScreen = () => {
   // If no user is authenticated, we shouldn't be on this page
   if (!USER_ID) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>No user authenticated</Text>
+          <Text style={[styles.errorText, { color: currentTheme.colors.text }]}>No user authenticated</Text>
         </View>
       </SafeAreaView>
     );
@@ -823,8 +825,8 @@ const ProfileScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
         <View style={styles.headerContainer}>
           <Text style={styles.header}>My Profile</Text>
           <TouchableOpacity 
@@ -840,40 +842,40 @@ const ProfileScreen = () => {
       </SafeAreaView>
 
       <ScrollView
-        style={styles.viewPort}
+        style={[styles.viewPort, { backgroundColor: currentTheme.colors.surface }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         <View style={styles.profileContainer}>
           {/* Profile Section */}
-          <View style={styles.profileSection}>
+          <View style={[styles.profileSection, { backgroundColor: currentTheme.colors.background }]}>
             {!isEditing ? (
               <TouchableOpacity
-                style={styles.editButton}
+                style={[styles.editButton, { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.border }]}
                 onPress={handleEditPress}
                 disabled={isLoading}
               >
-                <Text style={styles.editButtonText}>Edit Profile</Text>
+                <Text style={[styles.editButtonText, { color: '#FFFFFF' }]}>Edit Profile</Text>
               </TouchableOpacity>
             ) : (
               <>
                 <TouchableOpacity
-                  style={styles.cancelButton}
+                  style={[styles.cancelButton, { backgroundColor: currentTheme.colors.textSecondary }]}
                   onPress={handleCancel}
                   disabled={isLoading}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={[styles.cancelButtonText, { color: '#FFFFFF' }]}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.saveButton}
+                  style={[styles.saveButton, { backgroundColor: currentTheme.colors.primary }]}
                   onPress={handleSave}
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.saveButtonText}>Save</Text>
+                    <Text style={[styles.saveButtonText, { color: '#FFFFFF' }]}>Save</Text>
                   )}
                 </TouchableOpacity>
               </>

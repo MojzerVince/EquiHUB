@@ -626,13 +626,13 @@ const MyHorsesScreen = () => {
               onPress={() => setVisible(false)}
             >
               <View style={{
-                backgroundColor: '#1C3A42',
+                backgroundColor: currentTheme.colors.card,
                 borderRadius: 12,
                 padding: 20,
                 maxHeight: 300,
                 width: '80%',
                 borderWidth: 1,
-                borderColor: '#4A9BB7',
+                borderColor: currentTheme.colors.border,
               }}>
                 <ScrollView style={{ maxHeight: 250 }}>
                   {options.map((option, index) => (
@@ -650,7 +650,7 @@ const MyHorsesScreen = () => {
                       }}
                     >
                       <Text style={{
-                        color: value === option ? '#4A9BB7' : '#FFFFFF',
+                        color: value === option ? currentTheme.colors.secondary : '#FFFFFF',
                         fontSize: 16,
                         fontWeight: value === option ? 'bold' : 'normal',
                         fontFamily: "Inder",
@@ -775,13 +775,13 @@ const MyHorsesScreen = () => {
               onPress={() => setVisible(false)}
             >
               <View style={{
-                backgroundColor: '#1C3A42',
+                backgroundColor: currentTheme.colors.card,
                 borderRadius: 12,
                 padding: 20,
                 width: '90%',
                 maxWidth: 400,
                 borderWidth: 1,
-                borderColor: '#4A9BB7',
+                borderColor: currentTheme.colors.border,
               }}>
                 <Text style={{
                   color: '#FFFFFF',
@@ -1106,19 +1106,19 @@ const MyHorsesScreen = () => {
       onRequestClose={() => setShowSuccessModal(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.successModalContainer}>
-          <View style={styles.modalIcon}>
+        <View style={[styles.successModalContainer, { backgroundColor: currentTheme.colors.surface }]}>
+          <View style={[styles.modalIcon, { backgroundColor: currentTheme.colors.success }]}>
             <Text style={styles.checkIcon}>✓</Text>
           </View>
-          <Text style={styles.successModalTitle}>Success!</Text>
-          <Text style={styles.successModalMessage}>
+          <Text style={[styles.successModalTitle, { color: currentTheme.colors.text }]}>Success!</Text>
+          <Text style={[styles.successModalMessage, { color: currentTheme.colors.textSecondary }]}>
             {successMessage}
           </Text>
           <TouchableOpacity
-            style={styles.successModalButton}
+            style={[styles.successModalButton, { backgroundColor: currentTheme.colors.primary }]}
             onPress={() => setShowSuccessModal(false)}
           >
-            <Text style={styles.successModalButtonText}>OK</Text>
+            <Text style={[styles.successModalButtonText, { color: '#FFFFFF' }]}>OK</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1134,41 +1134,41 @@ const MyHorsesScreen = () => {
       onRequestClose={() => setShowImagePickerModal(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.imagePickerModalContainer}>
-          <View style={styles.imagePickerIcon}>
+        <View style={[styles.imagePickerModalContainer, { backgroundColor: currentTheme.colors.surface }]}>
+          <View style={[styles.imagePickerIcon, { backgroundColor: currentTheme.colors.accent }]}>
             <Text style={styles.cameraIcon}>📷</Text>
           </View>
-          <Text style={styles.imagePickerTitle}>Update Photo</Text>
-          <Text style={styles.imagePickerMessage}>
+          <Text style={[styles.imagePickerTitle, { color: currentTheme.colors.text }]}>Update Photo</Text>
+          <Text style={[styles.imagePickerMessage, { color: currentTheme.colors.textSecondary }]}>
             Choose how you'd like to update the horse's photo
           </Text>
           
           <View style={styles.imagePickerButtons}>
             <TouchableOpacity
-              style={styles.imagePickerButton}
+              style={[styles.imagePickerButton, { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.border }]}
               onPress={takePhoto}
             >
               <View style={styles.imagePickerButtonIcon}>
                 <Text style={styles.imagePickerButtonEmoji}>📷</Text>
               </View>
-              <Text style={styles.imagePickerButtonText}>Take Photo</Text>
+              <Text style={[styles.imagePickerButtonText, { color: '#FFFFFF' }]}>Take Photo</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={styles.imagePickerButton}
+              style={[styles.imagePickerButton, { backgroundColor: currentTheme.colors.secondary, borderColor: currentTheme.colors.border }]}
               onPress={pickImageFromLibrary}
             >
               <View style={styles.imagePickerButtonIcon}>
                 <Text style={styles.imagePickerButtonEmoji}>🖼️</Text>
               </View>
-              <Text style={styles.imagePickerButtonText}>Choose from Library</Text>
+              <Text style={[styles.imagePickerButtonText, { color: '#FFFFFF' }]}>Choose from Library</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.imagePickerButton, styles.cancelImageButton]}
+              style={[styles.imagePickerButton, styles.cancelImageButton, { backgroundColor: currentTheme.colors.textSecondary }]}
               onPress={() => setShowImagePickerModal(false)}
             >
-              <Text style={styles.cancelImageButtonText}>Cancel</Text>
+              <Text style={[styles.cancelImageButtonText, { color: '#FFFFFF' }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1254,7 +1254,7 @@ const MyHorsesScreen = () => {
         </View>
       </SafeAreaView>
 
-      <View style={[styles.viewPort, { backgroundColor: currentTheme.colors.background }]}>
+      <View style={[styles.viewPort, { backgroundColor: currentTheme.colors.surface }]}>
         <ScrollView 
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
@@ -1262,21 +1262,19 @@ const MyHorsesScreen = () => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          <View style={styles.horsesContainer}>
-            <View style={styles.statsHeader}>
-              <Text style={styles.statsText}>You have {horses.length} horses</Text>
-            </View>
-            
-            <TouchableOpacity
-              style={styles.addHorseButton}
-              onPress={openAddModal}
-            >
-              <Text style={styles.addHorseButtonIcon}>🐴</Text>
-              <Text style={styles.addHorseButtonText}>Add New Horse</Text>
-            </TouchableOpacity>
-            
-            {horses.map((horse, index) => (
-              <View style={styles.horseCard} key={horse.id}>
+      <View style={styles.horsesContainer}>
+        <View style={[styles.statsHeader, { backgroundColor: currentTheme.colors.surface }]}>
+          <Text style={[styles.statsText, { color: currentTheme.colors.text }]}>You have {horses.length} horses</Text>
+        </View>
+        
+        <TouchableOpacity
+          style={[styles.addHorseButton, { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.border }]}
+          onPress={openAddModal}
+        >
+          <Text style={styles.addHorseButtonIcon}>🐴</Text>
+          <Text style={[styles.addHorseButtonText, { color: '#FFFFFF' }]}>Add New Horse</Text>
+        </TouchableOpacity>            {horses.map((horse, index) => (
+              <View style={[styles.horseCard, { backgroundColor: currentTheme.colors.background, borderColor: currentTheme.colors.border }]} key={horse.id}>
                 <View style={styles.horseImageContainer}>
                   <Image
                     style={styles.horseImage}
@@ -1291,47 +1289,47 @@ const MyHorsesScreen = () => {
                 
                 <View style={styles.horseContent}>
                   <View style={styles.horseInfo}>
-                    <Text style={styles.horseName}>{horse.name}</Text>
+                    <Text style={[styles.horseName, { color: currentTheme.colors.text, fontSize: 20, fontWeight: 'bold' }]}>{horse.name}</Text>
                     <View style={styles.horseDetails}>
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Gender:</Text>
-                        <Text style={styles.detailValue}>{horse.gender}</Text>
+                        <Text style={[styles.detailLabel, { color: currentTheme.colors.textSecondary, fontSize: 14 }]}>Gender:</Text>
+                        <Text style={[styles.detailValue, { color: currentTheme.colors.text, fontSize: 14 }]}>{horse.gender}</Text>
                       </View>
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Born:</Text>
-                        <Text style={styles.detailValue}>
+                        <Text style={[styles.detailLabel, { color: currentTheme.colors.textSecondary, fontSize: 14 }]}>Born:</Text>
+                        <Text style={[styles.detailValue, { color: currentTheme.colors.text, fontSize: 14 }]}>
                           {formatDate(horse.birth_date)}
                         </Text>
                       </View>
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Height:</Text>
-                        <Text style={styles.detailValue}>{horse.height} cm</Text>
+                        <Text style={[styles.detailLabel, { color: currentTheme.colors.textSecondary, fontSize: 14 }]}>Height:</Text>
+                        <Text style={[styles.detailValue, { color: currentTheme.colors.text, fontSize: 14 }]}>{horse.height} cm</Text>
                       </View>
                       {horse.weight && (
                         <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>Weight:</Text>
-                          <Text style={styles.detailValue}>{horse.weight} kg</Text>
+                          <Text style={[styles.detailLabel, { color: currentTheme.colors.textSecondary, fontSize: 14 }]}>Weight:</Text>
+                          <Text style={[styles.detailValue, { color: currentTheme.colors.text, fontSize: 14 }]}>{horse.weight} kg</Text>
                         </View>
                       )}
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Breed:</Text>
-                        <Text style={styles.detailValue}>{horse.breed}</Text>
+                        <Text style={[styles.detailLabel, { color: currentTheme.colors.textSecondary, fontSize: 14 }]}>Breed:</Text>
+                        <Text style={[styles.detailValue, { color: currentTheme.colors.text, fontSize: 14 }]}>{horse.breed}</Text>
                       </View>
                     </View>
                   </View>
                   
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
-                      style={[styles.actionButton, styles.editButton]}
+                      style={[styles.actionButton, styles.editButton, { backgroundColor: currentTheme.colors.secondary }]}
                       onPress={() => openEditModal(horse)}
                     >
-                      <Text style={styles.editButtonText}>✏️ Edit</Text>
+                      <Text style={[styles.editButtonText, { color: '#FFFFFF' }]}>✏️ Edit</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.actionButton, styles.deleteButton]}
+                      style={[styles.actionButton, styles.deleteButton, { backgroundColor: currentTheme.colors.error }]}
                       onPress={() => deleteHorse(horse)}
                     >
-                      <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
+                      <Text style={[styles.deleteButtonText, { color: '#FFFFFF' }]}>🗑️ Delete</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1341,8 +1339,8 @@ const MyHorsesScreen = () => {
             {horses.length === 0 && !loading && (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateEmoji}>🐴</Text>
-                <Text style={styles.emptyStateText}>No horses yet!</Text>
-                <Text style={styles.emptyStateSubtext}>
+                <Text style={[styles.emptyStateText, { color: currentTheme.colors.text }]}>No horses yet!</Text>
+                <Text style={[styles.emptyStateSubtext, { color: currentTheme.colors.textSecondary }]}>
                   Add your first horse to get started.
                 </Text>
               </View>
@@ -1354,9 +1352,9 @@ const MyHorsesScreen = () => {
       {/* Loading overlay */}
       {loading && horses.length > 0 && (
         <View style={styles.loadingOverlay}>
-          <View style={styles.loadingModal}>
-            <ActivityIndicator size="large" color="#335C67" />
-            <Text style={styles.loadingModalText}>Updating...</Text>
+          <View style={[styles.loadingModal, { backgroundColor: currentTheme.colors.surface }]}>
+            <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+            <Text style={[styles.loadingModalText, { color: currentTheme.colors.text }]}>Updating...</Text>
           </View>
         </View>
       )}
@@ -1369,14 +1367,14 @@ const MyHorsesScreen = () => {
         onRequestClose={closeEditModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Horse</Text>
+          <View style={[styles.modalContainer, { backgroundColor: currentTheme.colors.surface }]}>
+            <View style={[styles.modalHeader, { backgroundColor: currentTheme.colors.primary }]}>
+              <Text style={[styles.modalTitle, { color: '#FFFFFF' }]}>Edit Horse</Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={closeEditModal}
               >
-                <Text style={styles.modalCloseText}>✕</Text>
+                <Text style={[styles.modalCloseText, { color: '#FFFFFF' }]}>✕</Text>
               </TouchableOpacity>
             </View>
 
@@ -1408,9 +1406,9 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Name</Text>
+                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>Name</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, { backgroundColor: currentTheme.colors.primaryDark, borderColor: currentTheme.colors.border, color: '#FFFFFF' }]}
                   value={editName}
                   onChangeText={setEditName}
                   placeholder="Horse name"
@@ -1491,16 +1489,16 @@ const MyHorsesScreen = () => {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: currentTheme.colors.textSecondary }]}
                 onPress={closeEditModal}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, { color: '#FFFFFF' }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: currentTheme.colors.primary }]}
                 onPress={saveHorseEdit}
               >
-                <Text style={styles.saveButtonText}>Save Changes</Text>
+                <Text style={[styles.saveButtonText, { color: '#FFFFFF' }]}>Save Changes</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1515,14 +1513,14 @@ const MyHorsesScreen = () => {
         onRequestClose={closeAddModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Horse</Text>
+          <View style={[styles.modalContainer, { backgroundColor: currentTheme.colors.surface }]}>
+            <View style={[styles.modalHeader, { backgroundColor: currentTheme.colors.primary }]}>
+              <Text style={[styles.modalTitle, { color: '#FFFFFF' }]}>Add New Horse</Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={closeAddModal}
               >
-                <Text style={styles.modalCloseText}>✕</Text>
+                <Text style={[styles.modalCloseText, { color: '#FFFFFF' }]}>✕</Text>
               </TouchableOpacity>
             </View>
 

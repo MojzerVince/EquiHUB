@@ -1,16 +1,17 @@
 import { icons } from "@/components/icon";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { PlatformPressable } from "@react-navigation/elements";
-import { useLinkBuilder, useTheme } from "@react-navigation/native";
+import { useLinkBuilder } from "@react-navigation/native";
 import type { JSX } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { useTheme } from "../contexts/ThemeContext";
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const { colors } = useTheme();
+  const { currentTheme } = useTheme();
   const { buildHref } = useLinkBuilder();
 
   return (
-    <View style={styles.tabBar}>
+    <View style={[styles.tabBar, { backgroundColor: currentTheme.colors.card }]}>
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const label =
@@ -53,9 +54,6 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             style={styles.tabBarItem}
           >
             {(icons as Record<string, (props: any) => JSX.Element>)[route.name]?.({})}
-            <Text style={{ color: isFocused ? colors.primary : colors.text }}>
-              {}
-            </Text>
           </PlatformPressable>
         );
       })}

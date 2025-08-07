@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { useTheme, ThemeName } from "@/contexts/ThemeContext";
+import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
