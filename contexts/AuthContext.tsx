@@ -34,6 +34,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Get initial session
     getInitialSession();
 
+    // Add timeout fallback for auth loading
+    const authLoadingTimeout = setTimeout(() => {
+      if (loading) {
+        console.log('⚠️ Auth loading timeout - forcing loading to false');
+        setLoading(false);
+      }
+    }, 15000); // 15 second timeout for auth
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -61,12 +69,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return () => {
       subscription.unsubscribe();
+      clearTimeout(authLoadingTimeout);
     };
   }, []);
 
   const getInitialSession = async () => {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      console.log('Getting initial session...');
+      
+      // Add timeout to prevent hanging on session check
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Session check timeout')), 10000);
+      });
+      
+      const { data: { session }, error } = await Promise.race([
+        sessionPromise,
+        timeoutPromise
+      ]);
       
       if (error) {
         console.error('Error getting initial session:', error);
@@ -86,7 +106,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error in getInitialSession:', error);
+      if (error instanceof Error && error.message.includes('timeout')) {
+        console.log('Session check timed out, proceeding without authentication');
+      }
     } finally {
+      console.log('Setting auth loading to false');
       setLoading(false);
     }
   };

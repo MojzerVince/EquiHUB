@@ -148,6 +148,15 @@ const MyHorsesScreen = () => {
   // Load horses when user is authenticated
   useEffect(() => {
     console.log('useEffect triggered:', { authLoading, userId: user?.id, currentlyLoading: loading });
+    
+    // Add a timeout to prevent getting stuck in loading state
+    const loadingTimeout = setTimeout(() => {
+      if (loading) {
+        console.log('⚠️ Loading timeout reached, forcing loading to false');
+        setLoading(false);
+      }
+    }, 15000); // 15 second timeout
+
     if (!authLoading && user?.id && !loading) {
       console.log('Loading horses for authenticated user');
       loadHorses(user.id);
@@ -158,6 +167,10 @@ const MyHorsesScreen = () => {
     } else if (loading) {
       console.log('Already loading horses, skipping duplicate call');
     }
+
+    return () => {
+      clearTimeout(loadingTimeout);
+    };
   }, [user, authLoading]);
 
   const loadHorses = async (userId: string) => {
@@ -183,13 +196,23 @@ const MyHorsesScreen = () => {
       console.log('🐎 Horses data type:', typeof horsesData);
       console.log('🐎 Is array:', Array.isArray(horsesData));
       
-      console.log('🐎 Setting horses state...');
-      setHorses(horsesData);
-      console.log('🐎 Horses state updated');
+      // Ensure we have valid array data
+      if (Array.isArray(horsesData)) {
+        console.log('🐎 Setting horses state...');
+        setHorses(horsesData);
+        console.log('🐎 Horses state updated');
+      } else {
+        console.log('🐎 Invalid data received, setting empty array');
+        setHorses([]);
+      }
       
     } catch (error) {
       console.error('🐎 Error loading horses:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Set empty array on error to prevent UI issues
+      setHorses([]);
+      
       if (errorMessage.includes('timeout')) {
         Alert.alert('Timeout', 'The request took too long. Please check your internet connection.');
       } else {
@@ -1201,6 +1224,21 @@ const MyHorsesScreen = () => {
     userId: user?.id,
     showLoadingScreen: authLoading || loading
   });
+
+  // Add timeout fallback for auth loading
+  useEffect(() => {
+    const authTimeout = setTimeout(() => {
+      if (authLoading) {
+        console.log('⚠️ Auth loading timeout reached, this might indicate an issue');
+        // We don't force authLoading to false as it's managed by AuthContext
+        // but we log it for debugging
+      }
+    }, 20000); // 20 second timeout for auth
+
+    return () => {
+      clearTimeout(authTimeout);
+    };
+  }, [authLoading]);
 
   if (authLoading || loading) {
     return (
