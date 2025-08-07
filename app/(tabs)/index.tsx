@@ -147,25 +147,18 @@ const MyHorsesScreen = () => {
 
   // Load horses when user is authenticated
   useEffect(() => {
-    console.log('useEffect triggered:', { authLoading, userId: user?.id, currentlyLoading: loading });
-    
     // Add a timeout to prevent getting stuck in loading state
     const loadingTimeout = setTimeout(() => {
       if (loading) {
-        console.log('⚠️ Loading timeout reached, forcing loading to false');
         setLoading(false);
       }
     }, 15000); // 15 second timeout
 
     if (!authLoading && user?.id && !loading) {
-      console.log('Loading horses for authenticated user');
       loadHorses(user.id);
     } else if (!authLoading && !user?.id) {
       // User is not authenticated, set loading to false
-      console.log('User not authenticated, stopping loading');
       setLoading(false);
-    } else if (loading) {
-      console.log('Already loading horses, skipping duplicate call');
     }
 
     return () => {
@@ -175,11 +168,7 @@ const MyHorsesScreen = () => {
 
   const loadHorses = async (userId: string) => {
     try {
-      console.log('🐎 Starting loadHorses for user:', userId);
-      console.log('🐎 Setting loading to true');
       setLoading(true);
-      
-      console.log('🐎 Calling HorseAPI.getHorses...');
       
       // Add timeout to detect hanging API calls
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -188,26 +177,17 @@ const MyHorsesScreen = () => {
       
       const apiPromise = HorseAPI.getHorses(userId);
       
-      console.log('🐎 Racing API call against timeout...');
       const horsesData = await Promise.race([apiPromise, timeoutPromise]);
-      
-      console.log('🐎 API Response received:', horsesData);
-      console.log('🐎 Number of horses:', Array.isArray(horsesData) ? horsesData.length : 0);
-      console.log('🐎 Horses data type:', typeof horsesData);
-      console.log('🐎 Is array:', Array.isArray(horsesData));
       
       // Ensure we have valid array data
       if (Array.isArray(horsesData)) {
-        console.log('🐎 Setting horses state...');
         setHorses(horsesData);
-        console.log('🐎 Horses state updated');
       } else {
-        console.log('🐎 Invalid data received, setting empty array');
         setHorses([]);
       }
       
     } catch (error) {
-      console.error('🐎 Error loading horses:', error);
+      console.error('Error loading horses:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       
       // Set empty array on error to prevent UI issues
@@ -219,9 +199,7 @@ const MyHorsesScreen = () => {
         Alert.alert('Error', 'Failed to load horses');
       }
     } finally {
-      console.log('🐎 Setting loading to false');
       setLoading(false);
-      console.log('🐎 loadHorses completed');
     }
   };
 
@@ -392,10 +370,7 @@ const MyHorsesScreen = () => {
   };
 
   const saveHorseAdd = async () => {
-    console.log('Attempting to save horse, user?.id:', user?.id);
-    
     if (!user?.id) {
-      console.error('No current user ID');
       Alert.alert("Authentication Error", "Please log in again to add horses");
       return;
     }
@@ -458,7 +433,6 @@ const MyHorsesScreen = () => {
         image: addImage,
       };
 
-      console.log('Calling HorseAPI.addHorse with:', { userId: user?.id, horseData });
       const newHorse = await HorseAPI.addHorse(user?.id, horseData);
 
       if (newHorse) {
@@ -1216,22 +1190,11 @@ const MyHorsesScreen = () => {
     );
   }
 
-  // Debug current state
-  console.log('🎯 Render state:', { 
-    authLoading, 
-    loading, 
-    horsesLength: horses.length, 
-    userId: user?.id,
-    showLoadingScreen: authLoading || loading
-  });
-
   // Add timeout fallback for auth loading
   useEffect(() => {
     const authTimeout = setTimeout(() => {
       if (authLoading) {
-        console.log('⚠️ Auth loading timeout reached, this might indicate an issue');
-        // We don't force authLoading to false as it's managed by AuthContext
-        // but we log it for debugging
+        // Auth loading timeout - just log for debugging
       }
     }, 20000); // 20 second timeout for auth
 
