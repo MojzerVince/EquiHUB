@@ -15,17 +15,7 @@ export class ProfileAPIBase64 {
         return null
       }
 
-      // Log the retrieved experience data specifically
-      if (data) {
-        console.log('Retrieved profile data:', {
-          id: data.id,
-          name: data.name,
-          age: data.age,
-          experience: data.experience,
-          is_pro_member: data.is_pro_member
-        });
-      }
-
+      // Return the data if found
       return data
     } catch (error) {
       console.error('Error in getProfile:', error)
@@ -36,24 +26,11 @@ export class ProfileAPIBase64 {
   // Update user profile
   static async updateProfile(userId: string, profileData: Partial<Profile>): Promise<boolean> {
     try {
-      console.log('=== UPDATE PROFILE DEBUG ===');
-      console.log('Updating profile for user:', userId);
-      console.log('Profile data to update:', JSON.stringify(profileData, null, 2));
       
-      // Specifically log experience field updates
-      if (profileData.experience !== undefined) {
-        console.log('Experience field update:', profileData.experience, 'Type:', typeof profileData.experience);
-      }
-      if (profileData.is_pro_member !== undefined) {
-        console.log('Pro member status update:', profileData.is_pro_member, 'Type:', typeof profileData.is_pro_member);
-      }
-
       const updatePayload = {
         ...profileData,
         updated_at: new Date().toISOString()
       };
-      
-      console.log('Final update payload:', JSON.stringify(updatePayload, null, 2));
 
       const { data, error } = await supabase
         .from('profiles')
@@ -67,8 +44,6 @@ export class ProfileAPIBase64 {
         return false
       }
 
-      console.log('Update successful! Returned data:', JSON.stringify(data, null, 2));
-      console.log('Profile updated successfully');
       return true
     } catch (error) {
       console.error('Error in updateProfile:', error)
@@ -79,8 +54,6 @@ export class ProfileAPIBase64 {
   // Update user experience and pro member status specifically
   static async updateMembershipData(userId: string, experience: number, isProMember: boolean): Promise<boolean> {
     try {
-      console.log('Updating membership data for user:', userId);
-      console.log('Experience:', experience, 'Pro Member:', isProMember);
 
       const { error } = await supabase
         .from('profiles')
@@ -96,7 +69,6 @@ export class ProfileAPIBase64 {
         return false
       }
 
-      console.log('Membership data updated successfully');
       return true
     } catch (error) {
       console.error('Error in updateMembershipData:', error)
@@ -118,16 +90,11 @@ export class ProfileAPIBase64 {
   // Update profile with automatic pro membership calculation
   static async updateProfileWithMembershipLogic(userId: string, profileData: Partial<Profile>): Promise<boolean> {
     try {
-      console.log('Updating profile with membership logic for user:', userId);
       
       // If experience is being updated, calculate pro status
       if (profileData.experience !== undefined) {
         const currentProStatus = profileData.is_pro_member || false;
         const calculatedProStatus = this.determineMembershipStatus(profileData.experience, currentProStatus);
-        
-        console.log('Experience:', profileData.experience);
-        console.log('Current pro status:', currentProStatus);
-        console.log('Calculated pro status:', calculatedProStatus);
         
         profileData.is_pro_member = calculatedProStatus;
       }
@@ -158,14 +125,12 @@ export class ProfileAPIBase64 {
       }
     }
 
-    console.log(`Batch update completed: ${success} successful, ${failed} failed`);
     return { success, failed };
   }
 
   // Verify database connection and profile table structure
   static async verifyDatabaseConnection(): Promise<boolean> {
     try {
-      console.log('Verifying database connection...');
       
       const { data, error } = await supabase
         .from('profiles')
@@ -177,7 +142,6 @@ export class ProfileAPIBase64 {
         return false;
       }
 
-      console.log('Database connection verified successfully');
       return true;
     } catch (error) {
       console.error('Error verifying database connection:', error);

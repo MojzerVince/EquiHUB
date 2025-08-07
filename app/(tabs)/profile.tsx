@@ -97,11 +97,7 @@ const ProfileScreen = () => {
   // Direct API functions to bypass Supabase client issues
   const getProfileDirectAPI = async (userId: string) => {
     try {
-      console.log('=== FETCHING PROFILE VIA DIRECT API ===');
-      console.log('User ID:', userId);
-      
       const url = `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${userId}`;
-      console.log('API URL:', url);
       
       const response = await Promise.race([
         fetch(url, {
@@ -116,9 +112,6 @@ const ProfileScreen = () => {
         )
       ]) as Response;
 
-      console.log('API Response status:', response.status);
-      console.log('API Response ok:', response.ok);
-
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Profile API response not OK:', response.status, response.statusText);
@@ -127,8 +120,6 @@ const ProfileScreen = () => {
       }
 
       const profiles = await response.json();
-      console.log('Direct API profile response:', profiles);
-      console.log('Number of profiles found:', profiles.length);
       
       return profiles.length > 0 ? profiles[0] : null;
     } catch (error) {
@@ -139,8 +130,6 @@ const ProfileScreen = () => {
 
   const createProfileDirectAPI = async (userId: string, profileData: any) => {
     try {
-      console.log('Creating profile via direct API for user:', userId);
-      
       const newProfile = {
         id: userId,
         ...profileData,
@@ -170,7 +159,6 @@ const ProfileScreen = () => {
       }
 
       const createdProfiles = await response.json();
-      console.log('Direct API create profile response:', createdProfiles);
       
       return createdProfiles.length > 0 ? createdProfiles[0] : null;
     } catch (error) {
@@ -181,9 +169,6 @@ const ProfileScreen = () => {
 
   const updateProfileDirectAPI = async (userId: string, profileData: any) => {
     try {
-      console.log('Updating profile via direct API for user:', userId);
-      console.log('Update data:', profileData);
-      
       const updatePayload = {
         ...profileData,
         updated_at: new Date().toISOString()
@@ -218,7 +203,6 @@ const ProfileScreen = () => {
       }
 
       const updatedProfiles = await response.json();
-      console.log('Direct API update profile response:', updatedProfiles);
       
       return true;
     } catch (error) {
@@ -230,11 +214,7 @@ const ProfileScreen = () => {
   // Direct API functions for badges to bypass Supabase client issues
   const getUserBadgesDirectAPI = async (userId: string) => {
     try {
-      console.log('=== FETCHING USER BADGES VIA DIRECT API ===');
-      console.log('User ID:', userId);
-      
       const url = `https://grdsqxwghajehneksxik.supabase.co/rest/v1/user_badges?user_id=eq.${userId}&select=*,badge:badges!user_badges_badge_id_fkey(*)`;
-      console.log('Badges API URL:', url);
       
       const response = await Promise.race([
         fetch(url, {
@@ -257,7 +237,6 @@ const ProfileScreen = () => {
       }
 
       const badges = await response.json();
-      console.log('Direct API badges response:', badges);
       
       return badges || [];
     } catch (error) {
@@ -316,7 +295,6 @@ const ProfileScreen = () => {
   }, []);
 
   const initializeProfile = async () => {
-    console.log('=== INITIALIZING PROFILE ===');
     
     try {
       // Load profile data with timeout
@@ -338,8 +316,6 @@ const ProfileScreen = () => {
   const loadUserBadges = async () => {
     setBadgesLoading(true);
     try {
-      console.log('Loading badges for user:', USER_ID);
-      
       // Load user badges using direct API with timeout
       const badges = await Promise.race([
         getUserBadgesDirectAPI(USER_ID),
@@ -347,13 +323,10 @@ const ProfileScreen = () => {
           setTimeout(() => reject(new Error('Badge loading timeout after 10 seconds')), 10000)
         )
       ]);
-      
-      console.log('Loaded badges:', badges);
       setUserBadges(badges);
 
       // Calculate badge statistics from the loaded badges
       const stats = getBadgeStatsDirectAPI(badges);
-      console.log('Calculated badge stats:', stats);
       setBadgeStats(stats);
 
       // Note: Badge eligibility checking is disabled for now to prevent hanging
@@ -362,7 +335,6 @@ const ProfileScreen = () => {
     } catch (error) {
       console.error('Error loading user badges:', error);
       // Don't set error for badges, just log it and continue
-      console.log('Badge loading failed, continuing without badges');
       setUserBadges([]);
       setBadgeStats({
         totalBadges: 0,
@@ -382,8 +354,6 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      console.log('=== LOADING PROFILE FOR USER ===');
-      console.log('User ID:', USER_ID);
       
       // Try direct REST API approach with timeout like in refresh
       let profile = await Promise.race([
@@ -395,7 +365,6 @@ const ProfileScreen = () => {
 
       // If profile doesn't exist, create it with default values
       if (!profile) {
-        console.log("Profile not found, creating new profile...");
         const newProfile = await createProfileDirectAPI(USER_ID, {
           name: "New User", // Don't use hardcoded values
           age: 25,
@@ -405,7 +374,6 @@ const ProfileScreen = () => {
         });
 
         if (!newProfile) {
-          console.log("Failed to create profile, using fallback data");
           // If we can't create a profile, use some default data so the user can at least use the app
           const fallbackProfile = {
             id: USER_ID,
@@ -437,8 +405,6 @@ const ProfileScreen = () => {
         // Use the newly created profile
         profile = newProfile;
       }
-
-      console.log('Profile loaded successfully:', profile);
 
       // Update state with loaded/created profile data
       const loadedExperience = profile.experience || 0;
@@ -480,7 +446,6 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      console.log("Refreshing profile data...");
       
       // Add 15-second timeout to profile refresh
       const profile = await Promise.race([
@@ -526,7 +491,6 @@ const ProfileScreen = () => {
           // Don't prevent refresh if badges fail
         }
       } else {
-        console.log("No profile data received during refresh");
         setError("Failed to refresh profile data");
       }
     } catch (err) {
@@ -653,8 +617,6 @@ const ProfileScreen = () => {
       // Handle image upload if there's a new image
       if (hasNewImage) {
         try {
-          console.log('Converting new image to base64...');
-          
           // Convert image to base64 directly here instead of using separate upload function
           const response = await fetch(profileImage.uri);
           if (!response.ok) {
@@ -662,7 +624,6 @@ const ProfileScreen = () => {
           }
 
           const blob = await response.blob();
-          console.log('Image blob size:', blob.size, 'type:', blob.type);
 
           // Convert blob to Base64
           const base64 = await new Promise<string>((resolve, reject) => {
@@ -683,7 +644,6 @@ const ProfileScreen = () => {
           const mimeType = blob.type || 'image/jpeg';
           const dataUrl = `data:${mimeType};base64,${base64}`;
           
-          console.log('Base64 conversion successful, data URL created');
           updateData.profile_image_url = dataUrl;
         } catch (imageError) {
           console.error('Image upload failed:', imageError);

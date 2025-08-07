@@ -5,8 +5,6 @@ export class HorseAPI {
   // Get all horses for a user
   static async getHorses(userId: string): Promise<Horse[]> {
     try {
-      console.log('🔥 HorseAPI: Fetching horses for user:', userId);
-      
       // Use direct REST API (Supabase client has compatibility issues)
       const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
       const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
@@ -29,7 +27,6 @@ export class HorseAPI {
       }
 
       const data = await response.json();
-      console.log('🔥 HorseAPI: ✅ Successfully retrieved', data.length, 'horses');
       
       return data || [];
       
@@ -50,22 +47,13 @@ export class HorseAPI {
     image?: any;
   }): Promise<Horse | null> {
     try {
-      console.log('🔥 HorseAPI: Adding horse for user:', userId);
-      console.log('🔥 HorseAPI: Horse data:', horseData);
-      console.log('🔥 HorseAPI: Image provided:', !!horseData.image);
-      console.log('🔥 HorseAPI: Image URI:', horseData.image?.uri);
-
       let imageBase64 = null;
 
       // Convert image to base64 if provided
       if (horseData.image && horseData.image.uri) {
-        console.log('🔥 HorseAPI: Converting image to base64...');
         imageBase64 = await FileSystem.readAsStringAsync(horseData.image.uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
-        console.log('🔥 HorseAPI: Base64 conversion successful, length:', imageBase64.length);
-      } else {
-        console.log('🔥 HorseAPI: No image provided for conversion');
       }
 
       // Use direct REST API (Supabase client has compatibility issues)
@@ -84,8 +72,6 @@ export class HorseAPI {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
-
-      console.log('🔥 HorseAPI: Prepared horse data with base64 in image_url:', !!newHorse.image_url);
 
       const response = await fetch(`${supabaseUrl}/rest/v1/horses`, {
         method: 'POST',
@@ -107,7 +93,6 @@ export class HorseAPI {
       const data = await response.json();
       const addedHorse = data && data.length > 0 ? data[0] : data;
       
-      console.log('🔥 HorseAPI: ✅ Successfully added horse:', addedHorse);
       return addedHorse;
     } catch (error) {
       console.error('🔥 HorseAPI: Error in addHorse:', error);
@@ -126,22 +111,13 @@ export class HorseAPI {
     image?: any;
   }): Promise<Horse | null> {
     try {
-      console.log('🔥 HorseAPI: Updating horse:', horseId);
-      console.log('🔥 HorseAPI: Updates:', updates);
-      console.log('🔥 HorseAPI: Image provided:', !!updates.image);
-      console.log('🔥 HorseAPI: Image URI:', updates.image?.uri);
-
       let imageBase64 = undefined;
 
       // Convert new image to base64 if provided
       if (updates.image && updates.image.uri) {
-        console.log('🔥 HorseAPI: Converting image to base64...');
         imageBase64 = await FileSystem.readAsStringAsync(updates.image.uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
-        console.log('🔥 HorseAPI: Base64 conversion successful, length:', imageBase64.length);
-      } else {
-        console.log('🔥 HorseAPI: No new image provided for conversion');
       }
 
       const updateData: any = { ...updates };
@@ -150,8 +126,6 @@ export class HorseAPI {
         updateData.image_url = `data:image/jpeg;base64,${imageBase64}`;
       }
       updateData.updated_at = new Date().toISOString();
-
-      console.log('🔥 HorseAPI: Prepared update data with base64 in image_url:', !!updateData.image_url);
 
       // Use direct REST API (Supabase client has compatibility issues)
       const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
@@ -176,8 +150,6 @@ export class HorseAPI {
 
       const data = await response.json();
       const updatedHorse = data && data.length > 0 ? data[0] : data;
-      
-      console.log('🔥 HorseAPI: ✅ Successfully updated horse:', updatedHorse);
       return updatedHorse;
     } catch (error) {
       console.error('🔥 HorseAPI: Error in updateHorse:', error);
@@ -188,8 +160,6 @@ export class HorseAPI {
   // Delete a horse
   static async deleteHorse(horseId: string, userId: string): Promise<boolean> {
     try {
-      console.log('🔥 HorseAPI: Deleting horse:', horseId);
-
       // Use direct REST API to get horse data first
       const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
       const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
