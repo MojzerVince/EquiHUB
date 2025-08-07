@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTheme } from "../../contexts/ThemeContext";
 import { HorseAPI } from "../../lib/horseAPI";
 import { Horse } from "../../lib/supabase";
 
@@ -96,6 +97,7 @@ const breedOptions = [
 
 const MyHorsesScreen = () => {
   const { user, loading: authLoading } = useAuth();
+  const { currentTheme } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [horses, setHorses] = useState<Horse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1186,13 +1188,13 @@ const MyHorsesScreen = () => {
   // Show authentication message if no user
   if (!authLoading && !user?.id) {
     return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
           <View style={styles.headerContainer}>
             <Text style={styles.header}>My Horses</Text>
           </View>
         </SafeAreaView>
-        <View style={styles.viewPort}>
+        <View style={[styles.viewPort, { backgroundColor: currentTheme.colors.background }]}>
           <View style={styles.loadingContainer}>
             <Text style={styles.emptyStateEmoji}>🔒</Text>
             <Text style={styles.emptyStateText}>Please log in</Text>
@@ -1226,15 +1228,15 @@ const MyHorsesScreen = () => {
 
   if (authLoading || loading) {
     return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
           <View style={styles.headerContainer}>
             <Text style={styles.header}>My Horses</Text>
           </View>
         </SafeAreaView>
-        <View style={styles.viewPort}>
+        <View style={[styles.viewPort, { backgroundColor: currentTheme.colors.background }]}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#335C67" />
+            <ActivityIndicator size="large" color={currentTheme.colors.primary} />
             <Text style={styles.loadingText}>
               {authLoading ? "Loading..." : "Loading horses..."}
             </Text>
@@ -1245,14 +1247,14 @@ const MyHorsesScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
         <View style={styles.headerContainer}>
           <Text style={styles.header}>My Horses</Text>
         </View>
       </SafeAreaView>
 
-      <View style={styles.viewPort}>
+      <View style={[styles.viewPort, { backgroundColor: currentTheme.colors.background }]}>
         <ScrollView 
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
