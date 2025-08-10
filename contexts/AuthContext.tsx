@@ -34,15 +34,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Get initial session
     getInitialSession();
 
-    // Add timeout fallback for auth loading - reduced to 8 seconds
+    // Add timeout fallback for auth loading - increased to 20 seconds
     const authLoadingTimeout = setTimeout(() => {
       if (loading) {
         console.log(
-          "⚠️ Auth loading timeout after 8 seconds - forcing loading to false"
+          "⚠️ Auth loading timeout after 20 seconds - forcing loading to false"
         );
         setLoading(false);
       }
-    }, 8000); // 8 second timeout for auth
+    }, 20000); // 20 second timeout for auth
 
     // Listen for auth changes
     const {
@@ -79,10 +79,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log("Getting initial session...");
 
-      // Shorter timeout to prevent long green screen - 5 seconds
+      // First, try a quick session check without timeout
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!error && session?.user) {
+          console.log("Quick session check successful for user:", session.user.email);
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            created_at: session.user.created_at!,
+          });
+          setLoading(false);
+          return;
+        }
+        
+        if (!error && !session) {
+          console.log("Quick session check - no existing session found");
+          setLoading(false);
+          return;
+        }
+        
+        // If there was an error, fall through to the timeout-protected version
+        if (error) {
+          console.log("Quick session check failed, trying with timeout protection:", error.message);
+        }
+      } catch (quickError) {
+        console.log("Quick session check threw error, trying with timeout protection:", quickError);
+      }
+
+      // Fallback: Use timeout-protected session check
       const sessionPromise = supabase.auth.getSession();
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Session check timeout")), 5000);
+        setTimeout(() => reject(new Error("Session check timeout")), 15000);
       });
 
       const {
@@ -92,27 +121,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) {
         console.error("Error getting initial session:", error);
+        setUser(null);
         setLoading(false);
         return;
       }
 
       if (session?.user) {
-        console.log("Found existing session for user:", session.user.email);
+        console.log("Timeout-protected session check successful for user:", session.user.email);
         setUser({
           id: session.user.id,
           email: session.user.email!,
           created_at: session.user.created_at!,
         });
       } else {
-        console.log("No existing session found");
+        console.log("Timeout-protected session check - no existing session found");
+        setUser(null);
       }
     } catch (error) {
       console.error("Error in getInitialSession:", error);
       if (error instanceof Error && error.message.includes("timeout")) {
         console.log(
-          "⚠️ Session check timed out after 5 seconds, proceeding without authentication"
+          "⚠️ Session check timed out after 15 seconds, proceeding without authentication"
         );
-        // Clear any stale session data on timeout
+        // Only clear user state on timeout - don't force logout of valid sessions
+        setUser(null);
+        
+        // Attempt a background retry without blocking the UI
+        console.log("Scheduling background session retry...");
+        setTimeout(async () => {
+          try {
+            console.log("Attempting background session retry...");
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user && !user) { // Only set user if we don't already have one
+              console.log("Background retry successful - found session for user:", session.user.email);
+              setUser({
+                id: session.user.id,
+                email: session.user.email!,
+                created_at: session.user.created_at!,
+              });
+            }
+          } catch (retryError) {
+            console.log("Background session retry failed:", retryError);
+          }
+        }, 3000);
+      } else {
+        // For non-timeout errors, clear user state
         setUser(null);
       }
     } finally {
