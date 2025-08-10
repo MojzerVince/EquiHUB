@@ -25,27 +25,7 @@ const ProfileScreen = () => {
   const { user } = useAuth();
   const { currentTheme } = useTheme();
 
-  // Get the user ID from the authenticated user
-  const USER_ID = user?.id;
-
-  // If no user is authenticated, we shouldn't be on this page
-  if (!USER_ID) {
-    return (
-      <SafeAreaView
-        style={[
-          styles.container,
-          { backgroundColor: currentTheme.colors.primary },
-        ]}
-      >
-        <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: currentTheme.colors.text }]}>
-            No user authenticated
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
+  // All hooks must be declared before any early returns
   const [isEditing, setIsEditing] = useState(false);
   const [userName, setUserName] = useState("Loading...");
   const [userAge, setUserAge] = useState("Loading...");
@@ -98,6 +78,35 @@ const ProfileScreen = () => {
   const [selectedBadge, setSelectedBadge] =
     useState<UserBadgeWithDetails | null>(null);
   const [badgeDialogVisible, setBadgeDialogVisible] = useState(false);
+
+  // Load profile data on component mount
+  useEffect(() => {
+    // Only initialize if we have a valid user
+    if (user?.id) {
+      initializeProfile();
+    }
+  }, [user?.id]);
+
+  // Get the user ID from the authenticated user
+  const USER_ID = user?.id;
+
+  // If no user is authenticated, we shouldn't be on this page
+  if (!USER_ID) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.container,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
+        <View style={styles.errorContainer}>
+          <Text style={[styles.errorText, { color: currentTheme.colors.text }]}>
+            No user authenticated
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // Function to determine membership status based on database value only
   const determineMembershipStatus = (databaseProStatus: boolean) => {
@@ -332,11 +341,6 @@ const ProfileScreen = () => {
   const getMembershipDisplayText = (isProMember: boolean) => {
     return isProMember ? "PRO MEMBER" : "RIDER";
   };
-
-  // Load profile data on component mount
-  useEffect(() => {
-    initializeProfile();
-  }, []);
 
   const initializeProfile = async () => {
     try {
@@ -851,18 +855,20 @@ const ProfileScreen = () => {
     >
       <View style={styles.badgeDialogOverlay}>
         <View style={styles.badgeDialogContainer}>
-          {selectedBadge && (
+          {selectedBadge ? (
             <>
               <View style={styles.badgeDialogHeader}>
                 <View
                   style={[
                     styles.badgeDialogIcon,
-                    selectedBadge.badge.rarity === "legendary" &&
-                      styles.legendaryBadge,
-                    selectedBadge.badge.rarity === "epic" && styles.epicBadge,
-                    selectedBadge.badge.rarity === "rare" && styles.rareBadge,
-                    selectedBadge.badge.rarity === "common" &&
-                      styles.commonBadge,
+                    selectedBadge.badge.rarity === "legendary"
+                      ? styles.legendaryBadge
+                      : null,
+                    selectedBadge.badge.rarity === "epic" ? styles.epicBadge : null,
+                    selectedBadge.badge.rarity === "rare" ? styles.rareBadge : null,
+                    selectedBadge.badge.rarity === "common"
+                      ? styles.commonBadge
+                      : null,
                   ]}
                 >
                   <Text style={styles.badgeDialogEmoji}>
@@ -916,7 +922,7 @@ const ProfileScreen = () => {
                 </Text>
               </View>
             </>
-          )}
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -1221,12 +1227,14 @@ const ProfileScreen = () => {
                     <View
                       style={[
                         styles.badgeIcon,
-                        userBadge.badge.rarity === "legendary" &&
-                          styles.legendaryBadge,
-                        userBadge.badge.rarity === "epic" && styles.epicBadge,
-                        userBadge.badge.rarity === "rare" && styles.rareBadge,
-                        userBadge.badge.rarity === "common" &&
-                          styles.commonBadge,
+                        userBadge.badge.rarity === "legendary"
+                          ? styles.legendaryBadge
+                          : null,
+                        userBadge.badge.rarity === "epic" ? styles.epicBadge : null,
+                        userBadge.badge.rarity === "rare" ? styles.rareBadge : null,
+                        userBadge.badge.rarity === "common"
+                          ? styles.commonBadge
+                          : null,
                       ]}
                     >
                       <Text style={styles.badgeEmoji}>
@@ -1291,24 +1299,24 @@ const ProfileScreen = () => {
       <ImagePickerModal />
 
       {/* Loading Overlay */}
-      {isLoading && (
+      {isLoading ? (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#335C67" />
             <Text style={styles.loadingText}>Saving...</Text>
           </View>
         </View>
-      )}
+      ) : null}
 
       {/* Error Display */}
-      {error && (
+      {error ? (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={clearError} style={styles.errorButton}>
             <Text style={styles.errorButtonText}>Dismiss</Text>
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
 
       {/* Badge Dialog */}
       {renderBadgeDialog()}

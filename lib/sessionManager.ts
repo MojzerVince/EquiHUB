@@ -96,14 +96,27 @@ export class SessionManager {
   // Clear all stored session data
   static async clearSessionData(): Promise<void> {
     try {
-      await Promise.all([
+      const promises = [
         AsyncStorage.removeItem('last_login_time'),
         AsyncStorage.removeItem('user_preferences'),
         AsyncStorage.removeItem('app_settings')
-      ]);
+      ];
+
+      // Use Promise.allSettled to prevent one failure from breaking the others
+      const results = await Promise.allSettled(promises);
+      
+      // Log any failures but don't throw
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const keys = ['last_login_time', 'user_preferences', 'app_settings'];
+          console.warn(`Failed to clear ${keys[index]}:`, result.reason);
+        }
+      });
+
       console.log('Session data cleared');
     } catch (error) {
       console.error('Error clearing session data:', error);
+      // Don't throw the error to prevent crashes during logout
     }
   }
 

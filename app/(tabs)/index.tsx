@@ -165,6 +165,19 @@ const MyHorsesScreen = () => {
     };
   }, [user, authLoading, loading, horsesLoaded]);
 
+  // Add timeout fallback for auth loading
+  useEffect(() => {
+    const authTimeout = setTimeout(() => {
+      if (authLoading) {
+        // Auth loading timeout - just log for debugging
+      }
+    }, 20000); // 20 second timeout for auth
+
+    return () => {
+      clearTimeout(authTimeout);
+    };
+  }, [authLoading]);
+
   const loadHorses = async (userId: string) => {
     try {
       setLoading(true);
@@ -644,14 +657,14 @@ const MyHorsesScreen = () => {
               includeFontPadding: false,
             }}
           >
-            {value || placeholder}
+            {value || placeholder || ""}
           </Text>
           <Text style={{ color: currentTheme.colors.text, fontSize: 16 }}>
             {isVisible ? "▲" : "▼"}
           </Text>
         </TouchableOpacity>
 
-        {isVisible && (
+        {isVisible ? (
           <Modal
             transparent={true}
             visible={isVisible}
@@ -714,7 +727,7 @@ const MyHorsesScreen = () => {
               </View>
             </TouchableOpacity>
           </Modal>
-        )}
+        ) : null}
       </View>
     );
   };
@@ -816,14 +829,14 @@ const MyHorsesScreen = () => {
               includeFontPadding: false,
             }}
           >
-            {value ? formatDate(value) : placeholder}
+            {value ? formatDate(value) : (placeholder || "")}
           </Text>
           <Text style={{ color: currentTheme.colors.text, fontSize: 16 }}>
             {isVisible ? "▲" : "▼"}
           </Text>
         </TouchableOpacity>
 
-        {isVisible && (
+        {isVisible ? (
           <Modal
             transparent={true}
             visible={isVisible}
@@ -1061,7 +1074,7 @@ const MyHorsesScreen = () => {
               </View>
             </TouchableOpacity>
           </Modal>
-        )}
+        ) : null}
       </View>
     );
   };
@@ -1127,14 +1140,14 @@ const MyHorsesScreen = () => {
               includeFontPadding: false,
             }}
           >
-            {value ? `${value}${unit}` : placeholder}
+            {value ? `${value}${unit}` : (placeholder || "")}
           </Text>
           <Text style={{ color: "#FFFFFF", fontSize: 16 }}>
             {isVisible ? "▲" : "▼"}
           </Text>
         </TouchableOpacity>
 
-        {isVisible && (
+        {isVisible ? (
           <Modal
             transparent={true}
             visible={isVisible}
@@ -1171,7 +1184,7 @@ const MyHorsesScreen = () => {
                     fontFamily: "Inder",
                   }}
                 >
-                  Select {placeholder.toLowerCase()}
+                  Select {placeholder ? placeholder.toLowerCase() : "item"}
                 </Text>
 
                 <ScrollView
@@ -1256,7 +1269,7 @@ const MyHorsesScreen = () => {
               </View>
             </TouchableOpacity>
           </Modal>
-        )}
+        ) : null}
       </View>
     );
   };
@@ -1298,7 +1311,7 @@ const MyHorsesScreen = () => {
               { color: currentTheme.colors.textSecondary },
             ]}
           >
-            {successMessage}
+            {successMessage || ""}
           </Text>
           <TouchableOpacity
             style={[
@@ -1469,19 +1482,6 @@ const MyHorsesScreen = () => {
     );
   }
 
-  // Add timeout fallback for auth loading
-  useEffect(() => {
-    const authTimeout = setTimeout(() => {
-      if (authLoading) {
-        // Auth loading timeout - just log for debugging
-      }
-    }, 20000); // 20 second timeout for auth
-
-    return () => {
-      clearTimeout(authTimeout);
-    };
-  }, [authLoading]);
-
   if (authLoading || loading) {
     return (
       <View
@@ -1561,7 +1561,7 @@ const MyHorsesScreen = () => {
               <Text
                 style={[styles.statsText, { color: currentTheme.colors.text }]}
               >
-                You have {horses.length} horses
+                You have {horses?.length || 0} horses
               </Text>
             </View>
             <TouchableOpacity
@@ -1579,7 +1579,7 @@ const MyHorsesScreen = () => {
                 Add New Horse
               </Text>
             </TouchableOpacity>{" "}
-            {horses.map((horse, index) => (
+            {(horses || []).map((horse, index) => (
               <View
                 style={[
                   styles.horseCard,
@@ -1614,7 +1614,7 @@ const MyHorsesScreen = () => {
                         },
                       ]}
                     >
-                      {horse.name}
+                      {horse.name || ""}
                     </Text>
                     <View style={styles.horseDetails}>
                       <View style={styles.detailRow}>
@@ -1635,7 +1635,7 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text, fontSize: 14 },
                           ]}
                         >
-                          {horse.gender}
+                          {horse.gender || ""}
                         </Text>
                       </View>
                       <View style={styles.detailRow}>
@@ -1656,7 +1656,7 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text, fontSize: 14 },
                           ]}
                         >
-                          {formatDate(horse.birth_date)}
+                          {horse.birth_date ? formatDate(horse.birth_date) : ""}
                         </Text>
                       </View>
                       <View style={styles.detailRow}>
@@ -1677,10 +1677,10 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text, fontSize: 14 },
                           ]}
                         >
-                          {horse.height} cm
+                          {horse.height || 0} cm
                         </Text>
                       </View>
-                      {horse.weight && (
+                      {horse.weight ? (
                         <View style={styles.detailRow}>
                           <Text
                             style={[
@@ -1699,10 +1699,10 @@ const MyHorsesScreen = () => {
                               { color: currentTheme.colors.text, fontSize: 14 },
                             ]}
                           >
-                            {horse.weight} kg
+                            {horse.weight || 0} kg
                           </Text>
                         </View>
-                      )}
+                      ) : null}
                       <View style={styles.detailRow}>
                         <Text
                           style={[
@@ -1721,7 +1721,7 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text, fontSize: 14 },
                           ]}
                         >
-                          {horse.breed}
+                          {horse.breed || ""}
                         </Text>
                       </View>
                     </View>
@@ -1760,7 +1760,7 @@ const MyHorsesScreen = () => {
                 </View>
               </View>
             ))}
-            {horses.length === 0 && !loading && (
+            {horses && horses.length === 0 && !loading ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateEmoji}>🐴</Text>
                 <Text
@@ -1780,13 +1780,13 @@ const MyHorsesScreen = () => {
                   Add your first horse to get started.
                 </Text>
               </View>
-            )}
+            ) : null}
           </View>
         </ScrollView>
       </View>
 
       {/* Loading overlay */}
-      {loading && horses.length > 0 && (
+      {loading && horses && horses.length > 0 ? (
         <View style={styles.loadingOverlay}>
           <View
             style={[
@@ -1808,7 +1808,7 @@ const MyHorsesScreen = () => {
             </Text>
           </View>
         </View>
-      )}
+      ) : null}
 
       {/* Edit Horse Modal */}
       <Modal

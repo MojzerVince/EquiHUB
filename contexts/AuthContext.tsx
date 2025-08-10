@@ -120,20 +120,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async () => {
     try {
       console.log('Signing out user');
-      // Clear user state immediately
+      // Clear user state immediately to trigger navigation
       setUser(null);
+      
+      // Clear session data first before signOut
+      await clearStoredCredentials();
       
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Error signing out:', error);
-        throw error;
+        // Don't throw here, just log the error
+        // The user state is already cleared, so navigation will happen
       }
-      // Clear any additional stored data
-      await clearStoredCredentials();
       console.log('User signed out successfully');
     } catch (error) {
       console.error('Sign out error:', error);
-      throw error;
+      // Don't re-throw the error to prevent crashes
+      // The user state is already cleared
     }
   };
 
