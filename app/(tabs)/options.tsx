@@ -32,19 +32,17 @@ const OptionsScreen = () => {
   const [themeDropdownVisible, setThemeDropdownVisible] = useState(false);
 
   const handleLogout = () => {
-    showLogout(
-      async () => {
-        try {
-          console.log("Starting logout process for user:", user?.email);
-          await signOut();
-          console.log("User logged out successfully");
-          // ProtectedRoute will handle navigation automatically
-        } catch (error) {
-          console.error("Logout error:", error);
-          showError("Failed to sign out. Please try again.");
-        }
+    showLogout(async () => {
+      try {
+        console.log("Starting logout process for user:", user?.email);
+        await signOut();
+        console.log("User logged out successfully");
+        // ProtectedRoute will handle navigation automatically
+      } catch (error) {
+        console.error("Logout error:", error);
+        showError("Failed to sign out. Please try again.");
       }
-    );
+    });
   };
 
   const handleDeleteAccount = () => {

@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { AuthUser } from '../lib/authAPI';
-import { SessionManager } from '../lib/sessionManager';
-import { supabase } from '../lib/supabase';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { AuthUser } from "../lib/authAPI";
+import { SessionManager } from "../lib/sessionManager";
+import { supabase } from "../lib/supabase";
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -17,7 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -37,35 +37,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Add timeout fallback for auth loading - reduced to 8 seconds
     const authLoadingTimeout = setTimeout(() => {
       if (loading) {
-        console.log('⚠️ Auth loading timeout after 8 seconds - forcing loading to false');
+        console.log(
+          "⚠️ Auth loading timeout after 8 seconds - forcing loading to false"
+        );
         setLoading(false);
       }
     }, 8000); // 8 second timeout for auth
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            created_at: session.user.created_at!
-          });
-          
-          // Refresh session if needed
-          await SessionManager.refreshSessionIfNeeded();
-        } else {
-          setUser(null);
-          // Clear session data on logout
-          if (event === 'SIGNED_OUT') {
-            await SessionManager.clearSessionData();
-          }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session?.user?.id);
+
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          created_at: session.user.created_at!,
+        });
+
+        // Refresh session if needed
+        await SessionManager.refreshSessionIfNeeded();
+      } else {
+        setUser(null);
+        // Clear session data on logout
+        if (event === "SIGNED_OUT") {
+          await SessionManager.clearSessionData();
         }
-        setLoading(false);
       }
-    );
+      setLoading(false);
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -75,66 +77,68 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const getInitialSession = async () => {
     try {
-      console.log('Getting initial session...');
-      
+      console.log("Getting initial session...");
+
       // Shorter timeout to prevent long green screen - 5 seconds
       const sessionPromise = supabase.auth.getSession();
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Session check timeout')), 5000);
+        setTimeout(() => reject(new Error("Session check timeout")), 5000);
       });
-      
-      const { data: { session }, error } = await Promise.race([
-        sessionPromise,
-        timeoutPromise
-      ]);
-      
+
+      const {
+        data: { session },
+        error,
+      } = await Promise.race([sessionPromise, timeoutPromise]);
+
       if (error) {
-        console.error('Error getting initial session:', error);
+        console.error("Error getting initial session:", error);
         setLoading(false);
         return;
       }
 
       if (session?.user) {
-        console.log('Found existing session for user:', session.user.email);
+        console.log("Found existing session for user:", session.user.email);
         setUser({
           id: session.user.id,
           email: session.user.email!,
-          created_at: session.user.created_at!
+          created_at: session.user.created_at!,
         });
       } else {
-        console.log('No existing session found');
+        console.log("No existing session found");
       }
     } catch (error) {
-      console.error('Error in getInitialSession:', error);
-      if (error instanceof Error && error.message.includes('timeout')) {
-        console.log('⚠️ Session check timed out after 5 seconds, proceeding without authentication');
+      console.error("Error in getInitialSession:", error);
+      if (error instanceof Error && error.message.includes("timeout")) {
+        console.log(
+          "⚠️ Session check timed out after 5 seconds, proceeding without authentication"
+        );
         // Clear any stale session data on timeout
         setUser(null);
       }
     } finally {
-      console.log('✅ Setting auth loading to false');
+      console.log("✅ Setting auth loading to false");
       setLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
-      console.log('Signing out user');
+      console.log("Signing out user");
       // Clear user state immediately to trigger navigation
       setUser(null);
-      
+
       // Clear session data first before signOut
       await clearStoredCredentials();
-      
+
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error signing out:', error);
+        console.error("Error signing out:", error);
         // Don't throw here, just log the error
         // The user state is already cleared, so navigation will happen
       }
-      console.log('User signed out successfully');
+      console.log("User signed out successfully");
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error("Sign out error:", error);
       // Don't re-throw the error to prevent crashes
       // The user state is already cleared
     }
@@ -144,9 +148,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Use session manager to clear all session data
       await SessionManager.clearSessionData();
-      console.log('Cleared stored credentials');
+      console.log("Cleared stored credentials");
     } catch (error) {
-      console.error('Error clearing stored credentials:', error);
+      console.error("Error clearing stored credentials:", error);
     }
   };
 
@@ -154,17 +158,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       return await SessionManager.hasValidSession();
     } catch (error) {
-      console.error('Error in isSessionValid:', error);
+      console.error("Error in isSessionValid:", error);
       return false;
     }
   };
 
   const refreshUser = async () => {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+
       if (error) {
-        console.error('Error refreshing user:', error);
+        console.error("Error refreshing user:", error);
         return;
       }
 
@@ -172,13 +179,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser({
           id: session.user.id,
           email: session.user.email!,
-          created_at: session.user.created_at!
+          created_at: session.user.created_at!,
         });
       } else {
         setUser(null);
       }
     } catch (error) {
-      console.error('Error in refreshUser:', error);
+      console.error("Error in refreshUser:", error);
     }
   };
 
@@ -191,9 +198,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isSessionValid,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

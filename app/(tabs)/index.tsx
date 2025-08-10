@@ -213,7 +213,9 @@ const MyHorsesScreen = () => {
       setHorsesLoaded(true);
 
       if (errorMessage.includes("timeout")) {
-        showError("The request took too long. Please check your internet connection.");
+        showError(
+          "The request took too long. Please check your internet connection."
+        );
       } else {
         showError("Failed to load horses");
       }
@@ -506,41 +508,57 @@ const MyHorsesScreen = () => {
       }
     } catch (error) {
       console.error("Error adding horse:", error);
-      showError("Failed to add horse. Please check your connection and try again.");
+      showError(
+        "Failed to add horse. Please check your connection and try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const deleteHorse = (horse: Horse) => {
-    showDelete(
-      horse.name,
-      async () => {
-        if (!user?.id) {
-          showError("User not authenticated");
-          return;
-        }
-
-        try {
-          setLoading(true);
-          const success = await HorseAPI.deleteHorse(horse.id, user?.id);
-
-          if (success) {
-            setHorsesLoaded(false); // Reset flag to allow reloading
-            await loadHorses(user?.id);
-            setSuccessMessage(`${horse.name} has been deleted`);
-            setShowSuccessModal(true);
-          } else {
-            showError("Failed to delete horse");
-          }
-        } catch (error) {
-          console.error("Error deleting horse:", error);
-          showError("Failed to delete horse");
-        } finally {
-          setLoading(false);
-        }
+    showDelete(horse.name, async () => {
+      if (!user?.id) {
+        showError("User not authenticated");
+        return;
       }
-    );
+
+      try {
+        setLoading(true);
+        console.log(
+          `🔥 Starting delete for horse: ${horse.name} (ID: ${horse.id})`
+        );
+
+        const success = await HorseAPI.deleteHorse(horse.id, user?.id);
+
+        if (success) {
+          console.log(`🔥 Delete successful for horse: ${horse.name}`);
+
+          // Immediately remove the horse from the local state for instant UI feedback
+          setHorses((prevHorses) =>
+            prevHorses.filter((h) => h.id !== horse.id)
+          );
+
+          // Add a small delay to ensure the delete has been processed on the server
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // Then reload to ensure data consistency
+          setHorsesLoaded(false); // Reset flag to allow reloading
+          await loadHorses(user?.id);
+
+          setSuccessMessage(`${horse.name} has been deleted`);
+          setShowSuccessModal(true);
+        } else {
+          console.log(`🔥 Delete failed for horse: ${horse.name}`);
+          showError("Failed to delete horse");
+        }
+      } catch (error) {
+        console.error("Error deleting horse:", error);
+        showError("Failed to delete horse");
+      } finally {
+        setLoading(false);
+      }
+    });
   };
 
   // Image picker functions
@@ -810,7 +828,7 @@ const MyHorsesScreen = () => {
               includeFontPadding: false,
             }}
           >
-            {value ? formatDate(value) : (placeholder || "")}
+            {value ? formatDate(value) : placeholder || ""}
           </Text>
           <Text style={{ color: currentTheme.colors.text, fontSize: 16 }}>
             {isVisible ? "▲" : "▼"}
@@ -1121,7 +1139,7 @@ const MyHorsesScreen = () => {
               includeFontPadding: false,
             }}
           >
-            {value ? `${value}${unit}` : (placeholder || "")}
+            {value ? `${value}${unit}` : placeholder || ""}
           </Text>
           <Text style={{ color: "#FFFFFF", fontSize: 16 }}>
             {isVisible ? "▲" : "▼"}

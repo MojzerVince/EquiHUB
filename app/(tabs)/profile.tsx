@@ -575,7 +575,9 @@ const ProfileScreen = () => {
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      showError("You need to grant camera roll permissions to change your profile picture.");
+      showError(
+        "You need to grant camera roll permissions to change your profile picture."
+      );
       return;
     }
 
@@ -862,8 +864,12 @@ const ProfileScreen = () => {
                     selectedBadge.badge.rarity === "legendary"
                       ? styles.legendaryBadge
                       : null,
-                    selectedBadge.badge.rarity === "epic" ? styles.epicBadge : null,
-                    selectedBadge.badge.rarity === "rare" ? styles.rareBadge : null,
+                    selectedBadge.badge.rarity === "epic"
+                      ? styles.epicBadge
+                      : null,
+                    selectedBadge.badge.rarity === "rare"
+                      ? styles.rareBadge
+                      : null,
                     selectedBadge.badge.rarity === "common"
                       ? styles.commonBadge
                       : null,
@@ -1228,8 +1234,12 @@ const ProfileScreen = () => {
                         userBadge.badge.rarity === "legendary"
                           ? styles.legendaryBadge
                           : null,
-                        userBadge.badge.rarity === "epic" ? styles.epicBadge : null,
-                        userBadge.badge.rarity === "rare" ? styles.rareBadge : null,
+                        userBadge.badge.rarity === "epic"
+                          ? styles.epicBadge
+                          : null,
+                        userBadge.badge.rarity === "rare"
+                          ? styles.rareBadge
+                          : null,
                         userBadge.badge.rarity === "common"
                           ? styles.commonBadge
                           : null,

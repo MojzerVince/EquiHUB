@@ -1,5 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { CustomDialog, DialogButton, createDialog } from '@/components/CustomDialog';
+import React, { createContext, useContext, useState, ReactNode } from "react";
+import {
+  CustomDialog,
+  DialogButton,
+  createDialog,
+} from "@/components/CustomDialog";
 
 interface DialogConfig {
   title: string;
@@ -11,8 +15,17 @@ interface DialogContextType {
   showDialog: (config: DialogConfig) => void;
   showError: (message: string) => void;
   showSuccess: (message: string) => void;
-  showConfirm: (title: string, message: string, onConfirm?: () => void, onCancel?: () => void) => void;
-  showDelete: (itemName: string, onConfirm?: () => void, onCancel?: () => void) => void;
+  showConfirm: (
+    title: string,
+    message: string,
+    onConfirm?: () => void,
+    onCancel?: () => void
+  ) => void;
+  showDelete: (
+    itemName: string,
+    onConfirm?: () => void,
+    onCancel?: () => void
+  ) => void;
   showLogout: (onConfirm?: () => void, onCancel?: () => void) => void;
   hideDialog: () => void;
 }
@@ -26,8 +39,8 @@ interface DialogProviderProps {
 export const DialogProvider: React.FC<DialogProviderProps> = ({ children }) => {
   const [visible, setVisible] = useState(false);
   const [config, setConfig] = useState<DialogConfig>({
-    title: '',
-    message: '',
+    title: "",
+    message: "",
     buttons: [],
   });
 
@@ -64,7 +77,12 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({ children }) => {
     onConfirm?: () => void,
     onCancel?: () => void
   ) => {
-    const dialogConfig = createDialog.confirm(title, message, onConfirm, onCancel);
+    const dialogConfig = createDialog.confirm(
+      title,
+      message,
+      onConfirm,
+      onCancel
+    );
     showDialog({
       title: dialogConfig.title,
       message: dialogConfig.message,
@@ -121,7 +139,7 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({ children }) => {
 export const useDialog = (): DialogContextType => {
   const context = useContext(DialogContext);
   if (!context) {
-    throw new Error('useDialog must be used within a DialogProvider');
+    throw new Error("useDialog must be used within a DialogProvider");
   }
   return context;
 };
