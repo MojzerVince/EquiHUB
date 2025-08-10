@@ -9,7 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs location access to track your riding routes and show your position on the map.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access to track your riding routes even when the app is in the background."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyAqdFPkyBOQByGRJatqE0SmD-iQYjNQR7w"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +24,16 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.mojzi1969.EquiHUB"
+      "package": "com.mojzi1969.EquiHUB",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+        }
+      }
     },
     "web": {
       "bundler": "metro",

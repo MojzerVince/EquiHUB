@@ -305,9 +305,6 @@ const MapScreen = () => {
         duration: finalDuration,
       };
 
-      // Here you could save the session to a database
-      console.log('Session completed:', finalSession);
-      
       Alert.alert(
         'Ride Completed!',
         `Distance: ${distance.toFixed(2)} km\nDuration: ${formatDuration(finalDuration)}\nAverage Speed: ${calculateAverageSpeed(distance, finalDuration).toFixed(1)} km/h`,
@@ -374,9 +371,7 @@ const MapScreen = () => {
         }, 1000);
       }
 
-      console.log('Centered on user location:', userLoc);
     } catch (error) {
-      console.error('Error getting current location:', error);
       Alert.alert('Location Error', 'Unable to get your current location. Please try again.');
     }
   };
@@ -906,6 +901,53 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  permissionOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  permissionCard: {
+    padding: 24,
+    borderRadius: 16,
+    margin: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  permissionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+    fontFamily: "Inder",
+  },
+  permissionSubtext: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 22,
+    fontFamily: "Inder",
+  },
+  skipButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
     fontFamily: "Inder",
   },
 });
