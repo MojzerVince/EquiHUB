@@ -1,17 +1,17 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useDialog } from "@/contexts/DialogContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -19,80 +19,54 @@ const OptionsScreen = () => {
   const router = useRouter();
   const { signOut, user } = useAuth();
   const { currentTheme, setTheme, availableThemes } = useTheme();
-  
+  const { showLogout, showConfirm, showError } = useDialog();
+
   // Settings state
   const [notifications, setNotifications] = useState(true);
   const [locationSharing, setLocationSharing] = useState(false);
   const [privateProfile, setPrivateProfile] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
-  
+
   // Theme dropdown state
   const [themeDropdownVisible, setThemeDropdownVisible] = useState(false);
 
   const handleLogout = () => {
-    Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              console.log("Starting logout process for user:", user?.email);
-              await signOut();
-              console.log("User logged out successfully");
-              // Force navigation after a brief delay to ensure state is updated
-              setTimeout(() => {
-                router.replace("/login");
-              }, 100);
-            } catch (error) {
-              console.error("Logout error:", error);
-              Alert.alert("Error", "Failed to sign out. Please try again.");
-            }
-          },
-        },
-      ]
-    );
+    showLogout(async () => {
+      try {
+        console.log("Starting logout process for user:", user?.email);
+        await signOut();
+        console.log("User logged out successfully");
+        // ProtectedRoute will handle navigation automatically
+      } catch (error) {
+        console.error("Logout error:", error);
+        showError("Failed to sign out. Please try again.");
+      }
+    });
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
+    showConfirm(
       "Delete Account",
       "This action cannot be undone. Are you sure you want to delete your account?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            // Handle account deletion logic here
-            console.log("Account deletion requested");
-          },
-        },
-      ]
+      () => {
+        // Handle account deletion logic here
+        console.log("Account deletion requested");
+      }
     );
   };
 
-  const SettingItem = ({ 
-    title, 
-    subtitle, 
-    value, 
-    onValueChange, 
+  const SettingItem = ({
+    title,
+    subtitle,
+    value,
+    onValueChange,
     type = "switch",
     dropdownValue,
     dropdownOptions,
     onDropdownSelect,
     dropdownVisible,
-    setDropdownVisible
+    setDropdownVisible,
   }: {
     title: string;
     subtitle?: string;
@@ -105,48 +79,96 @@ const OptionsScreen = () => {
     dropdownVisible?: boolean;
     setDropdownVisible?: (visible: boolean) => void;
   }) => (
-    <View style={[styles.settingItem, { borderBottomColor: currentTheme.colors.accent }]}>
+    <View
+      style={[
+        styles.settingItem,
+        { borderBottomColor: currentTheme.colors.accent },
+      ]}
+    >
       <View style={styles.settingInfo}>
-        <Text style={[styles.settingTitle, { color: currentTheme.colors.text }]}>{title}</Text>
-        {subtitle && <Text style={[styles.settingSubtitle, { color: currentTheme.colors.textSecondary }]}>{subtitle}</Text>}
+        <Text
+          style={[styles.settingTitle, { color: currentTheme.colors.text }]}
+        >
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text
+            style={[
+              styles.settingSubtitle,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
-      {type === "switch" && (
+      {type === "switch" ? (
         <Switch
           value={value}
           onValueChange={onValueChange}
-          trackColor={{ false: currentTheme.colors.accent, true: currentTheme.colors.primary }}
+          trackColor={{
+            false: currentTheme.colors.accent,
+            true: currentTheme.colors.primary,
+          }}
           thumbColor={value ? "#fff" : "#f4f3f4"}
         />
-      )}
-      {type === "dropdown" && (
+      ) : null}
+      {type === "dropdown" ? (
         <TouchableOpacity
-          style={[styles.dropdownButton, { borderColor: currentTheme.colors.border }]}
-          onPress={() => setDropdownVisible && setDropdownVisible(!dropdownVisible)}
+          style={[
+            styles.dropdownButton,
+            { borderColor: currentTheme.colors.border },
+          ]}
+          onPress={() =>
+            setDropdownVisible && setDropdownVisible(!dropdownVisible)
+          }
         >
-          <Text style={[styles.dropdownButtonText, { color: currentTheme.colors.text }]}>
+          <Text
+            style={[
+              styles.dropdownButtonText,
+              { color: currentTheme.colors.text },
+            ]}
+          >
             {dropdownValue}
           </Text>
-          <Text style={[styles.dropdownArrow, { color: currentTheme.colors.text }]}>
-            {dropdownVisible ? '▲' : '▼'}
+          <Text
+            style={[styles.dropdownArrow, { color: currentTheme.colors.text }]}
+          >
+            {dropdownVisible ? "▲" : "▼"}
           </Text>
         </TouchableOpacity>
-      )}
+      ) : null}
     </View>
   );
 
-  const ActionButton = ({ 
-    title, 
-    onPress, 
-    style, 
-    textStyle 
+  const ActionButton = ({
+    title,
+    onPress,
+    style,
+    textStyle,
   }: {
     title: string;
     onPress: () => void;
     style?: any;
     textStyle?: any;
   }) => (
-    <TouchableOpacity style={[styles.actionButton, { borderBottomColor: currentTheme.colors.accent }, style]} onPress={onPress}>
-      <Text style={[styles.actionButtonText, { color: currentTheme.colors.text }, textStyle]}>{title}</Text>
+    <TouchableOpacity
+      style={[
+        styles.actionButton,
+        { borderBottomColor: currentTheme.colors.accent },
+        style,
+      ]}
+      onPress={onPress}
+    >
+      <Text
+        style={[
+          styles.actionButtonText,
+          { color: currentTheme.colors.text },
+          textStyle,
+        ]}
+      >
+        {title}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -162,31 +184,44 @@ const OptionsScreen = () => {
         style={styles.modalOverlay}
         onPress={() => setThemeDropdownVisible(false)}
       >
-        <View style={[styles.dropdownModal, { backgroundColor: currentTheme.colors.card }]}>
-          <Text style={[styles.dropdownModalTitle, { color: '#fff' }]}>Select Theme</Text>
+        <View
+          style={[
+            styles.dropdownModal,
+            { backgroundColor: currentTheme.colors.card },
+          ]}
+        >
+          <Text style={[styles.dropdownModalTitle, { color: "#fff" }]}>
+            Select Theme
+          </Text>
           <ScrollView style={styles.dropdownModalContent}>
             {availableThemes.map((theme, index) => (
               <TouchableOpacity
                 key={index}
                 style={[
                   styles.dropdownOption,
-                  { 
-                    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-                    backgroundColor: currentTheme.name === theme ? 'rgba(255, 255, 255, 0.1)' : 'transparent'
-                  }
+                  {
+                    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+                    backgroundColor:
+                      currentTheme.name === theme
+                        ? "rgba(255, 255, 255, 0.1)"
+                        : "transparent",
+                  },
                 ]}
                 onPress={() => {
                   setTheme(theme as ThemeName);
                   setThemeDropdownVisible(false);
                 }}
               >
-                <Text style={[
-                  styles.dropdownOptionText, 
-                  { 
-                    color: '#fff',
-                    fontWeight: currentTheme.name === theme ? 'bold' : 'normal'
-                  }
-                ]}>
+                <Text
+                  style={[
+                    styles.dropdownOptionText,
+                    {
+                      color: "#fff",
+                      fontWeight:
+                        currentTheme.name === theme ? "bold" : "normal",
+                    },
+                  ]}
+                >
                   {theme}
                 </Text>
               </TouchableOpacity>
@@ -198,15 +233,25 @@ const OptionsScreen = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.colors.primary },
+      ]}
+    >
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
         <View style={styles.headerContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.push("/(tabs)/profile")}
             activeOpacity={0.7}
           >
-            <Image 
+            <Image
               source={require("../../assets/UI_resources/UI_white/arrow_white.png")}
               style={styles.backIcon}
             />
@@ -215,13 +260,26 @@ const OptionsScreen = () => {
         </View>
       </SafeAreaView>
 
-      <ScrollView style={[styles.viewPort, { backgroundColor: currentTheme.colors.background }]}>
+      <ScrollView
+        style={[
+          styles.viewPort,
+          { backgroundColor: currentTheme.colors.background },
+        ]}
+      >
         <View style={styles.optionsContainer}>
-          
           {/* Account Settings Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>Account</Text>
-            <View style={[styles.sectionContent, { backgroundColor: currentTheme.colors.surface }]}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              Account
+            </Text>
+            <View
+              style={[
+                styles.sectionContent,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
               <SettingItem
                 title="Private Profile"
                 subtitle="Only friends can see your profile"
@@ -239,8 +297,17 @@ const OptionsScreen = () => {
 
           {/* Privacy Settings Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>Privacy</Text>
-            <View style={[styles.sectionContent, { backgroundColor: currentTheme.colors.surface }]}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              Privacy
+            </Text>
+            <View
+              style={[
+                styles.sectionContent,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
               <SettingItem
                 title="Location Sharing"
                 subtitle="Share your location with friends"
@@ -258,8 +325,17 @@ const OptionsScreen = () => {
 
           {/* App Settings Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>App Settings</Text>
-            <View style={[styles.sectionContent, { backgroundColor: currentTheme.colors.surface }]}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              App Settings
+            </Text>
+            <View
+              style={[
+                styles.sectionContent,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
               <SettingItem
                 title="Theme"
                 subtitle="Choose your preferred color theme"
@@ -281,8 +357,17 @@ const OptionsScreen = () => {
 
           {/* General Actions Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>General</Text>
-            <View style={[styles.sectionContent, { backgroundColor: currentTheme.colors.surface }]}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              General
+            </Text>
+            <View
+              style={[
+                styles.sectionContent,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
               <ActionButton
                 title="About"
                 onPress={() => console.log("About pressed")}
@@ -304,18 +389,33 @@ const OptionsScreen = () => {
 
           {/* Account Actions Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>Account Actions</Text>
-            <View style={[styles.sectionContent, { backgroundColor: currentTheme.colors.surface }]}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              Account Actions
+            </Text>
+            <View
+              style={[
+                styles.sectionContent,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
               <ActionButton
                 title="Logout"
                 onPress={handleLogout}
-                style={[styles.logoutButton, { backgroundColor: currentTheme.colors.warning }]}
+                style={[
+                  styles.logoutButton,
+                  { backgroundColor: currentTheme.colors.warning },
+                ]}
                 textStyle={styles.logoutButtonText}
               />
               <ActionButton
                 title="Delete Account"
                 onPress={handleDeleteAccount}
-                style={[styles.deleteButton, { backgroundColor: currentTheme.colors.error }]}
+                style={[
+                  styles.deleteButton,
+                  { backgroundColor: currentTheme.colors.error },
+                ]}
                 textStyle={styles.deleteButtonText}
               />
             </View>
@@ -343,7 +443,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -20,
+    marginBottom: -45,
   },
   header: {
     fontSize: 30,
@@ -377,11 +477,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: 5,
-    paddingTop: 30,
+    paddingTop: 15,
+    paddingBottom: 150, // Add bottom padding to account for tab bar
   },
   optionsContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 120,
   },
   section: {
     marginBottom: 30,
@@ -444,21 +545,21 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   dropdownModal: {
     borderRadius: 12,
     padding: 20,
-    width: '80%',
+    width: "80%",
     maxWidth: 300,
     maxHeight: 400,
   },
   dropdownModalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
     marginBottom: 15,
     fontFamily: "Inder",
   },
@@ -469,11 +570,11 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
   },
   dropdownOptionText: {
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
     fontFamily: "Inder",
   },
   actionButton: {

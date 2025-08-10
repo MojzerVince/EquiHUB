@@ -1,26 +1,46 @@
 import React from "react";
-import {
-    StyleSheet,
-    Text,
-    View
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../contexts/ThemeContext";
 
 const ClubScreen = () => {
   const { currentTheme } = useTheme();
-  
+
   return (
-    <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.colors.primary },
+      ]}
+    >
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
         <View style={styles.headerContainer}>
           <Text style={styles.header}>Club</Text>
         </View>
       </SafeAreaView>
-      <View style={[styles.viewPort, { backgroundColor: currentTheme.colors.background }]}>
+      <View
+        style={[
+          styles.viewPort,
+          { backgroundColor: currentTheme.colors.background },
+        ]}
+      >
         <View style={styles.contentContainer}>
-          <Text style={[styles.comingSoonText, { color: currentTheme.colors.text }]}>Coming Soon!</Text>
-          <Text style={[styles.comingSoonSubtext, { color: currentTheme.colors.textSecondary }]}>
+          <Text
+            style={[styles.comingSoonText, { color: currentTheme.colors.text }]}
+          >
+            Coming Soon!
+          </Text>
+          <Text
+            style={[
+              styles.comingSoonSubtext,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             This feature is under development.
           </Text>
         </View>
@@ -39,7 +59,8 @@ const styles = StyleSheet.create({
   headerContainer: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    alignItems: 'center',
+    alignItems: "center",
+    marginBottom: -45,
   },
   header: {
     fontSize: 28,
@@ -53,20 +74,21 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
+    paddingBottom: 130, // Add bottom padding to account for tab bar
   },
   comingSoonText: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: "Inder",
     marginBottom: 10,
   },
   comingSoonSubtext: {
     fontSize: 16,
     fontFamily: "Inder",
-    textAlign: 'center',
+    textAlign: "center",
   },
 });
 

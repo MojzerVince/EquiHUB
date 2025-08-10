@@ -1,24 +1,25 @@
-import * as Haptics from 'expo-haptics';
+import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useDialog } from "@/contexts/DialogContext";
 import { AuthAPI, RegisterData } from "../lib/authAPI";
 
 const RegisterScreen = () => {
   const router = useRouter();
-  
+  const { showError, showConfirm } = useDialog();
+
   // Form state
   const [formData, setFormData] = useState<RegisterData>({
     email: "",
@@ -28,17 +29,17 @@ const RegisterScreen = () => {
     description: "",
     riding_experience: 0,
   });
-  
+
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Form validation
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const validateForm = (): boolean => {
-    const newErrors: {[key: string]: string} = {};
+    const newErrors: { [key: string]: string } = {};
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -80,9 +81,12 @@ const RegisterScreen = () => {
     }
 
     // Riding experience validation
-    if (formData.riding_experience !== undefined && 
-        (formData.riding_experience < 0 || formData.riding_experience > 80)) {
-      newErrors.riding_experience = "Riding experience must be between 0 and 80 years";
+    if (
+      formData.riding_experience !== undefined &&
+      (formData.riding_experience < 0 || formData.riding_experience > 80)
+    ) {
+      newErrors.riding_experience =
+        "Riding experience must be between 0 and 80 years";
     }
 
     setErrors(newErrors);
@@ -104,82 +108,78 @@ const RegisterScreen = () => {
 
       if (error) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert("Registration Error", error);
+        showError(error);
         return;
       }
 
       if (user) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert(
+        showConfirm(
           "Registration Successful!",
           "Your account has been created successfully. Please check your email to verify your account before logging in. Once logged in, you'll stay signed in automatically on this device.",
-          [
-            {
-              text: "OK",
-              onPress: () => router.replace("/login")
-            }
-          ]
+          () => router.replace("/login")
         );
       }
     } catch (error) {
       console.error("Registration error:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      showError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field: keyof RegisterData, value: string | number) => {
+  const handleInputChange = (
+    field: keyof RegisterData,
+    value: string | number
+  ) => {
     setFormData((prev: RegisterData) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
-    
+
     // Clear error for this field when user starts typing
     if (errors[field as string]) {
-      setErrors((prev: {[key: string]: string}) => ({
+      setErrors((prev: { [key: string]: string }) => ({
         ...prev,
-        [field as string]: ""
+        [field as string]: "",
       }));
     }
   };
 
-  const handleTermsPress = (type: 'terms' | 'privacy') => {
+  const handleTermsPress = (type: "terms" | "privacy") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    const title = type === 'terms' ? 'Terms of Service' : 'Privacy Policy';
-    const message = type === 'terms' 
-      ? 'Our Terms of Service outline the rules and regulations for using EquiHUB. This would typically open a detailed terms page or web view.'
-      : 'Our Privacy Policy explains how we collect, use, and protect your personal information. This would typically open a detailed privacy page or web view.';
-    
-    Alert.alert(
+
+    const title = type === "terms" ? "Terms of Service" : "Privacy Policy";
+    const message =
+      type === "terms"
+        ? "Our Terms of Service outline the rules and regulations for using EquiHUB. This would typically open a detailed terms page or web view."
+        : "Our Privacy Policy explains how we collect, use, and protect your personal information. This would typically open a detailed privacy page or web view.";
+
+    showConfirm(
       title,
       message,
-      [
-        {
-          text: 'Close',
-          style: 'cancel'
-        },
-        {
-          text: 'View Full Document',
-          onPress: () => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            // TODO: In a real app, this would open a web view or navigate to a dedicated page
-            Alert.alert('Coming Soon', 'Full document viewer will be available in a future update.');
-          }
-        }
-      ]
+      () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        // TODO: In a real app, this would open a web view or navigate to a dedicated page
+        showConfirm(
+          "Coming Soon",
+          "Full document viewer will be available in a future update."
+        );
+      },
+      () => {
+        // User closed the dialog
+      }
     );
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView 
+        <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
@@ -196,61 +196,81 @@ const RegisterScreen = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Full Name</Text>
               <TextInput
-                style={[styles.textInput, errors.name ? styles.inputError : null]}
+                style={[
+                  styles.textInput,
+                  errors.name ? styles.inputError : null,
+                ]}
                 value={formData.name}
-                onChangeText={(text) => handleInputChange('name', text)}
+                onChangeText={(text) => handleInputChange("name", text)}
                 placeholder="Enter your full name"
                 placeholderTextColor="#999"
                 autoCapitalize="words"
                 autoCorrect={false}
                 maxLength={50}
               />
-              {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
+              {errors.name ? (
+                <Text style={styles.errorText}>{errors.name}</Text>
+              ) : null}
             </View>
 
             {/* Age Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Age</Text>
               <TextInput
-                style={[styles.textInput, errors.age ? styles.inputError : null]}
+                style={[
+                  styles.textInput,
+                  errors.age ? styles.inputError : null,
+                ]}
                 value={formData.age.toString()}
                 onChangeText={(text) => {
                   const age = parseInt(text) || 0;
-                  handleInputChange('age', age);
+                  handleInputChange("age", age);
                 }}
                 placeholder="Enter your age"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={3}
               />
-              {errors.age ? <Text style={styles.errorText}>{errors.age}</Text> : null}
+              {errors.age ? (
+                <Text style={styles.errorText}>{errors.age}</Text>
+              ) : null}
             </View>
 
             {/* Riding Experience Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Riding Experience (Years)</Text>
               <TextInput
-                style={[styles.textInput, errors.riding_experience ? styles.inputError : null]}
+                style={[
+                  styles.textInput,
+                  errors.riding_experience ? styles.inputError : null,
+                ]}
                 value={formData.riding_experience?.toString() || "0"}
                 onChangeText={(text) => {
                   const experience = parseInt(text) || 0;
-                  handleInputChange('riding_experience', experience);
+                  handleInputChange("riding_experience", experience);
                 }}
                 placeholder="Years of riding experience"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={2}
               />
-              {errors.riding_experience ? <Text style={styles.errorText}>{errors.riding_experience}</Text> : null}
+              {errors.riding_experience ? (
+                <Text style={styles.errorText}>{errors.riding_experience}</Text>
+              ) : null}
             </View>
 
             {/* Email Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email Address</Text>
               <TextInput
-                style={[styles.textInput, errors.email ? styles.inputError : null]}
+                style={[
+                  styles.textInput,
+                  errors.email ? styles.inputError : null,
+                ]}
                 value={formData.email}
-                onChangeText={(text) => handleInputChange('email', text.toLowerCase().trim())}
+                onChangeText={(text) =>
+                  handleInputChange("email", text.toLowerCase().trim())
+                }
                 placeholder="Enter your email address"
                 placeholderTextColor="#999"
                 keyboardType="email-address"
@@ -258,7 +278,9 @@ const RegisterScreen = () => {
                 autoCorrect={false}
                 autoComplete="email"
               />
-              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+              {errors.email ? (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              ) : null}
             </View>
 
             {/* Password Input */}
@@ -266,9 +288,12 @@ const RegisterScreen = () => {
               <Text style={styles.inputLabel}>Password</Text>
               <View style={styles.passwordContainer}>
                 <TextInput
-                  style={[styles.passwordInput, errors.password ? styles.inputError : null]}
+                  style={[
+                    styles.passwordInput,
+                    errors.password ? styles.inputError : null,
+                  ]}
                   value={formData.password}
-                  onChangeText={(text) => handleInputChange('password', text)}
+                  onChangeText={(text) => handleInputChange("password", text)}
                   placeholder="Create a password"
                   placeholderTextColor="#999"
                   secureTextEntry={!showPassword}
@@ -284,10 +309,14 @@ const RegisterScreen = () => {
                   }}
                   activeOpacity={0.6}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁️"}</Text>
+                  <Text style={styles.eyeIcon}>
+                    {showPassword ? "🙈" : "👁️"}
+                  </Text>
                 </TouchableOpacity>
               </View>
-              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+              {errors.password ? (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              ) : null}
             </View>
 
             {/* Confirm Password Input */}
@@ -295,14 +324,17 @@ const RegisterScreen = () => {
               <Text style={styles.inputLabel}>Confirm Password</Text>
               <View style={styles.passwordContainer}>
                 <TextInput
-                  style={[styles.passwordInput, errors.confirmPassword ? styles.inputError : null]}
+                  style={[
+                    styles.passwordInput,
+                    errors.confirmPassword ? styles.inputError : null,
+                  ]}
                   value={confirmPassword}
                   onChangeText={(text) => {
                     setConfirmPassword(text);
                     if (errors.confirmPassword) {
-                      setErrors(prev => ({
+                      setErrors((prev) => ({
                         ...prev,
-                        confirmPassword: ""
+                        confirmPassword: "",
                       }));
                     }
                   }}
@@ -321,10 +353,14 @@ const RegisterScreen = () => {
                   }}
                   activeOpacity={0.6}
                 >
-                  <Text style={styles.eyeIcon}>{showConfirmPassword ? "🙈" : "👁️"}</Text>
+                  <Text style={styles.eyeIcon}>
+                    {showConfirmPassword ? "🙈" : "👁️"}
+                  </Text>
                 </TouchableOpacity>
               </View>
-              {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
+              {errors.confirmPassword ? (
+                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+              ) : null}
             </View>
 
             {/* Description Input (Optional) */}
@@ -333,7 +369,7 @@ const RegisterScreen = () => {
               <TextInput
                 style={[styles.textArea]}
                 value={formData.description}
-                onChangeText={(text) => handleInputChange('description', text)}
+                onChangeText={(text) => handleInputChange("description", text)}
                 placeholder="Tell us a bit about yourself and your equestrian interests..."
                 placeholderTextColor="#999"
                 multiline={true}
@@ -350,7 +386,10 @@ const RegisterScreen = () => {
           {/* Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={[styles.registerButton, loading ? styles.disabledButton : null]}
+              style={[
+                styles.registerButton,
+                loading ? styles.disabledButton : null,
+              ]}
               onPress={handleRegister}
               disabled={loading}
               activeOpacity={0.8}
@@ -365,7 +404,7 @@ const RegisterScreen = () => {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.loginLinkContainer}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -373,7 +412,9 @@ const RegisterScreen = () => {
               }}
               activeOpacity={0.7}
             >
-              <Text style={styles.loginLinkText}>Already have an account? </Text>
+              <Text style={styles.loginLinkText}>
+                Already have an account?{" "}
+              </Text>
               <Text style={styles.loginLink}>Sign In</Text>
             </TouchableOpacity>
           </View>
@@ -383,15 +424,15 @@ const RegisterScreen = () => {
             <Text style={styles.termsText}>
               By creating an account, you agree to our{" "}
             </Text>
-            <TouchableOpacity 
-              onPress={() => handleTermsPress('terms')}
+            <TouchableOpacity
+              onPress={() => handleTermsPress("terms")}
               activeOpacity={0.7}
             >
               <Text style={styles.termsLink}>Terms of Service</Text>
             </TouchableOpacity>
             <Text style={styles.termsText}> and </Text>
-            <TouchableOpacity 
-              onPress={() => handleTermsPress('privacy')}
+            <TouchableOpacity
+              onPress={() => handleTermsPress("privacy")}
               activeOpacity={0.7}
             >
               <Text style={styles.termsLink}>Privacy Policy</Text>
@@ -545,9 +586,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   loadingText: {
     color: "#fff",
@@ -577,10 +618,10 @@ const styles = StyleSheet.create({
   termsContainer: {
     paddingHorizontal: 30,
     paddingTop: 20,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
   },
   termsText: {
     fontSize: 16,
@@ -593,7 +634,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     color: "#fff",
     fontWeight: "600",
-    textDecorationLine: 'underline',
+    textDecorationLine: "underline",
   },
 });
 

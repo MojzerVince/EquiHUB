@@ -2,7 +2,6 @@ import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   RefreshControl,
@@ -15,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useDialog } from "../../contexts/DialogContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { HorseAPI } from "../../lib/horseAPI";
 import { Horse } from "../../lib/supabase";
@@ -92,6 +92,7 @@ const breedOptions = [
 const MyHorsesScreen = () => {
   const { user, loading: authLoading } = useAuth();
   const { currentTheme } = useTheme();
+  const { showError, showDelete, showConfirm } = useDialog();
   const [refreshing, setRefreshing] = useState(false);
   const [horses, setHorses] = useState<Horse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -165,6 +166,19 @@ const MyHorsesScreen = () => {
     };
   }, [user, authLoading, loading, horsesLoaded]);
 
+  // Add timeout fallback for auth loading
+  useEffect(() => {
+    const authTimeout = setTimeout(() => {
+      if (authLoading) {
+        // Auth loading timeout - just log for debugging
+      }
+    }, 20000); // 20 second timeout for auth
+
+    return () => {
+      clearTimeout(authTimeout);
+    };
+  }, [authLoading]);
+
   const loadHorses = async (userId: string) => {
     try {
       setLoading(true);
@@ -199,12 +213,11 @@ const MyHorsesScreen = () => {
       setHorsesLoaded(true);
 
       if (errorMessage.includes("timeout")) {
-        Alert.alert(
-          "Timeout",
+        showError(
           "The request took too long. Please check your internet connection."
         );
       } else {
-        Alert.alert("Error", "Failed to load horses");
+        showError("Failed to load horses");
       }
     } finally {
       setLoading(false);
@@ -298,7 +311,7 @@ const MyHorsesScreen = () => {
 
   const saveHorseEdit = async () => {
     if (!user?.id || !editingHorse) {
-      Alert.alert("Error", "User not authenticated");
+      showError("User not authenticated");
       return;
     }
 
@@ -316,31 +329,31 @@ const MyHorsesScreen = () => {
       !normalizedHeight ||
       !normalizedBreed
     ) {
-      Alert.alert("Error", "Please fill in all required fields");
+      showError("Please fill in all required fields");
       return;
     }
 
     const namePattern = /^[\p{L}\p{M}\s\-'\.]+$/u;
     if (!namePattern.test(normalizedName)) {
-      Alert.alert("Error", "Horse name contains invalid characters");
+      showError("Horse name contains invalid characters");
       return;
     }
 
     if (normalizedName.length < 2 || normalizedName.length > 50) {
-      Alert.alert("Error", "Horse name must be between 2 and 50 characters");
+      showError("Horse name must be between 2 and 50 characters");
       return;
     }
 
     const currentDate = new Date();
     const minDate = new Date(1980, 0, 1);
     if (editBirthDate < minDate || editBirthDate > currentDate) {
-      Alert.alert("Error", "Please enter a valid birth date");
+      showError("Please enter a valid birth date");
       return;
     }
 
     const heightNum = parseInt(normalizedHeight);
     if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
-      Alert.alert("Error", "Please enter a valid height (50-250 cm)");
+      showError("Please enter a valid height (50-250 cm)");
       return;
     }
 
@@ -348,7 +361,7 @@ const MyHorsesScreen = () => {
     if (normalizedWeight) {
       weightNum = parseInt(normalizedWeight);
       if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
-        Alert.alert("Error", "Please enter a valid weight (50-2000 kg)");
+        showError("Please enter a valid weight (50-2000 kg)");
         return;
       }
     }
@@ -394,11 +407,11 @@ const MyHorsesScreen = () => {
         }
         setShowSuccessModal(true);
       } else {
-        Alert.alert("Error", "Failed to update horse");
+        showError("Failed to update horse");
       }
     } catch (error) {
       console.error("Error updating horse:", error);
-      Alert.alert("Error", "Failed to update horse");
+      showError("Failed to update horse");
     } finally {
       setLoading(false);
     }
@@ -406,7 +419,7 @@ const MyHorsesScreen = () => {
 
   const saveHorseAdd = async () => {
     if (!user?.id) {
-      Alert.alert("Authentication Error", "Please log in again to add horses");
+      showError("Please log in again to add horses");
       return;
     }
 
@@ -424,31 +437,31 @@ const MyHorsesScreen = () => {
       !normalizedHeight ||
       !normalizedBreed
     ) {
-      Alert.alert("Error", "Please fill in all required fields");
+      showError("Please fill in all required fields");
       return;
     }
 
     const namePattern = /^[\p{L}\p{M}\s\-'\.]+$/u;
     if (!namePattern.test(normalizedName)) {
-      Alert.alert("Error", "Horse name contains invalid characters");
+      showError("Horse name contains invalid characters");
       return;
     }
 
     if (normalizedName.length < 2 || normalizedName.length > 50) {
-      Alert.alert("Error", "Horse name must be between 2 and 50 characters");
+      showError("Horse name must be between 2 and 50 characters");
       return;
     }
 
     const currentDate = new Date();
     const minDate = new Date(1980, 0, 1);
     if (addBirthDate < minDate || addBirthDate > currentDate) {
-      Alert.alert("Error", "Please enter a valid birth date");
+      showError("Please enter a valid birth date");
       return;
     }
 
     const heightNum = parseInt(normalizedHeight);
     if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
-      Alert.alert("Error", "Please enter a valid height (50-250 cm)");
+      showError("Please enter a valid height (50-250 cm)");
       return;
     }
 
@@ -456,7 +469,7 @@ const MyHorsesScreen = () => {
     if (normalizedWeight) {
       weightNum = parseInt(normalizedWeight);
       if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
-        Alert.alert("Error", "Please enter a valid weight (50-2000 kg)");
+        showError("Please enter a valid weight (50-2000 kg)");
         return;
       }
     }
@@ -491,12 +504,11 @@ const MyHorsesScreen = () => {
         }
         setShowSuccessModal(true);
       } else {
-        Alert.alert("Error", "Failed to add horse. Please try again.");
+        showError("Failed to add horse. Please try again.");
       }
     } catch (error) {
       console.error("Error adding horse:", error);
-      Alert.alert(
-        "Error",
+      showError(
         "Failed to add horse. Please check your connection and try again."
       );
     } finally {
@@ -505,42 +517,48 @@ const MyHorsesScreen = () => {
   };
 
   const deleteHorse = (horse: Horse) => {
-    Alert.alert(
-      "Delete Horse",
-      `Are you sure you want to delete ${horse.name}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            if (!user?.id) {
-              Alert.alert("Error", "User not authenticated");
-              return;
-            }
+    showDelete(horse.name, async () => {
+      if (!user?.id) {
+        showError("User not authenticated");
+        return;
+      }
 
-            try {
-              setLoading(true);
-              const success = await HorseAPI.deleteHorse(horse.id, user?.id);
+      try {
+        setLoading(true);
+        console.log(
+          `🔥 Starting delete for horse: ${horse.name} (ID: ${horse.id})`
+        );
 
-              if (success) {
-                setHorsesLoaded(false); // Reset flag to allow reloading
-                await loadHorses(user?.id);
-                setSuccessMessage(`${horse.name} has been deleted`);
-                setShowSuccessModal(true);
-              } else {
-                Alert.alert("Error", "Failed to delete horse");
-              }
-            } catch (error) {
-              console.error("Error deleting horse:", error);
-              Alert.alert("Error", "Failed to delete horse");
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
+        const success = await HorseAPI.deleteHorse(horse.id, user?.id);
+
+        if (success) {
+          console.log(`🔥 Delete successful for horse: ${horse.name}`);
+
+          // Immediately remove the horse from the local state for instant UI feedback
+          setHorses((prevHorses) =>
+            prevHorses.filter((h) => h.id !== horse.id)
+          );
+
+          // Add a small delay to ensure the delete has been processed on the server
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // Then reload to ensure data consistency
+          setHorsesLoaded(false); // Reset flag to allow reloading
+          await loadHorses(user?.id);
+
+          setSuccessMessage(`${horse.name} has been deleted`);
+          setShowSuccessModal(true);
+        } else {
+          console.log(`🔥 Delete failed for horse: ${horse.name}`);
+          showError("Failed to delete horse");
+        }
+      } catch (error) {
+        console.error("Error deleting horse:", error);
+        showError("Failed to delete horse");
+      } finally {
+        setLoading(false);
+      }
+    });
   };
 
   // Image picker functions
@@ -549,10 +567,7 @@ const MyHorsesScreen = () => {
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert(
-        "Permission Required",
-        "Permission to access camera roll is required!"
-      );
+      showError("Permission to access camera roll is required!");
       return;
     }
 
@@ -578,10 +593,7 @@ const MyHorsesScreen = () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert(
-        "Permission Required",
-        "Permission to access camera is required!"
-      );
+      showError("Permission to access camera is required!");
       return;
     }
 
@@ -644,14 +656,14 @@ const MyHorsesScreen = () => {
               includeFontPadding: false,
             }}
           >
-            {value || placeholder}
+            {value || placeholder || ""}
           </Text>
           <Text style={{ color: currentTheme.colors.text, fontSize: 16 }}>
             {isVisible ? "▲" : "▼"}
           </Text>
         </TouchableOpacity>
 
-        {isVisible && (
+        {isVisible ? (
           <Modal
             transparent={true}
             visible={isVisible}
@@ -714,7 +726,7 @@ const MyHorsesScreen = () => {
               </View>
             </TouchableOpacity>
           </Modal>
-        )}
+        ) : null}
       </View>
     );
   };
@@ -816,14 +828,14 @@ const MyHorsesScreen = () => {
               includeFontPadding: false,
             }}
           >
-            {value ? formatDate(value) : placeholder}
+            {value ? formatDate(value) : placeholder || ""}
           </Text>
           <Text style={{ color: currentTheme.colors.text, fontSize: 16 }}>
             {isVisible ? "▲" : "▼"}
           </Text>
         </TouchableOpacity>
 
-        {isVisible && (
+        {isVisible ? (
           <Modal
             transparent={true}
             visible={isVisible}
@@ -1061,7 +1073,7 @@ const MyHorsesScreen = () => {
               </View>
             </TouchableOpacity>
           </Modal>
-        )}
+        ) : null}
       </View>
     );
   };
@@ -1127,14 +1139,14 @@ const MyHorsesScreen = () => {
               includeFontPadding: false,
             }}
           >
-            {value ? `${value}${unit}` : placeholder}
+            {value ? `${value}${unit}` : placeholder || ""}
           </Text>
           <Text style={{ color: "#FFFFFF", fontSize: 16 }}>
             {isVisible ? "▲" : "▼"}
           </Text>
         </TouchableOpacity>
 
-        {isVisible && (
+        {isVisible ? (
           <Modal
             transparent={true}
             visible={isVisible}
@@ -1171,7 +1183,7 @@ const MyHorsesScreen = () => {
                     fontFamily: "Inder",
                   }}
                 >
-                  Select {placeholder.toLowerCase()}
+                  Select {placeholder ? placeholder.toLowerCase() : "item"}
                 </Text>
 
                 <ScrollView
@@ -1256,7 +1268,7 @@ const MyHorsesScreen = () => {
               </View>
             </TouchableOpacity>
           </Modal>
-        )}
+        ) : null}
       </View>
     );
   };
@@ -1298,7 +1310,7 @@ const MyHorsesScreen = () => {
               { color: currentTheme.colors.textSecondary },
             ]}
           >
-            {successMessage}
+            {successMessage || ""}
           </Text>
           <TouchableOpacity
             style={[
@@ -1469,19 +1481,6 @@ const MyHorsesScreen = () => {
     );
   }
 
-  // Add timeout fallback for auth loading
-  useEffect(() => {
-    const authTimeout = setTimeout(() => {
-      if (authLoading) {
-        // Auth loading timeout - just log for debugging
-      }
-    }, 20000); // 20 second timeout for auth
-
-    return () => {
-      clearTimeout(authTimeout);
-    };
-  }, [authLoading]);
-
   if (authLoading || loading) {
     return (
       <View
@@ -1561,7 +1560,7 @@ const MyHorsesScreen = () => {
               <Text
                 style={[styles.statsText, { color: currentTheme.colors.text }]}
               >
-                You have {horses.length} horses
+                You have {horses?.length || 0} horses
               </Text>
             </View>
             <TouchableOpacity
@@ -1579,7 +1578,7 @@ const MyHorsesScreen = () => {
                 Add New Horse
               </Text>
             </TouchableOpacity>{" "}
-            {horses.map((horse, index) => (
+            {(horses || []).map((horse, index) => (
               <View
                 style={[
                   styles.horseCard,
@@ -1614,7 +1613,7 @@ const MyHorsesScreen = () => {
                         },
                       ]}
                     >
-                      {horse.name}
+                      {horse.name || ""}
                     </Text>
                     <View style={styles.horseDetails}>
                       <View style={styles.detailRow}>
@@ -1635,7 +1634,7 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text, fontSize: 14 },
                           ]}
                         >
-                          {horse.gender}
+                          {horse.gender || ""}
                         </Text>
                       </View>
                       <View style={styles.detailRow}>
@@ -1656,7 +1655,7 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text, fontSize: 14 },
                           ]}
                         >
-                          {formatDate(horse.birth_date)}
+                          {horse.birth_date ? formatDate(horse.birth_date) : ""}
                         </Text>
                       </View>
                       <View style={styles.detailRow}>
@@ -1677,10 +1676,10 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text, fontSize: 14 },
                           ]}
                         >
-                          {horse.height} cm
+                          {horse.height || 0} cm
                         </Text>
                       </View>
-                      {horse.weight && (
+                      {horse.weight ? (
                         <View style={styles.detailRow}>
                           <Text
                             style={[
@@ -1699,10 +1698,10 @@ const MyHorsesScreen = () => {
                               { color: currentTheme.colors.text, fontSize: 14 },
                             ]}
                           >
-                            {horse.weight} kg
+                            {horse.weight || 0} kg
                           </Text>
                         </View>
-                      )}
+                      ) : null}
                       <View style={styles.detailRow}>
                         <Text
                           style={[
@@ -1721,7 +1720,7 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text, fontSize: 14 },
                           ]}
                         >
-                          {horse.breed}
+                          {horse.breed || ""}
                         </Text>
                       </View>
                     </View>
@@ -1760,7 +1759,7 @@ const MyHorsesScreen = () => {
                 </View>
               </View>
             ))}
-            {horses.length === 0 && !loading && (
+            {horses && horses.length === 0 && !loading ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateEmoji}>🐴</Text>
                 <Text
@@ -1780,13 +1779,13 @@ const MyHorsesScreen = () => {
                   Add your first horse to get started.
                 </Text>
               </View>
-            )}
+            ) : null}
           </View>
         </ScrollView>
       </View>
 
       {/* Loading overlay */}
-      {loading && horses.length > 0 && (
+      {loading && horses && horses.length > 0 ? (
         <View style={styles.loadingOverlay}>
           <View
             style={[
@@ -1808,7 +1807,7 @@ const MyHorsesScreen = () => {
             </Text>
           </View>
         </View>
-      )}
+      ) : null}
 
       {/* Edit Horse Modal */}
       <Modal
@@ -2327,7 +2326,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -20,
+    marginBottom: -45,
   },
   header: {
     fontSize: 30,
@@ -2349,7 +2348,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 30,
+    paddingBottom: 110, // Add bottom padding to account for tab bar
   },
   horsesContainer: {
     paddingHorizontal: 20,

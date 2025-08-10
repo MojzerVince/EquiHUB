@@ -5,10 +5,13 @@ export class HorseAPI {
   // Get all horses for a user
   static async getHorses(userId: string): Promise<Horse[]> {
     try {
+      console.log(`🔥 HorseAPI: Getting horses for user: ${userId}`);
+      
       // Use direct REST API (Supabase client has compatibility issues)
       const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
       const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
       
+      // Remove timestamp parameter that was causing parsing error
       const apiUrl = `${supabaseUrl}/rest/v1/horses?user_id=eq.${userId}&order=created_at.desc`;
       
       const response = await fetch(apiUrl, {
@@ -16,7 +19,10 @@ export class HorseAPI {
         headers: {
           'apikey': apiKey,
           'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
 
@@ -27,6 +33,8 @@ export class HorseAPI {
       }
 
       const data = await response.json();
+      console.log(`🔥 HorseAPI: Retrieved ${data?.length || 0} horses for user ${userId}`);
+      console.log(`🔥 HorseAPI: Horses data:`, data?.map((h: any) => ({ id: h.id, name: h.name })));
       
       return data || [];
       
@@ -160,30 +168,49 @@ export class HorseAPI {
   // Delete a horse
   static async deleteHorse(horseId: string, userId: string): Promise<boolean> {
     try {
+      console.log(`🔥 HorseAPI: Starting delete for horse ID: ${horseId}, user ID: ${userId}`);
+      
       // Use direct REST API to get horse data first
       const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
       const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
 
-      // Get horse data to delete image
-      const getResponse = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${horseId}&user_id=eq.${userId}&select=image_url`, {
-        headers: {
-          'apikey': apiKey,
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Try to get horse data to delete image, but don't let this block the deletion
+      try {
+        console.log(`🔥 HorseAPI: Fetching horse data for image cleanup...`);
+        const getResponse = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${horseId}&user_id=eq.${userId}&select=image_url`, {
+          headers: {
+            'apikey': apiKey,
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-      if (getResponse.ok) {
-        const horses = await getResponse.json();
-        const horse = horses && horses.length > 0 ? horses[0] : null;
-        
-        // Delete image if exists
-        if (horse?.image_url) {
-          await this.deleteImage(horse.image_url);
+        if (getResponse.ok) {
+          const horses = await getResponse.json();
+          const horse = horses && horses.length > 0 ? horses[0] : null;
+          console.log(`🔥 HorseAPI: Horse found for deletion:`, horse);
+          
+          // Delete image if exists (but don't let image deletion failure stop horse deletion)
+          if (horse?.image_url) {
+            console.log(`🔥 HorseAPI: Attempting to delete image: ${horse.image_url.substring(0, 50)}...`);
+            try {
+              await this.deleteImage(horse.image_url);
+              console.log(`🔥 HorseAPI: Image deleted successfully`);
+            } catch (imageError) {
+              console.error(`🔥 HorseAPI: Failed to delete image, but continuing with horse deletion:`, imageError);
+            }
+          } else {
+            console.log(`🔥 HorseAPI: No image to delete`);
+          }
+        } else {
+          console.log(`🔥 HorseAPI: Horse not found or error getting horse data: ${getResponse.status}`);
         }
+      } catch (fetchError) {
+        console.error(`🔥 HorseAPI: Error fetching horse data, but continuing with deletion:`, fetchError);
       }
 
-      // Delete the horse using direct API
+      // Delete the horse using direct API - this is the main operation
+      console.log(`🔥 HorseAPI: Attempting to delete horse from database...`);
       const deleteResponse = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${horseId}&user_id=eq.${userId}`, {
         method: 'DELETE',
         headers: {
@@ -193,13 +220,18 @@ export class HorseAPI {
         }
       });
 
+      console.log(`🔥 HorseAPI: Delete response status: ${deleteResponse.status}`);
+
       if (!deleteResponse.ok) {
         const errorText = await deleteResponse.text();
         console.error('🔥 HorseAPI: Error deleting horse:', deleteResponse.status, errorText);
         return false;
       }
 
-      console.log('🔥 HorseAPI: ✅ Horse deleted successfully');
+      // Check if any rows were affected
+      const responseText = await deleteResponse.text();
+      console.log(`🔥 HorseAPI: Delete response body:`, responseText);
+      console.log(`🔥 HorseAPI: ✅ Horse deleted successfully from database`);
       return true;
     } catch (error) {
       console.error('🔥 HorseAPI: Error in deleteHorse:', error);
@@ -264,15 +296,30 @@ export class HorseAPI {
   // Delete image from Supabase Storage
   static async deleteImage(imageUrl: string): Promise<void> {
     try {
-      // Extract file path from URL
+      console.log(`🔥 HorseAPI: deleteImage called with URL: ${imageUrl?.substring(0, 100)}...`);
+      
+      // Check if it's a base64 data URL - if so, no need to delete from storage
+      if (imageUrl.startsWith('data:')) {
+        console.log(`🔥 HorseAPI: Image is base64 data URL, no storage deletion needed`);
+        return;
+      }
+      
+      // Extract file path from URL for actual storage URLs
       const urlParts = imageUrl.split('/');
       const fileName = urlParts.slice(-3).join('/'); // userId/horses/filename.jpg
+      console.log(`🔥 HorseAPI: Attempting to delete storage file: ${fileName}`);
 
-      await supabase.storage
+      const { error } = await supabase.storage
         .from('horse-images')
         .remove([fileName]);
+        
+      if (error) {
+        console.error('🔥 HorseAPI: Storage deletion error:', error);
+      } else {
+        console.log(`🔥 HorseAPI: Storage file deleted successfully: ${fileName}`);
+      }
     } catch (error) {
-      console.error('Error deleting image:', error);
+      console.error('🔥 HorseAPI: Error in deleteImage:', error);
     }
   }
 }

@@ -1,38 +1,39 @@
-import * as Haptics from 'expo-haptics';
+import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useDialog } from "@/contexts/DialogContext";
 import { AuthAPI, LoginData } from "../lib/authAPI";
 
 const LoginScreen = () => {
   const router = useRouter();
-  
+  const { showError, showConfirm } = useDialog();
+
   // Form state
   const [formData, setFormData] = useState<LoginData>({
     email: "",
     password: "",
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Form validation
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const validateForm = (): boolean => {
-    const newErrors: {[key: string]: string} = {};
+    const newErrors: { [key: string]: string } = {};
 
     // Email validation
     if (!formData.email) {
@@ -60,7 +61,7 @@ const LoginScreen = () => {
       const { user, error } = await AuthAPI.login(formData);
 
       if (error) {
-        Alert.alert("Login Error", error);
+        showError(error);
         return;
       }
 
@@ -70,7 +71,7 @@ const LoginScreen = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
-      Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      showError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -78,7 +79,7 @@ const LoginScreen = () => {
 
   const handleForgotPassword = async () => {
     if (!formData.email) {
-      Alert.alert("Email Required", "Please enter your email address to reset your password.");
+      showError("Please enter your email address to reset your password.");
       return;
     }
 
@@ -88,43 +89,46 @@ const LoginScreen = () => {
       const { error } = await AuthAPI.resetPassword(formData.email);
 
       if (error) {
-        Alert.alert("Error", error);
+        showError(error);
       } else {
-        Alert.alert(
+        showConfirm(
           "Password Reset Email Sent",
-          "Please check your email for instructions to reset your password."
+          "Please check your email for instructions to reset your password.",
+          () => {
+            // User acknowledged the message
+          }
         );
       }
     } catch (error) {
       console.error("Password reset error:", error);
-      Alert.alert("Error", "Failed to send password reset email. Please try again.");
+      showError("Failed to send password reset email. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputChange = (field: keyof LoginData, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
-    
+
     // Clear error for this field when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [field]: ""
+        [field]: "",
       }));
     }
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView 
+        <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
@@ -141,9 +145,14 @@ const LoginScreen = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email Address</Text>
               <TextInput
-                style={[styles.textInput, errors.email ? styles.inputError : null]}
+                style={[
+                  styles.textInput,
+                  errors.email ? styles.inputError : null,
+                ]}
                 value={formData.email}
-                onChangeText={(text) => handleInputChange('email', text.toLowerCase().trim())}
+                onChangeText={(text) =>
+                  handleInputChange("email", text.toLowerCase().trim())
+                }
                 placeholder="Enter your email address"
                 placeholderTextColor="#999"
                 keyboardType="email-address"
@@ -151,7 +160,9 @@ const LoginScreen = () => {
                 autoCorrect={false}
                 autoComplete="email"
               />
-              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+              {errors.email ? (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              ) : null}
             </View>
 
             {/* Password Input */}
@@ -159,9 +170,12 @@ const LoginScreen = () => {
               <Text style={styles.inputLabel}>Password</Text>
               <View style={styles.passwordContainer}>
                 <TextInput
-                  style={[styles.passwordInput, errors.password ? styles.inputError : null]}
+                  style={[
+                    styles.passwordInput,
+                    errors.password ? styles.inputError : null,
+                  ]}
                   value={formData.password}
-                  onChangeText={(text) => handleInputChange('password', text)}
+                  onChangeText={(text) => handleInputChange("password", text)}
                   placeholder="Enter your password"
                   placeholderTextColor="#999"
                   secureTextEntry={!showPassword}
@@ -173,14 +187,18 @@ const LoginScreen = () => {
                   style={styles.eyeButton}
                   onPress={() => setShowPassword(!showPassword)}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁️"}</Text>
+                  <Text style={styles.eyeIcon}>
+                    {showPassword ? "🙈" : "👁️"}
+                  </Text>
                 </TouchableOpacity>
               </View>
-              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+              {errors.password ? (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              ) : null}
             </View>
 
             {/* Forgot Password Link */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.forgotPasswordContainer}
               onPress={handleForgotPassword}
               disabled={loading}
@@ -200,7 +218,10 @@ const LoginScreen = () => {
           {/* Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={[styles.loginButton, loading ? styles.disabledButton : null]}
+              style={[
+                styles.loginButton,
+                loading ? styles.disabledButton : null,
+              ]}
               onPress={handleLogin}
               disabled={loading}
             >
@@ -211,7 +232,7 @@ const LoginScreen = () => {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.registerLinkContainer}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -219,11 +240,12 @@ const LoginScreen = () => {
               }}
               activeOpacity={0.7}
             >
-              <Text style={styles.registerLinkText}>Don't have an account? </Text>
+              <Text style={styles.registerLinkText}>
+                Don't have an account?{" "}
+              </Text>
               <Text style={styles.registerLink}>Create Account</Text>
             </TouchableOpacity>
           </View>
-
         </ScrollView>
       </SafeAreaView>
     </KeyboardAvoidingView>
