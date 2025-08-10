@@ -12,7 +12,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -24,16 +24,23 @@ const ProfileScreen = () => {
   const router = useRouter();
   const { user } = useAuth();
   const { currentTheme } = useTheme();
-  
+
   // Get the user ID from the authenticated user
   const USER_ID = user?.id;
 
   // If no user is authenticated, we shouldn't be on this page
   if (!USER_ID) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
+      <SafeAreaView
+        style={[
+          styles.container,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: currentTheme.colors.text }]}>No user authenticated</Text>
+          <Text style={[styles.errorText, { color: currentTheme.colors.text }]}>
+            No user authenticated
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -49,7 +56,8 @@ const ProfileScreen = () => {
   // Store the saved values to revert to when canceling
   const [savedUserName, setSavedUserName] = useState("Loading...");
   const [savedUserAge, setSavedUserAge] = useState("Loading...");
-  const [savedUserDescription, setSavedUserDescription] = useState("Loading profile...");
+  const [savedUserDescription, setSavedUserDescription] =
+    useState("Loading profile...");
   const [savedUserExperience, setSavedUserExperience] = useState("0");
   const [savedIsProMember, setSavedIsProMember] = useState(false);
 
@@ -83,11 +91,12 @@ const ProfileScreen = () => {
     epicBadges: 0,
     rareBadges: 0,
     commonBadges: 0,
-    categories: {} as { [key: string]: number }
+    categories: {} as { [key: string]: number },
   });
 
   // Badge dialog state
-  const [selectedBadge, setSelectedBadge] = useState<UserBadgeWithDetails | null>(null);
+  const [selectedBadge, setSelectedBadge] =
+    useState<UserBadgeWithDetails | null>(null);
   const [badgeDialogVisible, setBadgeDialogVisible] = useState(false);
 
   // Function to determine membership status based on database value only
@@ -100,32 +109,41 @@ const ProfileScreen = () => {
   const getProfileDirectAPI = async (userId: string) => {
     try {
       const url = `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${userId}`;
-      
-      const response = await Promise.race([
+
+      const response = (await Promise.race([
         fetch(url, {
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Content-Type': 'application/json',
+            apikey:
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            "Content-Type": "application/json",
           },
         }),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Profile API request timeout')), 10000)
-        )
-      ]) as Response;
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Profile API request timeout")),
+            10000
+          )
+        ),
+      ])) as Response;
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Profile API response not OK:', response.status, response.statusText);
-        console.error('Error response body:', errorText);
+        console.error(
+          "Profile API response not OK:",
+          response.status,
+          response.statusText
+        );
+        console.error("Error response body:", errorText);
         return null;
       }
 
       const profiles = await response.json();
-      
+
       return profiles.length > 0 ? profiles[0] : null;
     } catch (error) {
-      console.error('Error fetching profile via direct API:', error);
+      console.error("Error fetching profile via direct API:", error);
       return null;
     }
   };
@@ -136,35 +154,41 @@ const ProfileScreen = () => {
         id: userId,
         ...profileData,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       const response = await fetch(
-        'https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles',
+        "https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles",
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
+            apikey:
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            "Content-Type": "application/json",
+            Prefer: "return=representation",
           },
-          body: JSON.stringify(newProfile)
+          body: JSON.stringify(newProfile),
         }
       );
 
       if (!response.ok) {
-        console.error('Create profile API response not OK:', response.status, response.statusText);
+        console.error(
+          "Create profile API response not OK:",
+          response.status,
+          response.statusText
+        );
         const errorText = await response.text();
-        console.error('Error response:', errorText);
+        console.error("Error response:", errorText);
         return null;
       }
 
       const createdProfiles = await response.json();
-      
+
       return createdProfiles.length > 0 ? createdProfiles[0] : null;
     } catch (error) {
-      console.error('Error creating profile via direct API:', error);
+      console.error("Error creating profile via direct API:", error);
       return null;
     }
   };
@@ -173,42 +197,51 @@ const ProfileScreen = () => {
     try {
       const updatePayload = {
         ...profileData,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Profile update timeout after 15 seconds')), 15000);
+        setTimeout(
+          () => reject(new Error("Profile update timeout after 15 seconds")),
+          15000
+        );
       });
 
       const fetchPromise = fetch(
         `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${userId}`,
         {
-          method: 'PATCH',
+          method: "PATCH",
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
+            apikey:
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            "Content-Type": "application/json",
+            Prefer: "return=representation",
           },
-          body: JSON.stringify(updatePayload)
+          body: JSON.stringify(updatePayload),
         }
       );
 
       const response = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (!response.ok) {
-        console.error('Update profile API response not OK:', response.status, response.statusText);
+        console.error(
+          "Update profile API response not OK:",
+          response.status,
+          response.statusText
+        );
         const errorText = await response.text();
-        console.error('Error response:', errorText);
+        console.error("Error response:", errorText);
         return false;
       }
 
       const updatedProfiles = await response.json();
-      
+
       return true;
     } catch (error) {
-      console.error('Error updating profile via direct API:', error);
+      console.error("Error updating profile via direct API:", error);
       return false;
     }
   };
@@ -217,32 +250,41 @@ const ProfileScreen = () => {
   const getUserBadgesDirectAPI = async (userId: string) => {
     try {
       const url = `https://grdsqxwghajehneksxik.supabase.co/rest/v1/user_badges?user_id=eq.${userId}&select=*,badge:badges!user_badges_badge_id_fkey(*)`;
-      
-      const response = await Promise.race([
+
+      const response = (await Promise.race([
         fetch(url, {
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Content-Type': 'application/json',
+            apikey:
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            "Content-Type": "application/json",
           },
         }),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Badges API request timeout')), 10000)
-        )
-      ]) as Response;
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Badges API request timeout")),
+            10000
+          )
+        ),
+      ])) as Response;
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Badges API response not OK:', response.status, response.statusText);
-        console.error('Error response body:', errorText);
+        console.error(
+          "Badges API response not OK:",
+          response.status,
+          response.statusText
+        );
+        console.error("Error response body:", errorText);
         return [];
       }
 
       const badges = await response.json();
-      
+
       return badges || [];
     } catch (error) {
-      console.error('Error fetching badges via direct API:', error);
+      console.error("Error fetching badges via direct API:", error);
       return [];
     }
   };
@@ -254,26 +296,26 @@ const ProfileScreen = () => {
       epicBadges: 0,
       rareBadges: 0,
       commonBadges: 0,
-      categories: {} as { [key: string]: number }
+      categories: {} as { [key: string]: number },
     };
 
-    badges.forEach(userBadge => {
+    badges.forEach((userBadge) => {
       if (userBadge.badge) {
         const rarity = userBadge.badge.rarity;
         const category = userBadge.badge.category;
 
         // Count by rarity
         switch (rarity) {
-          case 'legendary':
+          case "legendary":
             stats.legendaryBadges++;
             break;
-          case 'epic':
+          case "epic":
             stats.epicBadges++;
             break;
-          case 'rare':
+          case "rare":
             stats.rareBadges++;
             break;
-          case 'common':
+          case "common":
             stats.commonBadges++;
             break;
         }
@@ -297,20 +339,19 @@ const ProfileScreen = () => {
   }, []);
 
   const initializeProfile = async () => {
-    
     try {
       // Load profile data with timeout
       await loadProfile();
-      
+
       // Load user badges and check eligibility (don't block if this fails)
       try {
         await loadUserBadges();
       } catch (error) {
-        console.error('Error loading badges during initialization:', error);
+        console.error("Error loading badges during initialization:", error);
         // Don't prevent profile loading if badges fail
       }
     } catch (error) {
-      console.error('Error during profile initialization:', error);
+      console.error("Error during profile initialization:", error);
       setError("Failed to load profile. Please try refreshing.");
     }
   };
@@ -321,9 +362,12 @@ const ProfileScreen = () => {
       // Load user badges using direct API with timeout
       const badges = await Promise.race([
         getUserBadgesDirectAPI(USER_ID),
-        new Promise<any[]>((_, reject) => 
-          setTimeout(() => reject(new Error('Badge loading timeout after 10 seconds')), 10000)
-        )
+        new Promise<any[]>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Badge loading timeout after 10 seconds")),
+            10000
+          )
+        ),
       ]);
       setUserBadges(badges);
 
@@ -333,9 +377,8 @@ const ProfileScreen = () => {
 
       // Note: Badge eligibility checking is disabled for now to prevent hanging
       // TODO: Implement direct API for badge eligibility if needed
-      
     } catch (error) {
-      console.error('Error loading user badges:', error);
+      console.error("Error loading user badges:", error);
       // Don't set error for badges, just log it and continue
       setUserBadges([]);
       setBadgeStats({
@@ -344,7 +387,7 @@ const ProfileScreen = () => {
         epicBadges: 0,
         rareBadges: 0,
         commonBadges: 0,
-        categories: {}
+        categories: {},
       });
     } finally {
       setBadgesLoading(false);
@@ -356,13 +399,15 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      
       // Try direct REST API approach with timeout like in refresh
       let profile = await Promise.race([
         getProfileDirectAPI(USER_ID),
-        new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error('Profile loading timeout after 15 seconds')), 15000)
-        )
+        new Promise<null>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Profile loading timeout after 15 seconds")),
+            15000
+          )
+        ),
       ]);
 
       // If profile doesn't exist, create it with default values
@@ -386,9 +431,9 @@ const ProfileScreen = () => {
             is_pro_member: false,
             profile_image_url: null,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           };
-          
+
           // Update state with fallback data
           setUserName(fallbackProfile.name);
           setUserAge(fallbackProfile.age.toString());
@@ -400,10 +445,10 @@ const ProfileScreen = () => {
           setSavedUserDescription(fallbackProfile.description);
           setSavedUserExperience(fallbackProfile.experience.toString());
           setSavedIsProMember(false);
-          
+
           return; // Exit early with fallback data
         }
-        
+
         // Use the newly created profile
         profile = newProfile;
       }
@@ -411,10 +456,10 @@ const ProfileScreen = () => {
       // Update state with loaded/created profile data
       const loadedExperience = profile.experience || 0;
       const loadedProStatus = profile.is_pro_member || false;
-      
+
       // Determine final membership status based on database value
       const finalProStatus = determineMembershipStatus(loadedProStatus);
-      
+
       setUserName(profile.name);
       setUserAge(profile.age.toString());
       setUserDescription(profile.description);
@@ -448,23 +493,25 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      
       // Add 15-second timeout to profile refresh
       const profile = await Promise.race([
         getProfileDirectAPI(USER_ID),
-        new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error('Profile refresh timeout after 15 seconds')), 15000)
-        )
+        new Promise<null>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Profile refresh timeout after 15 seconds")),
+            15000
+          )
+        ),
       ]);
 
       if (profile) {
         // Update state with refreshed profile data
         const loadedExperience = profile.experience || 0;
         const loadedProStatus = profile.is_pro_member || false;
-        
+
         // Determine final membership status based on database value
         const finalProStatus = determineMembershipStatus(loadedProStatus);
-        
+
         setUserName(profile.name);
         setUserAge(profile.age.toString());
         setUserDescription(profile.description);
@@ -484,12 +531,12 @@ const ProfileScreen = () => {
           setProfileImage(require("../../assets/images/horses/falko.png"));
           setSavedProfileImage(require("../../assets/images/horses/falko.png"));
         }
-        
+
         // Reload badges after refreshing profile using direct API
         try {
           await loadUserBadges();
         } catch (error) {
-          console.error('Error loading badges during refresh:', error);
+          console.error("Error loading badges during refresh:", error);
           // Don't prevent refresh if badges fail
         }
       } else {
@@ -607,7 +654,7 @@ const ProfileScreen = () => {
       const experienceValue = parseInt(userExperience);
       // Keep the current pro status from state (which came from database)
       const finalProStatus = isProMember;
-      
+
       const updateData: any = {
         name: userName,
         age: parseInt(userAge),
@@ -632,10 +679,10 @@ const ProfileScreen = () => {
             const reader = new FileReader();
             reader.onloadend = () => {
               if (reader.result) {
-                const base64 = (reader.result as string).split(',')[1];
+                const base64 = (reader.result as string).split(",")[1];
                 resolve(base64);
               } else {
-                reject(new Error('Failed to convert blob to Base64'));
+                reject(new Error("Failed to convert blob to Base64"));
               }
             };
             reader.onerror = reject;
@@ -643,13 +690,16 @@ const ProfileScreen = () => {
           });
 
           // Create data URL
-          const mimeType = blob.type || 'image/jpeg';
+          const mimeType = blob.type || "image/jpeg";
           const dataUrl = `data:${mimeType};base64,${base64}`;
-          
+
           updateData.profile_image_url = dataUrl;
         } catch (imageError) {
-          console.error('Image upload failed:', imageError);
-          Alert.alert("Warning", "Image upload failed, but other changes will be saved.");
+          console.error("Image upload failed:", imageError);
+          Alert.alert(
+            "Warning",
+            "Image upload failed, but other changes will be saved."
+          );
         }
       } else if (isSavedImageUri) {
         // Keep existing image URL if user hasn't changed the image
@@ -669,7 +719,7 @@ const ProfileScreen = () => {
       setSavedUserDescription(userDescription);
       setSavedUserExperience(userExperience);
       setSavedIsProMember(finalProStatus);
-      
+
       // Also update current state to reflect the calculated pro status
       setIsProMember(finalProStatus);
 
@@ -678,12 +728,12 @@ const ProfileScreen = () => {
 
       setIsEditing(false);
       setShowSuccessModal(true);
-      
+
       // Check for new badges after successful save using direct API
       try {
         await loadUserBadges();
       } catch (error) {
-        console.error('Error loading badges after save:', error);
+        console.error("Error loading badges after save:", error);
         // Don't prevent save success if badges fail
       }
     } catch (err) {
@@ -786,35 +836,45 @@ const ProfileScreen = () => {
           {selectedBadge && (
             <>
               <View style={styles.badgeDialogHeader}>
-                <View style={[
-                  styles.badgeDialogIcon,
-                  selectedBadge.badge.rarity === 'legendary' && styles.legendaryBadge,
-                  selectedBadge.badge.rarity === 'epic' && styles.epicBadge,
-                  selectedBadge.badge.rarity === 'rare' && styles.rareBadge,
-                  selectedBadge.badge.rarity === 'common' && styles.commonBadge
-                ]}>
-                  <Text style={styles.badgeDialogEmoji}>{selectedBadge.badge.icon_emoji}</Text>
+                <View
+                  style={[
+                    styles.badgeDialogIcon,
+                    selectedBadge.badge.rarity === "legendary" &&
+                      styles.legendaryBadge,
+                    selectedBadge.badge.rarity === "epic" && styles.epicBadge,
+                    selectedBadge.badge.rarity === "rare" && styles.rareBadge,
+                    selectedBadge.badge.rarity === "common" &&
+                      styles.commonBadge,
+                  ]}
+                >
+                  <Text style={styles.badgeDialogEmoji}>
+                    {selectedBadge.badge.icon_emoji}
+                  </Text>
                 </View>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.badgeDialogCloseButton}
                   onPress={closeBadgeDialog}
                 >
                   <Text style={styles.badgeDialogCloseText}>✕</Text>
                 </TouchableOpacity>
               </View>
-              
-              <Text style={styles.badgeDialogTitle}>{selectedBadge.badge.name}</Text>
-              <Text style={styles.badgeDialogRarity}>
-                {selectedBadge.badge.rarity.toUpperCase()} • {selectedBadge.badge.category.toUpperCase()}
+
+              <Text style={styles.badgeDialogTitle}>
+                {selectedBadge.badge.name}
               </Text>
-              
+              <Text style={styles.badgeDialogRarity}>
+                {selectedBadge.badge.rarity.toUpperCase()} •{" "}
+                {selectedBadge.badge.category.toUpperCase()}
+              </Text>
+
               <Text style={styles.badgeDialogDescription}>
                 {selectedBadge.badge.description}
               </Text>
-              
+
               <View style={styles.badgeDialogFooter}>
                 <Text style={styles.badgeDialogEarnedText}>
-                  Earned on {new Date(selectedBadge.earned_at).toLocaleDateString()}
+                  Earned on{" "}
+                  {new Date(selectedBadge.earned_at).toLocaleDateString()}
                 </Text>
               </View>
             </>
@@ -825,15 +885,25 @@ const ProfileScreen = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.colors.primary },
+      ]}
+    >
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
         <View style={styles.headerContainer}>
           <Text style={styles.header}>My Profile</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.optionsButton}
-            onPress={() => router.push("/(tabs)/options")}
+            onPress={() => router.push("/options")}
           >
-            <Image 
+            <Image
               source={require("../../assets/UI_resources/UI_white/settings_white.png")}
               style={styles.optionsIcon}
             />
@@ -842,40 +912,66 @@ const ProfileScreen = () => {
       </SafeAreaView>
 
       <ScrollView
-        style={[styles.viewPort, { backgroundColor: currentTheme.colors.surface }]}
+        style={[
+          styles.viewPort,
+          { backgroundColor: currentTheme.colors.surface },
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         <View style={styles.profileContainer}>
           {/* Profile Section */}
-          <View style={[styles.profileSection, { backgroundColor: currentTheme.colors.background }]}>
+          <View
+            style={[
+              styles.profileSection,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
             {!isEditing ? (
               <TouchableOpacity
-                style={[styles.editButton, { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.border }]}
+                style={[
+                  styles.editButton,
+                  {
+                    backgroundColor: currentTheme.colors.primary,
+                    borderColor: currentTheme.colors.border,
+                  },
+                ]}
                 onPress={handleEditPress}
                 disabled={isLoading}
               >
-                <Text style={[styles.editButtonText, { color: '#FFFFFF' }]}>Edit Profile</Text>
+                <Text style={[styles.editButtonText, { color: "#FFFFFF" }]}>
+                  Edit Profile
+                </Text>
               </TouchableOpacity>
             ) : (
               <>
                 <TouchableOpacity
-                  style={[styles.cancelButton, { backgroundColor: currentTheme.colors.textSecondary }]}
+                  style={[
+                    styles.cancelButton,
+                    { backgroundColor: currentTheme.colors.textSecondary },
+                  ]}
                   onPress={handleCancel}
                   disabled={isLoading}
                 >
-                  <Text style={[styles.cancelButtonText, { color: '#FFFFFF' }]}>Cancel</Text>
+                  <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.saveButton, { backgroundColor: currentTheme.colors.primary }]}
+                  style={[
+                    styles.saveButton,
+                    { backgroundColor: currentTheme.colors.primary },
+                  ]}
                   onPress={handleSave}
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={[styles.saveButtonText, { color: '#FFFFFF' }]}>Save</Text>
+                    <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
+                      Save
+                    </Text>
                   )}
                 </TouchableOpacity>
               </>
@@ -904,11 +1000,25 @@ const ProfileScreen = () => {
                 <Text style={styles.userDescription}>{userDescription}</Text>
                 <View style={styles.experienceContainer}>
                   <Text style={styles.experienceLabel}>Experience</Text>
-                  <Text style={styles.experienceValue}>{userExperience} years</Text>
+                  <Text style={styles.experienceValue}>
+                    {userExperience} years
+                  </Text>
                 </View>
                 <View style={styles.badgeContainer}>
-                  <View style={[styles.badge, isProMember ? styles.proBadge : styles.regularBadge]}>
-                    <Text style={[styles.badgeText, isProMember ? styles.proBadgeText : styles.regularBadgeText]}>
+                  <View
+                    style={[
+                      styles.badge,
+                      isProMember ? styles.proBadge : styles.regularBadge,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.badgeText,
+                        isProMember
+                          ? styles.proBadgeText
+                          : styles.regularBadgeText,
+                      ]}
+                    >
                       {getMembershipDisplayText(isProMember)}
                     </Text>
                   </View>
@@ -962,29 +1072,40 @@ const ProfileScreen = () => {
                 </Text>
               </View>
             </View>
-            
+
             {badgesLoading ? (
               <View style={styles.badgesLoadingContainer}>
                 <ActivityIndicator size="large" color="#335C67" />
                 <Text style={styles.badgesLoadingText}>Loading badges...</Text>
               </View>
             ) : userBadges.length > 0 ? (
-              <View style={[styles.badgesGrid, { backgroundColor: currentTheme.colors.background }]}>
+              <View
+                style={[
+                  styles.badgesGrid,
+                  { backgroundColor: currentTheme.colors.background },
+                ]}
+              >
                 {userBadges.map((userBadge, index) => (
-                  <TouchableOpacity 
-                    key={userBadge.id} 
+                  <TouchableOpacity
+                    key={userBadge.id}
                     style={styles.badgeItem}
                     onPress={() => handleBadgePress(userBadge)}
                     activeOpacity={0.7}
                   >
-                    <View style={[
-                      styles.badgeIcon, 
-                      userBadge.badge.rarity === 'legendary' && styles.legendaryBadge,
-                      userBadge.badge.rarity === 'epic' && styles.epicBadge,
-                      userBadge.badge.rarity === 'rare' && styles.rareBadge,
-                      userBadge.badge.rarity === 'common' && styles.commonBadge
-                    ]}>
-                      <Text style={styles.badgeEmoji}>{userBadge.badge.icon_emoji}</Text>
+                    <View
+                      style={[
+                        styles.badgeIcon,
+                        userBadge.badge.rarity === "legendary" &&
+                          styles.legendaryBadge,
+                        userBadge.badge.rarity === "epic" && styles.epicBadge,
+                        userBadge.badge.rarity === "rare" && styles.rareBadge,
+                        userBadge.badge.rarity === "common" &&
+                          styles.commonBadge,
+                      ]}
+                    >
+                      <Text style={styles.badgeEmoji}>
+                        {userBadge.badge.icon_emoji}
+                      </Text>
                     </View>
                     <Text style={styles.badgeLabel} numberOfLines={2}>
                       {userBadge.badge.name}
@@ -996,11 +1117,17 @@ const ProfileScreen = () => {
                 ))}
               </View>
             ) : (
-              <View style={[styles.noBadgesContainer, { backgroundColor: currentTheme.colors.background }]}>
+              <View
+                style={[
+                  styles.noBadgesContainer,
+                  { backgroundColor: currentTheme.colors.background },
+                ]}
+              >
                 <Text style={styles.noBadgesEmoji}>🏆</Text>
                 <Text style={styles.noBadgesText}>No badges yet!</Text>
                 <Text style={styles.noBadgesSubtext}>
-                  Complete your profile and participate in activities to earn badges.
+                  Complete your profile and participate in activities to earn
+                  badges.
                 </Text>
               </View>
             )}
