@@ -1,9 +1,11 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     Alert,
     Image,
+    Modal,
     ScrollView,
     StyleSheet,
     Switch,
@@ -16,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const OptionsScreen = () => {
   const router = useRouter();
   const { signOut, user } = useAuth();
+  const { currentTheme, setTheme, availableThemes } = useTheme();
   
   // Settings state
   const [notifications, setNotifications] = useState(true);
@@ -23,6 +26,9 @@ const OptionsScreen = () => {
   const [privateProfile, setPrivateProfile] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  
+  // Theme dropdown state
+  const [themeDropdownVisible, setThemeDropdownVisible] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -81,26 +87,49 @@ const OptionsScreen = () => {
     subtitle, 
     value, 
     onValueChange, 
-    type = "switch" 
+    type = "switch",
+    dropdownValue,
+    dropdownOptions,
+    onDropdownSelect,
+    dropdownVisible,
+    setDropdownVisible
   }: {
     title: string;
     subtitle?: string;
     value?: boolean;
     onValueChange?: (value: boolean) => void;
-    type?: "switch" | "button";
+    type?: "switch" | "button" | "dropdown";
+    dropdownValue?: string;
+    dropdownOptions?: string[];
+    onDropdownSelect?: (value: string) => void;
+    dropdownVisible?: boolean;
+    setDropdownVisible?: (visible: boolean) => void;
   }) => (
-    <View style={styles.settingItem}>
+    <View style={[styles.settingItem, { borderBottomColor: currentTheme.colors.accent }]}>
       <View style={styles.settingInfo}>
-        <Text style={styles.settingTitle}>{title}</Text>
-        {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
+        <Text style={[styles.settingTitle, { color: currentTheme.colors.text }]}>{title}</Text>
+        {subtitle && <Text style={[styles.settingSubtitle, { color: currentTheme.colors.textSecondary }]}>{subtitle}</Text>}
       </View>
       {type === "switch" && (
         <Switch
           value={value}
           onValueChange={onValueChange}
-          trackColor={{ false: "#C5D9D1", true: "#335C67" }}
+          trackColor={{ false: currentTheme.colors.accent, true: currentTheme.colors.primary }}
           thumbColor={value ? "#fff" : "#f4f3f4"}
         />
+      )}
+      {type === "dropdown" && (
+        <TouchableOpacity
+          style={[styles.dropdownButton, { borderColor: currentTheme.colors.border }]}
+          onPress={() => setDropdownVisible && setDropdownVisible(!dropdownVisible)}
+        >
+          <Text style={[styles.dropdownButtonText, { color: currentTheme.colors.text }]}>
+            {dropdownValue}
+          </Text>
+          <Text style={[styles.dropdownArrow, { color: currentTheme.colors.text }]}>
+            {dropdownVisible ? '▲' : '▼'}
+          </Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -116,14 +145,61 @@ const OptionsScreen = () => {
     style?: any;
     textStyle?: any;
   }) => (
-    <TouchableOpacity style={[styles.actionButton, style]} onPress={onPress}>
-      <Text style={[styles.actionButtonText, textStyle]}>{title}</Text>
+    <TouchableOpacity style={[styles.actionButton, { borderBottomColor: currentTheme.colors.accent }, style]} onPress={onPress}>
+      <Text style={[styles.actionButtonText, { color: currentTheme.colors.text }, textStyle]}>{title}</Text>
     </TouchableOpacity>
   );
 
+  // Theme Dropdown Modal
+  const ThemeDropdownModal = () => (
+    <Modal
+      transparent={true}
+      visible={themeDropdownVisible}
+      animationType="fade"
+      onRequestClose={() => setThemeDropdownVisible(false)}
+    >
+      <TouchableOpacity
+        style={styles.modalOverlay}
+        onPress={() => setThemeDropdownVisible(false)}
+      >
+        <View style={[styles.dropdownModal, { backgroundColor: currentTheme.colors.card }]}>
+          <Text style={[styles.dropdownModalTitle, { color: '#fff' }]}>Select Theme</Text>
+          <ScrollView style={styles.dropdownModalContent}>
+            {availableThemes.map((theme, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.dropdownOption,
+                  { 
+                    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                    backgroundColor: currentTheme.name === theme ? 'rgba(255, 255, 255, 0.1)' : 'transparent'
+                  }
+                ]}
+                onPress={() => {
+                  setTheme(theme as ThemeName);
+                  setThemeDropdownVisible(false);
+                }}
+              >
+                <Text style={[
+                  styles.dropdownOptionText, 
+                  { 
+                    color: '#fff',
+                    fontWeight: currentTheme.name === theme ? 'bold' : 'normal'
+                  }
+                ]}>
+                  {theme}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
         <View style={styles.headerContainer}>
           <TouchableOpacity 
             style={styles.backButton}
@@ -139,13 +215,13 @@ const OptionsScreen = () => {
         </View>
       </SafeAreaView>
 
-      <ScrollView style={styles.viewPort}>
+      <ScrollView style={[styles.viewPort, { backgroundColor: currentTheme.colors.background }]}>
         <View style={styles.optionsContainer}>
           
           {/* Account Settings Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Account</Text>
-            <View style={styles.sectionContent}>
+            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>Account</Text>
+            <View style={[styles.sectionContent, { backgroundColor: currentTheme.colors.surface }]}>
               <SettingItem
                 title="Private Profile"
                 subtitle="Only friends can see your profile"
@@ -163,8 +239,8 @@ const OptionsScreen = () => {
 
           {/* Privacy Settings Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Privacy</Text>
-            <View style={styles.sectionContent}>
+            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>Privacy</Text>
+            <View style={[styles.sectionContent, { backgroundColor: currentTheme.colors.surface }]}>
               <SettingItem
                 title="Location Sharing"
                 subtitle="Share your location with friends"
@@ -182,8 +258,18 @@ const OptionsScreen = () => {
 
           {/* App Settings Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>App Settings</Text>
-            <View style={styles.sectionContent}>
+            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>App Settings</Text>
+            <View style={[styles.sectionContent, { backgroundColor: currentTheme.colors.surface }]}>
+              <SettingItem
+                title="Theme"
+                subtitle="Choose your preferred color theme"
+                type="dropdown"
+                dropdownValue={currentTheme.name}
+                dropdownOptions={availableThemes}
+                onDropdownSelect={(theme) => setTheme(theme as ThemeName)}
+                dropdownVisible={themeDropdownVisible}
+                setDropdownVisible={setThemeDropdownVisible}
+              />
               <SettingItem
                 title="Dark Mode"
                 subtitle="Use dark theme"
@@ -195,8 +281,8 @@ const OptionsScreen = () => {
 
           {/* General Actions Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>General</Text>
-            <View style={styles.sectionContent}>
+            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>General</Text>
+            <View style={[styles.sectionContent, { backgroundColor: currentTheme.colors.surface }]}>
               <ActionButton
                 title="About"
                 onPress={() => console.log("About pressed")}
@@ -218,24 +304,27 @@ const OptionsScreen = () => {
 
           {/* Account Actions Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Account Actions</Text>
-            <View style={styles.sectionContent}>
+            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>Account Actions</Text>
+            <View style={[styles.sectionContent, { backgroundColor: currentTheme.colors.surface }]}>
               <ActionButton
                 title="Logout"
                 onPress={handleLogout}
-                style={styles.logoutButton}
+                style={[styles.logoutButton, { backgroundColor: currentTheme.colors.warning }]}
                 textStyle={styles.logoutButtonText}
               />
               <ActionButton
                 title="Delete Account"
                 onPress={handleDeleteAccount}
-                style={styles.deleteButton}
+                style={[styles.deleteButton, { backgroundColor: currentTheme.colors.error }]}
                 textStyle={styles.deleteButtonText}
               />
             </View>
           </View>
         </View>
       </ScrollView>
+
+      {/* Theme Dropdown Modal */}
+      <ThemeDropdownModal />
     </View>
   );
 };
@@ -332,6 +421,59 @@ const styles = StyleSheet.create({
   settingSubtitle: {
     fontSize: 14,
     color: "#666",
+    fontFamily: "Inder",
+  },
+  dropdownButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 8,
+    minWidth: 100,
+    justifyContent: "space-between",
+  },
+  dropdownButtonText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    marginRight: 5,
+  },
+  dropdownArrow: {
+    fontSize: 12,
+    fontFamily: "Inder",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownModal: {
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    maxWidth: 300,
+    maxHeight: 400,
+  },
+  dropdownModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+    fontFamily: "Inder",
+  },
+  dropdownModalContent: {
+    maxHeight: 250,
+  },
+  dropdownOption: {
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  dropdownOptionText: {
+    fontSize: 16,
+    textAlign: 'center',
     fontFamily: "Inder",
   },
   actionButton: {

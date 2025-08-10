@@ -1,17 +1,23 @@
 import { icons } from "@/components/icon";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { PlatformPressable } from "@react-navigation/elements";
-import { useLinkBuilder, useTheme } from "@react-navigation/native";
+import { useLinkBuilder } from "@react-navigation/native";
 import type { JSX } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { useTheme } from "../contexts/ThemeContext";
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const { colors } = useTheme();
+  const { currentTheme } = useTheme();
   const { buildHref } = useLinkBuilder();
 
   return (
-    <View style={styles.tabBar}>
-      {state.routes.map((route, index) => {
+    <View style={[styles.tabBar, { backgroundColor: currentTheme.colors.card }]}>
+      {state.routes
+        .filter((route) => {
+          // Filter out routes that don't have corresponding icons
+          return (icons as Record<string, (props: any) => JSX.Element>)[route.name] !== undefined;
+        })
+        .map((route) => {
         const { options } = descriptors[route.key];
         const label =
           options.tabBarLabel !== undefined
@@ -20,7 +26,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             ? options.title
             : route.name;
 
-        const isFocused = state.index === index;
+        const isFocused = state.index === state.routes.findIndex(r => r.key === route.key);
 
         const onPress = () => {
           const event = navigation.emit({
@@ -53,9 +59,6 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             style={styles.tabBarItem}
           >
             {(icons as Record<string, (props: any) => JSX.Element>)[route.name]?.({})}
-            <Text style={{ color: isFocused ? colors.primary : colors.text }}>
-              {}
-            </Text>
           </PlatformPressable>
         );
       })}

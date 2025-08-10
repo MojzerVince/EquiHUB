@@ -12,26 +12,35 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTheme } from "../../contexts/ThemeContext";
 import { useLoadingState } from "../../hooks/useLoadingState";
 import { UserBadgeWithDetails } from "../../lib/supabase";
 
 const ProfileScreen = () => {
   const router = useRouter();
   const { user } = useAuth();
-  
+  const { currentTheme } = useTheme();
+
   // Get the user ID from the authenticated user
   const USER_ID = user?.id;
 
   // If no user is authenticated, we shouldn't be on this page
   if (!USER_ID) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView
+        style={[
+          styles.container,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>No user authenticated</Text>
+          <Text style={[styles.errorText, { color: currentTheme.colors.text }]}>
+            No user authenticated
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -47,7 +56,8 @@ const ProfileScreen = () => {
   // Store the saved values to revert to when canceling
   const [savedUserName, setSavedUserName] = useState("Loading...");
   const [savedUserAge, setSavedUserAge] = useState("Loading...");
-  const [savedUserDescription, setSavedUserDescription] = useState("Loading profile...");
+  const [savedUserDescription, setSavedUserDescription] =
+    useState("Loading profile...");
   const [savedUserExperience, setSavedUserExperience] = useState("0");
   const [savedIsProMember, setSavedIsProMember] = useState(false);
 
@@ -81,11 +91,12 @@ const ProfileScreen = () => {
     epicBadges: 0,
     rareBadges: 0,
     commonBadges: 0,
-    categories: {} as { [key: string]: number }
+    categories: {} as { [key: string]: number },
   });
 
   // Badge dialog state
-  const [selectedBadge, setSelectedBadge] = useState<UserBadgeWithDetails | null>(null);
+  const [selectedBadge, setSelectedBadge] =
+    useState<UserBadgeWithDetails | null>(null);
   const [badgeDialogVisible, setBadgeDialogVisible] = useState(false);
 
   // Function to determine membership status based on database value only
@@ -98,32 +109,41 @@ const ProfileScreen = () => {
   const getProfileDirectAPI = async (userId: string) => {
     try {
       const url = `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${userId}`;
-      
-      const response = await Promise.race([
+
+      const response = (await Promise.race([
         fetch(url, {
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Content-Type': 'application/json',
+            apikey:
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            "Content-Type": "application/json",
           },
         }),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Profile API request timeout')), 10000)
-        )
-      ]) as Response;
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Profile API request timeout")),
+            10000
+          )
+        ),
+      ])) as Response;
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Profile API response not OK:', response.status, response.statusText);
-        console.error('Error response body:', errorText);
+        console.error(
+          "Profile API response not OK:",
+          response.status,
+          response.statusText
+        );
+        console.error("Error response body:", errorText);
         return null;
       }
 
       const profiles = await response.json();
-      
+
       return profiles.length > 0 ? profiles[0] : null;
     } catch (error) {
-      console.error('Error fetching profile via direct API:', error);
+      console.error("Error fetching profile via direct API:", error);
       return null;
     }
   };
@@ -134,35 +154,41 @@ const ProfileScreen = () => {
         id: userId,
         ...profileData,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       const response = await fetch(
-        'https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles',
+        "https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles",
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
+            apikey:
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            "Content-Type": "application/json",
+            Prefer: "return=representation",
           },
-          body: JSON.stringify(newProfile)
+          body: JSON.stringify(newProfile),
         }
       );
 
       if (!response.ok) {
-        console.error('Create profile API response not OK:', response.status, response.statusText);
+        console.error(
+          "Create profile API response not OK:",
+          response.status,
+          response.statusText
+        );
         const errorText = await response.text();
-        console.error('Error response:', errorText);
+        console.error("Error response:", errorText);
         return null;
       }
 
       const createdProfiles = await response.json();
-      
+
       return createdProfiles.length > 0 ? createdProfiles[0] : null;
     } catch (error) {
-      console.error('Error creating profile via direct API:', error);
+      console.error("Error creating profile via direct API:", error);
       return null;
     }
   };
@@ -171,42 +197,51 @@ const ProfileScreen = () => {
     try {
       const updatePayload = {
         ...profileData,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Profile update timeout after 15 seconds')), 15000);
+        setTimeout(
+          () => reject(new Error("Profile update timeout after 15 seconds")),
+          15000
+        );
       });
 
       const fetchPromise = fetch(
         `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${userId}`,
         {
-          method: 'PATCH',
+          method: "PATCH",
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
+            apikey:
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            "Content-Type": "application/json",
+            Prefer: "return=representation",
           },
-          body: JSON.stringify(updatePayload)
+          body: JSON.stringify(updatePayload),
         }
       );
 
       const response = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (!response.ok) {
-        console.error('Update profile API response not OK:', response.status, response.statusText);
+        console.error(
+          "Update profile API response not OK:",
+          response.status,
+          response.statusText
+        );
         const errorText = await response.text();
-        console.error('Error response:', errorText);
+        console.error("Error response:", errorText);
         return false;
       }
 
       const updatedProfiles = await response.json();
-      
+
       return true;
     } catch (error) {
-      console.error('Error updating profile via direct API:', error);
+      console.error("Error updating profile via direct API:", error);
       return false;
     }
   };
@@ -215,32 +250,41 @@ const ProfileScreen = () => {
   const getUserBadgesDirectAPI = async (userId: string) => {
     try {
       const url = `https://grdsqxwghajehneksxik.supabase.co/rest/v1/user_badges?user_id=eq.${userId}&select=*,badge:badges!user_badges_badge_id_fkey(*)`;
-      
-      const response = await Promise.race([
+
+      const response = (await Promise.race([
         fetch(url, {
           headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms',
-            'Content-Type': 'application/json',
+            apikey:
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+            "Content-Type": "application/json",
           },
         }),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Badges API request timeout')), 10000)
-        )
-      ]) as Response;
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Badges API request timeout")),
+            10000
+          )
+        ),
+      ])) as Response;
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Badges API response not OK:', response.status, response.statusText);
-        console.error('Error response body:', errorText);
+        console.error(
+          "Badges API response not OK:",
+          response.status,
+          response.statusText
+        );
+        console.error("Error response body:", errorText);
         return [];
       }
 
       const badges = await response.json();
-      
+
       return badges || [];
     } catch (error) {
-      console.error('Error fetching badges via direct API:', error);
+      console.error("Error fetching badges via direct API:", error);
       return [];
     }
   };
@@ -252,26 +296,26 @@ const ProfileScreen = () => {
       epicBadges: 0,
       rareBadges: 0,
       commonBadges: 0,
-      categories: {} as { [key: string]: number }
+      categories: {} as { [key: string]: number },
     };
 
-    badges.forEach(userBadge => {
+    badges.forEach((userBadge) => {
       if (userBadge.badge) {
         const rarity = userBadge.badge.rarity;
         const category = userBadge.badge.category;
 
         // Count by rarity
         switch (rarity) {
-          case 'legendary':
+          case "legendary":
             stats.legendaryBadges++;
             break;
-          case 'epic':
+          case "epic":
             stats.epicBadges++;
             break;
-          case 'rare':
+          case "rare":
             stats.rareBadges++;
             break;
-          case 'common':
+          case "common":
             stats.commonBadges++;
             break;
         }
@@ -295,20 +339,19 @@ const ProfileScreen = () => {
   }, []);
 
   const initializeProfile = async () => {
-    
     try {
       // Load profile data with timeout
       await loadProfile();
-      
+
       // Load user badges and check eligibility (don't block if this fails)
       try {
         await loadUserBadges();
       } catch (error) {
-        console.error('Error loading badges during initialization:', error);
+        console.error("Error loading badges during initialization:", error);
         // Don't prevent profile loading if badges fail
       }
     } catch (error) {
-      console.error('Error during profile initialization:', error);
+      console.error("Error during profile initialization:", error);
       setError("Failed to load profile. Please try refreshing.");
     }
   };
@@ -319,9 +362,12 @@ const ProfileScreen = () => {
       // Load user badges using direct API with timeout
       const badges = await Promise.race([
         getUserBadgesDirectAPI(USER_ID),
-        new Promise<any[]>((_, reject) => 
-          setTimeout(() => reject(new Error('Badge loading timeout after 10 seconds')), 10000)
-        )
+        new Promise<any[]>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Badge loading timeout after 10 seconds")),
+            10000
+          )
+        ),
       ]);
       setUserBadges(badges);
 
@@ -331,9 +377,8 @@ const ProfileScreen = () => {
 
       // Note: Badge eligibility checking is disabled for now to prevent hanging
       // TODO: Implement direct API for badge eligibility if needed
-      
     } catch (error) {
-      console.error('Error loading user badges:', error);
+      console.error("Error loading user badges:", error);
       // Don't set error for badges, just log it and continue
       setUserBadges([]);
       setBadgeStats({
@@ -342,7 +387,7 @@ const ProfileScreen = () => {
         epicBadges: 0,
         rareBadges: 0,
         commonBadges: 0,
-        categories: {}
+        categories: {},
       });
     } finally {
       setBadgesLoading(false);
@@ -354,13 +399,15 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      
       // Try direct REST API approach with timeout like in refresh
       let profile = await Promise.race([
         getProfileDirectAPI(USER_ID),
-        new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error('Profile loading timeout after 15 seconds')), 15000)
-        )
+        new Promise<null>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Profile loading timeout after 15 seconds")),
+            15000
+          )
+        ),
       ]);
 
       // If profile doesn't exist, create it with default values
@@ -384,9 +431,9 @@ const ProfileScreen = () => {
             is_pro_member: false,
             profile_image_url: null,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           };
-          
+
           // Update state with fallback data
           setUserName(fallbackProfile.name);
           setUserAge(fallbackProfile.age.toString());
@@ -398,10 +445,10 @@ const ProfileScreen = () => {
           setSavedUserDescription(fallbackProfile.description);
           setSavedUserExperience(fallbackProfile.experience.toString());
           setSavedIsProMember(false);
-          
+
           return; // Exit early with fallback data
         }
-        
+
         // Use the newly created profile
         profile = newProfile;
       }
@@ -409,10 +456,10 @@ const ProfileScreen = () => {
       // Update state with loaded/created profile data
       const loadedExperience = profile.experience || 0;
       const loadedProStatus = profile.is_pro_member || false;
-      
+
       // Determine final membership status based on database value
       const finalProStatus = determineMembershipStatus(loadedProStatus);
-      
+
       setUserName(profile.name);
       setUserAge(profile.age.toString());
       setUserDescription(profile.description);
@@ -446,23 +493,25 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      
       // Add 15-second timeout to profile refresh
       const profile = await Promise.race([
         getProfileDirectAPI(USER_ID),
-        new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error('Profile refresh timeout after 15 seconds')), 15000)
-        )
+        new Promise<null>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Profile refresh timeout after 15 seconds")),
+            15000
+          )
+        ),
       ]);
 
       if (profile) {
         // Update state with refreshed profile data
         const loadedExperience = profile.experience || 0;
         const loadedProStatus = profile.is_pro_member || false;
-        
+
         // Determine final membership status based on database value
         const finalProStatus = determineMembershipStatus(loadedProStatus);
-        
+
         setUserName(profile.name);
         setUserAge(profile.age.toString());
         setUserDescription(profile.description);
@@ -482,12 +531,12 @@ const ProfileScreen = () => {
           setProfileImage(require("../../assets/images/horses/falko.png"));
           setSavedProfileImage(require("../../assets/images/horses/falko.png"));
         }
-        
+
         // Reload badges after refreshing profile using direct API
         try {
           await loadUserBadges();
         } catch (error) {
-          console.error('Error loading badges during refresh:', error);
+          console.error("Error loading badges during refresh:", error);
           // Don't prevent refresh if badges fail
         }
       } else {
@@ -605,7 +654,7 @@ const ProfileScreen = () => {
       const experienceValue = parseInt(userExperience);
       // Keep the current pro status from state (which came from database)
       const finalProStatus = isProMember;
-      
+
       const updateData: any = {
         name: userName,
         age: parseInt(userAge),
@@ -630,10 +679,10 @@ const ProfileScreen = () => {
             const reader = new FileReader();
             reader.onloadend = () => {
               if (reader.result) {
-                const base64 = (reader.result as string).split(',')[1];
+                const base64 = (reader.result as string).split(",")[1];
                 resolve(base64);
               } else {
-                reject(new Error('Failed to convert blob to Base64'));
+                reject(new Error("Failed to convert blob to Base64"));
               }
             };
             reader.onerror = reject;
@@ -641,13 +690,16 @@ const ProfileScreen = () => {
           });
 
           // Create data URL
-          const mimeType = blob.type || 'image/jpeg';
+          const mimeType = blob.type || "image/jpeg";
           const dataUrl = `data:${mimeType};base64,${base64}`;
-          
+
           updateData.profile_image_url = dataUrl;
         } catch (imageError) {
-          console.error('Image upload failed:', imageError);
-          Alert.alert("Warning", "Image upload failed, but other changes will be saved.");
+          console.error("Image upload failed:", imageError);
+          Alert.alert(
+            "Warning",
+            "Image upload failed, but other changes will be saved."
+          );
         }
       } else if (isSavedImageUri) {
         // Keep existing image URL if user hasn't changed the image
@@ -667,7 +719,7 @@ const ProfileScreen = () => {
       setSavedUserDescription(userDescription);
       setSavedUserExperience(userExperience);
       setSavedIsProMember(finalProStatus);
-      
+
       // Also update current state to reflect the calculated pro status
       setIsProMember(finalProStatus);
 
@@ -676,12 +728,12 @@ const ProfileScreen = () => {
 
       setIsEditing(false);
       setShowSuccessModal(true);
-      
+
       // Check for new badges after successful save using direct API
       try {
         await loadUserBadges();
       } catch (error) {
-        console.error('Error loading badges after save:', error);
+        console.error("Error loading badges after save:", error);
         // Don't prevent save success if badges fail
       }
     } catch (err) {
@@ -716,8 +768,17 @@ const ProfileScreen = () => {
           <View style={styles.modalIcon}>
             <Text style={styles.checkIcon}>✓</Text>
           </View>
-          <Text style={styles.modalTitle}>Success!</Text>
-          <Text style={styles.modalMessage}>
+          <Text
+            style={[styles.modalTitle, { color: currentTheme.colors.text }]}
+          >
+            Success!
+          </Text>
+          <Text
+            style={[
+              styles.modalMessage,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             Your profile has been updated successfully
           </Text>
           <TouchableOpacity
@@ -743,8 +804,17 @@ const ProfileScreen = () => {
           <View style={styles.imagePickerIcon}>
             <Text style={styles.cameraIcon}>📷</Text>
           </View>
-          <Text style={styles.modalTitle}>Select Image</Text>
-          <Text style={styles.modalMessage}>
+          <Text
+            style={[styles.modalTitle, { color: currentTheme.colors.text }]}
+          >
+            Select Image
+          </Text>
+          <Text
+            style={[
+              styles.modalMessage,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             Choose how you want to select your profile picture
           </Text>
           <View style={styles.imagePickerButtons}>
@@ -784,35 +854,65 @@ const ProfileScreen = () => {
           {selectedBadge && (
             <>
               <View style={styles.badgeDialogHeader}>
-                <View style={[
-                  styles.badgeDialogIcon,
-                  selectedBadge.badge.rarity === 'legendary' && styles.legendaryBadge,
-                  selectedBadge.badge.rarity === 'epic' && styles.epicBadge,
-                  selectedBadge.badge.rarity === 'rare' && styles.rareBadge,
-                  selectedBadge.badge.rarity === 'common' && styles.commonBadge
-                ]}>
-                  <Text style={styles.badgeDialogEmoji}>{selectedBadge.badge.icon_emoji}</Text>
+                <View
+                  style={[
+                    styles.badgeDialogIcon,
+                    selectedBadge.badge.rarity === "legendary" &&
+                      styles.legendaryBadge,
+                    selectedBadge.badge.rarity === "epic" && styles.epicBadge,
+                    selectedBadge.badge.rarity === "rare" && styles.rareBadge,
+                    selectedBadge.badge.rarity === "common" &&
+                      styles.commonBadge,
+                  ]}
+                >
+                  <Text style={styles.badgeDialogEmoji}>
+                    {selectedBadge.badge.icon_emoji}
+                  </Text>
                 </View>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.badgeDialogCloseButton}
                   onPress={closeBadgeDialog}
                 >
                   <Text style={styles.badgeDialogCloseText}>✕</Text>
                 </TouchableOpacity>
               </View>
-              
-              <Text style={styles.badgeDialogTitle}>{selectedBadge.badge.name}</Text>
-              <Text style={styles.badgeDialogRarity}>
-                {selectedBadge.badge.rarity.toUpperCase()} • {selectedBadge.badge.category.toUpperCase()}
+
+              <Text
+                style={[
+                  styles.badgeDialogTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                {selectedBadge.badge.name}
               </Text>
-              
-              <Text style={styles.badgeDialogDescription}>
+              <Text
+                style={[
+                  styles.badgeDialogRarity,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {selectedBadge.badge.rarity.toUpperCase()} •{" "}
+                {selectedBadge.badge.category.toUpperCase()}
+              </Text>
+
+              <Text
+                style={[
+                  styles.badgeDialogDescription,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
                 {selectedBadge.badge.description}
               </Text>
-              
+
               <View style={styles.badgeDialogFooter}>
-                <Text style={styles.badgeDialogEarnedText}>
-                  Earned on {new Date(selectedBadge.earned_at).toLocaleDateString()}
+                <Text
+                  style={[
+                    styles.badgeDialogEarnedText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Earned on{" "}
+                  {new Date(selectedBadge.earned_at).toLocaleDateString()}
                 </Text>
               </View>
             </>
@@ -823,15 +923,25 @@ const ProfileScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.colors.primary },
+      ]}
+    >
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
         <View style={styles.headerContainer}>
-          <Text style={styles.header}>My Profile</Text>
-          <TouchableOpacity 
+          <Text style={[styles.header, { color: "#FFFFFF" }]}>My Profile</Text>
+          <TouchableOpacity
             style={styles.optionsButton}
-            onPress={() => router.push("/(tabs)/options")}
+            onPress={() => router.push("/options")}
           >
-            <Image 
+            <Image
               source={require("../../assets/UI_resources/UI_white/settings_white.png")}
               style={styles.optionsIcon}
             />
@@ -840,40 +950,66 @@ const ProfileScreen = () => {
       </SafeAreaView>
 
       <ScrollView
-        style={styles.viewPort}
+        style={[
+          styles.viewPort,
+          { backgroundColor: currentTheme.colors.surface },
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         <View style={styles.profileContainer}>
           {/* Profile Section */}
-          <View style={styles.profileSection}>
+          <View
+            style={[
+              styles.profileSection,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
             {!isEditing ? (
               <TouchableOpacity
-                style={styles.editButton}
+                style={[
+                  styles.editButton,
+                  {
+                    backgroundColor: currentTheme.colors.primary,
+                    borderColor: currentTheme.colors.border,
+                  },
+                ]}
                 onPress={handleEditPress}
                 disabled={isLoading}
               >
-                <Text style={styles.editButtonText}>Edit Profile</Text>
+                <Text style={[styles.editButtonText, { color: "#FFFFFF" }]}>
+                  Edit Profile
+                </Text>
               </TouchableOpacity>
             ) : (
               <>
                 <TouchableOpacity
-                  style={styles.cancelButton}
+                  style={[
+                    styles.cancelButton,
+                    { backgroundColor: currentTheme.colors.textSecondary },
+                  ]}
                   onPress={handleCancel}
                   disabled={isLoading}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.saveButton}
+                  style={[
+                    styles.saveButton,
+                    { backgroundColor: currentTheme.colors.primary },
+                  ]}
                   onPress={handleSave}
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.saveButtonText}>Save</Text>
+                    <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
+                      Save
+                    </Text>
                   )}
                 </TouchableOpacity>
               </>
@@ -881,13 +1017,25 @@ const ProfileScreen = () => {
 
             <View style={styles.profileImageContainer}>
               {!isEditing ? (
-                <Image source={profileImage} style={styles.profileImage} />
+                <Image
+                  source={profileImage}
+                  style={[
+                    styles.profileImage,
+                    { borderColor: currentTheme.colors.primary },
+                  ]}
+                />
               ) : (
                 <TouchableOpacity
                   onPress={pickImage}
                   style={styles.editImageContainer}
                 >
-                  <Image source={profileImage} style={styles.profileImage} />
+                  <Image
+                    source={profileImage}
+                    style={[
+                      styles.profileImage,
+                      { borderColor: currentTheme.colors.primary },
+                    ]}
+                  />
                   <View style={styles.editImageOverlay}>
                     <Text style={styles.editImageLabel}>Edit</Text>
                   </View>
@@ -897,16 +1045,59 @@ const ProfileScreen = () => {
 
             {!isEditing ? (
               <>
-                <Text style={styles.userName}>{userName}</Text>
-                <Text style={styles.userAge}>{userAge}</Text>
-                <Text style={styles.userDescription}>{userDescription}</Text>
+                <Text
+                  style={[styles.userName, { color: currentTheme.colors.text }]}
+                >
+                  {userName}
+                </Text>
+                <Text
+                  style={[styles.userAge, { color: currentTheme.colors.text }]}
+                >
+                  {userAge}
+                </Text>
+                <Text
+                  style={[
+                    styles.userDescription,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  {userDescription}
+                </Text>
                 <View style={styles.experienceContainer}>
-                  <Text style={styles.experienceLabel}>Experience</Text>
-                  <Text style={styles.experienceValue}>{userExperience} years</Text>
+                  <Text
+                    style={[
+                      styles.experienceLabel,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Experience
+                  </Text>
+                  <Text
+                    style={[
+                      styles.experienceValue,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    {userExperience} years
+                  </Text>
                 </View>
                 <View style={styles.badgeContainer}>
-                  <View style={[styles.badge, isProMember ? styles.proBadge : styles.regularBadge]}>
-                    <Text style={[styles.badgeText, isProMember ? styles.proBadgeText : styles.regularBadgeText]}>
+                  <View
+                    style={[
+                      styles.badge,
+                      isProMember ? styles.proBadge : styles.regularBadge,
+                      { backgroundColor: currentTheme.colors.surface },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.badgeText,
+                        isProMember
+                          ? styles.proBadgeText
+                          : styles.regularBadgeText,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
                       {getMembershipDisplayText(isProMember)}
                     </Text>
                   </View>
@@ -915,90 +1106,177 @@ const ProfileScreen = () => {
             ) : (
               <>
                 <TextInput
-                  style={styles.editInput}
+                  style={[
+                    styles.editInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={userName}
                   onChangeText={setUserName}
                   placeholder="Enter your name"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                 />
                 <TextInput
-                  style={styles.editInput}
+                  style={[
+                    styles.editInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={userAge}
                   onChangeText={setUserAge}
                   placeholder="Enter your age"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                 />
                 <TextInput
-                  style={[styles.editInput, styles.editDescriptionInput]}
+                  style={[
+                    styles.editInput,
+                    styles.editDescriptionInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={userDescription}
                   onChangeText={setUserDescription}
                   placeholder="Enter your description"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   multiline
                   numberOfLines={4}
                 />
                 <TextInput
-                  style={styles.editInput}
+                  style={[
+                    styles.editInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={userExperience}
                   onChangeText={setUserExperience}
                   placeholder="Years of experience"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                 />
               </>
             )}
           </View>
 
-          {/* Badges Section */}
           <View style={styles.badgesSection}>
             <View style={styles.badgesHeader}>
-              <Text style={styles.badgesTitle}>Achievements & Badges</Text>
+              <Text
+                style={[
+                  styles.badgesTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Achievements & Badges
+              </Text>
               <View style={styles.badgeStatsContainer}>
-                <Text style={styles.badgeStatsText}>
+                <Text
+                  style={[
+                    styles.badgeStatsText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   {badgeStats.totalBadges} badges earned
                 </Text>
               </View>
             </View>
-            
+
             {badgesLoading ? (
               <View style={styles.badgesLoadingContainer}>
                 <ActivityIndicator size="large" color="#335C67" />
-                <Text style={styles.badgesLoadingText}>Loading badges...</Text>
+                <Text
+                  style={[
+                    styles.badgesLoadingText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Loading badges...
+                </Text>
               </View>
             ) : userBadges.length > 0 ? (
-              <View style={styles.badgesGrid}>
+              <View
+                style={[
+                  styles.badgesGrid,
+                  { backgroundColor: currentTheme.colors.background },
+                ]}
+              >
                 {userBadges.map((userBadge, index) => (
-                  <TouchableOpacity 
-                    key={userBadge.id} 
+                  <TouchableOpacity
+                    key={userBadge.id}
                     style={styles.badgeItem}
                     onPress={() => handleBadgePress(userBadge)}
                     activeOpacity={0.7}
                   >
-                    <View style={[
-                      styles.badgeIcon, 
-                      userBadge.badge.rarity === 'legendary' && styles.legendaryBadge,
-                      userBadge.badge.rarity === 'epic' && styles.epicBadge,
-                      userBadge.badge.rarity === 'rare' && styles.rareBadge,
-                      userBadge.badge.rarity === 'common' && styles.commonBadge
-                    ]}>
-                      <Text style={styles.badgeEmoji}>{userBadge.badge.icon_emoji}</Text>
+                    <View
+                      style={[
+                        styles.badgeIcon,
+                        userBadge.badge.rarity === "legendary" &&
+                          styles.legendaryBadge,
+                        userBadge.badge.rarity === "epic" && styles.epicBadge,
+                        userBadge.badge.rarity === "rare" && styles.rareBadge,
+                        userBadge.badge.rarity === "common" &&
+                          styles.commonBadge,
+                      ]}
+                    >
+                      <Text style={styles.badgeEmoji}>
+                        {userBadge.badge.icon_emoji}
+                      </Text>
                     </View>
-                    <Text style={styles.badgeLabel} numberOfLines={2}>
+                    <Text
+                      style={[
+                        styles.badgeLabel,
+                        { color: currentTheme.colors.text },
+                      ]}
+                      numberOfLines={2}
+                    >
                       {userBadge.badge.name}
                     </Text>
-                    <Text style={styles.badgeRarity}>
+                    <Text
+                      style={[
+                        styles.badgeRarity,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
                       {userBadge.badge.rarity.toUpperCase()}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             ) : (
-              <View style={styles.noBadgesContainer}>
+              <View
+                style={[
+                  styles.noBadgesContainer,
+                  { backgroundColor: currentTheme.colors.background },
+                ]}
+              >
                 <Text style={styles.noBadgesEmoji}>🏆</Text>
-                <Text style={styles.noBadgesText}>No badges yet!</Text>
-                <Text style={styles.noBadgesSubtext}>
-                  Complete your profile and participate in activities to earn badges.
+                <Text
+                  style={[
+                    styles.noBadgesText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  No badges yet!
+                </Text>
+                <Text
+                  style={[
+                    styles.noBadgesSubtext,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Complete your profile and participate in activities to earn
+                  badges.
                 </Text>
               </View>
             )}
@@ -1101,7 +1379,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#335C67",
     marginBottom: 15,
     fontFamily: "Inder",
   },
@@ -1126,13 +1403,11 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#335C67",
     fontFamily: "Inder",
     marginBottom: 2,
   },
   settingSubtitle: {
     fontSize: 14,
-    color: "#666",
     fontFamily: "Inder",
   },
   actionButton: {
@@ -1143,7 +1418,6 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 16,
-    color: "#335C67",
     fontFamily: "Inder",
     fontWeight: "500",
   },
@@ -1162,7 +1436,6 @@ const styles = StyleSheet.create({
   profileSection: {
     alignItems: "center",
     marginBottom: 40,
-    backgroundColor: "#E9F5F0",
     borderRadius: 30,
     padding: 30,
     position: "relative",
@@ -1221,14 +1494,12 @@ const styles = StyleSheet.create({
   editInput: {
     backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "#335C67",
     borderRadius: 10,
     paddingHorizontal: 15,
     paddingVertical: 10,
     marginBottom: 15,
     fontSize: 16,
     fontFamily: "Inder",
-    color: "#335C67",
     textAlign: "center",
     minWidth: 200,
   },
@@ -1246,7 +1517,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: "#335C67",
   },
   editImageContainer: {
     position: "relative",
@@ -1271,19 +1541,16 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#335C67",
     marginBottom: 5,
     fontFamily: "Inder",
   },
   userAge: {
     fontSize: 20,
-    color: "#335C67",
     marginBottom: 15,
     fontFamily: "Inder",
   },
   userDescription: {
     fontSize: 14,
-    color: "#666",
     textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 10,
@@ -1296,7 +1563,6 @@ const styles = StyleSheet.create({
   },
   experienceLabel: {
     fontSize: 12,
-    color: "#666",
     fontFamily: "Inder",
     textTransform: "uppercase",
     letterSpacing: 1,
@@ -1304,7 +1570,6 @@ const styles = StyleSheet.create({
   experienceValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#335C67",
     fontFamily: "Inder",
     marginTop: 2,
   },
@@ -1319,11 +1584,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   proBadge: {
-    backgroundColor: "#FFD700",
     borderColor: "#FFA500",
   },
   regularBadge: {
-    backgroundColor: "#E3F2FD",
     borderColor: "#2196F3",
   },
   badgeText: {
@@ -1332,12 +1595,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     letterSpacing: 0.5,
   },
-  proBadgeText: {
-    color: "#B8860B",
-  },
-  regularBadgeText: {
-    color: "#1976D2",
-  },
+  proBadgeText: {},
+  regularBadgeText: {},
   badgesSection: {
     marginBottom: 30,
   },
@@ -1347,7 +1606,6 @@ const styles = StyleSheet.create({
   badgesTitle: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#335C67",
     textAlign: "center",
     fontFamily: "Inder",
     marginBottom: 8,
@@ -1357,7 +1615,6 @@ const styles = StyleSheet.create({
   },
   badgeStatsText: {
     fontSize: 14,
-    color: "#666",
     fontFamily: "Inder",
     textAlign: "center",
   },
@@ -1365,7 +1622,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-around",
-    backgroundColor: "#E9F5F0",
     borderRadius: 20,
     padding: 20,
     gap: 15,
@@ -1419,7 +1675,6 @@ const styles = StyleSheet.create({
   badgeLabel: {
     fontSize: 12,
     fontWeight: "bold",
-    color: "#335C67",
     fontFamily: "Inder",
     textAlign: "center",
     lineHeight: 14,
@@ -1427,14 +1682,12 @@ const styles = StyleSheet.create({
   },
   badgeRarity: {
     fontSize: 8,
-    color: "#666",
     fontFamily: "Inder",
     textAlign: "center",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   noBadgesContainer: {
-    backgroundColor: "#E9F5F0",
     borderRadius: 20,
     padding: 40,
     alignItems: "center",
@@ -1446,13 +1699,11 @@ const styles = StyleSheet.create({
   noBadgesText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#335C67",
     fontFamily: "Inder",
     marginBottom: 8,
   },
   noBadgesSubtext: {
     fontSize: 14,
-    color: "#666",
     fontFamily: "Inder",
     textAlign: "center",
     lineHeight: 20,
@@ -1496,13 +1747,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#335C67",
     marginBottom: 10,
     fontFamily: "Inder",
   },
   modalMessage: {
     fontSize: 16,
-    color: "#666",
     textAlign: "center",
     marginBottom: 25,
     lineHeight: 22,
@@ -1626,7 +1875,6 @@ const styles = StyleSheet.create({
   badgesLoadingText: {
     marginTop: 15,
     fontSize: 16,
-    color: "#666",
     fontFamily: "Inder",
   },
   badgeDialogOverlay: {
@@ -1684,14 +1932,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     marginBottom: 5,
-    color: "#335C67",
   },
   badgeDialogRarity: {
     fontSize: 14,
     fontFamily: "Inder",
     textAlign: "center",
     marginBottom: 15,
-    color: "#666",
     fontWeight: "bold",
   },
   badgeDialogDescription: {
@@ -1699,7 +1945,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     lineHeight: 24,
-    color: "#333",
     marginBottom: 20,
   },
   badgeDialogFooter: {
@@ -1712,7 +1957,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inder",
     textAlign: "center",
-    color: "#666",
     fontStyle: "italic",
   },
 });

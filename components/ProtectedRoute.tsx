@@ -1,6 +1,6 @@
 import { useRouter, useSegments } from 'expo-router';
-import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
@@ -11,6 +11,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
+  const [showForceButton, setShowForceButton] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -27,10 +28,35 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }, [user, loading, segments]);
 
+  // Show force continue button after 6 seconds of loading
+  useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        setShowForceButton(true);
+      }, 6000); // Show button after 6 seconds
+
+      return () => clearTimeout(timer);
+    } else {
+      setShowForceButton(false);
+    }
+  }, [loading]);
+
+  const handleForceContinue = () => {
+    console.log('🔄 User forced continue from loading screen');
+    // Force navigation to login if loading is stuck
+    router.replace('/login');
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#335C67" />
+        <ActivityIndicator size="large" color="#FFFFFF" />
+        <Text style={styles.loadingText}>Loading EquiHub...</Text>
+        {showForceButton && (
+          <TouchableOpacity style={styles.forceButton} onPress={handleForceContinue}>
+            <Text style={styles.forceButtonText}>Continue Anyway</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -44,5 +70,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#335C67',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontFamily: 'Inder',
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  forceButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  forceButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'Inder',
+    textAlign: 'center',
+    fontWeight: '600',
   },
 });

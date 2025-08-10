@@ -15,23 +15,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTheme } from "../../contexts/ThemeContext";
 import { HorseAPI } from "../../lib/horseAPI";
 import { Horse } from "../../lib/supabase";
 
 // Dropdown options
-const genderOptions = [
-  "Stallion",
-  "Mare", 
-  "Gelding",
-  "Filly",
-  "Colt"
-];
+const genderOptions = ["Stallion", "Mare", "Gelding", "Filly", "Colt"];
 
 const breedOptions = [
   "Arabian",
   "Thoroughbred",
   "Quarter Horse",
-  "Paint Horse", 
+  "Paint Horse",
   "Appaloosa",
   "Friesian",
   "Clydesdale",
@@ -91,16 +86,17 @@ const breedOptions = [
   "Mecklenburg",
   "Sachsen-Anhaltiner",
   "Thüringer",
-  "Other"
+  "Other",
 ];
 
 const MyHorsesScreen = () => {
   const { user, loading: authLoading } = useAuth();
+  const { currentTheme } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [horses, setHorses] = useState<Horse[]>([]);
   const [loading, setLoading] = useState(false);
   const [horsesLoaded, setHorsesLoaded] = useState(false);
-  
+
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingHorse, setEditingHorse] = useState<any>(null);
@@ -125,23 +121,24 @@ const MyHorsesScreen = () => {
   // Dropdown state
   const [genderDropdownVisible, setGenderDropdownVisible] = useState(false);
   const [breedDropdownVisible, setBreedDropdownVisible] = useState(false);
-  
+
   // Add modal dropdown state
-  const [addGenderDropdownVisible, setAddGenderDropdownVisible] = useState(false);
+  const [addGenderDropdownVisible, setAddGenderDropdownVisible] =
+    useState(false);
   const [addBreedDropdownVisible, setAddBreedDropdownVisible] = useState(false);
-  
+
   // Number picker state
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [heightPickerVisible, setHeightPickerVisible] = useState(false);
-  
+
   // Add modal picker state
   const [addDatePickerVisible, setAddDatePickerVisible] = useState(false);
   const [addHeightPickerVisible, setAddHeightPickerVisible] = useState(false);
-  
+
   // Success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  
+
   // Image picker state
   const [editImage, setEditImage] = useState<any>(null);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
@@ -171,37 +168,43 @@ const MyHorsesScreen = () => {
   const loadHorses = async (userId: string) => {
     try {
       setLoading(true);
-      
+
       // Add timeout to detect hanging API calls
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('API call timeout after 10 seconds')), 10000);
+        setTimeout(
+          () => reject(new Error("API call timeout after 10 seconds")),
+          10000
+        );
       });
-      
+
       const apiPromise = HorseAPI.getHorses(userId);
-      
+
       const horsesData = await Promise.race([apiPromise, timeoutPromise]);
-      
+
       // Ensure we have valid array data
       if (Array.isArray(horsesData)) {
         setHorses(horsesData);
       } else {
         setHorses([]);
       }
-      
+
       setHorsesLoaded(true);
-      
     } catch (error) {
-      console.error('Error loading horses:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
+      console.error("Error loading horses:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
       // Set empty array on error to prevent UI issues
       setHorses([]);
       setHorsesLoaded(true);
-      
-      if (errorMessage.includes('timeout')) {
-        Alert.alert('Timeout', 'The request took too long. Please check your internet connection.');
+
+      if (errorMessage.includes("timeout")) {
+        Alert.alert(
+          "Timeout",
+          "The request took too long. Please check your internet connection."
+        );
       } else {
-        Alert.alert('Error', 'Failed to load horses');
+        Alert.alert("Error", "Failed to load horses");
       }
     } finally {
       setLoading(false);
@@ -226,14 +229,14 @@ const MyHorsesScreen = () => {
     setEditBreed(horse.breed);
     // Check if image_url contains base64 data or is a regular URL
     setEditImage(horse.image_url ? { uri: horse.image_url } : null);
-    
+
     // Set birth date
     if (horse.birth_date) {
       setEditBirthDate(new Date(horse.birth_date));
     } else {
       setEditBirthDate(null);
     }
-    
+
     // Reset dropdown states
     setGenderDropdownVisible(false);
     setBreedDropdownVisible(false);
@@ -300,13 +303,19 @@ const MyHorsesScreen = () => {
     }
 
     // Validation logic (same as before)
-    const normalizedName = editName.normalize('NFC').trim();
-    const normalizedGender = editGender.normalize('NFC').trim();
-    const normalizedBreed = editBreed.normalize('NFC').trim();
+    const normalizedName = editName.normalize("NFC").trim();
+    const normalizedGender = editGender.normalize("NFC").trim();
+    const normalizedBreed = editBreed.normalize("NFC").trim();
     const normalizedHeight = editHeight.trim();
     const normalizedWeight = editWeight.trim();
 
-    if (!normalizedName || !normalizedGender || !editBirthDate || !normalizedHeight || !normalizedBreed) {
+    if (
+      !normalizedName ||
+      !normalizedGender ||
+      !editBirthDate ||
+      !normalizedHeight ||
+      !normalizedBreed
+    ) {
       Alert.alert("Error", "Please fill in all required fields");
       return;
     }
@@ -354,19 +363,32 @@ const MyHorsesScreen = () => {
         height: heightNum,
         weight: weightNum, // This will be null if weight field is cleared
         breed: normalizedBreed,
-        image: editImage && editImage.uri !== editingHorse.image_url ? editImage : undefined,
+        image:
+          editImage && editImage.uri !== editingHorse.image_url
+            ? editImage
+            : undefined,
       };
 
-      const updatedHorse = await HorseAPI.updateHorse(editingHorse.id, user?.id, updates);
+      const updatedHorse = await HorseAPI.updateHorse(
+        editingHorse.id,
+        user?.id,
+        updates
+      );
 
       if (updatedHorse) {
         setHorsesLoaded(false); // Reset flag to allow reloading
         await loadHorses(user?.id);
         closeEditModal();
-        
+
         // Check if image was provided but not saved
-        if (editImage && editImage.uri !== editingHorse.image_url && !updatedHorse.image_url) {
-          setSuccessMessage(`${normalizedName} has been updated! (Note: Image processing failed, but other changes were saved)`);
+        if (
+          editImage &&
+          editImage.uri !== editingHorse.image_url &&
+          !updatedHorse.image_url
+        ) {
+          setSuccessMessage(
+            `${normalizedName} has been updated! (Note: Image processing failed, but other changes were saved)`
+          );
         } else {
           setSuccessMessage(`${normalizedName} has been updated!`);
         }
@@ -375,7 +397,7 @@ const MyHorsesScreen = () => {
         Alert.alert("Error", "Failed to update horse");
       }
     } catch (error) {
-      console.error('Error updating horse:', error);
+      console.error("Error updating horse:", error);
       Alert.alert("Error", "Failed to update horse");
     } finally {
       setLoading(false);
@@ -389,13 +411,19 @@ const MyHorsesScreen = () => {
     }
 
     // Validation logic (same as before)
-    const normalizedName = addName.normalize('NFC').trim();
-    const normalizedGender = addGender.normalize('NFC').trim();
-    const normalizedBreed = addBreed.normalize('NFC').trim();
+    const normalizedName = addName.normalize("NFC").trim();
+    const normalizedGender = addGender.normalize("NFC").trim();
+    const normalizedBreed = addBreed.normalize("NFC").trim();
     const normalizedHeight = addHeight.trim();
     const normalizedWeight = addWeight.trim();
 
-    if (!normalizedName || !normalizedGender || !addBirthDate || !normalizedHeight || !normalizedBreed) {
+    if (
+      !normalizedName ||
+      !normalizedGender ||
+      !addBirthDate ||
+      !normalizedHeight ||
+      !normalizedBreed
+    ) {
       Alert.alert("Error", "Please fill in all required fields");
       return;
     }
@@ -452,10 +480,12 @@ const MyHorsesScreen = () => {
         setHorsesLoaded(false); // Reset flag to allow reloading
         await loadHorses(user?.id);
         closeAddModal();
-        
+
         // Check if image was provided but not saved
         if (addImage && !newHorse.image_url) {
-          setSuccessMessage(`${normalizedName} has been added! (Note: Image processing failed, but horse was saved successfully)`);
+          setSuccessMessage(
+            `${normalizedName} has been added! (Note: Image processing failed, but horse was saved successfully)`
+          );
         } else {
           setSuccessMessage(`${normalizedName} has been added!`);
         }
@@ -464,8 +494,11 @@ const MyHorsesScreen = () => {
         Alert.alert("Error", "Failed to add horse. Please try again.");
       }
     } catch (error) {
-      console.error('Error adding horse:', error);
-      Alert.alert("Error", "Failed to add horse. Please check your connection and try again.");
+      console.error("Error adding horse:", error);
+      Alert.alert(
+        "Error",
+        "Failed to add horse. Please check your connection and try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -477,8 +510,8 @@ const MyHorsesScreen = () => {
       `Are you sure you want to delete ${horse.name}?`,
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
+        {
+          text: "Delete",
           style: "destructive",
           onPress: async () => {
             if (!user?.id) {
@@ -489,7 +522,7 @@ const MyHorsesScreen = () => {
             try {
               setLoading(true);
               const success = await HorseAPI.deleteHorse(horse.id, user?.id);
-              
+
               if (success) {
                 setHorsesLoaded(false); // Reset flag to allow reloading
                 await loadHorses(user?.id);
@@ -499,23 +532,27 @@ const MyHorsesScreen = () => {
                 Alert.alert("Error", "Failed to delete horse");
               }
             } catch (error) {
-              console.error('Error deleting horse:', error);
+              console.error("Error deleting horse:", error);
               Alert.alert("Error", "Failed to delete horse");
             } finally {
               setLoading(false);
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   // Image picker functions
   const pickImageFromLibrary = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (permissionResult.granted === false) {
-      Alert.alert("Permission Required", "Permission to access camera roll is required!");
+      Alert.alert(
+        "Permission Required",
+        "Permission to access camera roll is required!"
+      );
       return;
     }
 
@@ -539,9 +576,12 @@ const MyHorsesScreen = () => {
 
   const takePhoto = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    
+
     if (permissionResult.granted === false) {
-      Alert.alert("Permission Required", "Permission to access camera is required!");
+      Alert.alert(
+        "Permission Required",
+        "Permission to access camera is required!"
+      );
       return;
     }
 
@@ -563,13 +603,13 @@ const MyHorsesScreen = () => {
   };
 
   // Custom Dropdown Component
-  const CustomDropdown = ({ 
-    value, 
-    placeholder, 
-    options, 
-    onSelect, 
-    isVisible, 
-    setVisible 
+  const CustomDropdown = ({
+    value,
+    placeholder,
+    options,
+    onSelect,
+    isVisible,
+    setVisible,
   }: {
     value: string;
     placeholder: string;
@@ -582,31 +622,35 @@ const MyHorsesScreen = () => {
       <View style={{ marginBottom: 20 }}>
         <TouchableOpacity
           style={{
-            backgroundColor: '#2D5A66',
+            backgroundColor: currentTheme.colors.surface,
             borderRadius: 8,
             paddingVertical: 15,
             paddingHorizontal: 16,
             borderWidth: 1,
-            borderColor: '#4A9BB7',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            borderColor: currentTheme.colors.border,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
           onPress={() => setVisible(!isVisible)}
         >
-          <Text style={{
-            color: value ? '#FFFFFF' : '#B0B0B0',
-            fontSize: 16,
-            fontFamily: "Inder",
-            includeFontPadding: false,
-          }}>
+          <Text
+            style={{
+              color: value
+                ? currentTheme.colors.text
+                : currentTheme.colors.textSecondary,
+              fontSize: 16,
+              fontFamily: "Inder",
+              includeFontPadding: false,
+            }}
+          >
             {value || placeholder}
           </Text>
-          <Text style={{ color: '#FFFFFF', fontSize: 16 }}>
-            {isVisible ? '▲' : '▼'}
+          <Text style={{ color: currentTheme.colors.text, fontSize: 16 }}>
+            {isVisible ? "▲" : "▼"}
           </Text>
         </TouchableOpacity>
-        
+
         {isVisible && (
           <Modal
             transparent={true}
@@ -617,21 +661,23 @@ const MyHorsesScreen = () => {
             <TouchableOpacity
               style={{
                 flex: 1,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                justifyContent: 'center',
-                alignItems: 'center',
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                justifyContent: "center",
+                alignItems: "center",
               }}
               onPress={() => setVisible(false)}
             >
-              <View style={{
-                backgroundColor: '#1C3A42',
-                borderRadius: 12,
-                padding: 20,
-                maxHeight: 300,
-                width: '80%',
-                borderWidth: 1,
-                borderColor: '#4A9BB7',
-              }}>
+              <View
+                style={{
+                  backgroundColor: currentTheme.colors.surface,
+                  borderRadius: 12,
+                  padding: 20,
+                  maxHeight: 300,
+                  width: "80%",
+                  borderWidth: 1,
+                  borderColor: currentTheme.colors.border,
+                }}
+              >
                 <ScrollView style={{ maxHeight: 250 }}>
                   {options.map((option, index) => (
                     <TouchableOpacity
@@ -640,21 +686,26 @@ const MyHorsesScreen = () => {
                         paddingVertical: 15,
                         paddingHorizontal: 10,
                         borderBottomWidth: index < options.length - 1 ? 1 : 0,
-                        borderBottomColor: '#335C67',
+                        borderBottomColor: currentTheme.colors.border,
                       }}
                       onPress={() => {
                         onSelect(option);
                         setVisible(false);
                       }}
                     >
-                      <Text style={{
-                        color: value === option ? '#4A9BB7' : '#FFFFFF',
-                        fontSize: 16,
-                        fontWeight: value === option ? 'bold' : 'normal',
-                        fontFamily: "Inder",
-                        textAlign: "left",
-                        includeFontPadding: false,
-                      }}>
+                      <Text
+                        style={{
+                          color:
+                            value === option
+                              ? currentTheme.colors.secondary
+                              : currentTheme.colors.text,
+                          fontSize: 16,
+                          fontWeight: value === option ? "bold" : "normal",
+                          fontFamily: "Inder",
+                          textAlign: "left",
+                          includeFontPadding: false,
+                        }}
+                      >
                         {option}
                       </Text>
                     </TouchableOpacity>
@@ -674,7 +725,7 @@ const MyHorsesScreen = () => {
     placeholder,
     onSelect,
     isVisible,
-    setVisible
+    setVisible,
   }: {
     value: Date | null;
     placeholder: string;
@@ -684,11 +735,23 @@ const MyHorsesScreen = () => {
   }) => {
     const [selectedDay, setSelectedDay] = useState(value?.getDate() || 1);
     const [selectedMonth, setSelectedMonth] = useState(value?.getMonth() || 0);
-    const [selectedYear, setSelectedYear] = useState(value?.getFullYear() || new Date().getFullYear());
+    const [selectedYear, setSelectedYear] = useState(
+      value?.getFullYear() || new Date().getFullYear()
+    );
 
     const months = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
 
     const generateYears = () => {
@@ -714,10 +777,10 @@ const MyHorsesScreen = () => {
     };
 
     const formatDate = (date: Date) => {
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       });
     };
 
@@ -731,31 +794,35 @@ const MyHorsesScreen = () => {
       <View style={{ marginBottom: 20 }}>
         <TouchableOpacity
           style={{
-            backgroundColor: '#2D5A66',
+            backgroundColor: currentTheme.colors.surface,
             borderRadius: 8,
             paddingVertical: 15,
             paddingHorizontal: 16,
             borderWidth: 1,
-            borderColor: '#4A9BB7',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            borderColor: currentTheme.colors.border,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
           onPress={() => setVisible(!isVisible)}
         >
-          <Text style={{
-            color: value ? '#FFFFFF' : '#B0B0B0',
-            fontSize: 16,
-            fontFamily: "Inder",
-            includeFontPadding: false,
-          }}>
+          <Text
+            style={{
+              color: value
+                ? currentTheme.colors.text
+                : currentTheme.colors.textSecondary,
+              fontSize: 16,
+              fontFamily: "Inder",
+              includeFontPadding: false,
+            }}
+          >
             {value ? formatDate(value) : placeholder}
           </Text>
-          <Text style={{ color: '#FFFFFF', fontSize: 16 }}>
-            {isVisible ? '▲' : '▼'}
+          <Text style={{ color: currentTheme.colors.text, fontSize: 16 }}>
+            {isVisible ? "▲" : "▼"}
           </Text>
         </TouchableOpacity>
-        
+
         {isVisible && (
           <Modal
             transparent={true}
@@ -766,107 +833,180 @@ const MyHorsesScreen = () => {
             <TouchableOpacity
               style={{
                 flex: 1,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                justifyContent: 'center',
-                alignItems: 'center',
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                justifyContent: "center",
+                alignItems: "center",
               }}
               onPress={() => setVisible(false)}
             >
-              <View style={{
-                backgroundColor: '#1C3A42',
-                borderRadius: 12,
-                padding: 20,
-                width: '90%',
-                maxWidth: 400,
-                borderWidth: 1,
-                borderColor: '#4A9BB7',
-              }}>
-                <Text style={{
-                  color: '#FFFFFF',
-                  fontSize: 20,
-                  fontWeight: 'bold',
-                  textAlign: 'center',
-                  marginBottom: 20,
-                  fontFamily: "Inder",
-                }}>
+              <View
+                style={{
+                  backgroundColor: currentTheme.colors.surface,
+                  borderRadius: 12,
+                  padding: 20,
+                  width: "90%",
+                  maxWidth: 400,
+                  borderWidth: 1,
+                  borderColor: currentTheme.colors.border,
+                }}
+              >
+                <Text
+                  style={{
+                    color: currentTheme.colors.text,
+                    fontSize: 20,
+                    fontWeight: "bold",
+                    textAlign: "center",
+                    marginBottom: 20,
+                    fontFamily: "Inder",
+                  }}
+                >
                   Select Birth Date
                 </Text>
-                
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    marginBottom: 20,
+                  }}
+                >
                   {/* Month Picker */}
                   <View style={{ flex: 1, marginRight: 10 }}>
-                    <Text style={{ color: '#FFFFFF', marginBottom: 10, textAlign: 'center', fontFamily: "Inder" }}>Month</Text>
-                    <ScrollView style={{ maxHeight: 150, backgroundColor: '#2D5A66', borderRadius: 8 }}>
+                    <Text
+                      style={{
+                        color: currentTheme.colors.text,
+                        marginBottom: 10,
+                        textAlign: "center",
+                        fontFamily: "Inder",
+                      }}
+                    >
+                      Month
+                    </Text>
+                    <ScrollView
+                      style={{
+                        maxHeight: 150,
+                        backgroundColor: currentTheme.colors.primaryDark,
+                        borderRadius: 8,
+                      }}
+                    >
                       {months.map((month, index) => (
                         <TouchableOpacity
                           key={index}
                           style={{
                             paddingVertical: 12,
                             paddingHorizontal: 10,
-                            backgroundColor: selectedMonth === index ? '#4A9BB7' : 'transparent',
+                            backgroundColor:
+                              selectedMonth === index
+                                ? currentTheme.colors.secondary
+                                : "transparent",
                           }}
                           onPress={() => setSelectedMonth(index)}
                         >
-                          <Text style={{
-                            color: '#FFFFFF',
-                            textAlign: 'center',
-                            fontFamily: "Inder",
-                            fontWeight: selectedMonth === index ? 'bold' : 'normal',
-                          }}>
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              textAlign: "center",
+                              fontFamily: "Inder",
+                              fontWeight:
+                                selectedMonth === index ? "bold" : "normal",
+                            }}
+                          >
                             {month}
                           </Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
                   </View>
-                  
+
                   {/* Day Picker */}
                   <View style={{ flex: 0.6, marginRight: 10 }}>
-                    <Text style={{ color: '#FFFFFF', marginBottom: 10, textAlign: 'center', fontFamily: "Inder" }}>Day</Text>
-                    <ScrollView style={{ maxHeight: 150, backgroundColor: '#2D5A66', borderRadius: 8 }}>
+                    <Text
+                      style={{
+                        color: currentTheme.colors.text,
+                        marginBottom: 10,
+                        textAlign: "center",
+                        fontFamily: "Inder",
+                      }}
+                    >
+                      Day
+                    </Text>
+                    <ScrollView
+                      style={{
+                        maxHeight: 150,
+                        backgroundColor: currentTheme.colors.primaryDark,
+                        borderRadius: 8,
+                      }}
+                    >
                       {generateDays().map((day) => (
                         <TouchableOpacity
                           key={day}
                           style={{
                             paddingVertical: 12,
                             paddingHorizontal: 10,
-                            backgroundColor: selectedDay === day ? '#4A9BB7' : 'transparent',
+                            backgroundColor:
+                              selectedDay === day
+                                ? currentTheme.colors.secondary
+                                : "transparent",
                           }}
                           onPress={() => setSelectedDay(day)}
                         >
-                          <Text style={{
-                            color: '#FFFFFF',
-                            textAlign: 'center',
-                            fontFamily: "Inder",
-                            fontWeight: selectedDay === day ? 'bold' : 'normal',
-                          }}>
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              textAlign: "center",
+                              fontFamily: "Inder",
+                              fontWeight:
+                                selectedDay === day ? "bold" : "normal",
+                            }}
+                          >
                             {day}
                           </Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
                   </View>
-                  
+
                   {/* Year Picker */}
                   <View style={{ flex: 0.8 }}>
-                    <Text style={{ color: '#FFFFFF', marginBottom: 10, textAlign: 'center', fontFamily: "Inder" }}>Year</Text>
-                    <ScrollView style={{ maxHeight: 150, backgroundColor: '#2D5A66', borderRadius: 8 }}>
+                    <Text
+                      style={{
+                        color: currentTheme.colors.text,
+                        marginBottom: 10,
+                        textAlign: "center",
+                        fontFamily: "Inder",
+                      }}
+                    >
+                      Year
+                    </Text>
+                    <ScrollView
+                      style={{
+                        maxHeight: 150,
+                        backgroundColor: currentTheme.colors.primaryDark,
+                        borderRadius: 8,
+                      }}
+                    >
                       {generateYears().map((year) => (
                         <TouchableOpacity
                           key={year}
                           style={{
                             paddingVertical: 12,
                             paddingHorizontal: 10,
-                            backgroundColor: selectedYear === year ? '#4A9BB7' : 'transparent',
+                            backgroundColor:
+                              selectedYear === year
+                                ? currentTheme.colors.secondary
+                                : "transparent",
                           }}
                           onPress={() => setSelectedYear(year)}
                         >
-                          <Text style={{
-                            color: '#FFFFFF',
-                            textAlign: 'center',
-                            fontFamily: "Inder",
-                            fontWeight: selectedYear === year ? 'bold' : 'normal',
-                          }}>
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              textAlign: "center",
+                              fontFamily: "Inder",
+                              fontWeight:
+                                selectedYear === year ? "bold" : "normal",
+                            }}
+                          >
                             {year}
                           </Text>
                         </TouchableOpacity>
@@ -874,42 +1014,46 @@ const MyHorsesScreen = () => {
                     </ScrollView>
                   </View>
                 </View>
-                
-                <View style={{ flexDirection: 'row', gap: 10 }}>
+
+                <View style={{ flexDirection: "row", gap: 10 }}>
                   <TouchableOpacity
                     style={{
                       flex: 1,
-                      backgroundColor: '#666',
+                      backgroundColor: currentTheme.colors.textSecondary,
                       borderRadius: 8,
                       paddingVertical: 12,
                     }}
                     onPress={() => setVisible(false)}
                   >
-                    <Text style={{
-                      color: '#FFFFFF',
-                      textAlign: 'center',
-                      fontSize: 16,
-                      fontFamily: "Inder",
-                    }}>
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        textAlign: "center",
+                        fontSize: 16,
+                        fontFamily: "Inder",
+                      }}
+                    >
                       Cancel
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={{
                       flex: 1,
-                      backgroundColor: '#4A9BB7',
+                      backgroundColor: currentTheme.colors.primary,
                       borderRadius: 8,
                       paddingVertical: 12,
                     }}
                     onPress={handleConfirm}
                   >
-                    <Text style={{
-                      color: '#FFFFFF',
-                      textAlign: 'center',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                      fontFamily: "Inder",
-                    }}>
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        textAlign: "center",
+                        fontSize: 16,
+                        fontWeight: "bold",
+                        fontFamily: "Inder",
+                      }}
+                    >
                       Confirm
                     </Text>
                   </TouchableOpacity>
@@ -931,7 +1075,7 @@ const MyHorsesScreen = () => {
     onSelect,
     isVisible,
     setVisible,
-    unit = ""
+    unit = "",
   }: {
     value: string;
     placeholder: string;
@@ -942,7 +1086,9 @@ const MyHorsesScreen = () => {
     setVisible: (visible: boolean) => void;
     unit?: string;
   }) => {
-    const [selectedValue, setSelectedValue] = useState(parseInt(value) || minValue);
+    const [selectedValue, setSelectedValue] = useState(
+      parseInt(value) || minValue
+    );
 
     const generateNumbers = () => {
       const numbers = [];
@@ -961,31 +1107,33 @@ const MyHorsesScreen = () => {
       <View style={{ marginBottom: 20 }}>
         <TouchableOpacity
           style={{
-            backgroundColor: '#2D5A66',
+            backgroundColor: "#2D5A66",
             borderRadius: 8,
             paddingVertical: 15,
             paddingHorizontal: 16,
             borderWidth: 1,
-            borderColor: '#4A9BB7',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            borderColor: "#4A9BB7",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
           onPress={() => setVisible(!isVisible)}
         >
-          <Text style={{
-            color: value ? '#FFFFFF' : '#B0B0B0',
-            fontSize: 16,
-            fontFamily: "Inder",
-            includeFontPadding: false,
-          }}>
+          <Text
+            style={{
+              color: value ? "#FFFFFF" : "#B0B0B0",
+              fontSize: 16,
+              fontFamily: "Inder",
+              includeFontPadding: false,
+            }}
+          >
             {value ? `${value}${unit}` : placeholder}
           </Text>
-          <Text style={{ color: '#FFFFFF', fontSize: 16 }}>
-            {isVisible ? '▲' : '▼'}
+          <Text style={{ color: "#FFFFFF", fontSize: 16 }}>
+            {isVisible ? "▲" : "▼"}
           </Text>
         </TouchableOpacity>
-        
+
         {isVisible && (
           <Modal
             transparent={true}
@@ -996,93 +1144,111 @@ const MyHorsesScreen = () => {
             <TouchableOpacity
               style={{
                 flex: 1,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                justifyContent: 'center',
-                alignItems: 'center',
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                justifyContent: "center",
+                alignItems: "center",
               }}
               onPress={() => setVisible(false)}
             >
-              <View style={{
-                backgroundColor: '#1C3A42',
-                borderRadius: 12,
-                padding: 20,
-                width: '80%',
-                maxWidth: 300,
-                borderWidth: 1,
-                borderColor: '#4A9BB7',
-              }}>
-                <Text style={{
-                  color: '#FFFFFF',
-                  fontSize: 20,
-                  fontWeight: 'bold',
-                  textAlign: 'center',
-                  marginBottom: 20,
-                  fontFamily: "Inder",
-                }}>
+              <View
+                style={{
+                  backgroundColor: "#1C3A42",
+                  borderRadius: 12,
+                  padding: 20,
+                  width: "80%",
+                  maxWidth: 300,
+                  borderWidth: 1,
+                  borderColor: "#4A9BB7",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#FFFFFF",
+                    fontSize: 20,
+                    fontWeight: "bold",
+                    textAlign: "center",
+                    marginBottom: 20,
+                    fontFamily: "Inder",
+                  }}
+                >
                   Select {placeholder.toLowerCase()}
                 </Text>
-                
-                <ScrollView style={{ maxHeight: 200, backgroundColor: '#2D5A66', borderRadius: 8 }}>
+
+                <ScrollView
+                  style={{
+                    maxHeight: 200,
+                    backgroundColor: "#2D5A66",
+                    borderRadius: 8,
+                  }}
+                >
                   {generateNumbers().map((num) => (
                     <TouchableOpacity
                       key={num}
                       style={{
                         paddingVertical: 15,
                         paddingHorizontal: 10,
-                        backgroundColor: selectedValue === num ? '#4A9BB7' : 'transparent',
+                        backgroundColor:
+                          selectedValue === num ? "#4A9BB7" : "transparent",
                         borderBottomWidth: 1,
-                        borderBottomColor: '#335C67',
+                        borderBottomColor: "#335C67",
                       }}
                       onPress={() => setSelectedValue(num)}
                     >
-                      <Text style={{
-                        color: '#FFFFFF',
-                        fontSize: 16,
-                        textAlign: 'center',
-                        fontFamily: "Inder",
-                        fontWeight: selectedValue === num ? 'bold' : 'normal',
-                      }}>
-                        {num}{unit}
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontSize: 16,
+                          textAlign: "center",
+                          fontFamily: "Inder",
+                          fontWeight: selectedValue === num ? "bold" : "normal",
+                        }}
+                      >
+                        {num}
+                        {unit}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
-                
-                <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
                   <TouchableOpacity
                     style={{
                       flex: 1,
-                      backgroundColor: '#666',
+                      backgroundColor: "#666",
                       borderRadius: 8,
                       paddingVertical: 12,
                     }}
                     onPress={() => setVisible(false)}
                   >
-                    <Text style={{
-                      color: '#FFFFFF',
-                      textAlign: 'center',
-                      fontSize: 16,
-                      fontFamily: "Inder",
-                    }}>
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        textAlign: "center",
+                        fontSize: 16,
+                        fontFamily: "Inder",
+                      }}
+                    >
                       Cancel
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={{
                       flex: 1,
-                      backgroundColor: '#4A9BB7',
+                      backgroundColor: "#4A9BB7",
                       borderRadius: 8,
                       paddingVertical: 12,
                     }}
                     onPress={handleConfirm}
                   >
-                    <Text style={{
-                      color: '#FFFFFF',
-                      textAlign: 'center',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                      fontFamily: "Inder",
-                    }}>
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        textAlign: "center",
+                        fontSize: 16,
+                        fontWeight: "bold",
+                        fontFamily: "Inder",
+                      }}
+                    >
                       Confirm
                     </Text>
                   </TouchableOpacity>
@@ -1104,19 +1270,46 @@ const MyHorsesScreen = () => {
       onRequestClose={() => setShowSuccessModal(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.successModalContainer}>
-          <View style={styles.modalIcon}>
+        <View
+          style={[
+            styles.successModalContainer,
+            { backgroundColor: currentTheme.colors.surface },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalIcon,
+              { backgroundColor: currentTheme.colors.success },
+            ]}
+          >
             <Text style={styles.checkIcon}>✓</Text>
           </View>
-          <Text style={styles.successModalTitle}>Success!</Text>
-          <Text style={styles.successModalMessage}>
+          <Text
+            style={[
+              styles.successModalTitle,
+              { color: currentTheme.colors.text },
+            ]}
+          >
+            Success!
+          </Text>
+          <Text
+            style={[
+              styles.successModalMessage,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             {successMessage}
           </Text>
           <TouchableOpacity
-            style={styles.successModalButton}
+            style={[
+              styles.successModalButton,
+              { backgroundColor: currentTheme.colors.primary },
+            ]}
             onPress={() => setShowSuccessModal(false)}
           >
-            <Text style={styles.successModalButtonText}>OK</Text>
+            <Text style={[styles.successModalButtonText, { color: "#FFFFFF" }]}>
+              OK
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1132,41 +1325,91 @@ const MyHorsesScreen = () => {
       onRequestClose={() => setShowImagePickerModal(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.imagePickerModalContainer}>
-          <View style={styles.imagePickerIcon}>
+        <View
+          style={[
+            styles.imagePickerModalContainer,
+            { backgroundColor: currentTheme.colors.surface },
+          ]}
+        >
+          <View
+            style={[
+              styles.imagePickerIcon,
+              { backgroundColor: currentTheme.colors.accent },
+            ]}
+          >
             <Text style={styles.cameraIcon}>📷</Text>
           </View>
-          <Text style={styles.imagePickerTitle}>Update Photo</Text>
-          <Text style={styles.imagePickerMessage}>
+          <Text
+            style={[
+              styles.imagePickerTitle,
+              { color: currentTheme.colors.text },
+            ]}
+          >
+            Update Photo
+          </Text>
+          <Text
+            style={[
+              styles.imagePickerMessage,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             Choose how you'd like to update the horse's photo
           </Text>
-          
+
           <View style={styles.imagePickerButtons}>
             <TouchableOpacity
-              style={styles.imagePickerButton}
+              style={[
+                styles.imagePickerButton,
+                {
+                  backgroundColor: currentTheme.colors.primary,
+                  borderColor: currentTheme.colors.border,
+                },
+              ]}
               onPress={takePhoto}
             >
               <View style={styles.imagePickerButtonIcon}>
                 <Text style={styles.imagePickerButtonEmoji}>📷</Text>
               </View>
-              <Text style={styles.imagePickerButtonText}>Take Photo</Text>
+              <Text
+                style={[styles.imagePickerButtonText, { color: "#FFFFFF" }]}
+              >
+                Take Photo
+              </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
-              style={styles.imagePickerButton}
+              style={[
+                styles.imagePickerButton,
+                {
+                  backgroundColor: currentTheme.colors.secondary,
+                  borderColor: currentTheme.colors.border,
+                },
+              ]}
               onPress={pickImageFromLibrary}
             >
               <View style={styles.imagePickerButtonIcon}>
                 <Text style={styles.imagePickerButtonEmoji}>🖼️</Text>
               </View>
-              <Text style={styles.imagePickerButtonText}>Choose from Library</Text>
+              <Text
+                style={[styles.imagePickerButtonText, { color: "#FFFFFF" }]}
+              >
+                Choose from Library
+              </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
-              style={[styles.imagePickerButton, styles.cancelImageButton]}
+              style={[
+                styles.imagePickerButton,
+                styles.cancelImageButton,
+                { backgroundColor: currentTheme.colors.textSecondary },
+              ]}
               onPress={() => setShowImagePickerModal(false)}
             >
-              <Text style={styles.cancelImageButtonText}>Cancel</Text>
+              <Text
+                style={[styles.cancelImageButtonText, { color: "#FFFFFF" }]}
+              >
+                Cancel
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1176,23 +1419,38 @@ const MyHorsesScreen = () => {
 
   // Format date for display
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   // Show authentication message if no user
   if (!authLoading && !user?.id) {
     return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
+        <SafeAreaView
+          style={[
+            styles.safeArea,
+            { backgroundColor: currentTheme.colors.primary },
+          ]}
+        >
           <View style={styles.headerContainer}>
             <Text style={styles.header}>My Horses</Text>
           </View>
         </SafeAreaView>
-        <View style={styles.viewPort}>
+        <View
+          style={[
+            styles.viewPort,
+            { backgroundColor: currentTheme.colors.background },
+          ]}
+        >
           <View style={styles.loadingContainer}>
             <Text style={styles.emptyStateEmoji}>🔒</Text>
             <Text style={styles.emptyStateText}>Please log in</Text>
@@ -1226,15 +1484,33 @@ const MyHorsesScreen = () => {
 
   if (authLoading || loading) {
     return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
+        <SafeAreaView
+          style={[
+            styles.safeArea,
+            { backgroundColor: currentTheme.colors.primary },
+          ]}
+        >
           <View style={styles.headerContainer}>
             <Text style={styles.header}>My Horses</Text>
           </View>
         </SafeAreaView>
-        <View style={styles.viewPort}>
+        <View
+          style={[
+            styles.viewPort,
+            { backgroundColor: currentTheme.colors.background },
+          ]}
+        >
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#335C67" />
+            <ActivityIndicator
+              size="large"
+              color={currentTheme.colors.primary}
+            />
             <Text style={styles.loadingText}>
               {authLoading ? "Loading..." : "Loading horses..."}
             </Text>
@@ -1245,15 +1521,30 @@ const MyHorsesScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.colors.primary },
+      ]}
+    >
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
         <View style={styles.headerContainer}>
           <Text style={styles.header}>My Horses</Text>
         </View>
       </SafeAreaView>
 
-      <View style={styles.viewPort}>
-        <ScrollView 
+      <View
+        style={[
+          styles.viewPort,
+          { backgroundColor: currentTheme.colors.surface },
+        ]}
+      >
+        <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
@@ -1261,86 +1552,231 @@ const MyHorsesScreen = () => {
           }
         >
           <View style={styles.horsesContainer}>
-            <View style={styles.statsHeader}>
-              <Text style={styles.statsText}>You have {horses.length} horses</Text>
+            <View
+              style={[
+                styles.statsHeader,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
+              <Text
+                style={[styles.statsText, { color: currentTheme.colors.text }]}
+              >
+                You have {horses.length} horses
+              </Text>
             </View>
-            
             <TouchableOpacity
-              style={styles.addHorseButton}
+              style={[
+                styles.addHorseButton,
+                {
+                  backgroundColor: currentTheme.colors.primary,
+                  borderColor: currentTheme.colors.border,
+                },
+              ]}
               onPress={openAddModal}
             >
               <Text style={styles.addHorseButtonIcon}>🐴</Text>
-              <Text style={styles.addHorseButtonText}>Add New Horse</Text>
-            </TouchableOpacity>
-            
+              <Text style={[styles.addHorseButtonText, { color: "#FFFFFF" }]}>
+                Add New Horse
+              </Text>
+            </TouchableOpacity>{" "}
             {horses.map((horse, index) => (
-              <View style={styles.horseCard} key={horse.id}>
+              <View
+                style={[
+                  styles.horseCard,
+                  {
+                    backgroundColor: currentTheme.colors.background,
+                    borderColor: currentTheme.colors.border,
+                  },
+                ]}
+                key={horse.id}
+              >
                 <View style={styles.horseImageContainer}>
                   <Image
                     style={styles.horseImage}
                     resizeMode="cover"
                     source={
-                      horse.image_url 
+                      horse.image_url
                         ? { uri: horse.image_url }
                         : require("../../assets/images/horses/pony.jpg")
                     }
                   />
                 </View>
-                
+
                 <View style={styles.horseContent}>
                   <View style={styles.horseInfo}>
-                    <Text style={styles.horseName}>{horse.name}</Text>
+                    <Text
+                      style={[
+                        styles.horseName,
+                        {
+                          color: currentTheme.colors.text,
+                          fontSize: 20,
+                          fontWeight: "bold",
+                        },
+                      ]}
+                    >
+                      {horse.name}
+                    </Text>
                     <View style={styles.horseDetails}>
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Gender:</Text>
-                        <Text style={styles.detailValue}>{horse.gender}</Text>
+                        <Text
+                          style={[
+                            styles.detailLabel,
+                            {
+                              color: currentTheme.colors.textSecondary,
+                              fontSize: 14,
+                            },
+                          ]}
+                        >
+                          Gender:
+                        </Text>
+                        <Text
+                          style={[
+                            styles.detailValue,
+                            { color: currentTheme.colors.text, fontSize: 14 },
+                          ]}
+                        >
+                          {horse.gender}
+                        </Text>
                       </View>
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Born:</Text>
-                        <Text style={styles.detailValue}>
+                        <Text
+                          style={[
+                            styles.detailLabel,
+                            {
+                              color: currentTheme.colors.textSecondary,
+                              fontSize: 14,
+                            },
+                          ]}
+                        >
+                          Born:
+                        </Text>
+                        <Text
+                          style={[
+                            styles.detailValue,
+                            { color: currentTheme.colors.text, fontSize: 14 },
+                          ]}
+                        >
                           {formatDate(horse.birth_date)}
                         </Text>
                       </View>
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Height:</Text>
-                        <Text style={styles.detailValue}>{horse.height} cm</Text>
+                        <Text
+                          style={[
+                            styles.detailLabel,
+                            {
+                              color: currentTheme.colors.textSecondary,
+                              fontSize: 14,
+                            },
+                          ]}
+                        >
+                          Height:
+                        </Text>
+                        <Text
+                          style={[
+                            styles.detailValue,
+                            { color: currentTheme.colors.text, fontSize: 14 },
+                          ]}
+                        >
+                          {horse.height} cm
+                        </Text>
                       </View>
                       {horse.weight && (
                         <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>Weight:</Text>
-                          <Text style={styles.detailValue}>{horse.weight} kg</Text>
+                          <Text
+                            style={[
+                              styles.detailLabel,
+                              {
+                                color: currentTheme.colors.textSecondary,
+                                fontSize: 14,
+                              },
+                            ]}
+                          >
+                            Weight:
+                          </Text>
+                          <Text
+                            style={[
+                              styles.detailValue,
+                              { color: currentTheme.colors.text, fontSize: 14 },
+                            ]}
+                          >
+                            {horse.weight} kg
+                          </Text>
                         </View>
                       )}
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Breed:</Text>
-                        <Text style={styles.detailValue}>{horse.breed}</Text>
+                        <Text
+                          style={[
+                            styles.detailLabel,
+                            {
+                              color: currentTheme.colors.textSecondary,
+                              fontSize: 14,
+                            },
+                          ]}
+                        >
+                          Breed:
+                        </Text>
+                        <Text
+                          style={[
+                            styles.detailValue,
+                            { color: currentTheme.colors.text, fontSize: 14 },
+                          ]}
+                        >
+                          {horse.breed}
+                        </Text>
                       </View>
                     </View>
                   </View>
-                  
+
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
-                      style={[styles.actionButton, styles.editButton]}
+                      style={[
+                        styles.actionButton,
+                        styles.editButton,
+                        { backgroundColor: currentTheme.colors.secondary },
+                      ]}
                       onPress={() => openEditModal(horse)}
                     >
-                      <Text style={styles.editButtonText}>✏️ Edit</Text>
+                      <Text
+                        style={[styles.editButtonText, { color: "#FFFFFF" }]}
+                      >
+                        ✏️ Edit
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.actionButton, styles.deleteButton]}
+                      style={[
+                        styles.actionButton,
+                        styles.deleteButton,
+                        { backgroundColor: currentTheme.colors.error },
+                      ]}
                       onPress={() => deleteHorse(horse)}
                     >
-                      <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
+                      <Text
+                        style={[styles.deleteButtonText, { color: "#FFFFFF" }]}
+                      >
+                        🗑️ Delete
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               </View>
             ))}
-            
             {horses.length === 0 && !loading && (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateEmoji}>🐴</Text>
-                <Text style={styles.emptyStateText}>No horses yet!</Text>
-                <Text style={styles.emptyStateSubtext}>
+                <Text
+                  style={[
+                    styles.emptyStateText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  No horses yet!
+                </Text>
+                <Text
+                  style={[
+                    styles.emptyStateSubtext,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   Add your first horse to get started.
                 </Text>
               </View>
@@ -1352,9 +1788,24 @@ const MyHorsesScreen = () => {
       {/* Loading overlay */}
       {loading && horses.length > 0 && (
         <View style={styles.loadingOverlay}>
-          <View style={styles.loadingModal}>
-            <ActivityIndicator size="large" color="#335C67" />
-            <Text style={styles.loadingModalText}>Updating...</Text>
+          <View
+            style={[
+              styles.loadingModal,
+              { backgroundColor: currentTheme.colors.surface },
+            ]}
+          >
+            <ActivityIndicator
+              size="large"
+              color={currentTheme.colors.primary}
+            />
+            <Text
+              style={[
+                styles.loadingModalText,
+                { color: currentTheme.colors.text },
+              ]}
+            >
+              Updating...
+            </Text>
           </View>
         </View>
       )}
@@ -1367,52 +1818,94 @@ const MyHorsesScreen = () => {
         onRequestClose={closeEditModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Horse</Text>
+          <View
+            style={[
+              styles.modalContainer,
+              { backgroundColor: currentTheme.colors.surface },
+            ]}
+          >
+            <View
+              style={[
+                styles.modalHeader,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
+            >
+              <Text style={[styles.modalTitle, { color: "#FFFFFF" }]}>
+                Edit Horse
+              </Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={closeEditModal}
               >
-                <Text style={styles.modalCloseText}>✕</Text>
+                <Text style={[styles.modalCloseText, { color: "#FFFFFF" }]}>
+                  ✕
+                </Text>
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalContent}>
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Photo</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Photo
+                </Text>
                 <View style={styles.imageContainer}>
                   <Image
                     style={styles.selectedImage}
                     source={
-                      editImage 
+                      editImage
                         ? editImage
-                        : editingHorse?.image_url 
+                        : editingHorse?.image_url
                         ? { uri: editingHorse.image_url }
                         : require("../../assets/images/horses/pony.jpg")
                     }
                     resizeMode="cover"
                   />
                   <TouchableOpacity
-                    style={styles.changePhotoButton}
+                    style={[
+                      styles.changePhotoButton,
+                      { backgroundColor: currentTheme.colors.primary },
+                    ]}
                     onPress={() => setShowImagePickerModal(true)}
                   >
                     <View style={styles.cameraIconContainer}>
                       <Text style={styles.cameraIconText}>📷</Text>
                     </View>
-                    <Text style={styles.changePhotoText}>Change Photo</Text>
+                    <Text
+                      style={[styles.changePhotoText, { color: "#FFFFFF" }]}
+                    >
+                      Change Photo
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Name</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Name
+                </Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={editName}
                   onChangeText={setEditName}
                   placeholder="Horse name"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   autoCapitalize="words"
                   autoCorrect={false}
                   textContentType="none"
@@ -1424,7 +1917,14 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Gender</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Gender
+                </Text>
                 <CustomDropdown
                   value={editGender}
                   placeholder="Select gender"
@@ -1436,7 +1936,14 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Birth Date</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Birth Date
+                </Text>
                 <DatePicker
                   value={editBirthDate}
                   placeholder="Select birth date"
@@ -1447,13 +1954,27 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Height (cm)</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Height (cm)
+                </Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={editHeight}
                   onChangeText={setEditHeight}
                   placeholder="Enter height (100-220 cm)"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                   returnKeyType="next"
                   maxLength={3}
@@ -1461,13 +1982,27 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Weight (kg) - Optional</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Weight (kg) - Optional
+                </Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={editWeight}
                   onChangeText={setEditWeight}
                   placeholder="Enter weight"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                   returnKeyType="next"
                   maxLength={4}
@@ -1475,7 +2010,14 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Breed</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Breed
+                </Text>
                 <CustomDropdown
                   value={editBreed}
                   placeholder="Select breed"
@@ -1489,16 +2031,28 @@ const MyHorsesScreen = () => {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[
+                  styles.modalButton,
+                  styles.cancelButton,
+                  { backgroundColor: currentTheme.colors.textSecondary },
+                ]}
                 onPress={closeEditModal}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
+                style={[
+                  styles.modalButton,
+                  styles.saveButton,
+                  { backgroundColor: currentTheme.colors.primary },
+                ]}
                 onPress={saveHorseEdit}
               >
-                <Text style={styles.saveButtonText}>Save Changes</Text>
+                <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
+                  Save Changes
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1513,46 +2067,90 @@ const MyHorsesScreen = () => {
         onRequestClose={closeAddModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Horse</Text>
+          <View
+            style={[
+              styles.modalContainer,
+              { backgroundColor: currentTheme.colors.surface },
+            ]}
+          >
+            <View
+              style={[
+                styles.modalHeader,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
+            >
+              <Text style={[styles.modalTitle, { color: "#FFFFFF" }]}>
+                Add New Horse
+              </Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={closeAddModal}
               >
-                <Text style={styles.modalCloseText}>✕</Text>
+                <Text style={[styles.modalCloseText, { color: "#FFFFFF" }]}>
+                  ✕
+                </Text>
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalContent}>
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Photo</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Photo
+                </Text>
                 <View style={styles.imageContainer}>
                   <Image
                     style={styles.selectedImage}
-                    source={addImage || require("../../assets/images/horses/pony.jpg")}
+                    source={
+                      addImage || require("../../assets/images/horses/pony.jpg")
+                    }
                     resizeMode="cover"
                   />
                   <TouchableOpacity
-                    style={styles.changePhotoButton}
+                    style={[
+                      styles.changePhotoButton,
+                      { backgroundColor: currentTheme.colors.primary },
+                    ]}
                     onPress={() => setShowImagePickerModal(true)}
                   >
                     <View style={styles.cameraIconContainer}>
                       <Text style={styles.cameraIconText}>📷</Text>
                     </View>
-                    <Text style={styles.changePhotoText}>Add Photo</Text>
+                    <Text
+                      style={[styles.changePhotoText, { color: "#FFFFFF" }]}
+                    >
+                      Add Photo
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Name</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Name
+                </Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={addName}
                   onChangeText={setAddName}
                   placeholder="Horse name"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   autoCapitalize="words"
                   autoCorrect={false}
                   textContentType="none"
@@ -1564,7 +2162,14 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Gender</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Gender
+                </Text>
                 <CustomDropdown
                   value={addGender}
                   placeholder="Select gender"
@@ -1576,7 +2181,14 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Birth Date</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Birth Date
+                </Text>
                 <DatePicker
                   value={addBirthDate}
                   placeholder="Select birth date"
@@ -1587,13 +2199,27 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Height (cm)</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Height (cm)
+                </Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={addHeight}
                   onChangeText={setAddHeight}
                   placeholder="Enter height (100-220 cm)"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                   returnKeyType="next"
                   maxLength={3}
@@ -1601,13 +2227,27 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Weight (kg) - Optional</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Weight (kg) - Optional
+                </Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={addWeight}
                   onChangeText={setAddWeight}
                   placeholder="Enter weight"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                   returnKeyType="next"
                   maxLength={4}
@@ -1615,7 +2255,14 @@ const MyHorsesScreen = () => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Breed</Text>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Breed
+                </Text>
                 <CustomDropdown
                   value={addBreed}
                   placeholder="Select breed"
@@ -1629,16 +2276,28 @@ const MyHorsesScreen = () => {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[
+                  styles.modalButton,
+                  styles.cancelButton,
+                  { backgroundColor: currentTheme.colors.textSecondary },
+                ]}
                 onPress={closeAddModal}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
+                style={[
+                  styles.modalButton,
+                  styles.saveButton,
+                  { backgroundColor: currentTheme.colors.primary },
+                ]}
                 onPress={saveHorseAdd}
               >
-                <Text style={styles.saveButtonText}>Add Horse</Text>
+                <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
+                  Add Horse
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1647,7 +2306,7 @@ const MyHorsesScreen = () => {
 
       {/* Success Modal */}
       <SuccessModal />
-      
+
       {/* Image Picker Modal */}
       <ImagePickerModal />
     </View>
@@ -1697,11 +2356,10 @@ const styles = StyleSheet.create({
   },
   statsHeader: {
     alignItems: "center",
-    marginBottom: 10,
     backgroundColor: "#E9F5F0",
     borderRadius: 20,
-    paddingVertical: 15,
     paddingHorizontal: 20,
+    marginBottom: 5,
   },
   statsText: {
     fontSize: 18,
@@ -1942,22 +2600,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelButton: {
-    backgroundColor: "#f0f0f0",
+    // Background color applied dynamically with theme
   },
   saveButton: {
-    backgroundColor: "#335C67",
+    // Background color applied dynamically with theme
   },
   cancelButtonText: {
-    color: "#666",
     fontSize: 17,
     fontFamily: "Inder",
     fontWeight: "600",
+    // Color applied dynamically with theme
   },
   saveButtonText: {
-    color: "#fff",
     fontSize: 17,
     fontFamily: "Inder",
     fontWeight: "600",
+    // Color applied dynamically with theme
   },
   // Success Modal styles
   successModalContainer: {
@@ -2128,7 +2786,6 @@ const styles = StyleSheet.create({
   changePhotoButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#335C67",
     borderRadius: 25,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -2154,15 +2811,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   changePhotoText: {
-    color: "#fff",
     fontSize: 16,
     fontWeight: "600",
     fontFamily: "Inder",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 60,
   },
   loadingText: {
@@ -2172,23 +2828,23 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
   },
   loadingOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 1000,
   },
   loadingModal: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 15,
     padding: 20,
-    alignItems: 'center',
+    alignItems: "center",
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -2196,8 +2852,8 @@ const styles = StyleSheet.create({
   loadingModalText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#335C67',
-    fontFamily: 'Inder',
+    color: "#335C67",
+    fontFamily: "Inder",
   },
 });
 

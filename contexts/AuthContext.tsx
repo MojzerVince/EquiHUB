@@ -34,13 +34,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Get initial session
     getInitialSession();
 
-    // Add timeout fallback for auth loading
+    // Add timeout fallback for auth loading - reduced to 8 seconds
     const authLoadingTimeout = setTimeout(() => {
       if (loading) {
-        console.log('⚠️ Auth loading timeout - forcing loading to false');
+        console.log('⚠️ Auth loading timeout after 8 seconds - forcing loading to false');
         setLoading(false);
       }
-    }, 15000); // 15 second timeout for auth
+    }, 8000); // 8 second timeout for auth
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -77,10 +77,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('Getting initial session...');
       
-      // Add timeout to prevent hanging on session check
+      // Shorter timeout to prevent long green screen - 5 seconds
       const sessionPromise = supabase.auth.getSession();
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Session check timeout')), 10000);
+        setTimeout(() => reject(new Error('Session check timeout')), 5000);
       });
       
       const { data: { session }, error } = await Promise.race([
@@ -107,10 +107,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Error in getInitialSession:', error);
       if (error instanceof Error && error.message.includes('timeout')) {
-        console.log('Session check timed out, proceeding without authentication');
+        console.log('⚠️ Session check timed out after 5 seconds, proceeding without authentication');
+        // Clear any stale session data on timeout
+        setUser(null);
       }
     } finally {
-      console.log('Setting auth loading to false');
+      console.log('✅ Setting auth loading to false');
       setLoading(false);
     }
   };
