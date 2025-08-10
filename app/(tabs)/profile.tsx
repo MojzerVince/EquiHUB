@@ -768,8 +768,17 @@ const ProfileScreen = () => {
           <View style={styles.modalIcon}>
             <Text style={styles.checkIcon}>✓</Text>
           </View>
-          <Text style={styles.modalTitle}>Success!</Text>
-          <Text style={styles.modalMessage}>
+          <Text
+            style={[styles.modalTitle, { color: currentTheme.colors.text }]}
+          >
+            Success!
+          </Text>
+          <Text
+            style={[
+              styles.modalMessage,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             Your profile has been updated successfully
           </Text>
           <TouchableOpacity
@@ -795,8 +804,17 @@ const ProfileScreen = () => {
           <View style={styles.imagePickerIcon}>
             <Text style={styles.cameraIcon}>📷</Text>
           </View>
-          <Text style={styles.modalTitle}>Select Image</Text>
-          <Text style={styles.modalMessage}>
+          <Text
+            style={[styles.modalTitle, { color: currentTheme.colors.text }]}
+          >
+            Select Image
+          </Text>
+          <Text
+            style={[
+              styles.modalMessage,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             Choose how you want to select your profile picture
           </Text>
           <View style={styles.imagePickerButtons}>
@@ -859,20 +877,40 @@ const ProfileScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.badgeDialogTitle}>
+              <Text
+                style={[
+                  styles.badgeDialogTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
                 {selectedBadge.badge.name}
               </Text>
-              <Text style={styles.badgeDialogRarity}>
+              <Text
+                style={[
+                  styles.badgeDialogRarity,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
                 {selectedBadge.badge.rarity.toUpperCase()} •{" "}
                 {selectedBadge.badge.category.toUpperCase()}
               </Text>
 
-              <Text style={styles.badgeDialogDescription}>
+              <Text
+                style={[
+                  styles.badgeDialogDescription,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
                 {selectedBadge.badge.description}
               </Text>
 
               <View style={styles.badgeDialogFooter}>
-                <Text style={styles.badgeDialogEarnedText}>
+                <Text
+                  style={[
+                    styles.badgeDialogEarnedText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   Earned on{" "}
                   {new Date(selectedBadge.earned_at).toLocaleDateString()}
                 </Text>
@@ -898,7 +936,7 @@ const ProfileScreen = () => {
         ]}
       >
         <View style={styles.headerContainer}>
-          <Text style={styles.header}>My Profile</Text>
+          <Text style={[styles.header, { color: "#FFFFFF" }]}>My Profile</Text>
           <TouchableOpacity
             style={styles.optionsButton}
             onPress={() => router.push("/options")}
@@ -979,13 +1017,25 @@ const ProfileScreen = () => {
 
             <View style={styles.profileImageContainer}>
               {!isEditing ? (
-                <Image source={profileImage} style={styles.profileImage} />
+                <Image
+                  source={profileImage}
+                  style={[
+                    styles.profileImage,
+                    { borderColor: currentTheme.colors.primary },
+                  ]}
+                />
               ) : (
                 <TouchableOpacity
                   onPress={pickImage}
                   style={styles.editImageContainer}
                 >
-                  <Image source={profileImage} style={styles.profileImage} />
+                  <Image
+                    source={profileImage}
+                    style={[
+                      styles.profileImage,
+                      { borderColor: currentTheme.colors.primary },
+                    ]}
+                  />
                   <View style={styles.editImageOverlay}>
                     <Text style={styles.editImageLabel}>Edit</Text>
                   </View>
@@ -995,12 +1045,39 @@ const ProfileScreen = () => {
 
             {!isEditing ? (
               <>
-                <Text style={styles.userName}>{userName}</Text>
-                <Text style={styles.userAge}>{userAge}</Text>
-                <Text style={styles.userDescription}>{userDescription}</Text>
+                <Text
+                  style={[styles.userName, { color: currentTheme.colors.text }]}
+                >
+                  {userName}
+                </Text>
+                <Text
+                  style={[styles.userAge, { color: currentTheme.colors.text }]}
+                >
+                  {userAge}
+                </Text>
+                <Text
+                  style={[
+                    styles.userDescription,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  {userDescription}
+                </Text>
                 <View style={styles.experienceContainer}>
-                  <Text style={styles.experienceLabel}>Experience</Text>
-                  <Text style={styles.experienceValue}>
+                  <Text
+                    style={[
+                      styles.experienceLabel,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Experience
+                  </Text>
+                  <Text
+                    style={[
+                      styles.experienceValue,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
                     {userExperience} years
                   </Text>
                 </View>
@@ -1009,6 +1086,7 @@ const ProfileScreen = () => {
                     style={[
                       styles.badge,
                       isProMember ? styles.proBadge : styles.regularBadge,
+                      { backgroundColor: currentTheme.colors.surface },
                     ]}
                   >
                     <Text
@@ -1017,6 +1095,7 @@ const ProfileScreen = () => {
                         isProMember
                           ? styles.proBadgeText
                           : styles.regularBadgeText,
+                        { color: currentTheme.colors.text },
                       ]}
                     >
                       {getMembershipDisplayText(isProMember)}
@@ -1027,47 +1106,87 @@ const ProfileScreen = () => {
             ) : (
               <>
                 <TextInput
-                  style={styles.editInput}
+                  style={[
+                    styles.editInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={userName}
                   onChangeText={setUserName}
                   placeholder="Enter your name"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                 />
                 <TextInput
-                  style={styles.editInput}
+                  style={[
+                    styles.editInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={userAge}
                   onChangeText={setUserAge}
                   placeholder="Enter your age"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                 />
                 <TextInput
-                  style={[styles.editInput, styles.editDescriptionInput]}
+                  style={[
+                    styles.editInput,
+                    styles.editDescriptionInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={userDescription}
                   onChangeText={setUserDescription}
                   placeholder="Enter your description"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   multiline
                   numberOfLines={4}
                 />
                 <TextInput
-                  style={styles.editInput}
+                  style={[
+                    styles.editInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.border,
+                      color: currentTheme.colors.text,
+                    },
+                  ]}
                   value={userExperience}
                   onChangeText={setUserExperience}
                   placeholder="Years of experience"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                 />
               </>
             )}
           </View>
 
-          {/* Badges Section */}
           <View style={styles.badgesSection}>
             <View style={styles.badgesHeader}>
-              <Text style={styles.badgesTitle}>Achievements & Badges</Text>
+              <Text
+                style={[
+                  styles.badgesTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Achievements & Badges
+              </Text>
               <View style={styles.badgeStatsContainer}>
-                <Text style={styles.badgeStatsText}>
+                <Text
+                  style={[
+                    styles.badgeStatsText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   {badgeStats.totalBadges} badges earned
                 </Text>
               </View>
@@ -1076,7 +1195,14 @@ const ProfileScreen = () => {
             {badgesLoading ? (
               <View style={styles.badgesLoadingContainer}>
                 <ActivityIndicator size="large" color="#335C67" />
-                <Text style={styles.badgesLoadingText}>Loading badges...</Text>
+                <Text
+                  style={[
+                    styles.badgesLoadingText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Loading badges...
+                </Text>
               </View>
             ) : userBadges.length > 0 ? (
               <View
@@ -1107,10 +1233,21 @@ const ProfileScreen = () => {
                         {userBadge.badge.icon_emoji}
                       </Text>
                     </View>
-                    <Text style={styles.badgeLabel} numberOfLines={2}>
+                    <Text
+                      style={[
+                        styles.badgeLabel,
+                        { color: currentTheme.colors.text },
+                      ]}
+                      numberOfLines={2}
+                    >
                       {userBadge.badge.name}
                     </Text>
-                    <Text style={styles.badgeRarity}>
+                    <Text
+                      style={[
+                        styles.badgeRarity,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
                       {userBadge.badge.rarity.toUpperCase()}
                     </Text>
                   </TouchableOpacity>
@@ -1124,8 +1261,20 @@ const ProfileScreen = () => {
                 ]}
               >
                 <Text style={styles.noBadgesEmoji}>🏆</Text>
-                <Text style={styles.noBadgesText}>No badges yet!</Text>
-                <Text style={styles.noBadgesSubtext}>
+                <Text
+                  style={[
+                    styles.noBadgesText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  No badges yet!
+                </Text>
+                <Text
+                  style={[
+                    styles.noBadgesSubtext,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   Complete your profile and participate in activities to earn
                   badges.
                 </Text>
@@ -1230,7 +1379,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#335C67",
     marginBottom: 15,
     fontFamily: "Inder",
   },
@@ -1255,13 +1403,11 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#335C67",
     fontFamily: "Inder",
     marginBottom: 2,
   },
   settingSubtitle: {
     fontSize: 14,
-    color: "#666",
     fontFamily: "Inder",
   },
   actionButton: {
@@ -1272,7 +1418,6 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 16,
-    color: "#335C67",
     fontFamily: "Inder",
     fontWeight: "500",
   },
@@ -1291,7 +1436,6 @@ const styles = StyleSheet.create({
   profileSection: {
     alignItems: "center",
     marginBottom: 40,
-    backgroundColor: "#E9F5F0",
     borderRadius: 30,
     padding: 30,
     position: "relative",
@@ -1350,14 +1494,12 @@ const styles = StyleSheet.create({
   editInput: {
     backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "#335C67",
     borderRadius: 10,
     paddingHorizontal: 15,
     paddingVertical: 10,
     marginBottom: 15,
     fontSize: 16,
     fontFamily: "Inder",
-    color: "#335C67",
     textAlign: "center",
     minWidth: 200,
   },
@@ -1375,7 +1517,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: "#335C67",
   },
   editImageContainer: {
     position: "relative",
@@ -1400,19 +1541,16 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#335C67",
     marginBottom: 5,
     fontFamily: "Inder",
   },
   userAge: {
     fontSize: 20,
-    color: "#335C67",
     marginBottom: 15,
     fontFamily: "Inder",
   },
   userDescription: {
     fontSize: 14,
-    color: "#666",
     textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 10,
@@ -1425,7 +1563,6 @@ const styles = StyleSheet.create({
   },
   experienceLabel: {
     fontSize: 12,
-    color: "#666",
     fontFamily: "Inder",
     textTransform: "uppercase",
     letterSpacing: 1,
@@ -1433,7 +1570,6 @@ const styles = StyleSheet.create({
   experienceValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#335C67",
     fontFamily: "Inder",
     marginTop: 2,
   },
@@ -1448,11 +1584,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   proBadge: {
-    backgroundColor: "#FFD700",
     borderColor: "#FFA500",
   },
   regularBadge: {
-    backgroundColor: "#E3F2FD",
     borderColor: "#2196F3",
   },
   badgeText: {
@@ -1461,12 +1595,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     letterSpacing: 0.5,
   },
-  proBadgeText: {
-    color: "#B8860B",
-  },
-  regularBadgeText: {
-    color: "#1976D2",
-  },
+  proBadgeText: {},
+  regularBadgeText: {},
   badgesSection: {
     marginBottom: 30,
   },
@@ -1476,7 +1606,6 @@ const styles = StyleSheet.create({
   badgesTitle: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#335C67",
     textAlign: "center",
     fontFamily: "Inder",
     marginBottom: 8,
@@ -1486,7 +1615,6 @@ const styles = StyleSheet.create({
   },
   badgeStatsText: {
     fontSize: 14,
-    color: "#666",
     fontFamily: "Inder",
     textAlign: "center",
   },
@@ -1547,7 +1675,6 @@ const styles = StyleSheet.create({
   badgeLabel: {
     fontSize: 12,
     fontWeight: "bold",
-    color: "#335C67",
     fontFamily: "Inder",
     textAlign: "center",
     lineHeight: 14,
@@ -1555,7 +1682,6 @@ const styles = StyleSheet.create({
   },
   badgeRarity: {
     fontSize: 8,
-    color: "#666",
     fontFamily: "Inder",
     textAlign: "center",
     textTransform: "uppercase",
@@ -1573,13 +1699,11 @@ const styles = StyleSheet.create({
   noBadgesText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#335C67",
     fontFamily: "Inder",
     marginBottom: 8,
   },
   noBadgesSubtext: {
     fontSize: 14,
-    color: "#666",
     fontFamily: "Inder",
     textAlign: "center",
     lineHeight: 20,
@@ -1623,13 +1747,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#335C67",
     marginBottom: 10,
     fontFamily: "Inder",
   },
   modalMessage: {
     fontSize: 16,
-    color: "#666",
     textAlign: "center",
     marginBottom: 25,
     lineHeight: 22,
@@ -1753,7 +1875,6 @@ const styles = StyleSheet.create({
   badgesLoadingText: {
     marginTop: 15,
     fontSize: 16,
-    color: "#666",
     fontFamily: "Inder",
   },
   badgeDialogOverlay: {
@@ -1811,14 +1932,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     marginBottom: 5,
-    color: "#335C67",
   },
   badgeDialogRarity: {
     fontSize: 14,
     fontFamily: "Inder",
     textAlign: "center",
     marginBottom: 15,
-    color: "#666",
     fontWeight: "bold",
   },
   badgeDialogDescription: {
@@ -1826,7 +1945,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     lineHeight: 24,
-    color: "#333",
     marginBottom: 20,
   },
   badgeDialogFooter: {
@@ -1839,7 +1957,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inder",
     textAlign: "center",
-    color: "#666",
     fontStyle: "italic",
   },
 });
