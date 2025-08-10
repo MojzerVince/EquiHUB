@@ -55,7 +55,11 @@ const MapScreen = () => {
 
     // Simulate distance tracking for demo
     const distanceInterval = setInterval(() => {
-      setDistance((prev) => prev + Math.random() * 0.1);
+      if (isTracking) {
+        setDistance((prev) => prev + Math.random() * 0.1);
+      } else {
+        clearInterval(distanceInterval);
+      }
     }, 5000);
 
     Alert.alert(
@@ -157,7 +161,7 @@ const MapScreen = () => {
         </View>
 
         {/* Tracking stats overlay */}
-        {isTracking ? (
+        {isTracking && (
           <View
             style={[
               styles.statsContainer,
@@ -195,7 +199,7 @@ const MapScreen = () => {
               </Text>
             </View>
           </View>
-        ) : null}
+        )}
       </View>
 
       {/* Action buttons */}
@@ -274,30 +278,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     fontStyle: "italic",
-  },
-  map: {
-    width: Dimensions.get("window").width,
-    height: "100%",
-  },
-  controlsContainer: {
-    position: "absolute",
-    top: 20,
-    right: 20,
-    zIndex: 1,
-  },
-  centerButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  centerButtonText: {
-    fontSize: 20,
   },
   statsContainer: {
     position: "absolute",
