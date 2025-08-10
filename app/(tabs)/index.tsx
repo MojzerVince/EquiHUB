@@ -2327,7 +2327,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -20,
+    marginBottom: -45,
   },
   header: {
     fontSize: 30,
@@ -2349,7 +2349,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 30,
+    paddingBottom: 110, // Add bottom padding to account for tab bar
   },
   horsesContainer: {
     paddingHorizontal: 20,

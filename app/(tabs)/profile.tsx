@@ -1332,7 +1332,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -20,
+    marginBottom: -45,
   },
   header: {
     fontSize: 30,
@@ -1431,7 +1431,7 @@ const styles = StyleSheet.create({
   },
   profileContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 130, // Add bottom padding to account for tab bar
   },
   profileSection: {
     alignItems: "center",
