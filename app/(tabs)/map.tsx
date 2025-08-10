@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -46,11 +46,20 @@ const MapScreen = () => {
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [locationSubscription, setLocationSubscription] = useState<Location.LocationSubscription | null>(null);
   const [hasLocationPermission, setHasLocationPermission] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
 
   // Request location permissions on mount
   useEffect(() => {
     checkLocationServices();
+    
+    // Force set a default location immediately for map rendering
+    const defaultLocation: Location = {
+      latitude: 47.4979,
+      longitude: 19.0402,
+      timestamp: Date.now(),
+    };
+    setUserLocation(defaultLocation);
+    setHasLocationPermission(true);
+    
     return () => {
       if (locationSubscription) {
         locationSubscription.remove();
@@ -104,8 +113,12 @@ const MapScreen = () => {
 
   const requestLocationPermission = async () => {
     try {
+      console.log('Requesting location permission...');
+      
       // First request foreground permission
       const foregroundStatus = await Location.requestForegroundPermissionsAsync();
+      
+      console.log('Foreground permission status:', foregroundStatus.status);
       
       if (foregroundStatus.status !== 'granted') {
         Alert.alert(
@@ -120,12 +133,15 @@ const MapScreen = () => {
       }
 
       setHasLocationPermission(true);
+      console.log('Location permission granted, getting current position...');
 
       try {
         // Get initial location with high accuracy
         const location = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.High,
         });
+
+        console.log('Got location:', location.coords);
 
         const userLoc: Location = {
           latitude: location.coords.latitude,
@@ -134,10 +150,12 @@ const MapScreen = () => {
         };
 
         setUserLocation(userLoc);
+        console.log('User location set:', userLoc);
         
         // Center map on user location with animation
         setTimeout(() => {
           if (mapRef.current) {
+            console.log('Animating to user location...');
             mapRef.current.animateToRegion({
               latitude: userLoc.latitude,
               longitude: userLoc.longitude,
@@ -148,6 +166,8 @@ const MapScreen = () => {
         }, 1000);
 
       } catch (locationError) {
+        console.error('Location error:', locationError);
+        
         // Use a default location (Budapest, Hungary) if GPS fails
         const defaultLocation: Location = {
           latitude: 47.4979,
@@ -156,6 +176,7 @@ const MapScreen = () => {
         };
         
         setUserLocation(defaultLocation);
+        console.log('Using default location:', defaultLocation);
         
         Alert.alert(
           'Location Error', 
@@ -164,6 +185,8 @@ const MapScreen = () => {
         );
       }
     } catch (error) {
+      console.error('Permission error:', error);
+      
       Alert.alert(
         'Permission Error', 
         'Failed to request location permission. The map will use a default location.',
@@ -404,12 +427,6 @@ const MapScreen = () => {
         ]}
       >
         <View style={styles.headerContainer}>
-          <TouchableOpacity
-            style={styles.debugButton}
-            onPress={() => setShowDebug(!showDebug)}
-          >
-            <Text style={styles.debugButtonText}>🐛</Text>
-          </TouchableOpacity>
           <Text style={styles.header}>Map & Tracking</Text>
           <TouchableOpacity
             style={styles.historyButton}
@@ -426,52 +443,61 @@ const MapScreen = () => {
           { backgroundColor: currentTheme.colors.surface },
         ]}
       >
-        {/* Real Map */}
-        {hasLocationPermission ? (
-          <MapView
-            provider={PROVIDER_GOOGLE}
-            ref={mapRef}
-            style={styles.map}
-            showsUserLocation={true}
-            showsMyLocationButton={true}
-            showsCompass={true}
-            showsScale={false}
-            zoomEnabled={true}
-            scrollEnabled={true}
-            pitchEnabled={true}
-            rotateEnabled={true}
-            followsUserLocation={false}
-            userLocationPriority="high"
-            userLocationUpdateInterval={5000}
-            userLocationFastestInterval={2000}
-            onMapReady={() => {
-              if (userLocation) {
+        {/* Real Map - Always show map */}
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          showsUserLocation={hasLocationPermission}
+          showsMyLocationButton={false}
+          showsCompass={true}
+          showsScale={true}
+          zoomEnabled={true}
+          scrollEnabled={true}
+          pitchEnabled={true}
+          rotateEnabled={true}
+          followsUserLocation={false}
+          userLocationPriority="high"
+          userLocationUpdateInterval={5000}
+          userLocationFastestInterval={2000}
+          mapType="standard"
+          initialRegion={{
+            latitude: userLocation?.latitude || 47.4979,
+            longitude: userLocation?.longitude || 19.0402,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }}
+          onMapReady={() => {
+            console.log('Map is ready');
+            if (userLocation) {
+              setTimeout(() => {
                 centerOnUser();
-              }
-            }}
-            onUserLocationChange={(event) => {
-              if (event.nativeEvent.coordinate) {
-                const newLocation: Location = {
-                  latitude: event.nativeEvent.coordinate.latitude,
-                  longitude: event.nativeEvent.coordinate.longitude,
-                  timestamp: Date.now(),
-                };
-                setUserLocation(newLocation);
-              }
-            }}
-            region={userLocation ? {
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            } : undefined}
-            initialRegion={{
-              latitude: userLocation?.latitude || 37.78825,
-              longitude: userLocation?.longitude || -122.4324,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-          >
+              }, 1000);
+            }
+          }}
+          onUserLocationChange={(event) => {
+            if (event.nativeEvent.coordinate) {
+              const newLocation: Location = {
+                latitude: event.nativeEvent.coordinate.latitude,
+                longitude: event.nativeEvent.coordinate.longitude,
+                timestamp: Date.now(),
+              };
+              setUserLocation(newLocation);
+            }
+          }}
+        >
+            {/* User location marker - manual fallback */}
+            {userLocation && (
+              <Marker
+                coordinate={{
+                  latitude: userLocation.latitude,
+                  longitude: userLocation.longitude,
+                }}
+                title="Your Location"
+                description="Current GPS position"
+                pinColor="blue"
+              />
+            )}
+            
             {/* Route polyline */}
             {route.length > 1 && (
               <Polyline
@@ -486,101 +512,44 @@ const MapScreen = () => {
               />
             )}
           </MapView>
-        ) : (
-          /* Fallback for no permission */
-          <View
-            style={[
-              styles.mapPlaceholder,
-              { backgroundColor: currentTheme.colors.background },
-            ]}
-          >
-            <Text
-              style={[
-                styles.mapPlaceholderText,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              �
-            </Text>
-            <Text
-              style={[
-                styles.mapPlaceholderSubtext,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              Location Permission Required
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.permissionButton,
-                { backgroundColor: currentTheme.colors.accent },
-              ]}
-              onPress={requestLocationPermission}
-            >
-              <Text style={styles.permissionButtonText}>Enable Location</Text>
-            </TouchableOpacity>
+
+        {/* Permission overlay if needed */}
+        {!hasLocationPermission && (
+          <View style={styles.permissionOverlay}>
+            <View style={[styles.permissionCard, { backgroundColor: currentTheme.colors.background }]}>
+              <Text style={[styles.permissionTitle, { color: currentTheme.colors.text }]}>
+                Location Permission
+              </Text>
+              <Text style={[styles.permissionSubtext, { color: currentTheme.colors.textSecondary }]}>
+                Enable location to see your position and track rides
+              </Text>
+              <TouchableOpacity
+                style={[styles.permissionButton, { backgroundColor: currentTheme.colors.accent }]}
+                onPress={requestLocationPermission}
+              >
+                <Text style={styles.permissionButtonText}>Enable Location</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
         {/* Control buttons */}
-        {hasLocationPermission && (
-          <View style={styles.controlsContainer}>
-            <TouchableOpacity
-              style={[
-                styles.centerButton,
-                { backgroundColor: currentTheme.colors.background }
-              ]}
-              onPress={centerOnUser}
-            >
-              <Text style={[styles.centerButtonText, { color: currentTheme.colors.text }]}>
-                🎯
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Debug panel */}
-        {showDebug && (
-          <View style={[
-            styles.debugPanel,
-            { backgroundColor: currentTheme.colors.background }
-          ]}>
-            <Text style={[styles.debugTitle, { color: currentTheme.colors.text }]}>
-              Debug Info
+        <View style={styles.controlsContainer}>
+          <TouchableOpacity
+            style={[
+              styles.centerButton,
+              { backgroundColor: currentTheme.colors.background }
+            ]}
+            onPress={centerOnUser}
+          >
+            <Text style={[styles.centerButtonText, { color: currentTheme.colors.text }]}>
+              🎯
             </Text>
-            <Text style={[styles.debugText, { color: currentTheme.colors.textSecondary }]}>
-              Permission: {hasLocationPermission ? '✅' : '❌'}
-            </Text>
-            <Text style={[styles.debugText, { color: currentTheme.colors.textSecondary }]}>
-              User Location: {userLocation ? '✅' : '❌'}
-            </Text>
-            <Text style={[styles.debugText, { color: currentTheme.colors.textSecondary }]}>
-              Tracking: {isTracking ? '✅' : '❌'}
-            </Text>
-            <Text style={[styles.debugText, { color: currentTheme.colors.textSecondary }]}>
-              Route Points: {route.length}
-            </Text>
-            {userLocation && (
-              <Text style={[styles.debugText, { color: currentTheme.colors.textSecondary }]}>
-                Lat: {userLocation.latitude.toFixed(6)}
-              </Text>
-            )}
-            {userLocation && (
-              <Text style={[styles.debugText, { color: currentTheme.colors.textSecondary }]}>
-                Lng: {userLocation.longitude.toFixed(6)}
-              </Text>
-            )}
-            <TouchableOpacity
-              style={[styles.debugRefreshButton, { backgroundColor: currentTheme.colors.accent }]}
-              onPress={centerOnUser}
-            >
-              <Text style={styles.debugRefreshText}>Refresh Location</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          </TouchableOpacity>
+        </View>
 
         {/* Location status indicator */}
-        {userLocation && !showDebug && (
+        {userLocation && (
           <View style={[
             styles.locationStatus,
             { backgroundColor: currentTheme.colors.background }
@@ -712,16 +681,6 @@ const styles = StyleSheet.create({
   historyButtonText: {
     fontSize: 20,
   },
-  debugButton: {
-    position: "absolute",
-    left: 20,
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-  },
-  debugButtonText: {
-    fontSize: 18,
-  },
   mapContainer: {
     flex: 1,
     position: "relative",
@@ -801,44 +760,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inder",
     textAlign: 'center',
-  },
-  debugPanel: {
-    position: 'absolute',
-    top: 80,
-    left: 20,
-    right: 20,
-    padding: 15,
-    borderRadius: 10,
-    elevation: 5,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    zIndex: 10,
-  },
-  debugTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: "Inder",
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  debugText: {
-    fontSize: 12,
-    fontFamily: "Inder",
-    marginBottom: 3,
-  },
-  debugRefreshButton: {
-    marginTop: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    alignItems: 'center',
-  },
-  debugRefreshText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-    fontFamily: "Inder",
   },
   statsContainer: {
     position: "absolute",

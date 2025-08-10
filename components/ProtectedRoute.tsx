@@ -45,23 +45,39 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }, [user, loading, segments]);
 
-  // Show force continue button after 6 seconds of loading
+  // Show force continue button after 3 seconds of loading (reduced for testing)
   useEffect(() => {
     if (loading) {
+      console.log("⏱️ Starting force button timer (3 seconds)");
       const timer = setTimeout(() => {
+        console.log("⏱️ Force button timer fired - showing button");
         setShowForceButton(true);
-      }, 6000); // Show button after 6 seconds
+      }, 3000); // Show button after 3 seconds for testing
 
-      return () => clearTimeout(timer);
+      return () => {
+        console.log("⏱️ Clearing force button timer");
+        clearTimeout(timer);
+      };
     } else {
+      console.log("⏱️ Not loading - hiding force button");
       setShowForceButton(false);
     }
   }, [loading]);
 
   const handleForceContinue = () => {
     console.log("🔄 User forced continue from loading screen");
+    console.log("Current segments:", segments);
+    console.log("User state:", !!user);
+    console.log("Loading state:", loading);
+    
     // Force navigation to login if loading is stuck
-    router.replace("/login");
+    try {
+      setShowForceButton(false); // Hide button immediately
+      router.replace("/login");
+      console.log("Navigation to /login initiated");
+    } catch (error) {
+      console.error("Error during force continue navigation:", error);
+    }
   };
 
   if (loading) {
@@ -69,12 +85,26 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FFFFFF" />
         <Text style={styles.loadingText}>Loading EquiHub...</Text>
+        
+        {/* Test button - always visible for debugging */}
+        <TouchableOpacity
+          style={[styles.forceButton, { backgroundColor: 'red', marginTop: 10 }]}
+          onPress={() => {
+            console.log("🔴 TEST BUTTON PRESSED!");
+            alert("Test button works!");
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.forceButtonText}>TEST BUTTON</Text>
+        </TouchableOpacity>
+        
         {showForceButton && (
           <TouchableOpacity
             style={styles.forceButton}
             onPress={handleForceContinue}
+            activeOpacity={0.7}
           >
-            <Text style={styles.forceButtonText}>Continue Anyway</Text>
+            <Text style={styles.forceButtonText}>Continue Anyway ({showForceButton ? 'visible' : 'hidden'})</Text>
           </TouchableOpacity>
         )}
       </View>
