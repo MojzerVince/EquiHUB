@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   RefreshControl,
@@ -16,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useDialog } from "../../contexts/DialogContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useLoadingState } from "../../hooks/useLoadingState";
 import { UserBadgeWithDetails } from "../../lib/supabase";
@@ -24,6 +24,7 @@ const ProfileScreen = () => {
   const router = useRouter();
   const { user } = useAuth();
   const { currentTheme } = useTheme();
+  const { showError, showConfirm } = useDialog();
 
   // All hooks must be declared before any early returns
   const [isEditing, setIsEditing] = useState(false);
@@ -574,10 +575,7 @@ const ProfileScreen = () => {
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert(
-        "Permission Required",
-        "You need to grant camera roll permissions to change your profile picture."
-      );
+      showError("You need to grant camera roll permissions to change your profile picture.");
       return;
     }
 
@@ -590,10 +588,7 @@ const ProfileScreen = () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert(
-        "Permission Required",
-        "You need to grant camera permissions to take a photo."
-      );
+      showError("You need to grant camera permissions to take a photo.");
       return;
     }
 
@@ -625,15 +620,15 @@ const ProfileScreen = () => {
 
   const handleSave = async () => {
     if (userName.trim() === "") {
-      Alert.alert("Error", "Name cannot be empty");
+      showError("Name cannot be empty");
       return;
     }
     if (userAge.trim() === "" || isNaN(Number(userAge))) {
-      Alert.alert("Error", "Please enter a valid age");
+      showError("Please enter a valid age");
       return;
     }
     if (userExperience.trim() === "" || isNaN(Number(userExperience))) {
-      Alert.alert("Error", "Please enter a valid experience number");
+      showError("Please enter a valid experience number");
       return;
     }
 
@@ -700,9 +695,12 @@ const ProfileScreen = () => {
           updateData.profile_image_url = dataUrl;
         } catch (imageError) {
           console.error("Image upload failed:", imageError);
-          Alert.alert(
+          showConfirm(
             "Warning",
-            "Image upload failed, but other changes will be saved."
+            "Image upload failed, but other changes will be saved.",
+            () => {
+              // Continue with save operation
+            }
           );
         }
       } else if (isSavedImageUri) {
@@ -742,7 +740,7 @@ const ProfileScreen = () => {
       }
     } catch (err) {
       setError("Failed to save profile");
-      Alert.alert("Error", "Failed to save profile. Please try again.");
+      showError("Failed to save profile. Please try again.");
       console.error("Error saving profile:", err);
     } finally {
       setLoading(false);

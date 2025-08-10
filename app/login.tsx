@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -14,10 +13,12 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useDialog } from "@/contexts/DialogContext";
 import { AuthAPI, LoginData } from "../lib/authAPI";
 
 const LoginScreen = () => {
   const router = useRouter();
+  const { showError, showConfirm } = useDialog();
   
   // Form state
   const [formData, setFormData] = useState<LoginData>({
@@ -60,7 +61,7 @@ const LoginScreen = () => {
       const { user, error } = await AuthAPI.login(formData);
 
       if (error) {
-        Alert.alert("Login Error", error);
+        showError(error);
         return;
       }
 
@@ -70,7 +71,7 @@ const LoginScreen = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
-      Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      showError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -78,7 +79,7 @@ const LoginScreen = () => {
 
   const handleForgotPassword = async () => {
     if (!formData.email) {
-      Alert.alert("Email Required", "Please enter your email address to reset your password.");
+      showError("Please enter your email address to reset your password.");
       return;
     }
 
@@ -88,16 +89,19 @@ const LoginScreen = () => {
       const { error } = await AuthAPI.resetPassword(formData.email);
 
       if (error) {
-        Alert.alert("Error", error);
+        showError(error);
       } else {
-        Alert.alert(
+        showConfirm(
           "Password Reset Email Sent",
-          "Please check your email for instructions to reset your password."
+          "Please check your email for instructions to reset your password.",
+          () => {
+            // User acknowledged the message
+          }
         );
       }
     } catch (error) {
       console.error("Password reset error:", error);
-      Alert.alert("Error", "Failed to send password reset email. Please try again.");
+      showError("Failed to send password reset email. Please try again.");
     } finally {
       setLoading(false);
     }

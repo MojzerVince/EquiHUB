@@ -2,7 +2,6 @@ import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   RefreshControl,
@@ -15,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useDialog } from "../../contexts/DialogContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { HorseAPI } from "../../lib/horseAPI";
 import { Horse } from "../../lib/supabase";
@@ -92,6 +92,7 @@ const breedOptions = [
 const MyHorsesScreen = () => {
   const { user, loading: authLoading } = useAuth();
   const { currentTheme } = useTheme();
+  const { showError, showDelete, showConfirm } = useDialog();
   const [refreshing, setRefreshing] = useState(false);
   const [horses, setHorses] = useState<Horse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -212,12 +213,9 @@ const MyHorsesScreen = () => {
       setHorsesLoaded(true);
 
       if (errorMessage.includes("timeout")) {
-        Alert.alert(
-          "Timeout",
-          "The request took too long. Please check your internet connection."
-        );
+        showError("The request took too long. Please check your internet connection.");
       } else {
-        Alert.alert("Error", "Failed to load horses");
+        showError("Failed to load horses");
       }
     } finally {
       setLoading(false);
@@ -311,7 +309,7 @@ const MyHorsesScreen = () => {
 
   const saveHorseEdit = async () => {
     if (!user?.id || !editingHorse) {
-      Alert.alert("Error", "User not authenticated");
+      showError("User not authenticated");
       return;
     }
 
@@ -329,31 +327,31 @@ const MyHorsesScreen = () => {
       !normalizedHeight ||
       !normalizedBreed
     ) {
-      Alert.alert("Error", "Please fill in all required fields");
+      showError("Please fill in all required fields");
       return;
     }
 
     const namePattern = /^[\p{L}\p{M}\s\-'\.]+$/u;
     if (!namePattern.test(normalizedName)) {
-      Alert.alert("Error", "Horse name contains invalid characters");
+      showError("Horse name contains invalid characters");
       return;
     }
 
     if (normalizedName.length < 2 || normalizedName.length > 50) {
-      Alert.alert("Error", "Horse name must be between 2 and 50 characters");
+      showError("Horse name must be between 2 and 50 characters");
       return;
     }
 
     const currentDate = new Date();
     const minDate = new Date(1980, 0, 1);
     if (editBirthDate < minDate || editBirthDate > currentDate) {
-      Alert.alert("Error", "Please enter a valid birth date");
+      showError("Please enter a valid birth date");
       return;
     }
 
     const heightNum = parseInt(normalizedHeight);
     if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
-      Alert.alert("Error", "Please enter a valid height (50-250 cm)");
+      showError("Please enter a valid height (50-250 cm)");
       return;
     }
 
@@ -361,7 +359,7 @@ const MyHorsesScreen = () => {
     if (normalizedWeight) {
       weightNum = parseInt(normalizedWeight);
       if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
-        Alert.alert("Error", "Please enter a valid weight (50-2000 kg)");
+        showError("Please enter a valid weight (50-2000 kg)");
         return;
       }
     }
@@ -407,11 +405,11 @@ const MyHorsesScreen = () => {
         }
         setShowSuccessModal(true);
       } else {
-        Alert.alert("Error", "Failed to update horse");
+        showError("Failed to update horse");
       }
     } catch (error) {
       console.error("Error updating horse:", error);
-      Alert.alert("Error", "Failed to update horse");
+      showError("Failed to update horse");
     } finally {
       setLoading(false);
     }
@@ -419,7 +417,7 @@ const MyHorsesScreen = () => {
 
   const saveHorseAdd = async () => {
     if (!user?.id) {
-      Alert.alert("Authentication Error", "Please log in again to add horses");
+      showError("Please log in again to add horses");
       return;
     }
 
@@ -437,31 +435,31 @@ const MyHorsesScreen = () => {
       !normalizedHeight ||
       !normalizedBreed
     ) {
-      Alert.alert("Error", "Please fill in all required fields");
+      showError("Please fill in all required fields");
       return;
     }
 
     const namePattern = /^[\p{L}\p{M}\s\-'\.]+$/u;
     if (!namePattern.test(normalizedName)) {
-      Alert.alert("Error", "Horse name contains invalid characters");
+      showError("Horse name contains invalid characters");
       return;
     }
 
     if (normalizedName.length < 2 || normalizedName.length > 50) {
-      Alert.alert("Error", "Horse name must be between 2 and 50 characters");
+      showError("Horse name must be between 2 and 50 characters");
       return;
     }
 
     const currentDate = new Date();
     const minDate = new Date(1980, 0, 1);
     if (addBirthDate < minDate || addBirthDate > currentDate) {
-      Alert.alert("Error", "Please enter a valid birth date");
+      showError("Please enter a valid birth date");
       return;
     }
 
     const heightNum = parseInt(normalizedHeight);
     if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
-      Alert.alert("Error", "Please enter a valid height (50-250 cm)");
+      showError("Please enter a valid height (50-250 cm)");
       return;
     }
 
@@ -469,7 +467,7 @@ const MyHorsesScreen = () => {
     if (normalizedWeight) {
       weightNum = parseInt(normalizedWeight);
       if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
-        Alert.alert("Error", "Please enter a valid weight (50-2000 kg)");
+        showError("Please enter a valid weight (50-2000 kg)");
         return;
       }
     }
@@ -504,55 +502,44 @@ const MyHorsesScreen = () => {
         }
         setShowSuccessModal(true);
       } else {
-        Alert.alert("Error", "Failed to add horse. Please try again.");
+        showError("Failed to add horse. Please try again.");
       }
     } catch (error) {
       console.error("Error adding horse:", error);
-      Alert.alert(
-        "Error",
-        "Failed to add horse. Please check your connection and try again."
-      );
+      showError("Failed to add horse. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const deleteHorse = (horse: Horse) => {
-    Alert.alert(
-      "Delete Horse",
-      `Are you sure you want to delete ${horse.name}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            if (!user?.id) {
-              Alert.alert("Error", "User not authenticated");
-              return;
-            }
+    showDelete(
+      horse.name,
+      async () => {
+        if (!user?.id) {
+          showError("User not authenticated");
+          return;
+        }
 
-            try {
-              setLoading(true);
-              const success = await HorseAPI.deleteHorse(horse.id, user?.id);
+        try {
+          setLoading(true);
+          const success = await HorseAPI.deleteHorse(horse.id, user?.id);
 
-              if (success) {
-                setHorsesLoaded(false); // Reset flag to allow reloading
-                await loadHorses(user?.id);
-                setSuccessMessage(`${horse.name} has been deleted`);
-                setShowSuccessModal(true);
-              } else {
-                Alert.alert("Error", "Failed to delete horse");
-              }
-            } catch (error) {
-              console.error("Error deleting horse:", error);
-              Alert.alert("Error", "Failed to delete horse");
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
+          if (success) {
+            setHorsesLoaded(false); // Reset flag to allow reloading
+            await loadHorses(user?.id);
+            setSuccessMessage(`${horse.name} has been deleted`);
+            setShowSuccessModal(true);
+          } else {
+            showError("Failed to delete horse");
+          }
+        } catch (error) {
+          console.error("Error deleting horse:", error);
+          showError("Failed to delete horse");
+        } finally {
+          setLoading(false);
+        }
+      }
     );
   };
 
@@ -562,10 +549,7 @@ const MyHorsesScreen = () => {
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert(
-        "Permission Required",
-        "Permission to access camera roll is required!"
-      );
+      showError("Permission to access camera roll is required!");
       return;
     }
 
@@ -591,10 +575,7 @@ const MyHorsesScreen = () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert(
-        "Permission Required",
-        "Permission to access camera is required!"
-      );
+      showError("Permission to access camera is required!");
       return;
     }
 

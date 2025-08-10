@@ -1,9 +1,9 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useDialog } from "@/contexts/DialogContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Alert,
   Image,
   Modal,
   ScrollView,
@@ -19,6 +19,7 @@ const OptionsScreen = () => {
   const router = useRouter();
   const { signOut, user } = useAuth();
   const { currentTheme, setTheme, availableThemes } = useTheme();
+  const { showLogout, showConfirm, showError } = useDialog();
 
   // Settings state
   const [notifications, setNotifications] = useState(true);
@@ -31,47 +32,29 @@ const OptionsScreen = () => {
   const [themeDropdownVisible, setThemeDropdownVisible] = useState(false);
 
   const handleLogout = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            console.log("Starting logout process for user:", user?.email);
-            await signOut();
-            console.log("User logged out successfully");
-            // ProtectedRoute will handle navigation automatically
-          } catch (error) {
-            console.error("Logout error:", error);
-            Alert.alert("Error", "Failed to sign out. Please try again.");
-          }
-        },
-      },
-    ]);
+    showLogout(
+      async () => {
+        try {
+          console.log("Starting logout process for user:", user?.email);
+          await signOut();
+          console.log("User logged out successfully");
+          // ProtectedRoute will handle navigation automatically
+        } catch (error) {
+          console.error("Logout error:", error);
+          showError("Failed to sign out. Please try again.");
+        }
+      }
+    );
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
+    showConfirm(
       "Delete Account",
       "This action cannot be undone. Are you sure you want to delete your account?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            // Handle account deletion logic here
-            console.log("Account deletion requested");
-          },
-        },
-      ]
+      () => {
+        // Handle account deletion logic here
+        console.log("Account deletion requested");
+      }
     );
   };
 

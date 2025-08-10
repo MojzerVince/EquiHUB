@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -14,10 +13,12 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useDialog } from "@/contexts/DialogContext";
 import { AuthAPI, RegisterData } from "../lib/authAPI";
 
 const RegisterScreen = () => {
   const router = useRouter();
+  const { showError, showConfirm } = useDialog();
   
   // Form state
   const [formData, setFormData] = useState<RegisterData>({
@@ -104,27 +105,22 @@ const RegisterScreen = () => {
 
       if (error) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert("Registration Error", error);
+        showError(error);
         return;
       }
 
       if (user) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert(
+        showConfirm(
           "Registration Successful!",
           "Your account has been created successfully. Please check your email to verify your account before logging in. Once logged in, you'll stay signed in automatically on this device.",
-          [
-            {
-              text: "OK",
-              onPress: () => router.replace("/login")
-            }
-          ]
+          () => router.replace("/login")
         );
       }
     } catch (error) {
       console.error("Registration error:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      showError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -153,23 +149,17 @@ const RegisterScreen = () => {
       ? 'Our Terms of Service outline the rules and regulations for using EquiHUB. This would typically open a detailed terms page or web view.'
       : 'Our Privacy Policy explains how we collect, use, and protect your personal information. This would typically open a detailed privacy page or web view.';
     
-    Alert.alert(
+    showConfirm(
       title,
       message,
-      [
-        {
-          text: 'Close',
-          style: 'cancel'
-        },
-        {
-          text: 'View Full Document',
-          onPress: () => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            // TODO: In a real app, this would open a web view or navigate to a dedicated page
-            Alert.alert('Coming Soon', 'Full document viewer will be available in a future update.');
-          }
-        }
-      ]
+      () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        // TODO: In a real app, this would open a web view or navigate to a dedicated page
+        showConfirm('Coming Soon', 'Full document viewer will be available in a future update.');
+      },
+      () => {
+        // User closed the dialog
+      }
     );
   };
 
