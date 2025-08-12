@@ -507,11 +507,11 @@ const MapScreen = () => {
           userLocationUpdateInterval={5000}
           userLocationFastestInterval={2000}
           mapType="standard"
-          initialRegion={{
-            latitude: userLocation?.latitude || 47.4979,
-            longitude: userLocation?.longitude || 19.0402,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
+          region={{
+            latitude: 47.33341872578335, //userLocation?.latitude || 47.4979,
+            longitude: 18.68439639102018, //userLocation?.longitude || 19.0402,
+            latitudeDelta: 0.015,
+            longitudeDelta: 0.0121,
           }}
           onMapReady={() => {
             console.log("Map is ready");
