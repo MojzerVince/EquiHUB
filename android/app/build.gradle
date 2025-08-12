@@ -157,9 +157,9 @@ dependencies {
     implementation(project(':react-native-maps')){
       exclude group: 'com.google.android.gms'
     }
-    implementation 'com.google.android.gms:play-services-base:18.0.1'
-    implementation 'com.google.android.gms:play-services-location:19.0.1'
-    implementation 'com.google.android.gms:play-services-maps:18.0.2'
+    implementation 'com.google.android.gms:play-services-base:18.2.0'
+    implementation 'com.google.android.gms:play-services-location:21.0.1'
+    implementation 'com.google.android.gms:play-services-maps:18.2.0'
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
