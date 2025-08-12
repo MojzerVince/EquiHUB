@@ -26,12 +26,13 @@
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "INTERNET",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+          "apiKey": "AIzaSyAqdFPkyBOQByGRJatqE0SmD-iQYjNQR7w"
         }
       }
     },
