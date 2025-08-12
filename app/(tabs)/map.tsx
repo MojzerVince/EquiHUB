@@ -38,19 +38,22 @@ const MapScreen = () => {
   // State management
   const [userLocation, setUserLocation] = useState<Location | null>(null);
   const [isTracking, setIsTracking] = useState(false);
-  const [currentSession, setCurrentSession] = useState<TrackingSession | null>(null);
+  const [currentSession, setCurrentSession] = useState<TrackingSession | null>(
+    null
+  );
   const [route, setRoute] = useState<Location[]>([]);
   const [distance, setDistance] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentSpeed, setCurrentSpeed] = useState(0); // km/h
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
-  const [locationSubscription, setLocationSubscription] = useState<Location.LocationSubscription | null>(null);
+  const [locationSubscription, setLocationSubscription] =
+    useState<Location.LocationSubscription | null>(null);
   const [hasLocationPermission, setHasLocationPermission] = useState(false);
 
   // Request location permissions on mount
   useEffect(() => {
     checkLocationServices();
-    
+
     // Force set a default location immediately for map rendering
     const defaultLocation: Location = {
       latitude: 47.4979,
@@ -59,7 +62,7 @@ const MapScreen = () => {
     };
     setUserLocation(defaultLocation);
     setHasLocationPermission(true);
-    
+
     return () => {
       if (locationSubscription) {
         locationSubscription.remove();
@@ -70,30 +73,33 @@ const MapScreen = () => {
   const checkLocationServices = async () => {
     try {
       const isEnabled = await Location.hasServicesEnabledAsync();
-      
+
       if (!isEnabled) {
         Alert.alert(
-          'Location Services Disabled',
-          'Please enable location services in your device settings to use GPS features. You can still use the map manually.',
+          "Location Services Disabled",
+          "Please enable location services in your device settings to use GPS features. You can still use the map manually.",
           [
-            { text: 'Use Manual Map', onPress: () => {
-              // Set default location and show map
-              const defaultLocation: Location = {
-                latitude: 47.4979,
-                longitude: 19.0402,
-                timestamp: Date.now(),
-              };
-              setUserLocation(defaultLocation);
-              setHasLocationPermission(true);
-            }},
-            { text: 'Retry', onPress: checkLocationServices },
+            {
+              text: "Use Manual Map",
+              onPress: () => {
+                // Set default location and show map
+                const defaultLocation: Location = {
+                  latitude: 47.4979,
+                  longitude: 19.0402,
+                  timestamp: Date.now(),
+                };
+                setUserLocation(defaultLocation);
+                setHasLocationPermission(true);
+              },
+            },
+            { text: "Retry", onPress: checkLocationServices },
           ]
         );
         return;
       }
       requestLocationPermission();
     } catch (error) {
-      console.error('Error checking location services:', error);
+      console.error("Error checking location services:", error);
       requestLocationPermission(); // Try anyway
     }
   };
@@ -113,27 +119,28 @@ const MapScreen = () => {
 
   const requestLocationPermission = async () => {
     try {
-      console.log('Requesting location permission...');
-      
+      console.log("Requesting location permission...");
+
       // First request foreground permission
-      const foregroundStatus = await Location.requestForegroundPermissionsAsync();
-      
-      console.log('Foreground permission status:', foregroundStatus.status);
-      
-      if (foregroundStatus.status !== 'granted') {
+      const foregroundStatus =
+        await Location.requestForegroundPermissionsAsync();
+
+      console.log("Foreground permission status:", foregroundStatus.status);
+
+      if (foregroundStatus.status !== "granted") {
         Alert.alert(
-          'Permission Required',
-          'Location permission is needed to track your rides and show your position on the map.',
+          "Permission Required",
+          "Location permission is needed to track your rides and show your position on the map.",
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Try Again', onPress: requestLocationPermission },
+            { text: "Cancel", style: "cancel" },
+            { text: "Try Again", onPress: requestLocationPermission },
           ]
         );
         return;
       }
 
       setHasLocationPermission(true);
-      console.log('Location permission granted, getting current position...');
+      console.log("Location permission granted, getting current position...");
 
       try {
         // Get initial location with high accuracy
@@ -141,7 +148,7 @@ const MapScreen = () => {
           accuracy: Location.Accuracy.High,
         });
 
-        console.log('Got location:', location.coords);
+        console.log("Got location:", location.coords);
 
         const userLoc: Location = {
           latitude: location.coords.latitude,
@@ -150,52 +157,54 @@ const MapScreen = () => {
         };
 
         setUserLocation(userLoc);
-        console.log('User location set:', userLoc);
-        
+        console.log("User location set:", userLoc);
+
         // Center map on user location with animation
         setTimeout(() => {
           if (mapRef.current) {
-            console.log('Animating to user location...');
-            mapRef.current.animateToRegion({
-              latitude: userLoc.latitude,
-              longitude: userLoc.longitude,
-              latitudeDelta: 0.005,
-              longitudeDelta: 0.005,
-            }, 2000);
+            console.log("Animating to user location...");
+            mapRef.current.animateToRegion(
+              {
+                latitude: userLoc.latitude,
+                longitude: userLoc.longitude,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              },
+              2000
+            );
           }
         }, 1000);
-
       } catch (locationError) {
-        console.error('Location error:', locationError);
-        
+        console.error("Location error:", locationError);
+
         // Use a default location (Budapest, Hungary) if GPS fails
         const defaultLocation: Location = {
           latitude: 47.4979,
           longitude: 19.0402,
           timestamp: Date.now(),
         };
-        
+
         setUserLocation(defaultLocation);
-        console.log('Using default location:', defaultLocation);
-        
+        console.log("Using default location:", defaultLocation);
+
         Alert.alert(
-          'Location Error', 
-          'Could not get your exact location. Using default location. You can still use the map and tracking features.',
-          [{ text: 'OK' }]
+          "Location Error",
+          "Could not get your exact location. Using default location. You can still use the map and tracking features.",
+          [{ text: "OK" }]
         );
       }
     } catch (error) {
-      console.error('Permission error:', error);
-      
+      console.error("Permission error:", error);
+
       Alert.alert(
-        'Permission Error', 
-        'Failed to request location permission. The map will use a default location.',
+        "Permission Error",
+        "Failed to request location permission. The map will use a default location.",
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Retry', onPress: requestLocationPermission },
+          { text: "Cancel", style: "cancel" },
+          { text: "Retry", onPress: requestLocationPermission },
         ]
       );
-      
+
       // Set default location even if permission fails
       const defaultLocation: Location = {
         latitude: 47.4979,
@@ -209,17 +218,22 @@ const MapScreen = () => {
 
   const calculateDistance = (loc1: Location, loc2: Location): number => {
     const R = 6371; // Earth's radius in kilometers
-    const dLat = (loc2.latitude - loc1.latitude) * Math.PI / 180;
-    const dLon = (loc2.longitude - loc1.longitude) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(loc1.latitude * Math.PI / 180) * Math.cos(loc2.latitude * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const dLat = ((loc2.latitude - loc1.latitude) * Math.PI) / 180;
+    const dLon = ((loc2.longitude - loc1.longitude) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((loc1.latitude * Math.PI) / 180) *
+        Math.cos((loc2.latitude * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
 
-  const calculateAverageSpeed = (distance: number, duration: number): number => {
+  const calculateAverageSpeed = (
+    distance: number,
+    duration: number
+  ): number => {
     if (duration === 0) return 0;
     const hours = duration / (1000 * 60 * 60); // Convert ms to hours
     return distance / hours; // km/h
@@ -228,7 +242,7 @@ const MapScreen = () => {
   const startTracking = async () => {
     try {
       if (!hasLocationPermission) {
-        Alert.alert('Error', 'Location permission is required for tracking');
+        Alert.alert("Error", "Location permission is required for tracking");
         return;
       }
 
@@ -236,7 +250,7 @@ const MapScreen = () => {
         // Try to get current location first
         await centerOnUser();
         if (!userLocation) {
-          Alert.alert('Error', 'Unable to get your current location');
+          Alert.alert("Error", "Unable to get your current location");
           return;
         }
       }
@@ -272,29 +286,32 @@ const MapScreen = () => {
           };
 
           setUserLocation(newLocation);
-          
+
           // Calculate speed (location.coords.speed is in m/s, convert to km/h)
           if (location.coords.speed !== null && location.coords.speed >= 0) {
             setCurrentSpeed(location.coords.speed * 3.6); // Convert m/s to km/h
           }
-          
-          setRoute(prevRoute => {
+
+          setRoute((prevRoute) => {
             const updatedRoute = [...prevRoute, newLocation];
-            
+
             // Calculate total distance
             if (prevRoute.length > 0) {
               const lastLocation = prevRoute[prevRoute.length - 1];
-              const additionalDistance = calculateDistance(lastLocation, newLocation);
-              setDistance(prevDistance => {
+              const additionalDistance = calculateDistance(
+                lastLocation,
+                newLocation
+              );
+              setDistance((prevDistance) => {
                 const newDistance = prevDistance + additionalDistance;
                 return newDistance;
               });
             }
-            
+
             return updatedRoute;
           });
 
-          setCurrentSession(prevSession => {
+          setCurrentSession((prevSession) => {
             if (prevSession) {
               return {
                 ...prevSession,
@@ -307,9 +324,17 @@ const MapScreen = () => {
       );
 
       setLocationSubscription(subscription);
-      Alert.alert('Tracking Started!', 'Your ride tracking has begun. Your route will be recorded on the map.');
+      Alert.alert(
+        "Tracking Started!",
+        "Your ride tracking has begun. Your route will be recorded on the map."
+      );
     } catch (error) {
-      Alert.alert('Error', `Failed to start tracking: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      Alert.alert(
+        "Error",
+        `Failed to start tracking: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   };
 
@@ -329,11 +354,20 @@ const MapScreen = () => {
       };
 
       Alert.alert(
-        'Ride Completed!',
-        `Distance: ${distance.toFixed(2)} km\nDuration: ${formatDuration(finalDuration)}\nAverage Speed: ${calculateAverageSpeed(distance, finalDuration).toFixed(1)} km/h`,
+        "Ride Completed!",
+        `Distance: ${distance.toFixed(2)} km\nDuration: ${formatDuration(
+          finalDuration
+        )}\nAverage Speed: ${calculateAverageSpeed(
+          distance,
+          finalDuration
+        ).toFixed(1)} km/h`,
         [
-          { text: 'Save Session', onPress: () => saveSession(finalSession) },
-          { text: 'Discard', style: 'destructive', onPress: () => clearSession() },
+          { text: "Save Session", onPress: () => saveSession(finalSession) },
+          {
+            text: "Discard",
+            style: "destructive",
+            onPress: () => clearSession(),
+          },
         ]
       );
     }
@@ -353,22 +387,29 @@ const MapScreen = () => {
   const saveSession = async (session: TrackingSession) => {
     try {
       // Generate a name for the session
-      const sessionName = `Ride ${new Date(session.startTime).toLocaleDateString()} ${new Date(session.startTime).toLocaleTimeString()}`;
+      const sessionName = `Ride ${new Date(
+        session.startTime
+      ).toLocaleDateString()} ${new Date(
+        session.startTime
+      ).toLocaleTimeString()}`;
       const sessionWithName = { ...session, name: sessionName };
-      
+
       await saveSessions(sessionWithName);
-      Alert.alert('Success', 'Ride session saved successfully!');
+      Alert.alert("Success", "Ride session saved successfully!");
       clearSession();
     } catch (error) {
-      console.error('Error saving session:', error);
-      Alert.alert('Error', 'Failed to save session');
+      console.error("Error saving session:", error);
+      Alert.alert("Error", "Failed to save session");
     }
   };
 
   const centerOnUser = async () => {
     try {
       if (!hasLocationPermission) {
-        Alert.alert('Permission Required', 'Location permission is needed to center on your position.');
+        Alert.alert(
+          "Permission Required",
+          "Location permission is needed to center on your position."
+        );
         return;
       }
 
@@ -386,16 +427,21 @@ const MapScreen = () => {
       setUserLocation(userLoc);
 
       if (mapRef.current) {
-        mapRef.current.animateToRegion({
-          latitude: userLoc.latitude,
-          longitude: userLoc.longitude,
-          latitudeDelta: 0.005,
-          longitudeDelta: 0.005,
-        }, 1000);
+        mapRef.current.animateToRegion(
+          {
+            latitude: userLoc.latitude,
+            longitude: userLoc.longitude,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          },
+          1000
+        );
       }
-
     } catch (error) {
-      Alert.alert('Location Error', 'Unable to get your current location. Please try again.');
+      Alert.alert(
+        "Location Error",
+        "Unable to get your current location. Please try again."
+      );
     }
   };
 
@@ -468,7 +514,7 @@ const MapScreen = () => {
             longitudeDelta: 0.01,
           }}
           onMapReady={() => {
-            console.log('Map is ready');
+            console.log("Map is ready");
             if (userLocation) {
               setTimeout(() => {
                 centerOnUser();
@@ -486,46 +532,64 @@ const MapScreen = () => {
             }
           }}
         >
-            {/* User location marker - manual fallback */}
-            {userLocation && (
-              <Marker
-                coordinate={{
-                  latitude: userLocation.latitude,
-                  longitude: userLocation.longitude,
-                }}
-                title="Your Location"
-                description="Current GPS position"
-                pinColor="blue"
-              />
-            )}
-            
-            {/* Route polyline */}
-            {route.length > 1 && (
-              <Polyline
-                coordinates={route.map(loc => ({
-                  latitude: loc.latitude,
-                  longitude: loc.longitude,
-                }))}
-                strokeColor={currentTheme.colors.accent}
-                strokeWidth={4}
-                lineCap="round"
-                lineJoin="round"
-              />
-            )}
-          </MapView>
+          {/* User location marker - manual fallback */}
+          {userLocation && (
+            <Marker
+              coordinate={{
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+              }}
+              title="Your Location"
+              description="Current GPS position"
+              pinColor="blue"
+            />
+          )}
+
+          {/* Route polyline */}
+          {route.length > 1 && (
+            <Polyline
+              coordinates={route.map((loc) => ({
+                latitude: loc.latitude,
+                longitude: loc.longitude,
+              }))}
+              strokeColor={currentTheme.colors.accent}
+              strokeWidth={4}
+              lineCap="round"
+              lineJoin="round"
+            />
+          )}
+        </MapView>
 
         {/* Permission overlay if needed */}
         {!hasLocationPermission && (
           <View style={styles.permissionOverlay}>
-            <View style={[styles.permissionCard, { backgroundColor: currentTheme.colors.background }]}>
-              <Text style={[styles.permissionTitle, { color: currentTheme.colors.text }]}>
+            <View
+              style={[
+                styles.permissionCard,
+                { backgroundColor: currentTheme.colors.background },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.permissionTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
                 Location Permission
               </Text>
-              <Text style={[styles.permissionSubtext, { color: currentTheme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.permissionSubtext,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
                 Enable location to see your position and track rides
               </Text>
               <TouchableOpacity
-                style={[styles.permissionButton, { backgroundColor: currentTheme.colors.accent }]}
+                style={[
+                  styles.permissionButton,
+                  { backgroundColor: currentTheme.colors.accent },
+                ]}
                 onPress={requestLocationPermission}
               >
                 <Text style={styles.permissionButtonText}>Enable Location</Text>
@@ -539,11 +603,16 @@ const MapScreen = () => {
           <TouchableOpacity
             style={[
               styles.centerButton,
-              { backgroundColor: currentTheme.colors.background }
+              { backgroundColor: currentTheme.colors.background },
             ]}
             onPress={centerOnUser}
           >
-            <Text style={[styles.centerButtonText, { color: currentTheme.colors.text }]}>
+            <Text
+              style={[
+                styles.centerButtonText,
+                { color: currentTheme.colors.text },
+              ]}
+            >
               🎯
             </Text>
           </TouchableOpacity>
@@ -551,11 +620,18 @@ const MapScreen = () => {
 
         {/* Location status indicator */}
         {userLocation && (
-          <View style={[
-            styles.locationStatus,
-            { backgroundColor: currentTheme.colors.background }
-          ]}>
-            <Text style={[styles.locationStatusText, { color: currentTheme.colors.text }]}>
+          <View
+            style={[
+              styles.locationStatus,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <Text
+              style={[
+                styles.locationStatusText,
+                { color: currentTheme.colors.text },
+              ]}
+            >
               📍 GPS Active - Accuracy: High
             </Text>
           </View>
@@ -716,9 +792,9 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
   permissionButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: "Inder",
   },
   map: {
@@ -746,7 +822,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   locationStatus: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 100,
     left: 20,
     right: 20,
@@ -760,7 +836,7 @@ const styles = StyleSheet.create({
   locationStatusText: {
     fontSize: 12,
     fontFamily: "Inder",
-    textAlign: 'center',
+    textAlign: "center",
   },
   statsContainer: {
     position: "absolute",
@@ -826,21 +902,21 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
   },
   permissionOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 1000,
   },
   permissionCard: {
     padding: 24,
     borderRadius: 16,
     margin: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -848,14 +924,14 @@ const styles = StyleSheet.create({
   },
   permissionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
     fontFamily: "Inder",
   },
   permissionSubtext: {
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 20,
     lineHeight: 22,
     fontFamily: "Inder",
@@ -865,11 +941,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 8,
     marginTop: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   skipButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: "Inder",
   },
 });
