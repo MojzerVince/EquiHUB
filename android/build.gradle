@@ -11,8 +11,6 @@ buildscript {
     classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
   }
 }
-  }
-}
 
 def reactNativeAndroidDir = new File(
   providers.exec {
