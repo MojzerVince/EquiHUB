@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
-  RefreshControl,
 } from "react-native";
 import MapView, { Marker, Region, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -29,7 +28,6 @@ const MapScreen = () => {
     longitude: number;
   } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [locationPermission, setLocationPermission] = useState<boolean | null>(
     null
   );
@@ -82,16 +80,6 @@ const MapScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    if (locationPermission) {
-      await getCurrentLocation();
-    } else {
-      await requestLocationPermission();
-    }
-    setRefreshing(false);
   };
 
   const onRegionChange = (newRegion: Region) => {
@@ -165,9 +153,6 @@ const MapScreen = () => {
         <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
         >
           <View style={styles.mapContainer}>
             <View
@@ -179,7 +164,7 @@ const MapScreen = () => {
               <Text
                 style={[styles.statsText, { color: currentTheme.colors.text }]}
               >
-                📍 Explore equestrian locations nearby
+                📍 Explore equestrian routes nearby
               </Text>
             </View>
 
@@ -377,6 +362,7 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
     paddingHorizontal: 20,
+    marginTop: 5,
   },
   statsHeader: {
     backgroundColor: "#FFFFFF",
@@ -418,6 +404,7 @@ const styles = StyleSheet.create({
   },
   mapInfo: {
     marginTop: 10,
+    marginBottom: 130,
   },
   infoCard: {
     backgroundColor: "#FFFFFF",
