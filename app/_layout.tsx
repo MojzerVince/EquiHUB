@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DialogProvider } from "@/contexts/DialogContext";
 import { ThemeProvider as CustomThemeProvider } from "@/contexts/ThemeContext";
+import { TrackingProvider } from "@/contexts/TrackingContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
 export default function RootLayout() {
@@ -28,21 +29,30 @@ export default function RootLayout() {
     <AuthProvider>
       <CustomThemeProvider>
         <DialogProvider>
-          <ThemeProvider
-            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-          >
-            <ProtectedRoute>
-              <Stack>
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="login" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="register"
-                  options={{ headerShown: false }}
-                />
-              </Stack>
-            </ProtectedRoute>
-          </ThemeProvider>
+          <TrackingProvider>
+            <ThemeProvider
+              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+            >
+              <ProtectedRoute>
+                <Stack>
+                  <Stack.Screen name="index" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen name="login" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="register"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="sessions"
+                    options={{ headerShown: false }}
+                  />
+                </Stack>
+              </ProtectedRoute>
+            </ThemeProvider>
+          </TrackingProvider>
         </DialogProvider>
       </CustomThemeProvider>
     </AuthProvider>

@@ -1,7 +1,6 @@
 {
   "cli": {
-    "version": ">= 16.6.2",
-    "appVersionSource": "remote"
+    "version": ">= 16.6.2"
   },
   "build": {
     "development": {
@@ -15,10 +14,19 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./play-store-service-account.json",
+        "track": "internal"
+      }
+    }
   }
 }
