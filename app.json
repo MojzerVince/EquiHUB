@@ -15,7 +15,7 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access to track your riding routes even when the app is in the background."
       },
       "config": {
-        "googleMapsApiKey": "AIzaSyD0TBMGSaMFxm4oTr0jPmjE6ZAGdiB1mKg"
+        "googleMapsApiKey": "AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg"
       }
     },
     "android": {
@@ -36,7 +36,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyD0TBMGSaMFxm4oTr0jPmjE6ZAGdiB1mKg"
+          "apiKey": "AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg"
         }
       }
     },
