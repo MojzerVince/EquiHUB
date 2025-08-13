@@ -33,10 +33,66 @@ const MapScreen = () => {
   const [locationPermission, setLocationPermission] = useState<boolean | null>(
     null
   );
+  const [mapType, setMapType] = useState<"standard" | "satellite">("standard");
+  const [gpsStrength, setGpsStrength] = useState<number>(0); // 0-5 scale
 
   useEffect(() => {
     requestLocationPermission();
   }, []);
+
+  // GPS monitoring effect
+  useEffect(() => {
+    let gpsMonitoringInterval: ReturnType<typeof setInterval>;
+
+    const startGpsMonitoring = () => {
+      if (locationPermission) {
+        gpsMonitoringInterval = setInterval(async () => {
+          try {
+            const location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.High,
+            });
+
+            const { accuracy } = location.coords;
+
+            // Calculate GPS strength based on accuracy
+            const strength = calculateGpsStrength(accuracy);
+            setGpsStrength(strength);
+          } catch (error) {
+            console.log("GPS monitoring error:", error);
+            setGpsStrength(0);
+          }
+        }, 3000); // Update every 3 seconds
+      }
+    };
+
+    if (locationPermission && userLocation) {
+      startGpsMonitoring();
+    }
+
+    return () => {
+      if (gpsMonitoringInterval) {
+        clearInterval(gpsMonitoringInterval);
+      }
+    };
+  }, [locationPermission, userLocation]);
+
+  // Cleanup GPS monitoring when component unmounts
+  useEffect(() => {
+    return () => {
+      setGpsStrength(0);
+    };
+  }, []);
+
+  // Helper function to calculate GPS strength
+  const calculateGpsStrength = (accuracy: number | null): number => {
+    if (!accuracy) return 0;
+    if (accuracy <= 5) return 5;
+    if (accuracy <= 10) return 4;
+    if (accuracy <= 20) return 3;
+    if (accuracy <= 50) return 2;
+    if (accuracy <= 100) return 1;
+    return 0;
+  };
 
   const requestLocationPermission = async () => {
     try {
@@ -67,7 +123,12 @@ const MapScreen = () => {
         accuracy: Location.Accuracy.High,
       });
 
-      const { latitude, longitude } = location.coords;
+      const { latitude, longitude, accuracy } = location.coords;
+
+      // Calculate GPS strength based on accuracy (lower accuracy = better signal)
+      const strength = calculateGpsStrength(accuracy);
+      setGpsStrength(strength);
+
       const newRegion = {
         latitude,
         longitude,
@@ -79,6 +140,7 @@ const MapScreen = () => {
     } catch (error) {
       console.log("Error getting location:", error);
       showError("Unable to get your location");
+      setGpsStrength(0);
     } finally {
       setLoading(false);
     }
@@ -86,6 +148,49 @@ const MapScreen = () => {
 
   const onRegionChange = (newRegion: Region) => {
     setRegion(newRegion);
+  };
+
+  const toggleMapType = () => {
+    setMapType(mapType === "standard" ? "satellite" : "standard");
+  };
+
+  const centerToCurrentLocation = () => {
+    if (userLocation) {
+      const newRegion = {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setRegion(newRegion);
+    } else {
+      getCurrentLocation();
+    }
+  };
+
+  const renderGpsStrengthBar = () => {
+    const bars = [];
+    for (let i = 1; i <= 5; i++) {
+      bars.push(
+        <View
+          key={i}
+          style={[
+            styles.gpsBar,
+            {
+              backgroundColor:
+                i <= gpsStrength ? "#4CAF50" : "rgba(255,255,255,0.3)",
+              height: 4 + i * 2, // Progressive height
+            },
+          ]}
+        />
+      );
+    }
+    return (
+      <View style={styles.gpsContainer}>
+        <View style={styles.gpsStrengthBars}>{bars}</View>
+        <Text style={styles.gpsText}>GPS</Text>
+      </View>
+    );
   };
 
   if (loading && !userLocation) {
@@ -169,19 +274,6 @@ const MapScreen = () => {
           contentContainerStyle={styles.scrollContent}
         >
           <View style={styles.mapContainer}>
-            <View
-              style={[
-                styles.statsHeader,
-                { backgroundColor: currentTheme.colors.surface },
-              ]}
-            >
-              <Text
-                style={[styles.statsText, { color: currentTheme.colors.text }]}
-              >
-                📍 Explore equestrian routes nearby
-              </Text>
-            </View>
-
             {locationPermission === false && (
               <View style={styles.permissionContainer}>
                 <Text style={styles.permissionEmoji}>🔒</Text>
@@ -222,13 +314,48 @@ const MapScreen = () => {
             )}
 
             <View style={styles.mapViewContainer}>
+              {renderGpsStrengthBar()}
+
+              {/* Map control buttons */}
+              <View style={styles.mapControlsContainer}>
+                <TouchableOpacity
+                  style={styles.mapControlButton}
+                  onPress={toggleMapType}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.mapControlButtonText}>
+                    {mapType === "standard" ? "🛰️" : "🗺️"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.mapControlButton, { marginTop: 10 }]}
+                  onPress={centerToCurrentLocation}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.mapControlButtonText}>📍</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Coordinates display box */}
+              {userLocation && (
+                <View style={styles.coordinatesBox}>
+                  <Text style={styles.coordinatesBoxText}>
+                    {userLocation.latitude.toFixed(4)}°
+                  </Text>
+                  <Text style={styles.coordinatesBoxText}>
+                    {userLocation.longitude.toFixed(4)}°
+                  </Text>
+                </View>
+              )}
+
               <MapView
                 style={styles.map}
                 provider={PROVIDER_GOOGLE}
                 region={region}
                 onRegionChangeComplete={onRegionChange}
                 showsUserLocation={true}
-                showsMyLocationButton={true}
+                showsMyLocationButton={false}
                 followsUserLocation={false}
                 showsCompass={true}
                 showsScale={true}
@@ -236,7 +363,7 @@ const MapScreen = () => {
                 scrollEnabled={true}
                 pitchEnabled={true}
                 rotateEnabled={true}
-                mapType="standard"
+                mapType={mapType}
               >
                 {userLocation && (
                   <Marker
@@ -277,27 +404,6 @@ const MapScreen = () => {
                   your area. Use pinch to zoom and drag to navigate around the
                   map.
                 </Text>
-                {userLocation && (
-                  <View style={styles.coordinatesContainer}>
-                    <Text
-                      style={[
-                        styles.coordinatesLabel,
-                        { color: currentTheme.colors.textSecondary },
-                      ]}
-                    >
-                      Your coordinates:
-                    </Text>
-                    <Text
-                      style={[
-                        styles.coordinatesText,
-                        { color: currentTheme.colors.text },
-                      ]}
-                    >
-                      {userLocation.latitude.toFixed(6)},{" "}
-                      {userLocation.longitude.toFixed(6)}
-                    </Text>
-                  </View>
-                )}
               </View>
             </View>
           </View>
@@ -377,27 +483,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     marginTop: 5,
-  },
-  statsHeader: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    marginBottom: 10,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  statsText: {
-    fontSize: 16,
-    fontFamily: "Inder",
-    textAlign: "center",
-    fontWeight: "500",
   },
   mapViewContainer: {
     height: 400,
@@ -569,6 +654,86 @@ const styles = StyleSheet.create({
   historyButtonText: {
     fontSize: 20,
     color: "#FFFFFF",
+  },
+  gpsContainer: {
+    position: "absolute",
+    top: 10,
+    left: "50%",
+    marginLeft: -25,
+    zIndex: 10,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    borderRadius: 8,
+    padding: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  gpsStrengthBars: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginRight: 6,
+  },
+  gpsBar: {
+    width: 3,
+    marginHorizontal: 1,
+    borderRadius: 1,
+  },
+  gpsText: {
+    fontSize: 10,
+    color: "#FFFFFF",
+    fontFamily: "Inder",
+  },
+  mapControlsContainer: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  mapControlButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 25,
+    width: 50,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  mapControlButtonText: {
+    fontSize: 20,
+  },
+  coordinatesBox: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 100,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
+    zIndex: 15,
+  },
+  coordinatesBoxText: {
+    fontSize: 10,
+    fontFamily: "Inder",
+    color: "#333",
+    fontWeight: "500",
+    lineHeight: 12,
   },
 });
 
