@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
@@ -109,12 +110,7 @@ const SessionsScreen = () => {
   };
 
   const renderSession = ({ item }: { item: TrackingSession }) => (
-    <View
-      style={[
-        styles.sessionCard,
-        { backgroundColor: currentTheme.colors.background },
-      ]}
-    >
+    <View style={styles.sessionCard}>
       <View style={styles.sessionHeader}>
         <Text style={[styles.sessionName, { color: currentTheme.colors.text }]}>
           {item.name || `Ride ${new Date(item.startTime).toLocaleDateString()}`}
@@ -187,12 +183,7 @@ const SessionsScreen = () => {
     if (isProMember || restrictedSessions.length === 0) return null;
 
     return (
-      <View
-        style={[
-          styles.restrictedContainer,
-          { backgroundColor: currentTheme.colors.surface },
-        ]}
-      >
+      <View style={styles.restrictedContainer}>
         <Text
           style={[styles.restrictedTitle, { color: currentTheme.colors.text }]}
         >
@@ -221,35 +212,27 @@ const SessionsScreen = () => {
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: currentTheme.colors.primary },
-      ]}
-    >
-      <SafeAreaView
-        style={[
-          styles.safeArea,
-          { backgroundColor: currentTheme.colors.primary },
-        ]}
-      >
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
         <View style={styles.headerContainer}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => {
+              console.log("Back button pressed");
+              router.push("/(tabs)/map");
+            }}
+            activeOpacity={0.7}
           >
-            <Text style={styles.backButtonText}>‹</Text>
+            <Image
+              source={require("../assets/UI_resources/UI_white/arrow_white.png")}
+              style={styles.backButtonImage}
+            />
           </TouchableOpacity>
           <Text style={styles.header}>Ride History</Text>
         </View>
       </SafeAreaView>
 
-      <View
-        style={[
-          styles.content,
-          { backgroundColor: currentTheme.colors.surface },
-        ]}
-      >
+      <View style={styles.content}>
         {filteredSessions.length === 0 && restrictedSessions.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text
@@ -300,41 +283,54 @@ const SessionsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#335C67",
   },
   safeArea: {
-    paddingBottom: 0,
+    backgroundColor: "#335C67",
   },
   headerContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    alignItems: "center",
-    marginBottom: -45,
     flexDirection: "row",
     justifyContent: "center",
+    alignItems: "center",
     position: "relative",
+    marginBottom: -45,
+    paddingVertical: 10,
+    height: 60,
   },
   header: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFFFFF",
+    fontSize: 30,
     fontFamily: "Inder",
+    color: "#fff",
     textAlign: "center",
+    flex: 1,
+    fontWeight: "600",
   },
   content: {
+    backgroundColor: "#FFFFFF",
     flex: 1,
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    marginTop: 5,
     paddingTop: 50,
   },
   listContainer: {
     padding: 20,
   },
   sessionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
     padding: 20,
-    borderRadius: 15,
     marginBottom: 15,
-    elevation: 3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
     shadowRadius: 3.84,
+    elevation: 5,
   },
   sessionHeader: {
     flexDirection: "row",
@@ -344,8 +340,8 @@ const styles = StyleSheet.create({
   },
   sessionName: {
     fontSize: 18,
-    fontWeight: "bold",
     fontFamily: "Inder",
+    fontWeight: "600",
     flex: 1,
   },
   deleteButton: {
@@ -368,8 +364,8 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 16,
-    fontWeight: "bold",
     fontFamily: "Inder",
+    fontWeight: "600",
     marginBottom: 2,
   },
   statLabel: {
@@ -388,8 +384,8 @@ const styles = StyleSheet.create({
   },
   emptySubtext: {
     fontSize: 24,
-    fontWeight: "bold",
     fontFamily: "Inder",
+    fontWeight: "600",
     marginBottom: 10,
   },
   emptyDescription: {
@@ -398,19 +394,27 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   restrictedContainer: {
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#FFFFFF",
     marginHorizontal: 20,
     marginBottom: 20,
-    padding: 16,
+    padding: 20,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: "#E0E0E0",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   restrictedTitle: {
     fontSize: 18,
-    fontWeight: "bold",
     fontFamily: "Inder",
+    fontWeight: "600",
     marginBottom: 8,
   },
   restrictedText: {
@@ -427,19 +431,28 @@ const styles = StyleSheet.create({
   backButton: {
     position: "absolute",
     left: 20,
-    top: 0,
-    bottom: 0,
     justifyContent: "center",
     alignItems: "center",
     width: 40,
     height: 40,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
     borderRadius: 20,
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.5)",
   },
   backButtonText: {
-    fontSize: 24,
+    fontSize: 28,
     color: "#FFFFFF",
-    fontWeight: "bold",
+    fontWeight: "600",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  backButtonImage: {
+    width: 20,
+    height: 20,
+    tintColor: "#FFFFFF",
   },
 });
 
