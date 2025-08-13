@@ -12,11 +12,13 @@ import MapView, { Marker, Region, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useDialog } from "../../contexts/DialogContext";
+import { useRouter } from "expo-router";
 import * as Location from "expo-location";
 
 const MapScreen = () => {
   const { currentTheme } = useTheme();
   const { showError } = useDialog();
+  const router = useRouter();
   const [region, setRegion] = useState<Region>({
     latitude: 37.78825,
     longitude: -122.4324,
@@ -102,6 +104,12 @@ const MapScreen = () => {
         >
           <View style={styles.headerContainer}>
             <Text style={styles.header}>Map</Text>
+            <TouchableOpacity
+              style={styles.historyButton}
+              onPress={() => router.push("/sessions")}
+            >
+              <Text style={styles.historyButtonText}>📜</Text>
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
         <View
@@ -141,6 +149,12 @@ const MapScreen = () => {
       >
         <View style={styles.headerContainer}>
           <Text style={styles.header}>Map</Text>
+          <TouchableOpacity
+            style={styles.historyButton}
+            onPress={() => router.push("/sessions")}
+          >
+            <Text style={styles.historyButtonText}>📜</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
@@ -539,6 +553,22 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     fontWeight: "600",
     textAlign: "center",
+  },
+  historyButton: {
+    position: "absolute",
+    right: 20,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 40,
+    height: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 20,
+  },
+  historyButtonText: {
+    fontSize: 20,
+    color: "#FFFFFF",
   },
 });
 
