@@ -25,12 +25,6 @@ export const icons = {
       style={{ width: 48, height: 48 }}
     />
   ),
-  market: () => (
-    <Image
-      source={require("../assets/UI_resources/UI_white/shop_white.png")}
-      style={{ width: 48, height: 48 }}
-    />
-  ),
   profile: () => (
     <Image
       source={require("../assets/UI_resources/UI_white/user_white.png")}

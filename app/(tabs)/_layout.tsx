@@ -14,14 +14,13 @@ const TabLayout = () => {
       <Tabs.Screen name="coach" options={{ title: "Coach" }} />
       <Tabs.Screen name="map" options={{ title: "Map" }} />
       <Tabs.Screen name="index" options={{ title: "My Horses" }} />
-      <Tabs.Screen name="market" options={{ title: "Marketplace" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
-      <Tabs.Screen 
-        name="options" 
-        options={{ 
+      <Tabs.Screen
+        name="options"
+        options={{
           title: "Options",
-          href: null // Hide from tab bar but keep as route
-        }} 
+          href: null, // Hide from tab bar but keep as route
+        }}
       />
     </Tabs>
   );

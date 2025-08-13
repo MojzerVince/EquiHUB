@@ -1,15 +1,15 @@
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-    Dimensions,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 const WelcomeScreen = () => {
   const router = useRouter();
@@ -30,20 +30,15 @@ const WelcomeScreen = () => {
             <Text style={styles.featureIcon}>🐎</Text>
             <Text style={styles.featureText}>Manage Your Horses</Text>
           </View>
-          
+
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>🏆</Text>
             <Text style={styles.featureText}>Track Achievements</Text>
           </View>
-          
+
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>🌍</Text>
             <Text style={styles.featureText}>Connect with Riders</Text>
-          </View>
-          
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>🛒</Text>
-            <Text style={styles.featureText}>Equestrian Marketplace</Text>
           </View>
         </View>
 
@@ -60,7 +55,9 @@ const WelcomeScreen = () => {
             style={styles.secondaryButton}
             onPress={() => router.push("/login")}
           >
-            <Text style={styles.secondaryButtonText}>Already have an account? Sign In</Text>
+            <Text style={styles.secondaryButtonText}>
+              Already have an account? Sign In
+            </Text>
           </TouchableOpacity>
         </View>
 
