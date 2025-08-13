@@ -455,7 +455,7 @@ const MapScreen = () => {
                     { color: currentTheme.colors.text },
                   ]}
                 >
-                  🐎 Select Horse
+                  Select Horse
                 </Text>
                 <ScrollView
                   horizontal
@@ -572,7 +572,7 @@ const MapScreen = () => {
                     { color: currentTheme.colors.text },
                   ]}
                 >
-                  🏆 Training Type
+                  Training Type
                 </Text>
                 <View style={styles.trainingGrid}>
                   {trainingTypes.map((training) => (
@@ -649,7 +649,7 @@ const MapScreen = () => {
                     },
                   ]}
                 >
-                  🚀 Start Tracking
+                  Start Tracking
                 </Text>
               </TouchableOpacity>
             </View>
@@ -701,7 +701,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -45,
   },
   header: {
     fontSize: 30,
@@ -750,7 +749,6 @@ const styles = StyleSheet.create({
   },
   mapInfo: {
     marginTop: 10,
-    marginBottom: 130,
   },
   infoCard: {
     backgroundColor: "#FFFFFF",
@@ -766,18 +764,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontFamily: "Inder",
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-  infoDescription: {
-    fontSize: 14,
-    fontFamily: "Inder",
-    lineHeight: 20,
-    marginBottom: 15,
   },
   coordinatesContainer: {
     marginTop: 10,
@@ -988,13 +974,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   selectionContainer: {
-    marginBottom: 20,
+    marginBottom: 0,
   },
   selectionTitle: {
     fontSize: 18,
     fontFamily: "Inder",
     fontWeight: "600",
-    marginBottom: 12,
+    marginTop: 20,
   },
   horizontalScroll: {
     paddingVertical: 5,
@@ -1049,7 +1035,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   trainingIcon: {
-    fontSize: 24,
+    fontSize: 20,
     marginBottom: 6,
   },
   trainingName: {
@@ -1064,7 +1050,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 32,
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 25,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -1073,6 +1059,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 6,
+    marginBottom: -45,
   },
   startTrackingButtonText: {
     fontSize: 18,
