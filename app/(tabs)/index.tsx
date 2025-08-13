@@ -1551,18 +1551,6 @@ const MyHorsesScreen = () => {
           }
         >
           <View style={styles.horsesContainer}>
-            <View
-              style={[
-                styles.statsHeader,
-                { backgroundColor: currentTheme.colors.surface },
-              ]}
-            >
-              <Text
-                style={[styles.statsText, { color: currentTheme.colors.text }]}
-              >
-                You have {horses?.length || 0} horses
-              </Text>
-            </View>
             <TouchableOpacity
               style={[
                 styles.addHorseButton,
@@ -2342,7 +2330,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: 5,
-    paddingTop: 20,
+    paddingTop: 10,
   },
   scrollContainer: {
     flex: 1,
