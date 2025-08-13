@@ -12,12 +12,16 @@ import MapView, { Marker, Region, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useDialog } from "../../contexts/DialogContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "expo-router";
+import { HorseAPI } from "../../lib/horseAPI";
+import { Horse } from "../../lib/supabase";
 import * as Location from "expo-location";
 
 const MapScreen = () => {
   const { currentTheme } = useTheme();
   const { showError } = useDialog();
+  const { user } = useAuth();
   const router = useRouter();
   const [region, setRegion] = useState<Region>({
     latitude: 37.78825,
@@ -35,10 +39,34 @@ const MapScreen = () => {
   );
   const [mapType, setMapType] = useState<"standard" | "satellite">("standard");
   const [gpsStrength, setGpsStrength] = useState<number>(0); // 0-5 scale
+  const [selectedHorse, setSelectedHorse] = useState<string>("");
+  const [selectedTrainingType, setSelectedTrainingType] = useState<string>("");
+  const [userHorses, setUserHorses] = useState<Horse[]>([]);
+  const [horsesLoading, setHorsesLoading] = useState<boolean>(false);
 
   useEffect(() => {
     requestLocationPermission();
   }, []);
+
+  // Load user's horses
+  useEffect(() => {
+    const loadUserHorses = async () => {
+      if (user?.id) {
+        setHorsesLoading(true);
+        try {
+          const horses = await HorseAPI.getHorses(user.id);
+          setUserHorses(horses || []);
+        } catch (error) {
+          console.error("Error loading user horses:", error);
+          showError("Failed to load your horses");
+        } finally {
+          setHorsesLoading(false);
+        }
+      }
+    };
+
+    loadUserHorses();
+  }, [user]);
 
   // GPS monitoring effect
   useEffect(() => {
@@ -82,6 +110,16 @@ const MapScreen = () => {
       setGpsStrength(0);
     };
   }, []);
+
+  // Sample data - these could come from API or context in real app
+  const trainingTypes = [
+    { id: "dressage", name: "Dressage", icon: "🎭" },
+    { id: "jumping", name: "Show Jumping", icon: "🏇" },
+    { id: "trail", name: "Trail Riding", icon: "🌲" },
+    { id: "endurance", name: "Endurance", icon: "⚡" },
+    { id: "western", name: "Western", icon: "🤠" },
+    { id: "leisure", name: "Leisure Ride", icon: "🚶" },
+  ];
 
   // Helper function to calculate GPS strength
   const calculateGpsStrength = (accuracy: number | null): number => {
@@ -190,6 +228,38 @@ const MapScreen = () => {
         <View style={styles.gpsStrengthBars}>{bars}</View>
         <Text style={styles.gpsText}>GPS</Text>
       </View>
+    );
+  };
+
+  const startTracking = () => {
+    if (horsesLoading) {
+      showError("Please wait for horses to load");
+      return;
+    }
+    if (userHorses.length === 0) {
+      showError("No horses available. Please add horses in your profile first");
+      return;
+    }
+    if (!selectedHorse) {
+      showError("Please select a horse before starting tracking");
+      return;
+    }
+    if (!selectedTrainingType) {
+      showError("Please select a training type before starting tracking");
+      return;
+    }
+    if (!userLocation) {
+      showError("Location not available. Please wait for GPS signal");
+      return;
+    }
+
+    // Here you would implement the actual tracking logic
+    Alert.alert(
+      "Start Tracking",
+      `Starting ${
+        trainingTypes.find((t) => t.id === selectedTrainingType)?.name
+      } session with ${userHorses.find((h) => h.id === selectedHorse)?.name}`,
+      [{ text: "OK" }]
     );
   };
 
@@ -376,35 +446,212 @@ const MapScreen = () => {
               </MapView>
             </View>
 
-            <View style={styles.mapInfo}>
-              <View
-                style={[
-                  styles.infoCard,
-                  {
-                    backgroundColor: currentTheme.colors.background,
-                    borderColor: currentTheme.colors.border,
-                  },
-                ]}
-              >
+            <View style={styles.trackingControls}>
+              {/* Horse Selection */}
+              <View style={styles.selectionContainer}>
                 <Text
                   style={[
-                    styles.infoTitle,
+                    styles.selectionTitle,
                     { color: currentTheme.colors.text },
                   ]}
                 >
-                  🗺️ Interactive Map
+                  🐎 Select Horse
                 </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.horizontalScroll}
+                >
+                  {horsesLoading ? (
+                    <View
+                      style={[
+                        styles.selectionCard,
+                        {
+                          backgroundColor: currentTheme.colors.background,
+                          borderColor: currentTheme.colors.border,
+                        },
+                      ]}
+                    >
+                      <ActivityIndicator
+                        size="small"
+                        color={currentTheme.colors.primary}
+                      />
+                      <Text
+                        style={[
+                          styles.selectionCardSubtitle,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Loading horses...
+                      </Text>
+                    </View>
+                  ) : userHorses.length === 0 ? (
+                    <View
+                      style={[
+                        styles.selectionCard,
+                        {
+                          backgroundColor: currentTheme.colors.background,
+                          borderColor: currentTheme.colors.border,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.selectionCardTitle,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        No horses found
+                      </Text>
+                      <Text
+                        style={[
+                          styles.selectionCardSubtitle,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Add horses in your profile
+                      </Text>
+                    </View>
+                  ) : (
+                    userHorses.map((horse) => (
+                      <TouchableOpacity
+                        key={horse.id}
+                        style={[
+                          styles.selectionCard,
+                          {
+                            backgroundColor:
+                              selectedHorse === horse.id
+                                ? currentTheme.colors.primary
+                                : currentTheme.colors.background,
+                            borderColor:
+                              selectedHorse === horse.id
+                                ? currentTheme.colors.primary
+                                : currentTheme.colors.border,
+                          },
+                        ]}
+                        onPress={() => setSelectedHorse(horse.id)}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.selectionCardTitle,
+                            {
+                              color:
+                                selectedHorse === horse.id
+                                  ? "#FFFFFF"
+                                  : currentTheme.colors.text,
+                            },
+                          ]}
+                        >
+                          {horse.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.selectionCardSubtitle,
+                            {
+                              color:
+                                selectedHorse === horse.id
+                                  ? "rgba(255,255,255,0.8)"
+                                  : currentTheme.colors.textSecondary,
+                            },
+                          ]}
+                        >
+                          {horse.breed}
+                        </Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </ScrollView>
+              </View>
+
+              {/* Training Type Selection */}
+              <View style={styles.selectionContainer}>
                 <Text
                   style={[
-                    styles.infoDescription,
-                    { color: currentTheme.colors.textSecondary },
+                    styles.selectionTitle,
+                    { color: currentTheme.colors.text },
                   ]}
                 >
-                  Explore equestrian facilities, riding trails, and events in
-                  your area. Use pinch to zoom and drag to navigate around the
-                  map.
+                  🏆 Training Type
                 </Text>
+                <View style={styles.trainingGrid}>
+                  {trainingTypes.map((training) => (
+                    <TouchableOpacity
+                      key={training.id}
+                      style={[
+                        styles.trainingCard,
+                        {
+                          backgroundColor:
+                            selectedTrainingType === training.id
+                              ? currentTheme.colors.primary
+                              : currentTheme.colors.background,
+                          borderColor:
+                            selectedTrainingType === training.id
+                              ? currentTheme.colors.primary
+                              : currentTheme.colors.border,
+                        },
+                      ]}
+                      onPress={() => setSelectedTrainingType(training.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.trainingIcon}>{training.icon}</Text>
+                      <Text
+                        style={[
+                          styles.trainingName,
+                          {
+                            color:
+                              selectedTrainingType === training.id
+                                ? "#FFFFFF"
+                                : currentTheme.colors.text,
+                          },
+                        ]}
+                      >
+                        {training.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
+
+              {/* Start Tracking Button */}
+              <TouchableOpacity
+                style={[
+                  styles.startTrackingButton,
+                  {
+                    backgroundColor:
+                      selectedHorse &&
+                      selectedTrainingType &&
+                      userLocation &&
+                      !horsesLoading &&
+                      userHorses.length > 0
+                        ? currentTheme.colors.primary
+                        : currentTheme.colors.border,
+                  },
+                ]}
+                onPress={startTracking}
+                disabled={
+                  !selectedHorse ||
+                  !selectedTrainingType ||
+                  !userLocation ||
+                  horsesLoading ||
+                  userHorses.length === 0
+                }
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.startTrackingButtonText,
+                    {
+                      color:
+                        selectedHorse && selectedTrainingType && userLocation
+                          ? "#FFFFFF"
+                          : currentTheme.colors.textSecondary,
+                    },
+                  ]}
+                >
+                  🚀 Start Tracking
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -734,6 +981,103 @@ const styles = StyleSheet.create({
     color: "#333",
     fontWeight: "500",
     lineHeight: 12,
+  },
+  trackingControls: {
+    marginTop: 10,
+    marginBottom: 130,
+    paddingHorizontal: 20,
+  },
+  selectionContainer: {
+    marginBottom: 20,
+  },
+  selectionTitle: {
+    fontSize: 18,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  horizontalScroll: {
+    paddingVertical: 5,
+  },
+  selectionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 12,
+    minWidth: 120,
+    alignItems: "center",
+    borderWidth: 2,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 3,
+  },
+  selectionCardTitle: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  selectionCardSubtitle: {
+    fontSize: 12,
+    fontFamily: "Inder",
+  },
+  trainingGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  trainingCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    width: "48%",
+    alignItems: "center",
+    borderWidth: 2,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 3,
+  },
+  trainingIcon: {
+    fontSize: 24,
+    marginBottom: 6,
+  },
+  trainingName: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    fontWeight: "500",
+    textAlign: "center",
+  },
+  startTrackingButton: {
+    backgroundColor: "#335C67",
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: "center",
+    marginTop: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 6,
+  },
+  startTrackingButtonText: {
+    fontSize: 18,
+    fontFamily: "Inder",
+    fontWeight: "600",
   },
 });
 
