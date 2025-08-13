@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  Alert, 
-  ActivityIndicator, 
-  TouchableOpacity, 
+import {
+  StyleSheet,
+  Text,
+  View,
+  Alert,
+  ActivityIndicator,
+  TouchableOpacity,
   ScrollView,
-  RefreshControl 
+  RefreshControl,
 } from "react-native";
 import MapView, { Marker, Region, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,7 +30,9 @@ const MapScreen = () => {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
+  const [locationPermission, setLocationPermission] = useState<boolean | null>(
+    null
+  );
 
   useEffect(() => {
     requestLocationPermission();
@@ -42,7 +44,9 @@ const MapScreen = () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         setLocationPermission(false);
-        showError("Location permission is required to show your position on the map.");
+        showError(
+          "Location permission is required to show your position on the map."
+        );
         return;
       }
       setLocationPermission(true);
@@ -123,7 +127,9 @@ const MapScreen = () => {
               size="large"
               color={currentTheme.colors.primary}
             />
-            <Text style={[styles.loadingText, { color: currentTheme.colors.text }]}>
+            <Text
+              style={[styles.loadingText, { color: currentTheme.colors.text }]}
+            >
               Getting your location...
             </Text>
           </View>
@@ -194,7 +200,8 @@ const MapScreen = () => {
                     { color: currentTheme.colors.textSecondary },
                   ]}
                 >
-                  Allow location access to see your position and nearby equestrian facilities.
+                  Allow location access to see your position and nearby
+                  equestrian facilities.
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -206,7 +213,9 @@ const MapScreen = () => {
                   ]}
                   onPress={requestLocationPermission}
                 >
-                  <Text style={[styles.permissionButtonText, { color: "#FFFFFF" }]}>
+                  <Text
+                    style={[styles.permissionButtonText, { color: "#FFFFFF" }]}
+                  >
                     Grant Permission
                   </Text>
                 </TouchableOpacity>
@@ -265,8 +274,9 @@ const MapScreen = () => {
                     { color: currentTheme.colors.textSecondary },
                   ]}
                 >
-                  Explore equestrian facilities, riding trails, and events in your area. 
-                  Use pinch to zoom and drag to navigate around the map.
+                  Explore equestrian facilities, riding trails, and events in
+                  your area. Use pinch to zoom and drag to navigate around the
+                  map.
                 </Text>
                 {userLocation && (
                   <View style={styles.coordinatesContainer}>
@@ -284,7 +294,8 @@ const MapScreen = () => {
                         { color: currentTheme.colors.text },
                       ]}
                     >
-                      {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
+                      {userLocation.latitude.toFixed(6)},{" "}
+                      {userLocation.longitude.toFixed(6)}
                     </Text>
                   </View>
                 )}
