@@ -1565,7 +1565,7 @@ const MyHorsesScreen = () => {
               <Text style={[styles.addHorseButtonText, { color: "#FFFFFF" }]}>
                 Add New Horse
               </Text>
-            </TouchableOpacity>{" "}
+            </TouchableOpacity>
             {(horses || []).map((horse, index) => (
               <View
                 style={[
