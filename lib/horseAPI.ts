@@ -8,8 +8,8 @@ export class HorseAPI {
       console.log(`🔥 HorseAPI: Getting horses for user: ${userId}`);
       
       // Use direct REST API (Supabase client has compatibility issues)
-      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
-      const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
+      const supabaseUrl = 'API_KEY_HERE';
+      const apiKey = 'API_KEY_HERE';
       
       // Remove timestamp parameter that was causing parsing error
       const apiUrl = `${supabaseUrl}/rest/v1/horses?user_id=eq.${userId}&order=created_at.desc`;
@@ -65,8 +65,8 @@ export class HorseAPI {
       }
 
       // Use direct REST API (Supabase client has compatibility issues)
-      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
-      const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
+      const supabaseUrl = 'API_KEY_HERE';
+      const apiKey = 'API_KEY_HERE';
       
       const newHorse = {
         user_id: userId,
@@ -136,8 +136,8 @@ export class HorseAPI {
       updateData.updated_at = new Date().toISOString();
 
       // Use direct REST API (Supabase client has compatibility issues)
-      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
-      const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
+      const supabaseUrl = 'API_KEY_HERE';
+      const apiKey = 'API_KEY_HERE';
 
       const response = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${horseId}&user_id=eq.${userId}`, {
         method: 'PATCH',
@@ -171,8 +171,8 @@ export class HorseAPI {
       console.log(`🔥 HorseAPI: Starting delete for horse ID: ${horseId}, user ID: ${userId}`);
       
       // Use direct REST API to get horse data first
-      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
-      const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
+      const supabaseUrl = 'API_KEY_HERE';
+      const apiKey = 'API_KEY_HERE';
 
       // Try to get horse data to delete image, but don't let this block the deletion
       try {
