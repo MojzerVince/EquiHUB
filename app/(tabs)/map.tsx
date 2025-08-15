@@ -155,6 +155,10 @@ const MapScreen = () => {
     { id: "endurance", name: "Endurance" },
     { id: "western", name: "Western" },
     { id: "leisure", name: "Leisure Ride" },
+    { id: "groundwork", name: "Groundwork" },
+    { id: "liberty", name: "Liberty Training" },
+    { id: "endurance_riding", name: "Endurance Riding" },
+    { id: "show_jumping", name: "Show Jumping" },
   ];
 
   // Helper function to calculate GPS strength
