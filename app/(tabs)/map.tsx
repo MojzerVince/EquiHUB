@@ -1567,8 +1567,9 @@ const styles = StyleSheet.create({
   },
   trackingControls: {
     marginTop: 0,
-    marginBottom: 130,
+    marginBottom: 30,
     paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   selectionContainer: {
     marginBottom: 0,
@@ -1624,7 +1625,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 6,
-    marginBottom: -45,
+    marginBottom: 0,
   },
   startTrackingButtonText: {
     fontSize: 18,
@@ -1731,7 +1732,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
-    marginTop: 15,
+    marginTop: 25,
     borderWidth: 2,
     borderColor: "#E0E0E0",
     shadowColor: "#000",
