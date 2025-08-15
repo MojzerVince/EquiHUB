@@ -30,6 +30,7 @@
         "INTERNET",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "WAKE_LOCK"
@@ -47,6 +48,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "This app needs location access to track your riding routes and show your position on the map.",
+          "locationAlwaysPermission": "This app needs location access to track your riding routes even when the app is in the background.",
+          "locationWhenInUsePermission": "This app needs location access to track your riding routes and show your position on the map."
+        }
+      ],
       [
         "expo-splash-screen",
         {

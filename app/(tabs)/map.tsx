@@ -397,6 +397,13 @@ const MapScreen = () => {
 
   // Start GPS tracking
   const startTracking = async () => {
+    console.log("🚀 Starting tracking function called");
+    console.log("Horses loading:", horsesLoading);
+    console.log("User horses:", userHorses.length);
+    console.log("Selected horse:", selectedHorse);
+    console.log("Selected training type:", selectedTrainingType);
+    console.log("User location:", userLocation);
+    
     if (horsesLoading) {
       showError("Please wait for horses to load");
       return;
@@ -419,12 +426,10 @@ const MapScreen = () => {
     }
 
     try {
-      // Request background location permission
-      const { status } = await Location.requestBackgroundPermissionsAsync();
-      if (status !== "granted") {
-        showError("Background location permission is required for tracking");
-        return;
-      }
+      // For now, let's skip background permissions and just use foreground tracking
+      console.log("🔐 Using foreground location tracking...");
+      
+      console.log("✅ Starting session creation...");
 
       const selectedHorseData = userHorses.find((h) => h.id === selectedHorse);
       const selectedTrainingData = trainingTypes.find(
@@ -452,13 +457,21 @@ const MapScreen = () => {
       setTrackingPoints([]);
 
       // Start location tracking
+      console.log("📍 Starting location tracking subscription...");
       const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
-          timeInterval: 5000, // Update every 5 seconds
-          distanceInterval: 10, // Update every 10 meters
+          timeInterval: 1000, // Update every 1 second for testing
+          distanceInterval: 1, // Update every 1 meter for testing
         },
         (location) => {
+          console.log("📍 New GPS location received:", {
+            lat: location.coords.latitude,
+            lng: location.coords.longitude,
+            accuracy: location.coords.accuracy,
+            timestamp: new Date().toISOString()
+          });
+          
           const point: TrackingPoint = {
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
@@ -467,7 +480,11 @@ const MapScreen = () => {
             speed: location.coords.speed || undefined,
           };
 
-          setTrackingPoints((prev) => [...prev, point]);
+          setTrackingPoints((prev) => {
+            const newPoints = [...prev, point];
+            console.log("📊 Total tracking points:", newPoints.length);
+            return newPoints;
+          });
 
           // Update current location
           setUserLocation({
@@ -480,6 +497,8 @@ const MapScreen = () => {
           setGpsStrength(strength);
         }
       );
+
+      console.log("✅ Location tracking subscription created successfully");
 
       locationSubscriptionRef.current = subscription;
     } catch (error) {
