@@ -392,6 +392,7 @@ const styles = StyleSheet.create({
     position: "relative",
     paddingHorizontal: 20,
     paddingVertical: 10,
+    marginBottom: -45,
   },
   backButton: {
     position: "absolute",
@@ -482,6 +483,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inder",
     textAlign: "center",
+    marginTop: -15,
   },
   listContainer: {
     paddingHorizontal: 20,
