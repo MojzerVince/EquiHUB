@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
+  Modal,
 } from "react-native";
 import MapView, { Marker, Region, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,6 +17,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "expo-router";
 import { HorseAPI } from "../../lib/horseAPI";
 import { Horse } from "../../lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 
 const MapScreen = () => {
@@ -43,6 +45,11 @@ const MapScreen = () => {
   const [selectedTrainingType, setSelectedTrainingType] = useState<string>("");
   const [userHorses, setUserHorses] = useState<Horse[]>([]);
   const [horsesLoading, setHorsesLoading] = useState<boolean>(false);
+  const [favoriteTrainingTypes, setFavoriteTrainingTypes] = useState<string[]>(
+    []
+  );
+  const [trainingDropdownVisible, setTrainingDropdownVisible] =
+    useState<boolean>(false);
 
   useEffect(() => {
     requestLocationPermission();
@@ -67,6 +74,35 @@ const MapScreen = () => {
 
     loadUserHorses();
   }, [user]);
+
+  // Load favorite training types from storage
+  useEffect(() => {
+    const loadFavorites = async () => {
+      try {
+        const savedFavorites = await AsyncStorage.getItem(
+          "favorite_training_types"
+        );
+        if (savedFavorites) {
+          setFavoriteTrainingTypes(JSON.parse(savedFavorites));
+        }
+      } catch (error) {
+        console.error("Error loading favorite training types:", error);
+      }
+    };
+    loadFavorites();
+  }, []);
+
+  // Save favorite training types to storage
+  const saveFavoritesToStorage = async (favorites: string[]) => {
+    try {
+      await AsyncStorage.setItem(
+        "favorite_training_types",
+        JSON.stringify(favorites)
+      );
+    } catch (error) {
+      console.error("Error saving favorite training types:", error);
+    }
+  };
 
   // GPS monitoring effect
   useEffect(() => {
@@ -261,6 +297,32 @@ const MapScreen = () => {
       } session with ${userHorses.find((h) => h.id === selectedHorse)?.name}`,
       [{ text: "OK" }]
     );
+  };
+
+  // Toggle favorite training type
+  const toggleFavoriteTraining = (trainingId: string) => {
+    setFavoriteTrainingTypes((prev) => {
+      const newFavorites = prev.includes(trainingId)
+        ? prev.filter((id) => id !== trainingId)
+        : [...prev, trainingId];
+
+      // Save to storage
+      saveFavoritesToStorage(newFavorites);
+
+      return newFavorites;
+    });
+  };
+
+  // Sort training types with favorites first
+  const getSortedTrainingTypes = () => {
+    return [...trainingTypes].sort((a, b) => {
+      const aIsFavorite = favoriteTrainingTypes.includes(a.id);
+      const bIsFavorite = favoriteTrainingTypes.includes(b.id);
+
+      if (aIsFavorite && !bIsFavorite) return -1;
+      if (!aIsFavorite && bIsFavorite) return 1;
+      return 0;
+    });
   };
 
   if (loading && !userLocation) {
@@ -574,43 +636,196 @@ const MapScreen = () => {
                 >
                   Training Type
                 </Text>
-                <View style={styles.trainingGrid}>
-                  {trainingTypes.map((training) => (
-                    <TouchableOpacity
-                      key={training.id}
-                      style={[
-                        styles.trainingCard,
-                        {
-                          backgroundColor:
-                            selectedTrainingType === training.id
-                              ? currentTheme.colors.primary
-                              : currentTheme.colors.background,
-                          borderColor:
-                            selectedTrainingType === training.id
-                              ? currentTheme.colors.primary
-                              : currentTheme.colors.border,
-                        },
-                      ]}
-                      onPress={() => setSelectedTrainingType(training.id)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.trainingIcon}>{training.icon}</Text>
+
+                {/* Training Dropdown */}
+                <TouchableOpacity
+                  style={[
+                    styles.trainingDropdown,
+                    {
+                      backgroundColor: currentTheme.colors.background,
+                      borderColor: currentTheme.colors.border,
+                    },
+                  ]}
+                  onPress={() =>
+                    setTrainingDropdownVisible(!trainingDropdownVisible)
+                  }
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.trainingDropdownContent}>
+                    {selectedTrainingType ? (
+                      <View style={styles.selectedTrainingContent}>
+                        <Text style={styles.selectedTrainingIcon}>
+                          {
+                            trainingTypes.find(
+                              (t) => t.id === selectedTrainingType
+                            )?.icon
+                          }
+                        </Text>
+                        <Text
+                          style={[
+                            styles.selectedTrainingText,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          {
+                            trainingTypes.find(
+                              (t) => t.id === selectedTrainingType
+                            )?.name
+                          }
+                        </Text>
+                      </View>
+                    ) : (
                       <Text
                         style={[
-                          styles.trainingName,
-                          {
-                            color:
-                              selectedTrainingType === training.id
-                                ? "#FFFFFF"
-                                : currentTheme.colors.text,
-                          },
+                          styles.placeholderText,
+                          { color: currentTheme.colors.textSecondary },
                         ]}
                       >
-                        {training.name}
+                        Select training type
                       </Text>
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.dropdownArrow,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    {trainingDropdownVisible ? "▲" : "▼"}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Training Dropdown List */}
+                {trainingDropdownVisible && (
+                  <Modal
+                    transparent={true}
+                    visible={trainingDropdownVisible}
+                    animationType="fade"
+                    onRequestClose={() => setTrainingDropdownVisible(false)}
+                  >
+                    <TouchableOpacity
+                      style={{
+                        flex: 1,
+                        backgroundColor: "rgba(0, 0, 0, 0.3)",
+                      }}
+                      onPress={() => setTrainingDropdownVisible(false)}
+                      activeOpacity={1}
+                    >
+                      <View
+                        style={{
+                          position: "absolute",
+                          top: 400, // Adjust this value based on dropdown position
+                          left: 20,
+                          right: 20,
+                        }}
+                      >
+                        <View
+                          style={[
+                            styles.trainingDropdownList,
+                            {
+                              backgroundColor: currentTheme.colors.background,
+                              borderColor: currentTheme.colors.border,
+                            },
+                          ]}
+                        >
+                          <ScrollView
+                            style={{ maxHeight: 250 }}
+                            showsVerticalScrollIndicator={false}
+                          >
+                            {getSortedTrainingTypes().map((training, index) => {
+                              const isFirstNonFavorite =
+                                favoriteTrainingTypes.length > 0 &&
+                                index === favoriteTrainingTypes.length &&
+                                !favoriteTrainingTypes.includes(training.id);
+
+                              return (
+                                <View key={training.id}>
+                                  {isFirstNonFavorite && (
+                                    <View style={styles.favoritesSeparator}>
+                                      <Text
+                                        style={[
+                                          styles.separatorText,
+                                          {
+                                            color:
+                                              currentTheme.colors.textSecondary,
+                                          },
+                                        ]}
+                                      >
+                                        Other Training Types
+                                      </Text>
+                                    </View>
+                                  )}
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.trainingDropdownItem,
+                                      {
+                                        backgroundColor:
+                                          selectedTrainingType === training.id
+                                            ? currentTheme.colors.primary + "20"
+                                            : "transparent",
+                                      },
+                                    ]}
+                                    onPress={() => {
+                                      setSelectedTrainingType(training.id);
+                                      setTrainingDropdownVisible(false);
+                                    }}
+                                    activeOpacity={0.7}
+                                  >
+                                    <View style={styles.trainingItemContent}>
+                                      <Text style={styles.trainingItemIcon}>
+                                        {training.icon}
+                                      </Text>
+                                      <Text
+                                        style={[
+                                          styles.trainingItemText,
+                                          {
+                                            color:
+                                              selectedTrainingType ===
+                                              training.id
+                                                ? currentTheme.colors.primary
+                                                : currentTheme.colors.text,
+                                            fontWeight:
+                                              selectedTrainingType ===
+                                              training.id
+                                                ? "600"
+                                                : "normal",
+                                          },
+                                        ]}
+                                      >
+                                        {training.name}
+                                      </Text>
+                                    </View>
+                                    <TouchableOpacity
+                                      style={styles.favoriteButton}
+                                      onPress={(e) => {
+                                        e.stopPropagation();
+                                        toggleFavoriteTraining(training.id);
+                                      }}
+                                      hitSlop={{
+                                        top: 10,
+                                        bottom: 10,
+                                        left: 10,
+                                        right: 10,
+                                      }}
+                                    >
+                                      <Text style={styles.favoriteIcon}>
+                                        {favoriteTrainingTypes.includes(
+                                          training.id
+                                        )
+                                          ? "★"
+                                          : "☆"}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  </TouchableOpacity>
+                                </View>
+                              );
+                            })}
+                          </ScrollView>
+                        </View>
+                      </View>
                     </TouchableOpacity>
-                  ))}
-                </View>
+                  </Modal>
+                )}
               </View>
 
               {/* Start Tracking Button */}
@@ -734,7 +949,7 @@ const styles = StyleSheet.create({
     height: 400,
     borderRadius: 12,
     overflow: "hidden",
-    marginBottom: 20,
+    marginBottom: 0,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -969,7 +1184,7 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
   trackingControls: {
-    marginTop: 10,
+    marginTop: 0,
     marginBottom: 130,
     paddingHorizontal: 20,
   },
@@ -980,7 +1195,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "Inder",
     fontWeight: "600",
-    marginTop: 20,
+    marginTop: 10,
   },
   horizontalScroll: {
     paddingVertical: 5,
@@ -1012,38 +1227,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inder",
   },
-  trainingGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  trainingCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    width: "48%",
-    alignItems: "center",
-    borderWidth: 2,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 3,
-  },
-  trainingIcon: {
-    fontSize: 20,
-    marginBottom: 6,
-  },
-  trainingName: {
-    fontSize: 12,
-    fontFamily: "Inder",
-    fontWeight: "500",
-    textAlign: "center",
-  },
   startTrackingButton: {
     backgroundColor: "#335C67",
     borderRadius: 12,
@@ -1065,6 +1248,110 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "Inder",
     fontWeight: "600",
+  },
+  trainingDropdown: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 8,
+    borderWidth: 2,
+    borderColor: "#E0E0E0",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 3,
+  },
+  trainingDropdownContent: {
+    flex: 1,
+  },
+  selectedTrainingContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  selectedTrainingIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  selectedTrainingText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "500",
+  },
+  placeholderText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontStyle: "italic",
+  },
+  dropdownArrow: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  trainingDropdownList: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    marginTop: 5,
+    borderWidth: 2,
+    borderColor: "#E0E0E0",
+    maxHeight: 250,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  trainingDropdownItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  trainingItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  trainingItemIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+  trainingItemText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    flex: 1,
+  },
+  favoriteButton: {
+    padding: 5,
+    marginLeft: 10,
+  },
+  favoriteIcon: {
+    fontSize: 20,
+    color: "#FFD700",
+  },
+  favoritesSeparator: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+    backgroundColor: "#F8F8F8",
+  },
+  separatorText: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    fontWeight: "500",
+    textTransform: "uppercase",
   },
 });
 
