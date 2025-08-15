@@ -80,6 +80,7 @@ const MapScreen = () => {
   const [currentSession, setCurrentSession] = useState<TrainingSession | null>(null);
   const [trackingPoints, setTrackingPoints] = useState<TrackingPoint[]>([]);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState<number>(Date.now());
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
 
@@ -171,6 +172,23 @@ const MapScreen = () => {
       }
     };
   }, [locationPermission, userLocation]);
+
+  // Real-time timer update for tracking
+  useEffect(() => {
+    let timerInterval: ReturnType<typeof setInterval>;
+    
+    if (isTracking && sessionStartTime) {
+      timerInterval = setInterval(() => {
+        setCurrentTime(Date.now());
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+    };
+  }, [isTracking, sessionStartTime]);
 
   // Cleanup GPS monitoring when component unmounts
   useEffect(() => {
@@ -505,6 +523,9 @@ const MapScreen = () => {
       // Save session to storage
       await saveSessionToStorage(completedSession);
 
+      // Save current session for summary page
+      await AsyncStorage.setItem('current_session_summary', JSON.stringify(completedSession));
+
       // Reset tracking state
       setIsTracking(false);
       setCurrentSession(null);
@@ -517,11 +538,11 @@ const MapScreen = () => {
         `Training session completed!\n\nDuration: ${Math.floor(duration / 60)}m ${duration % 60}s\nDistance: ${(totalDistance / 1000).toFixed(2)} km\nAverage Speed: ${(averageSpeed * 3.6).toFixed(1)} km/h`,
         [
           {
-            text: "View Sessions",
-            onPress: () => router.push("/sessions")
+            text: "View Summary",
+            onPress: () => router.push("/session-summary")
           },
           {
-            text: "OK"
+            text: "Back to Map"
           }
         ]
       );
@@ -767,21 +788,22 @@ const MapScreen = () => {
             </View>
 
             <View style={styles.trackingControls}>
-              {/* Horse Selection */}
-              <View style={styles.selectionContainer}>
-                <Text
-                  style={[
-                    styles.selectionTitle,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Select Horse
-                </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.horizontalScroll}
-                >
+              {/* Horse Selection - Hidden during tracking */}
+              {!isTracking && (
+                <View style={styles.selectionContainer}>
+                  <Text
+                    style={[
+                      styles.selectionTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Select Horse
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.horizontalScroll}
+                  >
                   {horsesLoading ? (
                     <View
                       style={[
@@ -883,8 +905,10 @@ const MapScreen = () => {
                   )}
                 </ScrollView>
               </View>
+              )}
 
-              {/* Training Type Selection */}
+              {/* Training Type Selection - Hidden during tracking */}
+              {!isTracking && (
               <View style={styles.selectionContainer}>
                 <Text
                   style={[
@@ -1075,6 +1099,7 @@ const MapScreen = () => {
                   </Modal>
                 )}
               </View>
+              )}
 
               {/* Start/Stop Tracking Button */}
               <TouchableOpacity
@@ -1122,32 +1147,38 @@ const MapScreen = () => {
 
               {/* Tracking Status Display */}
               {isTracking && sessionStartTime && (
-                <View style={styles.trackingStatusContainer}>
-                  <View style={styles.trackingStatusRow}>
-                    <Text style={[styles.trackingStatusLabel, { color: currentTheme.colors.text }]}>
-                      🔴 RECORDING
-                    </Text>
-                    <Text style={[styles.trackingStatusValue, { color: currentTheme.colors.primary }]}>
-                      {Math.floor((Date.now() - sessionStartTime) / 60000)}:{
-                        String(Math.floor(((Date.now() - sessionStartTime) % 60000) / 1000)).padStart(2, '0')
+                <View style={[styles.trackingStatusContainer, { backgroundColor: currentTheme.colors.surface }]}>
+                  <View style={styles.trackingStatusHeader}>
+                    <View style={styles.recordingIndicator}>
+                      <View style={styles.recordingDot} />
+                      <Text style={[styles.recordingText, { color: "#DC3545" }]}>
+                        RECORDING
+                      </Text>
+                    </View>
+                    <Text style={[styles.trackingTimer, { color: currentTheme.colors.primary }]}>
+                      {Math.floor((currentTime - sessionStartTime) / 60000)}:{
+                        String(Math.floor(((currentTime - sessionStartTime) % 60000) / 1000)).padStart(2, '0')
                       }
                     </Text>
                   </View>
-                  <View style={styles.trackingStatusRow}>
-                    <Text style={[styles.trackingStatusLabel, { color: currentTheme.colors.textSecondary }]}>
-                      Distance:
-                    </Text>
-                    <Text style={[styles.trackingStatusValue, { color: currentTheme.colors.text }]}>
-                      {(calculateTotalDistance(trackingPoints) / 1000).toFixed(2)} km
-                    </Text>
-                  </View>
-                  <View style={styles.trackingStatusRow}>
-                    <Text style={[styles.trackingStatusLabel, { color: currentTheme.colors.textSecondary }]}>
-                      Points:
-                    </Text>
-                    <Text style={[styles.trackingStatusValue, { color: currentTheme.colors.text }]}>
-                      {trackingPoints.length}
-                    </Text>
+                  
+                  <View style={styles.trackingStats}>
+                    <View style={styles.trackingStatItem}>
+                      <Text style={[styles.trackingStatLabel, { color: currentTheme.colors.textSecondary }]}>
+                        Distance
+                      </Text>
+                      <Text style={[styles.trackingStatValue, { color: currentTheme.colors.text }]}>
+                        {(calculateTotalDistance(trackingPoints) / 1000).toFixed(2)} km
+                      </Text>
+                    </View>
+                    <View style={styles.trackingStatItem}>
+                      <Text style={[styles.trackingStatLabel, { color: currentTheme.colors.textSecondary }]}>
+                        Points
+                      </Text>
+                      <Text style={[styles.trackingStatValue, { color: currentTheme.colors.text }]}>
+                        {trackingPoints.length}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               )}
@@ -1632,19 +1663,66 @@ const styles = StyleSheet.create({
   },
   trackingStatusContainer: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     marginTop: 15,
     borderWidth: 2,
     borderColor: "#E0E0E0",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  trackingStatusHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  recordingIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  recordingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#DC3545",
+    marginRight: 8,
+  },
+  recordingText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    letterSpacing: 1,
+  },
+  trackingTimer: {
+    fontSize: 24,
+    fontFamily: "Inder",
+    fontWeight: "700",
+  },
+  trackingStats: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  trackingStatItem: {
+    alignItems: "center",
+  },
+  trackingStatLabel: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    fontWeight: "500",
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  trackingStatValue: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
   },
   trackingStatusRow: {
     flexDirection: "row",
