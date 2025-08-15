@@ -910,6 +910,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
+    marginBottom: -33,
   },
   header: {
     fontSize: 30,
