@@ -149,12 +149,12 @@ const MapScreen = () => {
 
   // Sample data - these could come from API or context in real app
   const trainingTypes = [
-    { id: "dressage", name: "Dressage", icon: "🎭" },
-    { id: "jumping", name: "Show Jumping", icon: "🏇" },
-    { id: "trail", name: "Trail Riding", icon: "🌲" },
-    { id: "endurance", name: "Endurance", icon: "⚡" },
-    { id: "western", name: "Western", icon: "🤠" },
-    { id: "leisure", name: "Leisure Ride", icon: "🚶" },
+    { id: "dressage", name: "Dressage" },
+    { id: "jumping", name: "Show Jumping" },
+    { id: "trail", name: "Trail Riding" },
+    { id: "endurance", name: "Endurance" },
+    { id: "western", name: "Western" },
+    { id: "leisure", name: "Leisure Ride" },
   ];
 
   // Helper function to calculate GPS strength
@@ -654,13 +654,6 @@ const MapScreen = () => {
                   <View style={styles.trainingDropdownContent}>
                     {selectedTrainingType ? (
                       <View style={styles.selectedTrainingContent}>
-                        <Text style={styles.selectedTrainingIcon}>
-                          {
-                            trainingTypes.find(
-                              (t) => t.id === selectedTrainingType
-                            )?.icon
-                          }
-                        </Text>
                         <Text
                           style={[
                             styles.selectedTrainingText,
@@ -772,9 +765,6 @@ const MapScreen = () => {
                                     activeOpacity={0.7}
                                   >
                                     <View style={styles.trainingItemContent}>
-                                      <Text style={styles.trainingItemIcon}>
-                                        {training.icon}
-                                      </Text>
                                       <Text
                                         style={[
                                           styles.trainingItemText,
@@ -1275,10 +1265,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  selectedTrainingIcon: {
-    fontSize: 18,
-    marginRight: 10,
-  },
   selectedTrainingText: {
     fontSize: 16,
     fontFamily: "Inder",
@@ -1322,10 +1308,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-  },
-  trainingItemIcon: {
-    fontSize: 18,
-    marginRight: 12,
   },
   trainingItemText: {
     fontSize: 16,
