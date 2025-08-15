@@ -49,13 +49,13 @@ const SessionSummaryScreen = () => {
   const loadSessionData = async () => {
     try {
       setLoading(true);
-      const sessionData = await AsyncStorage.getItem('current_session_summary');
+      const sessionData = await AsyncStorage.getItem("current_session_summary");
       if (sessionData) {
         const parsedSession: TrainingSession = JSON.parse(sessionData);
         setSession(parsedSession);
-        
+
         // Clear the temporary session data
-        await AsyncStorage.removeItem('current_session_summary');
+        await AsyncStorage.removeItem("current_session_summary");
       } else {
         // No session data found, redirect back
         Alert.alert(
@@ -65,12 +65,10 @@ const SessionSummaryScreen = () => {
         );
       }
     } catch (error) {
-      console.error('Error loading session data:', error);
-      Alert.alert(
-        "Error",
-        "Failed to load session data. Redirecting to map.",
-        [{ text: "OK", onPress: () => router.back() }]
-      );
+      console.error("Error loading session data:", error);
+      Alert.alert("Error", "Failed to load session data. Redirecting to map.", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -92,12 +90,12 @@ const SessionSummaryScreen = () => {
 
   const formatDate = (timestamp: number): string => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -111,20 +109,20 @@ const SessionSummaryScreen = () => {
       };
     }
 
-    const latitudes = session.path.map(point => point.latitude);
-    const longitudes = session.path.map(point => point.longitude);
-    
+    const latitudes = session.path.map((point) => point.latitude);
+    const longitudes = session.path.map((point) => point.longitude);
+
     const minLat = Math.min(...latitudes);
     const maxLat = Math.max(...latitudes);
     const minLon = Math.min(...longitudes);
     const maxLon = Math.max(...longitudes);
-    
+
     const centerLat = (minLat + maxLat) / 2;
     const centerLon = (minLon + maxLon) / 2;
-    
+
     const deltaLat = (maxLat - minLat) * 1.2; // Add 20% padding
     const deltaLon = (maxLon - minLon) * 1.2;
-    
+
     return {
       latitude: centerLat,
       longitude: centerLon,
@@ -143,16 +141,36 @@ const SessionSummaryScreen = () => {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
+        <SafeAreaView
+          style={[
+            styles.safeArea,
+            { backgroundColor: currentTheme.colors.primary },
+          ]}
+        >
           <View style={styles.headerContainer}>
             <Text style={styles.header}>Session Summary</Text>
           </View>
         </SafeAreaView>
-        <View style={[styles.content, { backgroundColor: currentTheme.colors.background }]}>
+        <View
+          style={[
+            styles.content,
+            { backgroundColor: currentTheme.colors.background },
+          ]}
+        >
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-            <Text style={[styles.loadingText, { color: currentTheme.colors.text }]}>
+            <ActivityIndicator
+              size="large"
+              color={currentTheme.colors.primary}
+            />
+            <Text
+              style={[styles.loadingText, { color: currentTheme.colors.text }]}
+            >
               Loading session summary...
             </Text>
           </View>
@@ -163,20 +181,40 @@ const SessionSummaryScreen = () => {
 
   if (!session) {
     return (
-      <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
+        <SafeAreaView
+          style={[
+            styles.safeArea,
+            { backgroundColor: currentTheme.colors.primary },
+          ]}
+        >
           <View style={styles.headerContainer}>
             <Text style={styles.header}>Session Summary</Text>
           </View>
         </SafeAreaView>
-        <View style={[styles.content, { backgroundColor: currentTheme.colors.background }]}>
+        <View
+          style={[
+            styles.content,
+            { backgroundColor: currentTheme.colors.background },
+          ]}
+        >
           <View style={styles.errorContainer}>
             <Text style={styles.errorEmoji}>⚠️</Text>
-            <Text style={[styles.errorText, { color: currentTheme.colors.text }]}>
+            <Text
+              style={[styles.errorText, { color: currentTheme.colors.text }]}
+            >
               Session Not Found
             </Text>
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: currentTheme.colors.primary }]}
+              style={[
+                styles.button,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
               onPress={() => router.back()}
             >
               <Text style={styles.buttonText}>Go Back</Text>
@@ -188,8 +226,18 @@ const SessionSummaryScreen = () => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.colors.primary },
+      ]}
+    >
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
         <View style={styles.headerContainer}>
           <TouchableOpacity
             style={styles.backButton}
@@ -202,87 +250,186 @@ const SessionSummaryScreen = () => {
         </View>
       </SafeAreaView>
 
-      <View style={[styles.content, { backgroundColor: currentTheme.colors.background }]}>
-        <ScrollView 
+      <View
+        style={[
+          styles.content,
+          { backgroundColor: currentTheme.colors.background },
+        ]}
+      >
+        <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           {/* Session Header */}
-          <View style={[styles.summaryCard, { backgroundColor: currentTheme.colors.surface }]}>
+          <View
+            style={[
+              styles.summaryCard,
+              { backgroundColor: currentTheme.colors.surface },
+            ]}
+          >
             <View style={styles.sessionIconContainer}>
               <Text style={styles.sessionIcon}>🏇</Text>
             </View>
-            <Text style={[styles.sessionTitle, { color: currentTheme.colors.text }]}>
+            <Text
+              style={[styles.sessionTitle, { color: currentTheme.colors.text }]}
+            >
               {session.trainingType}
             </Text>
-            <Text style={[styles.sessionSubtitle, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.sessionSubtitle,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               with {session.horseName}
             </Text>
-            <Text style={[styles.sessionDate, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.sessionDate,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {formatDate(session.startTime)}
             </Text>
           </View>
 
           {/* Statistics Grid */}
-          <View style={[styles.statsCard, { backgroundColor: currentTheme.colors.surface }]}>
-            <Text style={[styles.statsTitle, { color: currentTheme.colors.text }]}>
+          <View
+            style={[
+              styles.statsCard,
+              { backgroundColor: currentTheme.colors.surface },
+            ]}
+          >
+            <Text
+              style={[styles.statsTitle, { color: currentTheme.colors.text }]}
+            >
               Session Statistics
             </Text>
             <View style={styles.statsGrid}>
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: currentTheme.colors.primary }]}>
-                  {session.duration ? formatDuration(session.duration) : 'N/A'}
+                <Text
+                  style={[
+                    styles.statValue,
+                    { color: currentTheme.colors.primary },
+                  ]}
+                >
+                  {session.duration ? formatDuration(session.duration) : "N/A"}
                 </Text>
-                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   Duration
                 </Text>
               </View>
 
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: currentTheme.colors.primary }]}>
-                  {session.distance ? `${(session.distance / 1000).toFixed(2)} km` : 'N/A'}
+                <Text
+                  style={[
+                    styles.statValue,
+                    { color: currentTheme.colors.primary },
+                  ]}
+                >
+                  {session.distance
+                    ? `${(session.distance / 1000).toFixed(2)} km`
+                    : "N/A"}
                 </Text>
-                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   Distance
                 </Text>
               </View>
 
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: currentTheme.colors.primary }]}>
-                  {session.averageSpeed ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h` : 'N/A'}
+                <Text
+                  style={[
+                    styles.statValue,
+                    { color: currentTheme.colors.primary },
+                  ]}
+                >
+                  {session.averageSpeed
+                    ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h`
+                    : "N/A"}
                 </Text>
-                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   Avg Speed
                 </Text>
               </View>
 
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: currentTheme.colors.primary }]}>
-                  {session.maxSpeed ? `${(session.maxSpeed * 3.6).toFixed(1)} km/h` : 'N/A'}
+                <Text
+                  style={[
+                    styles.statValue,
+                    { color: currentTheme.colors.primary },
+                  ]}
+                >
+                  {session.maxSpeed
+                    ? `${(session.maxSpeed * 3.6).toFixed(1)} km/h`
+                    : "N/A"}
                 </Text>
-                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   Max Speed
                 </Text>
               </View>
 
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: currentTheme.colors.primary }]}>
+                <Text
+                  style={[
+                    styles.statValue,
+                    { color: currentTheme.colors.primary },
+                  ]}
+                >
                   {session.path.length}
                 </Text>
-                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   GPS Points
                 </Text>
               </View>
 
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: currentTheme.colors.primary }]}>
-                  {session.path.length > 0 ? 
-                    `${((session.path.reduce((sum, point) => sum + (point.accuracy || 0), 0) / session.path.length) || 0).toFixed(1)}m` : 
-                    'N/A'
-                  }
+                <Text
+                  style={[
+                    styles.statValue,
+                    { color: currentTheme.colors.primary },
+                  ]}
+                >
+                  {session.path.length > 0
+                    ? `${(
+                        session.path.reduce(
+                          (sum, point) => sum + (point.accuracy || 0),
+                          0
+                        ) / session.path.length || 0
+                      ).toFixed(1)}m`
+                    : "N/A"}
                 </Text>
-                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   Avg Accuracy
                 </Text>
               </View>
@@ -291,8 +438,15 @@ const SessionSummaryScreen = () => {
 
           {/* Route Map */}
           {session.path.length > 0 && (
-            <View style={[styles.mapCard, { backgroundColor: currentTheme.colors.surface }]}>
-              <Text style={[styles.mapTitle, { color: currentTheme.colors.text }]}>
+            <View
+              style={[
+                styles.mapCard,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
+              <Text
+                style={[styles.mapTitle, { color: currentTheme.colors.text }]}
+              >
                 Route Map
               </Text>
               <View style={styles.mapContainer}>
@@ -307,14 +461,14 @@ const SessionSummaryScreen = () => {
                 >
                   {/* Route polyline */}
                   <Polyline
-                    coordinates={session.path.map(point => ({
+                    coordinates={session.path.map((point) => ({
                       latitude: point.latitude,
                       longitude: point.longitude,
                     }))}
                     strokeColor={currentTheme.colors.primary}
                     strokeWidth={4}
                   />
-                  
+
                   {/* Start marker */}
                   <Marker
                     coordinate={{
@@ -325,12 +479,13 @@ const SessionSummaryScreen = () => {
                     description="Training start point"
                     pinColor="green"
                   />
-                  
+
                   {/* End marker */}
                   <Marker
                     coordinate={{
                       latitude: session.path[session.path.length - 1].latitude,
-                      longitude: session.path[session.path.length - 1].longitude,
+                      longitude:
+                        session.path[session.path.length - 1].longitude,
                     }}
                     title="Finish"
                     description="Training end point"
@@ -344,17 +499,28 @@ const SessionSummaryScreen = () => {
           {/* Action Buttons */}
           <View style={styles.actionContainer}>
             <TouchableOpacity
-              style={[styles.primaryButton, { backgroundColor: currentTheme.colors.primary }]}
+              style={[
+                styles.primaryButton,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
               onPress={saveAndContinue}
             >
               <Text style={styles.primaryButtonText}>Start New Session</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.secondaryButton, { borderColor: currentTheme.colors.border }]}
+              style={[
+                styles.secondaryButton,
+                { borderColor: currentTheme.colors.border },
+              ]}
               onPress={viewAllSessions}
             >
-              <Text style={[styles.secondaryButtonText, { color: currentTheme.colors.text }]}>
+              <Text
+                style={[
+                  styles.secondaryButtonText,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
                 View All Sessions
               </Text>
             </TouchableOpacity>

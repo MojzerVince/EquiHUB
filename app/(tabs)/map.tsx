@@ -9,7 +9,12 @@ import {
   ScrollView,
   Modal,
 } from "react-native";
-import MapView, { Marker, Region, PROVIDER_GOOGLE, Polyline } from "react-native-maps";
+import MapView, {
+  Marker,
+  Region,
+  PROVIDER_GOOGLE,
+  Polyline,
+} from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useDialog } from "../../contexts/DialogContext";
@@ -77,12 +82,18 @@ const MapScreen = () => {
 
   // Tracking state
   const [isTracking, setIsTracking] = useState<boolean>(false);
-  const [currentSession, setCurrentSession] = useState<TrainingSession | null>(null);
+  const [currentSession, setCurrentSession] = useState<TrainingSession | null>(
+    null
+  );
   const [trackingPoints, setTrackingPoints] = useState<TrackingPoint[]>([]);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
-  const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
+  const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
+  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(
+    null
+  );
 
   useEffect(() => {
     requestLocationPermission();
@@ -176,13 +187,13 @@ const MapScreen = () => {
   // Real-time timer update for tracking
   useEffect(() => {
     let timerInterval: ReturnType<typeof setInterval>;
-    
+
     if (isTracking && sessionStartTime) {
       timerInterval = setInterval(() => {
         setCurrentTime(Date.now());
       }, 1000);
     }
-    
+
     return () => {
       if (timerInterval) {
         clearInterval(timerInterval);
@@ -194,12 +205,12 @@ const MapScreen = () => {
   useEffect(() => {
     return () => {
       setGpsStrength(0);
-      
+
       // Cleanup tracking subscription
       if (locationSubscriptionRef.current) {
         locationSubscriptionRef.current.remove();
       }
-      
+
       // Cleanup tracking interval
       if (trackingIntervalRef.current) {
         clearInterval(trackingIntervalRef.current);
@@ -270,17 +281,17 @@ const MapScreen = () => {
   // Save session to AsyncStorage
   const saveSessionToStorage = async (session: TrainingSession) => {
     try {
-      const existingSessions = await AsyncStorage.getItem('training_sessions');
-      const sessions: TrainingSession[] = existingSessions 
-        ? JSON.parse(existingSessions) 
+      const existingSessions = await AsyncStorage.getItem("training_sessions");
+      const sessions: TrainingSession[] = existingSessions
+        ? JSON.parse(existingSessions)
         : [];
-      
+
       sessions.push(session);
-      await AsyncStorage.setItem('training_sessions', JSON.stringify(sessions));
-      
-      console.log('Session saved successfully:', session.id);
+      await AsyncStorage.setItem("training_sessions", JSON.stringify(sessions));
+
+      console.log("Session saved successfully:", session.id);
     } catch (error) {
-      console.error('Error saving session:', error);
+      console.error("Error saving session:", error);
       throw error;
     }
   };
@@ -410,25 +421,29 @@ const MapScreen = () => {
     try {
       // Request background location permission
       const { status } = await Location.requestBackgroundPermissionsAsync();
-      if (status !== 'granted') {
-        showError('Background location permission is required for tracking');
+      if (status !== "granted") {
+        showError("Background location permission is required for tracking");
         return;
       }
 
-      const selectedHorseData = userHorses.find(h => h.id === selectedHorse);
-      const selectedTrainingData = trainingTypes.find(t => t.id === selectedTrainingType);
+      const selectedHorseData = userHorses.find((h) => h.id === selectedHorse);
+      const selectedTrainingData = trainingTypes.find(
+        (t) => t.id === selectedTrainingType
+      );
 
-      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const sessionId = `session_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
       const startTime = Date.now();
 
       const newSession: TrainingSession = {
         id: sessionId,
-        userId: user?.id || '',
+        userId: user?.id || "",
         horseId: selectedHorse,
-        horseName: selectedHorseData?.name || 'Unknown Horse',
-        trainingType: selectedTrainingData?.name || 'Unknown Training',
+        horseName: selectedHorseData?.name || "Unknown Horse",
+        trainingType: selectedTrainingData?.name || "Unknown Training",
         startTime,
-        path: []
+        path: [],
       };
 
       setCurrentSession(newSession);
@@ -452,8 +467,8 @@ const MapScreen = () => {
             speed: location.coords.speed || undefined,
           };
 
-          setTrackingPoints(prev => [...prev, point]);
-          
+          setTrackingPoints((prev) => [...prev, point]);
+
           // Update current location
           setUserLocation({
             latitude: location.coords.latitude,
@@ -473,10 +488,9 @@ const MapScreen = () => {
         `Started tracking ${selectedTrainingData?.name} session with ${selectedHorseData?.name}`,
         [{ text: "OK" }]
       );
-
     } catch (error) {
-      console.error('Error starting tracking:', error);
-      showError('Failed to start tracking. Please try again.');
+      console.error("Error starting tracking:", error);
+      showError("Failed to start tracking. Please try again.");
     }
   };
 
@@ -499,16 +513,15 @@ const MapScreen = () => {
 
       // Calculate speed statistics
       const speeds = trackingPoints
-        .map(point => point.speed)
-        .filter(speed => speed !== undefined && speed > 0) as number[];
-      
-      const averageSpeed = speeds.length > 0 
-        ? speeds.reduce((sum, speed) => sum + speed, 0) / speeds.length 
-        : 0;
-      
-      const maxSpeed = speeds.length > 0 
-        ? Math.max(...speeds) 
-        : 0;
+        .map((point) => point.speed)
+        .filter((speed) => speed !== undefined && speed > 0) as number[];
+
+      const averageSpeed =
+        speeds.length > 0
+          ? speeds.reduce((sum, speed) => sum + speed, 0) / speeds.length
+          : 0;
+
+      const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0;
 
       const completedSession: TrainingSession = {
         ...currentSession,
@@ -524,7 +537,10 @@ const MapScreen = () => {
       await saveSessionToStorage(completedSession);
 
       // Save current session for summary page
-      await AsyncStorage.setItem('current_session_summary', JSON.stringify(completedSession));
+      await AsyncStorage.setItem(
+        "current_session_summary",
+        JSON.stringify(completedSession)
+      );
 
       // Reset tracking state
       setIsTracking(false);
@@ -535,21 +551,24 @@ const MapScreen = () => {
       // Show completion alert
       Alert.alert(
         "Session Completed",
-        `Training session completed!\n\nDuration: ${Math.floor(duration / 60)}m ${duration % 60}s\nDistance: ${(totalDistance / 1000).toFixed(2)} km\nAverage Speed: ${(averageSpeed * 3.6).toFixed(1)} km/h`,
+        `Training session completed!\n\nDuration: ${Math.floor(
+          duration / 60
+        )}m ${duration % 60}s\nDistance: ${(totalDistance / 1000).toFixed(
+          2
+        )} km\nAverage Speed: ${(averageSpeed * 3.6).toFixed(1)} km/h`,
         [
           {
             text: "View Summary",
-            onPress: () => router.push("/session-summary")
+            onPress: () => router.push("/session-summary"),
           },
           {
-            text: "Back to Map"
-          }
+            text: "Back to Map",
+          },
         ]
       );
-
     } catch (error) {
-      console.error('Error stopping tracking:', error);
-      showError('Failed to save session. Please try again.');
+      console.error("Error stopping tracking:", error);
+      showError("Failed to save session. Please try again.");
     }
   };
 
@@ -759,11 +778,11 @@ const MapScreen = () => {
                     pinColor="red"
                   />
                 )}
-                
+
                 {/* Show tracking path */}
                 {trackingPoints.length > 1 && (
                   <Polyline
-                    coordinates={trackingPoints.map(point => ({
+                    coordinates={trackingPoints.map((point) => ({
                       latitude: point.latitude,
                       longitude: point.longitude,
                     }))}
@@ -771,7 +790,7 @@ const MapScreen = () => {
                     strokeWidth={4}
                   />
                 )}
-                
+
                 {/* Show start marker */}
                 {trackingPoints.length > 0 && (
                   <Marker
@@ -804,301 +823,311 @@ const MapScreen = () => {
                     showsHorizontalScrollIndicator={false}
                     style={styles.horizontalScroll}
                   >
-                  {horsesLoading ? (
-                    <View
-                      style={[
-                        styles.selectionCard,
-                        {
-                          backgroundColor: currentTheme.colors.background,
-                          borderColor: currentTheme.colors.border,
-                        },
-                      ]}
-                    >
-                      <ActivityIndicator
-                        size="small"
-                        color={currentTheme.colors.primary}
-                      />
-                      <Text
-                        style={[
-                          styles.selectionCardSubtitle,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        Loading horses...
-                      </Text>
-                    </View>
-                  ) : userHorses.length === 0 ? (
-                    <View
-                      style={[
-                        styles.selectionCard,
-                        {
-                          backgroundColor: currentTheme.colors.background,
-                          borderColor: currentTheme.colors.border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.selectionCardTitle,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        No horses found
-                      </Text>
-                      <Text
-                        style={[
-                          styles.selectionCardSubtitle,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        Add horses in your profile
-                      </Text>
-                    </View>
-                  ) : (
-                    userHorses.map((horse) => (
-                      <TouchableOpacity
-                        key={horse.id}
+                    {horsesLoading ? (
+                      <View
                         style={[
                           styles.selectionCard,
                           {
-                            backgroundColor:
-                              selectedHorse === horse.id
-                                ? currentTheme.colors.primary
-                                : currentTheme.colors.background,
-                            borderColor:
-                              selectedHorse === horse.id
-                                ? currentTheme.colors.primary
-                                : currentTheme.colors.border,
+                            backgroundColor: currentTheme.colors.background,
+                            borderColor: currentTheme.colors.border,
                           },
                         ]}
-                        onPress={() => setSelectedHorse(horse.id)}
-                        activeOpacity={0.7}
+                      >
+                        <ActivityIndicator
+                          size="small"
+                          color={currentTheme.colors.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.selectionCardSubtitle,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          Loading horses...
+                        </Text>
+                      </View>
+                    ) : userHorses.length === 0 ? (
+                      <View
+                        style={[
+                          styles.selectionCard,
+                          {
+                            backgroundColor: currentTheme.colors.background,
+                            borderColor: currentTheme.colors.border,
+                          },
+                        ]}
                       >
                         <Text
                           style={[
                             styles.selectionCardTitle,
-                            {
-                              color:
-                                selectedHorse === horse.id
-                                  ? "#FFFFFF"
-                                  : currentTheme.colors.text,
-                            },
+                            { color: currentTheme.colors.text },
                           ]}
                         >
-                          {horse.name}
+                          No horses found
                         </Text>
                         <Text
                           style={[
                             styles.selectionCardSubtitle,
-                            {
-                              color:
-                                selectedHorse === horse.id
-                                  ? "rgba(255,255,255,0.8)"
-                                  : currentTheme.colors.textSecondary,
-                            },
+                            { color: currentTheme.colors.textSecondary },
                           ]}
                         >
-                          {horse.breed}
+                          Add horses in your profile
                         </Text>
-                      </TouchableOpacity>
-                    ))
-                  )}
-                </ScrollView>
-              </View>
+                      </View>
+                    ) : (
+                      userHorses.map((horse) => (
+                        <TouchableOpacity
+                          key={horse.id}
+                          style={[
+                            styles.selectionCard,
+                            {
+                              backgroundColor:
+                                selectedHorse === horse.id
+                                  ? currentTheme.colors.primary
+                                  : currentTheme.colors.background,
+                              borderColor:
+                                selectedHorse === horse.id
+                                  ? currentTheme.colors.primary
+                                  : currentTheme.colors.border,
+                            },
+                          ]}
+                          onPress={() => setSelectedHorse(horse.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.selectionCardTitle,
+                              {
+                                color:
+                                  selectedHorse === horse.id
+                                    ? "#FFFFFF"
+                                    : currentTheme.colors.text,
+                              },
+                            ]}
+                          >
+                            {horse.name}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.selectionCardSubtitle,
+                              {
+                                color:
+                                  selectedHorse === horse.id
+                                    ? "rgba(255,255,255,0.8)"
+                                    : currentTheme.colors.textSecondary,
+                              },
+                            ]}
+                          >
+                            {horse.breed}
+                          </Text>
+                        </TouchableOpacity>
+                      ))
+                    )}
+                  </ScrollView>
+                </View>
               )}
 
               {/* Training Type Selection - Hidden during tracking */}
               {!isTracking && (
-              <View style={styles.selectionContainer}>
-                <Text
-                  style={[
-                    styles.selectionTitle,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Training Type
-                </Text>
-
-                {/* Training Dropdown */}
-                <TouchableOpacity
-                  style={[
-                    styles.trainingDropdown,
-                    {
-                      backgroundColor: currentTheme.colors.background,
-                      borderColor: currentTheme.colors.border,
-                    },
-                  ]}
-                  onPress={() =>
-                    setTrainingDropdownVisible(!trainingDropdownVisible)
-                  }
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.trainingDropdownContent}>
-                    {selectedTrainingType ? (
-                      <View style={styles.selectedTrainingContent}>
-                        <Text
-                          style={[
-                            styles.selectedTrainingText,
-                            { color: currentTheme.colors.text },
-                          ]}
-                        >
-                          {
-                            trainingTypes.find(
-                              (t) => t.id === selectedTrainingType
-                            )?.name
-                          }
-                        </Text>
-                      </View>
-                    ) : (
-                      <Text
-                        style={[
-                          styles.placeholderText,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        Select training type
-                      </Text>
-                    )}
-                  </View>
+                <View style={styles.selectionContainer}>
                   <Text
                     style={[
-                      styles.dropdownArrow,
+                      styles.selectionTitle,
                       { color: currentTheme.colors.text },
                     ]}
                   >
-                    {trainingDropdownVisible ? "▲" : "▼"}
+                    Training Type
                   </Text>
-                </TouchableOpacity>
 
-                {/* Training Dropdown List */}
-                {trainingDropdownVisible && (
-                  <Modal
-                    transparent={true}
-                    visible={trainingDropdownVisible}
-                    animationType="fade"
-                    onRequestClose={() => setTrainingDropdownVisible(false)}
+                  {/* Training Dropdown */}
+                  <TouchableOpacity
+                    style={[
+                      styles.trainingDropdown,
+                      {
+                        backgroundColor: currentTheme.colors.background,
+                        borderColor: currentTheme.colors.border,
+                      },
+                    ]}
+                    onPress={() =>
+                      setTrainingDropdownVisible(!trainingDropdownVisible)
+                    }
+                    activeOpacity={0.7}
                   >
-                    <TouchableOpacity
-                      style={{
-                        flex: 1,
-                        backgroundColor: "rgba(0, 0, 0, 0.3)",
-                      }}
-                      onPress={() => setTrainingDropdownVisible(false)}
-                      activeOpacity={1}
-                    >
-                      <View
-                        style={{
-                          position: "absolute",
-                          top: 400, // Adjust this value based on dropdown position
-                          left: 20,
-                          right: 20,
-                        }}
-                      >
-                        <View
-                          style={[
-                            styles.trainingDropdownList,
+                    <View style={styles.trainingDropdownContent}>
+                      {selectedTrainingType ? (
+                        <View style={styles.selectedTrainingContent}>
+                          <Text
+                            style={[
+                              styles.selectedTrainingText,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
                             {
-                              backgroundColor: currentTheme.colors.background,
-                              borderColor: currentTheme.colors.border,
-                            },
+                              trainingTypes.find(
+                                (t) => t.id === selectedTrainingType
+                              )?.name
+                            }
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text
+                          style={[
+                            styles.placeholderText,
+                            { color: currentTheme.colors.textSecondary },
                           ]}
                         >
-                          <ScrollView
-                            style={{ maxHeight: 250 }}
-                            showsVerticalScrollIndicator={false}
-                          >
-                            {getSortedTrainingTypes().map((training, index) => {
-                              const isFirstNonFavorite =
-                                favoriteTrainingTypes.length > 0 &&
-                                index === favoriteTrainingTypes.length &&
-                                !favoriteTrainingTypes.includes(training.id);
+                          Select training type
+                        </Text>
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.dropdownArrow,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      {trainingDropdownVisible ? "▲" : "▼"}
+                    </Text>
+                  </TouchableOpacity>
 
-                              return (
-                                <View key={training.id}>
-                                  {isFirstNonFavorite && (
-                                    <View style={styles.favoritesSeparator}>
-                                      <Text
+                  {/* Training Dropdown List */}
+                  {trainingDropdownVisible && (
+                    <Modal
+                      transparent={true}
+                      visible={trainingDropdownVisible}
+                      animationType="fade"
+                      onRequestClose={() => setTrainingDropdownVisible(false)}
+                    >
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          backgroundColor: "rgba(0, 0, 0, 0.3)",
+                        }}
+                        onPress={() => setTrainingDropdownVisible(false)}
+                        activeOpacity={1}
+                      >
+                        <View
+                          style={{
+                            position: "absolute",
+                            top: 400, // Adjust this value based on dropdown position
+                            left: 20,
+                            right: 20,
+                          }}
+                        >
+                          <View
+                            style={[
+                              styles.trainingDropdownList,
+                              {
+                                backgroundColor: currentTheme.colors.background,
+                                borderColor: currentTheme.colors.border,
+                              },
+                            ]}
+                          >
+                            <ScrollView
+                              style={{ maxHeight: 250 }}
+                              showsVerticalScrollIndicator={false}
+                            >
+                              {getSortedTrainingTypes().map(
+                                (training, index) => {
+                                  const isFirstNonFavorite =
+                                    favoriteTrainingTypes.length > 0 &&
+                                    index === favoriteTrainingTypes.length &&
+                                    !favoriteTrainingTypes.includes(
+                                      training.id
+                                    );
+
+                                  return (
+                                    <View key={training.id}>
+                                      {isFirstNonFavorite && (
+                                        <View style={styles.favoritesSeparator}>
+                                          <Text
+                                            style={[
+                                              styles.separatorText,
+                                              {
+                                                color:
+                                                  currentTheme.colors
+                                                    .textSecondary,
+                                              },
+                                            ]}
+                                          >
+                                            Other Training Types
+                                          </Text>
+                                        </View>
+                                      )}
+                                      <TouchableOpacity
                                         style={[
-                                          styles.separatorText,
+                                          styles.trainingDropdownItem,
                                           {
-                                            color:
-                                              currentTheme.colors.textSecondary,
-                                          },
-                                        ]}
-                                      >
-                                        Other Training Types
-                                      </Text>
-                                    </View>
-                                  )}
-                                  <TouchableOpacity
-                                    style={[
-                                      styles.trainingDropdownItem,
-                                      {
-                                        backgroundColor:
-                                          selectedTrainingType === training.id
-                                            ? currentTheme.colors.primary + "20"
-                                            : "transparent",
-                                      },
-                                    ]}
-                                    onPress={() => {
-                                      setSelectedTrainingType(training.id);
-                                      setTrainingDropdownVisible(false);
-                                    }}
-                                    activeOpacity={0.7}
-                                  >
-                                    <View style={styles.trainingItemContent}>
-                                      <Text
-                                        style={[
-                                          styles.trainingItemText,
-                                          {
-                                            color:
+                                            backgroundColor:
                                               selectedTrainingType ===
                                               training.id
-                                                ? currentTheme.colors.primary
-                                                : currentTheme.colors.text,
-                                            fontWeight:
-                                              selectedTrainingType ===
-                                              training.id
-                                                ? "600"
-                                                : "normal",
+                                                ? currentTheme.colors.primary +
+                                                  "20"
+                                                : "transparent",
                                           },
                                         ]}
+                                        onPress={() => {
+                                          setSelectedTrainingType(training.id);
+                                          setTrainingDropdownVisible(false);
+                                        }}
+                                        activeOpacity={0.7}
                                       >
-                                        {training.name}
-                                      </Text>
+                                        <View
+                                          style={styles.trainingItemContent}
+                                        >
+                                          <Text
+                                            style={[
+                                              styles.trainingItemText,
+                                              {
+                                                color:
+                                                  selectedTrainingType ===
+                                                  training.id
+                                                    ? currentTheme.colors
+                                                        .primary
+                                                    : currentTheme.colors.text,
+                                                fontWeight:
+                                                  selectedTrainingType ===
+                                                  training.id
+                                                    ? "600"
+                                                    : "normal",
+                                              },
+                                            ]}
+                                          >
+                                            {training.name}
+                                          </Text>
+                                        </View>
+                                        <TouchableOpacity
+                                          style={styles.favoriteButton}
+                                          onPress={(e) => {
+                                            e.stopPropagation();
+                                            toggleFavoriteTraining(training.id);
+                                          }}
+                                          hitSlop={{
+                                            top: 10,
+                                            bottom: 10,
+                                            left: 10,
+                                            right: 10,
+                                          }}
+                                        >
+                                          <Text style={styles.favoriteIcon}>
+                                            {favoriteTrainingTypes.includes(
+                                              training.id
+                                            )
+                                              ? "★"
+                                              : "☆"}
+                                          </Text>
+                                        </TouchableOpacity>
+                                      </TouchableOpacity>
                                     </View>
-                                    <TouchableOpacity
-                                      style={styles.favoriteButton}
-                                      onPress={(e) => {
-                                        e.stopPropagation();
-                                        toggleFavoriteTraining(training.id);
-                                      }}
-                                      hitSlop={{
-                                        top: 10,
-                                        bottom: 10,
-                                        left: 10,
-                                        right: 10,
-                                      }}
-                                    >
-                                      <Text style={styles.favoriteIcon}>
-                                        {favoriteTrainingTypes.includes(
-                                          training.id
-                                        )
-                                          ? "★"
-                                          : "☆"}
-                                      </Text>
-                                    </TouchableOpacity>
-                                  </TouchableOpacity>
-                                </View>
-                              );
-                            })}
-                          </ScrollView>
+                                  );
+                                }
+                              )}
+                            </ScrollView>
+                          </View>
                         </View>
-                      </View>
-                    </TouchableOpacity>
-                  </Modal>
-                )}
-              </View>
+                      </TouchableOpacity>
+                    </Modal>
+                  )}
+                </View>
               )}
 
               {/* Start/Stop Tracking Button */}
@@ -1119,13 +1148,12 @@ const MapScreen = () => {
                 ]}
                 onPress={isTracking ? stopTracking : startTracking}
                 disabled={
-                  !isTracking && (
-                    !selectedHorse ||
+                  !isTracking &&
+                  (!selectedHorse ||
                     !selectedTrainingType ||
                     !userLocation ||
                     horsesLoading ||
-                    userHorses.length === 0
-                  )
+                    userHorses.length === 0)
                 }
                 activeOpacity={0.8}
               >
@@ -1147,35 +1175,73 @@ const MapScreen = () => {
 
               {/* Tracking Status Display */}
               {isTracking && sessionStartTime && (
-                <View style={[styles.trackingStatusContainer, { backgroundColor: currentTheme.colors.surface }]}>
+                <View
+                  style={[
+                    styles.trackingStatusContainer,
+                    { backgroundColor: currentTheme.colors.surface },
+                  ]}
+                >
                   <View style={styles.trackingStatusHeader}>
                     <View style={styles.recordingIndicator}>
                       <View style={styles.recordingDot} />
-                      <Text style={[styles.recordingText, { color: "#DC3545" }]}>
+                      <Text
+                        style={[styles.recordingText, { color: "#DC3545" }]}
+                      >
                         RECORDING
                       </Text>
                     </View>
-                    <Text style={[styles.trackingTimer, { color: currentTheme.colors.primary }]}>
-                      {Math.floor((currentTime - sessionStartTime) / 60000)}:{
-                        String(Math.floor(((currentTime - sessionStartTime) % 60000) / 1000)).padStart(2, '0')
-                      }
+                    <Text
+                      style={[
+                        styles.trackingTimer,
+                        { color: currentTheme.colors.primary },
+                      ]}
+                    >
+                      {Math.floor((currentTime - sessionStartTime) / 60000)}:
+                      {String(
+                        Math.floor(
+                          ((currentTime - sessionStartTime) % 60000) / 1000
+                        )
+                      ).padStart(2, "0")}
                     </Text>
                   </View>
-                  
+
                   <View style={styles.trackingStats}>
                     <View style={styles.trackingStatItem}>
-                      <Text style={[styles.trackingStatLabel, { color: currentTheme.colors.textSecondary }]}>
+                      <Text
+                        style={[
+                          styles.trackingStatLabel,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
                         Distance
                       </Text>
-                      <Text style={[styles.trackingStatValue, { color: currentTheme.colors.text }]}>
-                        {(calculateTotalDistance(trackingPoints) / 1000).toFixed(2)} km
+                      <Text
+                        style={[
+                          styles.trackingStatValue,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        {(
+                          calculateTotalDistance(trackingPoints) / 1000
+                        ).toFixed(2)}{" "}
+                        km
                       </Text>
                     </View>
                     <View style={styles.trackingStatItem}>
-                      <Text style={[styles.trackingStatLabel, { color: currentTheme.colors.textSecondary }]}>
+                      <Text
+                        style={[
+                          styles.trackingStatLabel,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
                         Points
                       </Text>
-                      <Text style={[styles.trackingStatValue, { color: currentTheme.colors.text }]}>
+                      <Text
+                        style={[
+                          styles.trackingStatValue,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
                         {trackingPoints.length}
                       </Text>
                     </View>

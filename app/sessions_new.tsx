@@ -12,7 +12,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Training session interface to match map.tsx
@@ -77,12 +76,11 @@ const SessionsScreen = () => {
     loadTrainingSessions();
   }, [user]);
 
-  // Reload sessions when screen is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      loadTrainingSessions();
-    }, [user])
-  );
+  // Reload sessions when screen is focused (using navigation listener would be better)
+  useEffect(() => {
+    const interval = setInterval(loadTrainingSessions, 5000); // Refresh every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const formatTrainingDuration = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
