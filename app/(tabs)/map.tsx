@@ -10,7 +10,6 @@ import {
   Modal,
 } from "react-native";
 import MapView, {
-  Marker,
   Region,
   PROVIDER_GOOGLE,
   Polyline,
@@ -783,15 +782,6 @@ const MapScreen = () => {
                 rotateEnabled={true}
                 mapType={mapType}
               >
-                {userLocation && (
-                  <Marker
-                    coordinate={userLocation}
-                    title="You are here"
-                    description="Your current location"
-                    pinColor="red"
-                  />
-                )}
-
                 {/* Show tracking path */}
                 {trackingPoints.length > 1 && (
                   <Polyline
@@ -801,19 +791,6 @@ const MapScreen = () => {
                     }))}
                     strokeColor={currentTheme.colors.primary}
                     strokeWidth={4}
-                  />
-                )}
-
-                {/* Show start marker */}
-                {trackingPoints.length > 0 && (
-                  <Marker
-                    coordinate={{
-                      latitude: trackingPoints[0].latitude,
-                      longitude: trackingPoints[0].longitude,
-                    }}
-                    title="Start"
-                    description="Training start point"
-                    pinColor="green"
                   />
                 )}
               </MapView>
