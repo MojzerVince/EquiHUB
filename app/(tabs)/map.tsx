@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,7 +9,7 @@ import {
   ScrollView,
   Modal,
 } from "react-native";
-import MapView, { Marker, Region, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { Marker, Region, PROVIDER_GOOGLE, Polyline } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useDialog } from "../../contexts/DialogContext";
@@ -19,6 +19,30 @@ import { HorseAPI } from "../../lib/horseAPI";
 import { Horse } from "../../lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
+
+// Types for tracking sessions
+interface TrackingPoint {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+  accuracy?: number;
+  speed?: number;
+}
+
+interface TrainingSession {
+  id: string;
+  userId: string;
+  horseId: string;
+  horseName: string;
+  trainingType: string;
+  startTime: number;
+  endTime?: number;
+  duration?: number; // in seconds
+  distance?: number; // in meters
+  path: TrackingPoint[];
+  averageSpeed?: number; // in m/s
+  maxSpeed?: number; // in m/s
+}
 
 const MapScreen = () => {
   const { currentTheme } = useTheme();
@@ -50,6 +74,14 @@ const MapScreen = () => {
   );
   const [trainingDropdownVisible, setTrainingDropdownVisible] =
     useState<boolean>(false);
+
+  // Tracking state
+  const [isTracking, setIsTracking] = useState<boolean>(false);
+  const [currentSession, setCurrentSession] = useState<TrainingSession | null>(null);
+  const [trackingPoints, setTrackingPoints] = useState<TrackingPoint[]>([]);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
 
   useEffect(() => {
     requestLocationPermission();
@@ -144,6 +176,16 @@ const MapScreen = () => {
   useEffect(() => {
     return () => {
       setGpsStrength(0);
+      
+      // Cleanup tracking subscription
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
+      }
+      
+      // Cleanup tracking interval
+      if (trackingIntervalRef.current) {
+        clearInterval(trackingIntervalRef.current);
+      }
     };
   }, []);
 
@@ -170,6 +212,59 @@ const MapScreen = () => {
     if (accuracy <= 50) return 2;
     if (accuracy <= 100) return 1;
     return 0;
+  };
+
+  // Calculate distance between two points using Haversine formula
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number => {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Calculate total distance from tracking points
+  const calculateTotalDistance = (points: TrackingPoint[]): number => {
+    if (points.length < 2) return 0;
+    let totalDistance = 0;
+    for (let i = 1; i < points.length; i++) {
+      totalDistance += calculateDistance(
+        points[i - 1].latitude,
+        points[i - 1].longitude,
+        points[i].latitude,
+        points[i].longitude
+      );
+    }
+    return totalDistance;
+  };
+
+  // Save session to AsyncStorage
+  const saveSessionToStorage = async (session: TrainingSession) => {
+    try {
+      const existingSessions = await AsyncStorage.getItem('training_sessions');
+      const sessions: TrainingSession[] = existingSessions 
+        ? JSON.parse(existingSessions) 
+        : [];
+      
+      sessions.push(session);
+      await AsyncStorage.setItem('training_sessions', JSON.stringify(sessions));
+      
+      console.log('Session saved successfully:', session.id);
+    } catch (error) {
+      console.error('Error saving session:', error);
+      throw error;
+    }
   };
 
   const requestLocationPermission = async () => {
@@ -271,7 +366,8 @@ const MapScreen = () => {
     );
   };
 
-  const startTracking = () => {
+  // Start GPS tracking
+  const startTracking = async () => {
     if (horsesLoading) {
       showError("Please wait for horses to load");
       return;
@@ -293,14 +389,147 @@ const MapScreen = () => {
       return;
     }
 
-    // Here you would implement the actual tracking logic
-    Alert.alert(
-      "Start Tracking",
-      `Starting ${
-        trainingTypes.find((t) => t.id === selectedTrainingType)?.name
-      } session with ${userHorses.find((h) => h.id === selectedHorse)?.name}`,
-      [{ text: "OK" }]
-    );
+    try {
+      // Request background location permission
+      const { status } = await Location.requestBackgroundPermissionsAsync();
+      if (status !== 'granted') {
+        showError('Background location permission is required for tracking');
+        return;
+      }
+
+      const selectedHorseData = userHorses.find(h => h.id === selectedHorse);
+      const selectedTrainingData = trainingTypes.find(t => t.id === selectedTrainingType);
+
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const startTime = Date.now();
+
+      const newSession: TrainingSession = {
+        id: sessionId,
+        userId: user?.id || '',
+        horseId: selectedHorse,
+        horseName: selectedHorseData?.name || 'Unknown Horse',
+        trainingType: selectedTrainingData?.name || 'Unknown Training',
+        startTime,
+        path: []
+      };
+
+      setCurrentSession(newSession);
+      setIsTracking(true);
+      setSessionStartTime(startTime);
+      setTrackingPoints([]);
+
+      // Start location tracking
+      const subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 5000, // Update every 5 seconds
+          distanceInterval: 10, // Update every 10 meters
+        },
+        (location) => {
+          const point: TrackingPoint = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            timestamp: Date.now(),
+            accuracy: location.coords.accuracy || undefined,
+            speed: location.coords.speed || undefined,
+          };
+
+          setTrackingPoints(prev => [...prev, point]);
+          
+          // Update current location
+          setUserLocation({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          });
+
+          // Update GPS strength
+          const strength = calculateGpsStrength(location.coords.accuracy);
+          setGpsStrength(strength);
+        }
+      );
+
+      locationSubscriptionRef.current = subscription;
+
+      Alert.alert(
+        "Tracking Started",
+        `Started tracking ${selectedTrainingData?.name} session with ${selectedHorseData?.name}`,
+        [{ text: "OK" }]
+      );
+
+    } catch (error) {
+      console.error('Error starting tracking:', error);
+      showError('Failed to start tracking. Please try again.');
+    }
+  };
+
+  // Stop GPS tracking and save session
+  const stopTracking = async () => {
+    if (!isTracking || !currentSession || !sessionStartTime) {
+      return;
+    }
+
+    try {
+      // Stop location subscription
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
+        locationSubscriptionRef.current = null;
+      }
+
+      const endTime = Date.now();
+      const duration = Math.floor((endTime - sessionStartTime) / 1000); // Duration in seconds
+      const totalDistance = calculateTotalDistance(trackingPoints);
+
+      // Calculate speed statistics
+      const speeds = trackingPoints
+        .map(point => point.speed)
+        .filter(speed => speed !== undefined && speed > 0) as number[];
+      
+      const averageSpeed = speeds.length > 0 
+        ? speeds.reduce((sum, speed) => sum + speed, 0) / speeds.length 
+        : 0;
+      
+      const maxSpeed = speeds.length > 0 
+        ? Math.max(...speeds) 
+        : 0;
+
+      const completedSession: TrainingSession = {
+        ...currentSession,
+        endTime,
+        duration,
+        distance: totalDistance,
+        path: trackingPoints,
+        averageSpeed,
+        maxSpeed,
+      };
+
+      // Save session to storage
+      await saveSessionToStorage(completedSession);
+
+      // Reset tracking state
+      setIsTracking(false);
+      setCurrentSession(null);
+      setSessionStartTime(null);
+      setTrackingPoints([]);
+
+      // Show completion alert
+      Alert.alert(
+        "Session Completed",
+        `Training session completed!\n\nDuration: ${Math.floor(duration / 60)}m ${duration % 60}s\nDistance: ${(totalDistance / 1000).toFixed(2)} km\nAverage Speed: ${(averageSpeed * 3.6).toFixed(1)} km/h`,
+        [
+          {
+            text: "View Sessions",
+            onPress: () => router.push("/sessions")
+          },
+          {
+            text: "OK"
+          }
+        ]
+      );
+
+    } catch (error) {
+      console.error('Error stopping tracking:', error);
+      showError('Failed to save session. Please try again.');
+    }
   };
 
   // Toggle favorite training type
@@ -507,6 +736,31 @@ const MapScreen = () => {
                     title="You are here"
                     description="Your current location"
                     pinColor="red"
+                  />
+                )}
+                
+                {/* Show tracking path */}
+                {trackingPoints.length > 1 && (
+                  <Polyline
+                    coordinates={trackingPoints.map(point => ({
+                      latitude: point.latitude,
+                      longitude: point.longitude,
+                    }))}
+                    strokeColor={currentTheme.colors.primary}
+                    strokeWidth={4}
+                  />
+                )}
+                
+                {/* Show start marker */}
+                {trackingPoints.length > 0 && (
+                  <Marker
+                    coordinate={{
+                      latitude: trackingPoints[0].latitude,
+                      longitude: trackingPoints[0].longitude,
+                    }}
+                    title="Start"
+                    description="Training start point"
+                    pinColor="green"
                   />
                 )}
               </MapView>
@@ -822,28 +1076,31 @@ const MapScreen = () => {
                 )}
               </View>
 
-              {/* Start Tracking Button */}
+              {/* Start/Stop Tracking Button */}
               <TouchableOpacity
                 style={[
                   styles.startTrackingButton,
                   {
-                    backgroundColor:
-                      selectedHorse &&
-                      selectedTrainingType &&
-                      userLocation &&
-                      !horsesLoading &&
-                      userHorses.length > 0
-                        ? currentTheme.colors.primary
-                        : currentTheme.colors.border,
+                    backgroundColor: isTracking
+                      ? "#DC3545" // Red color for stop
+                      : selectedHorse &&
+                        selectedTrainingType &&
+                        userLocation &&
+                        !horsesLoading &&
+                        userHorses.length > 0
+                      ? currentTheme.colors.primary
+                      : currentTheme.colors.border,
                   },
                 ]}
-                onPress={startTracking}
+                onPress={isTracking ? stopTracking : startTracking}
                 disabled={
-                  !selectedHorse ||
-                  !selectedTrainingType ||
-                  !userLocation ||
-                  horsesLoading ||
-                  userHorses.length === 0
+                  !isTracking && (
+                    !selectedHorse ||
+                    !selectedTrainingType ||
+                    !userLocation ||
+                    horsesLoading ||
+                    userHorses.length === 0
+                  )
                 }
                 activeOpacity={0.8}
               >
@@ -851,16 +1108,49 @@ const MapScreen = () => {
                   style={[
                     styles.startTrackingButtonText,
                     {
-                      color:
-                        selectedHorse && selectedTrainingType && userLocation
-                          ? "#FFFFFF"
-                          : currentTheme.colors.textSecondary,
+                      color: isTracking
+                        ? "#FFFFFF"
+                        : selectedHorse && selectedTrainingType && userLocation
+                        ? "#FFFFFF"
+                        : currentTheme.colors.textSecondary,
                     },
                   ]}
                 >
-                  Start Tracking
+                  {isTracking ? "Stop Tracking" : "Start Tracking"}
                 </Text>
               </TouchableOpacity>
+
+              {/* Tracking Status Display */}
+              {isTracking && sessionStartTime && (
+                <View style={styles.trackingStatusContainer}>
+                  <View style={styles.trackingStatusRow}>
+                    <Text style={[styles.trackingStatusLabel, { color: currentTheme.colors.text }]}>
+                      🔴 RECORDING
+                    </Text>
+                    <Text style={[styles.trackingStatusValue, { color: currentTheme.colors.primary }]}>
+                      {Math.floor((Date.now() - sessionStartTime) / 60000)}:{
+                        String(Math.floor(((Date.now() - sessionStartTime) % 60000) / 1000)).padStart(2, '0')
+                      }
+                    </Text>
+                  </View>
+                  <View style={styles.trackingStatusRow}>
+                    <Text style={[styles.trackingStatusLabel, { color: currentTheme.colors.textSecondary }]}>
+                      Distance:
+                    </Text>
+                    <Text style={[styles.trackingStatusValue, { color: currentTheme.colors.text }]}>
+                      {(calculateTotalDistance(trackingPoints) / 1000).toFixed(2)} km
+                    </Text>
+                  </View>
+                  <View style={styles.trackingStatusRow}>
+                    <Text style={[styles.trackingStatusLabel, { color: currentTheme.colors.textSecondary }]}>
+                      Points:
+                    </Text>
+                    <Text style={[styles.trackingStatusValue, { color: currentTheme.colors.text }]}>
+                      {trackingPoints.length}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -1339,6 +1629,38 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     fontWeight: "500",
     textTransform: "uppercase",
+  },
+  trackingStatusContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 15,
+    borderWidth: 2,
+    borderColor: "#E0E0E0",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 3,
+  },
+  trackingStatusRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  trackingStatusLabel: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    fontWeight: "500",
+  },
+  trackingStatusValue: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
   },
 });
 
