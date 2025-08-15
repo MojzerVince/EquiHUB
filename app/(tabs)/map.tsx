@@ -482,12 +482,6 @@ const MapScreen = () => {
       );
 
       locationSubscriptionRef.current = subscription;
-
-      Alert.alert(
-        "Tracking Started",
-        `Started tracking ${selectedTrainingData?.name} session with ${selectedHorseData?.name}`,
-        [{ text: "OK" }]
-      );
     } catch (error) {
       console.error("Error starting tracking:", error);
       showError("Failed to start tracking. Please try again.");
