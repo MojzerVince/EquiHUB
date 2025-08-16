@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 
 // Training session interface to match map.tsx
@@ -52,8 +53,8 @@ const SessionsScreen = () => {
     }
   };
   
-  // Hardcoded user for now - in production this would come from auth
-  const user = { id: 'test-user-id' };
+  // Get the authenticated user
+  const { user } = useAuth();
   
   const router = useRouter();
   const [trainingSessions, setTrainingSessions] = useState<TrainingSession[]>(

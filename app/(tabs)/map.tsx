@@ -279,17 +279,30 @@ const MapScreen = () => {
   // Save session to AsyncStorage
   const saveSessionToStorage = async (session: TrainingSession) => {
     try {
+      console.log("💾 Attempting to save session:", {
+        id: session.id,
+        userId: session.userId,
+        horseName: session.horseName,
+        trainingType: session.trainingType,
+        duration: session.duration,
+        distance: session.distance,
+        pathPoints: session.path.length
+      });
+      
       const existingSessions = await AsyncStorage.getItem("training_sessions");
       const sessions: TrainingSession[] = existingSessions
         ? JSON.parse(existingSessions)
         : [];
 
+      console.log("📚 Existing sessions count:", sessions.length);
+      
       sessions.push(session);
       await AsyncStorage.setItem("training_sessions", JSON.stringify(sessions));
 
-      console.log("Session saved successfully:", session.id);
+      console.log("✅ Session saved successfully:", session.id);
+      console.log("📚 Total sessions now:", sessions.length);
     } catch (error) {
-      console.error("Error saving session:", error);
+      console.error("❌ Error saving session:", error);
       throw error;
     }
   };
@@ -507,7 +520,14 @@ const MapScreen = () => {
 
   // Stop GPS tracking and save session
   const stopTracking = async () => {
+    console.log("🛑 Stop tracking called");
+    console.log("Is tracking:", isTracking);
+    console.log("Current session:", currentSession?.id);
+    console.log("Session start time:", sessionStartTime);
+    console.log("Tracking points count:", trackingPoints.length);
+    
     if (!isTracking || !currentSession || !sessionStartTime) {
+      console.log("❌ Cannot stop tracking - missing required data");
       return;
     }
 
@@ -521,6 +541,12 @@ const MapScreen = () => {
       const endTime = Date.now();
       const duration = Math.floor((endTime - sessionStartTime) / 1000); // Duration in seconds
       const totalDistance = calculateTotalDistance(trackingPoints);
+
+      console.log("📊 Session statistics:", {
+        duration: `${Math.floor(duration / 60)}m ${duration % 60}s`,
+        distance: `${(totalDistance / 1000).toFixed(2)} km`,
+        points: trackingPoints.length
+      });
 
       // Calculate speed statistics
       const speeds = trackingPoints
@@ -543,6 +569,13 @@ const MapScreen = () => {
         averageSpeed,
         maxSpeed,
       };
+
+      console.log("💾 About to save completed session:", {
+        id: completedSession.id,
+        userId: completedSession.userId,
+        duration: completedSession.duration,
+        distance: completedSession.distance
+      });
 
       // Save session to storage
       await saveSessionToStorage(completedSession);
