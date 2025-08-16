@@ -107,7 +107,6 @@ const MapScreen = () => {
           const horses = await HorseAPI.getHorses(user.id);
           setUserHorses(horses || []);
         } catch (error) {
-          console.error("Error loading user horses:", error);
           showError("Failed to load your horses");
         } finally {
           setHorsesLoading(false);
@@ -129,7 +128,7 @@ const MapScreen = () => {
           setFavoriteTrainingTypes(JSON.parse(savedFavorites));
         }
       } catch (error) {
-        console.error("Error loading favorite training types:", error);
+        // Error loading favorites - continue with empty array
       }
     };
     loadFavorites();
@@ -143,7 +142,7 @@ const MapScreen = () => {
         JSON.stringify(favorites)
       );
     } catch (error) {
-      console.error("Error saving favorite training types:", error);
+      // Error saving favorites - continue silently
     }
   };
 
@@ -165,7 +164,6 @@ const MapScreen = () => {
             const strength = calculateGpsStrength(accuracy);
             setGpsStrength(strength);
           } catch (error) {
-            console.log("GPS monitoring error:", error);
             setGpsStrength(0);
           }
         }, 3000); // Update every 3 seconds
@@ -279,30 +277,14 @@ const MapScreen = () => {
   // Save session to AsyncStorage
   const saveSessionToStorage = async (session: TrainingSession) => {
     try {
-      console.log("💾 Attempting to save session:", {
-        id: session.id,
-        userId: session.userId,
-        horseName: session.horseName,
-        trainingType: session.trainingType,
-        duration: session.duration,
-        distance: session.distance,
-        pathPoints: session.path.length
-      });
-      
       const existingSessions = await AsyncStorage.getItem("training_sessions");
       const sessions: TrainingSession[] = existingSessions
         ? JSON.parse(existingSessions)
         : [];
 
-      console.log("📚 Existing sessions count:", sessions.length);
-      
       sessions.push(session);
       await AsyncStorage.setItem("training_sessions", JSON.stringify(sessions));
-
-      console.log("✅ Session saved successfully:", session.id);
-      console.log("📚 Total sessions now:", sessions.length);
     } catch (error) {
-      console.error("❌ Error saving session:", error);
       throw error;
     }
   };
@@ -321,7 +303,6 @@ const MapScreen = () => {
       setLocationPermission(true);
       getCurrentLocation();
     } catch (error) {
-      console.warn("Error requesting location permission:", error);
       showError("Failed to request location permission");
       setLocationPermission(false);
     } finally {
@@ -351,7 +332,6 @@ const MapScreen = () => {
       setRegion(newRegion);
       setUserLocation({ latitude, longitude });
     } catch (error) {
-      console.log("Error getting location:", error);
       showError("Unable to get your location");
       setGpsStrength(0);
     } finally {
@@ -408,13 +388,6 @@ const MapScreen = () => {
 
   // Start GPS tracking
   const startTracking = async () => {
-    console.log("🚀 Starting tracking function called");
-    console.log("Horses loading:", horsesLoading);
-    console.log("User horses:", userHorses.length);
-    console.log("Selected horse:", selectedHorse);
-    console.log("Selected training type:", selectedTrainingType);
-    console.log("User location:", userLocation);
-    
     if (horsesLoading) {
       showError("Please wait for horses to load");
       return;
@@ -437,11 +410,6 @@ const MapScreen = () => {
     }
 
     try {
-      // For now, let's skip background permissions and just use foreground tracking
-      console.log("🔐 Using foreground location tracking...");
-      
-      console.log("✅ Starting session creation...");
-
       const selectedHorseData = userHorses.find((h) => h.id === selectedHorse);
       const selectedTrainingData = trainingTypes.find(
         (t) => t.id === selectedTrainingType
@@ -468,7 +436,6 @@ const MapScreen = () => {
       setTrackingPoints([]);
 
       // Start location tracking
-      console.log("📍 Starting location tracking subscription...");
       const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
@@ -476,13 +443,6 @@ const MapScreen = () => {
           distanceInterval: 1, // Update every 1 meter for testing
         },
         (location) => {
-          console.log("📍 New GPS location received:", {
-            lat: location.coords.latitude,
-            lng: location.coords.longitude,
-            accuracy: location.coords.accuracy,
-            timestamp: new Date().toISOString()
-          });
-          
           const point: TrackingPoint = {
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
@@ -493,7 +453,6 @@ const MapScreen = () => {
 
           setTrackingPoints((prev) => {
             const newPoints = [...prev, point];
-            console.log("📊 Total tracking points:", newPoints.length);
             return newPoints;
           });
 
@@ -509,25 +468,15 @@ const MapScreen = () => {
         }
       );
 
-      console.log("✅ Location tracking subscription created successfully");
-
       locationSubscriptionRef.current = subscription;
     } catch (error) {
-      console.error("Error starting tracking:", error);
       showError("Failed to start tracking. Please try again.");
     }
   };
 
   // Stop GPS tracking and save session
   const stopTracking = async () => {
-    console.log("🛑 Stop tracking called");
-    console.log("Is tracking:", isTracking);
-    console.log("Current session:", currentSession?.id);
-    console.log("Session start time:", sessionStartTime);
-    console.log("Tracking points count:", trackingPoints.length);
-    
     if (!isTracking || !currentSession || !sessionStartTime) {
-      console.log("❌ Cannot stop tracking - missing required data");
       return;
     }
 
@@ -541,12 +490,6 @@ const MapScreen = () => {
       const endTime = Date.now();
       const duration = Math.floor((endTime - sessionStartTime) / 1000); // Duration in seconds
       const totalDistance = calculateTotalDistance(trackingPoints);
-
-      console.log("📊 Session statistics:", {
-        duration: `${Math.floor(duration / 60)}m ${duration % 60}s`,
-        distance: `${(totalDistance / 1000).toFixed(2)} km`,
-        points: trackingPoints.length
-      });
 
       // Calculate speed statistics
       const speeds = trackingPoints
@@ -569,13 +512,6 @@ const MapScreen = () => {
         averageSpeed,
         maxSpeed,
       };
-
-      console.log("💾 About to save completed session:", {
-        id: completedSession.id,
-        userId: completedSession.userId,
-        duration: completedSession.duration,
-        distance: completedSession.distance
-      });
 
       // Save session to storage
       await saveSessionToStorage(completedSession);
@@ -611,7 +547,6 @@ const MapScreen = () => {
         ]
       );
     } catch (error) {
-      console.error("Error stopping tracking:", error);
       showError("Failed to save session. Please try again.");
     }
   };

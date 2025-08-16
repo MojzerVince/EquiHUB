@@ -84,13 +84,11 @@ const SessionsScreen = () => {
         .single();
 
       if (error) {
-        console.error('Error checking pro status:', error);
         setIsProMember(false);
       } else {
         setIsProMember(data?.is_pro_member || false);
       }
     } catch (error) {
-      console.error('Error checking pro membership:', error);
       setIsProMember(false);
     } finally {
       setCheckingProStatus(false);
@@ -173,67 +171,52 @@ const SessionsScreen = () => {
   // Load training sessions from AsyncStorage
   const loadTrainingSessions = useCallback(async () => {
     try {
-      console.log('Loading training sessions for week offset:', currentWeekOffset);
       setLoadingSessions(true);
       const savedSessions = await AsyncStorage.getItem("training_sessions");
       
-      console.log('Raw sessions from storage:', savedSessions ? 'Found data' : 'No data');
-      
       if (savedSessions) {
         const parsedSessions: TrainingSession[] = JSON.parse(savedSessions);
-        console.log('Parsed sessions count:', parsedSessions.length);
         
         // Filter sessions for current user if user ID is available
         const userSessions = user?.id
           ? parsedSessions.filter((session) => session.userId === user.id)
           : parsedSessions;
 
-        console.log('User sessions count:', userSessions.length);
-
         // Filter sessions by week
         const { startOfWeek, endOfWeek } = getWeekBounds(currentWeekOffset);
-        console.log('Week bounds:', { startOfWeek, endOfWeek });
         
         const weekSessions = userSessions.filter((session) => {
           const sessionDate = new Date(session.startTime);
           return sessionDate >= startOfWeek && sessionDate <= endOfWeek;
         });
 
-        console.log('Week sessions count:', weekSessions.length);
-
         // Sort by start time (newest first)
         weekSessions.sort((a, b) => b.startTime - a.startTime);
         setTrainingSessions(weekSessions);
       } else {
-        console.log('No saved sessions found');
         setTrainingSessions([]);
       }
     } catch (error) {
-      console.error("Error loading training sessions:", error);
       setTrainingSessions([]);
     } finally {
-      console.log('Finished loading sessions');
       setLoadingSessions(false);
     }
   }, [currentWeekOffset, user?.id]);
 
   // Load training sessions when component mounts
   useEffect(() => {
-    console.log('Component mounted, starting initial load');
     loadTrainingSessions();
     checkProMembership();
   }, []);
 
   // Reload sessions when week changes
   useEffect(() => {
-    console.log('Week offset changed to:', currentWeekOffset);
     loadTrainingSessions();
   }, [currentWeekOffset]);
 
   // Reload sessions when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      console.log('Screen focused, reloading sessions');
       loadTrainingSessions();
     }, [])
   );
@@ -288,7 +271,6 @@ const SessionsScreen = () => {
                 JSON.stringify(updatedSessions)
               );
             } catch (error) {
-              console.error("Error deleting training session:", error);
               Alert.alert(
                 "Error",
                 "Failed to delete session. Please try again."
