@@ -252,7 +252,12 @@ const SessionDetailsScreen = () => {
               { backgroundColor: currentTheme.colors.surface },
             ]}
           >
-            <View style={styles.sessionIconContainer}>
+            <View
+              style={[
+                styles.sessionIconContainer,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
+            >
               <Text style={styles.sessionIcon}>🏇</Text>
             </View>
             <Text
@@ -564,7 +569,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: 5,
-    paddingTop: 30,
   },
   scrollContainer: {
     flex: 1,
@@ -572,7 +576,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 30,
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 75,
   },
   loadingContainer: {
     flex: 1,
@@ -621,7 +625,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#335C67",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
