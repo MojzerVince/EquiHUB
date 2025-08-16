@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
+import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -47,8 +48,20 @@ interface TrainingSession {
   maxSpeed?: number; // in m/s
 }
 
+// Configure notification behavior
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
 // Background location tracking task
 const LOCATION_TASK_NAME = "background-location-task";
+const TRACKING_NOTIFICATION_IDENTIFIER = "gps-tracking-notification";
 
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (error) {
@@ -131,6 +144,13 @@ const MapScreen = () => {
   const [trackingPoints, setTrackingPoints] = useState<TrackingPoint[]>([]);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
+
+  // Notification state
+  const [notificationId, setNotificationId] = useState<string | null>(null);
+  const notificationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
+
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
   );
@@ -197,6 +217,17 @@ const MapScreen = () => {
       if (trackingIntervalRef.current) {
         clearInterval(trackingIntervalRef.current);
       }
+
+      // Cleanup notification interval
+      if (notificationIntervalRef.current) {
+        clearInterval(notificationIntervalRef.current);
+      }
+
+      // Dismiss any active tracking notification
+      if (notificationId) {
+        Notifications.dismissNotificationAsync(notificationId);
+      }
+      Notifications.dismissNotificationAsync(TRACKING_NOTIFICATION_IDENTIFIER);
 
       // Stop background location tracking if still running
       Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME)
@@ -352,6 +383,129 @@ const MapScreen = () => {
       await AsyncStorage.setItem("training_sessions", JSON.stringify(sessions));
     } catch (error) {
       throw error;
+    }
+  };
+
+  // Request notification permissions
+  const requestNotificationPermissions = async () => {
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== "granted") {
+        console.warn("Notification permissions not granted");
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error("Error requesting notification permissions:", error);
+      return false;
+    }
+  };
+
+  // Create or update tracking notification with elapsed time
+  const updateTrackingNotification = async (
+    startTime: number,
+    horseName: string,
+    trainingType: string
+  ) => {
+    try {
+      const now = Date.now();
+      const elapsedSeconds = Math.floor((now - startTime) / 1000);
+      const hours = Math.floor(elapsedSeconds / 3600);
+      const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+      const seconds = elapsedSeconds % 60;
+
+      const timeString =
+        hours > 0
+          ? `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
+              .toString()
+              .padStart(2, "0")}`
+          : `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+      const notificationContent = {
+        title: "🐎 GPS Tracking Active",
+        body: `${horseName} • ${trainingType}\nElapsed time: ${timeString}`,
+        data: {
+          type: "tracking",
+          startTime,
+          horseName,
+          trainingType,
+        },
+        categoryIdentifier: "tracking",
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        sticky: true,
+      };
+
+      if (notificationId) {
+        // Update existing notification
+        await Notifications.dismissNotificationAsync(notificationId);
+      }
+
+      const identifier = await Notifications.scheduleNotificationAsync({
+        content: notificationContent,
+        trigger: null, // Show immediately
+        identifier: TRACKING_NOTIFICATION_IDENTIFIER,
+      });
+
+      setNotificationId(identifier);
+      return identifier;
+    } catch (error) {
+      console.error("Error updating tracking notification:", error);
+      return null;
+    }
+  };
+
+  // Start notification timer for tracking
+  const startTrackingNotification = async (
+    startTime: number,
+    horseName: string,
+    trainingType: string
+  ) => {
+    // Request permissions first
+    const hasPermission = await requestNotificationPermissions();
+    if (!hasPermission) {
+      console.warn("Cannot show tracking notifications - permissions denied");
+      return;
+    }
+
+    // Show initial notification
+    const initialNotificationId = await updateTrackingNotification(
+      startTime,
+      horseName,
+      trainingType
+    );
+    setNotificationId(initialNotificationId);
+
+    // Set up interval to update notification every second
+    const interval = setInterval(async () => {
+      await updateTrackingNotification(startTime, horseName, trainingType);
+    }, 1000);
+
+    notificationIntervalRef.current = interval;
+  };
+
+  // Stop tracking notification
+  const stopTrackingNotification = async () => {
+    try {
+      // Clear interval
+      if (notificationIntervalRef.current) {
+        clearInterval(notificationIntervalRef.current);
+        notificationIntervalRef.current = null;
+      }
+
+      // Dismiss notification
+      if (notificationId) {
+        await Notifications.dismissNotificationAsync(notificationId);
+        setNotificationId(null);
+      }
+
+      // Also dismiss by identifier as backup
+      await Notifications.dismissNotificationAsync(
+        TRACKING_NOTIFICATION_IDENTIFIER
+      );
+
+      console.log("✅ Tracking notification stopped and dismissed");
+    } catch (error) {
+      console.error("Error stopping tracking notification:", error);
     }
   };
 
@@ -584,6 +738,14 @@ const MapScreen = () => {
 
       // Store the sync interval reference for cleanup
       trackingIntervalRef.current = syncInterval;
+
+      // Start tracking notification
+      console.log("📱 Starting tracking notification...");
+      await startTrackingNotification(
+        startTime,
+        selectedHorseData?.name || "Unknown Horse",
+        selectedTrainingData?.name || "Unknown Training"
+      );
     } catch (error) {
       showError("Failed to start tracking. Please try again.");
     }
@@ -596,6 +758,10 @@ const MapScreen = () => {
     }
 
     try {
+      // Stop tracking notification first
+      console.log("📱 Stopping tracking notification...");
+      await stopTrackingNotification();
+
       // Stop background location tracking
       console.log("🛑 Stopping background location tracking...");
       await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
