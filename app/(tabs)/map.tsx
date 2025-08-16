@@ -1698,11 +1698,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   favoriteButton: {
-    padding: 5,
+    padding: 8,
     marginLeft: 10,
+    minWidth: 32,
+    minHeight: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   favoriteIcon: {
-    fontSize: 20,
+    fontSize: 24,
     color: "#FFD700",
   },
   favoritesSeparator: {
