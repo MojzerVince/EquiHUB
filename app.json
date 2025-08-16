@@ -2,7 +2,7 @@
   "expo": {
     "name": "EquiHUB",
     "slug": "EquiHUB",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "orientation": "portrait",
     "icon": "./assets/icons/512x512.png",
     "scheme": "equihub",
@@ -20,12 +20,12 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/icons/512x512.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
-      "versionCode": 9,
+      "versionCode": 10,
       "permissions": [
         "INTERNET",
         "ACCESS_COARSE_LOCATION",
@@ -62,7 +62,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/icons/512x512.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#335C67"
@@ -72,7 +72,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "icon": "./assets/icons/512x512.png",
           "color": "#ffffff",
           "defaultChannel": "default"
         }
