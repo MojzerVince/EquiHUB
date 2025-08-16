@@ -71,29 +71,48 @@ const SessionsScreen = () => {
 
     try {
       setCheckingProStatus(true);
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("is_pro_member")
-        .eq("id", user.id)
-        .single();
 
-      if (error) {
-        setIsProMember(false);
-      } else {
-        const proStatus = data?.is_pro_member || false;
-        setIsProMember(proStatus);
+      // Try REST API approach first
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-        // If user is not pro and viewing previous weeks, reset to current week
-        if (!proStatus && currentWeekOffset < 0) {
-          setCurrentWeekOffset(0);
+        const response = await fetch(
+          `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${user.id}&select=is_pro_member`,
+          {
+            method: "GET",
+            headers: {
+              apikey:
+                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
+              Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms`,
+              "Content-Type": "application/json",
+            },
+            signal: controller.signal,
+          }
+        );
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data && data.length > 0) {
+            const proStatus = data[0]?.is_pro_member || false;
+            setIsProMember(proStatus);
+            return; // Success, exit early
+          } else {
+            setIsProMember(false);
+            return;
+          }
+        } else {
+          setIsProMember(false);
         }
+      } catch (restError) {
+        setIsProMember(false);
       }
     } catch (error) {
+      // Default to non-Pro if everything fails
       setIsProMember(false);
-      // If error occurred and user is viewing previous weeks, reset to current week
-      if (currentWeekOffset < 0) {
-        setCurrentWeekOffset(0);
-      }
     } finally {
       setCheckingProStatus(false);
     }
@@ -167,6 +186,7 @@ const SessionsScreen = () => {
       setShowProBrief(true);
       return;
     }
+
     setCurrentWeekOffset((prev) => prev - 1);
   };
 
@@ -510,7 +530,6 @@ const SessionsScreen = () => {
             >
               {formatWeekDisplay(currentWeekOffset)}
             </Text>
-            {/* Pro badge removed since non-pro users can't access previous weeks */}
           </View>
 
           <TouchableOpacity
