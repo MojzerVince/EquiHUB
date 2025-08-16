@@ -8,6 +8,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  Modal,
   PanResponder,
   StyleSheet,
   Text,
@@ -56,6 +57,7 @@ const SessionsScreen = () => {
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
   const [isProMember, setIsProMember] = useState(false);
   const [checkingProStatus, setCheckingProStatus] = useState(false);
+  const [showProBrief, setShowProBrief] = useState(false);
 
   // Get screen width for swipe gestures
   const screenWidth = Dimensions.get("window").width;
@@ -78,10 +80,20 @@ const SessionsScreen = () => {
       if (error) {
         setIsProMember(false);
       } else {
-        setIsProMember(data?.is_pro_member || false);
+        const proStatus = data?.is_pro_member || false;
+        setIsProMember(proStatus);
+
+        // If user is not pro and viewing previous weeks, reset to current week
+        if (!proStatus && currentWeekOffset < 0) {
+          setCurrentWeekOffset(0);
+        }
       }
     } catch (error) {
       setIsProMember(false);
+      // If error occurred and user is viewing previous weeks, reset to current week
+      if (currentWeekOffset < 0) {
+        setCurrentWeekOffset(0);
+      }
     } finally {
       setCheckingProStatus(false);
     }
@@ -150,9 +162,9 @@ const SessionsScreen = () => {
 
   // Handle navigation to previous week
   const handlePreviousWeek = () => {
-    if (!isProMember && currentWeekOffset <= -1) {
-      // Non-pro user trying to access older weeks
-      router.push("/subscription");
+    if (!isProMember && currentWeekOffset === 0) {
+      // Non-pro user trying to access last week - show brief
+      setShowProBrief(true);
       return;
     }
     setCurrentWeekOffset((prev) => prev - 1);
@@ -215,6 +227,7 @@ const SessionsScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       loadTrainingSessions();
+      checkProMembership(); // Also refresh pro status when screen is focused
     }, [])
   );
 
@@ -475,11 +488,11 @@ const SessionsScreen = () => {
               styles.weekNavButton,
               {
                 backgroundColor: currentTheme.colors.surface,
-                opacity: !isProMember && currentWeekOffset <= -1 ? 0.5 : 1,
+                opacity: !isProMember && currentWeekOffset === 0 ? 0.5 : 1,
               },
             ]}
             onPress={handlePreviousWeek}
-            disabled={!isProMember && currentWeekOffset <= -1}
+            disabled={!isProMember && currentWeekOffset === 0}
           >
             <Text
               style={[styles.weekNavText, { color: currentTheme.colors.text }]}
@@ -497,16 +510,7 @@ const SessionsScreen = () => {
             >
               {formatWeekDisplay(currentWeekOffset)}
             </Text>
-            {!isProMember && currentWeekOffset < 0 && (
-              <View
-                style={[
-                  styles.proRequiredBadge,
-                  { backgroundColor: currentTheme.colors.accent },
-                ]}
-              >
-                <Text style={styles.proRequiredText}>PRO</Text>
-              </View>
-            )}
+            {/* Pro badge removed since non-pro users can't access previous weeks */}
           </View>
 
           <TouchableOpacity
@@ -613,58 +617,115 @@ const SessionsScreen = () => {
           </>
         )}
 
-        {/* Pro Subscription Prompt Overlay */}
-        {!checkingProStatus && !isProMember && currentWeekOffset < 0 && (
-          <View style={styles.subscriptionOverlay}>
-            <View
-              style={[
-                styles.subscriptionPrompt,
-                { backgroundColor: currentTheme.colors.surface },
-              ]}
-            >
+        {/* Pro Subscription Prompt Overlay - Removed since non-pro users can't access previous weeks */}
+      </View>
+
+      {/* Pro Brief Modal */}
+      <Modal
+        visible={showProBrief}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowProBrief(false)}
+      >
+        <View style={styles.proBriefOverlay}>
+          <View
+            style={[
+              styles.proBriefContainer,
+              { backgroundColor: currentTheme.colors.surface },
+            ]}
+          >
+            <View style={styles.proBriefHeader}>
               <Text
                 style={[
-                  styles.subscriptionTitle,
+                  styles.proBriefTitle,
                   { color: currentTheme.colors.text },
                 ]}
               >
-                Unlock Full History
-              </Text>
-              <Text
-                style={[
-                  styles.subscriptionMessage,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
-                View all your training sessions from previous weeks with EquiHub
-                Pro
+                🔓 Pro Feature
               </Text>
               <TouchableOpacity
-                style={[
-                  styles.upgradeButton,
-                  { backgroundColor: currentTheme.colors.accent },
-                ]}
-                onPress={() => router.push("/subscription")}
-              >
-                <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.dismissButton}
-                onPress={() => setCurrentWeekOffset(0)}
+                style={styles.proBriefCloseButton}
+                onPress={() => setShowProBrief(false)}
               >
                 <Text
                   style={[
-                    styles.dismissButtonText,
+                    styles.proBriefCloseText,
                     { color: currentTheme.colors.textSecondary },
                   ]}
                 >
-                  Back to Current Week
+                  ✕
                 </Text>
               </TouchableOpacity>
             </View>
+
+            <Text
+              style={[
+                styles.proBriefMessage,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              Access to previous weeks' training history is available with
+              EquiHub Pro.
+            </Text>
+
+            <View style={styles.proBriefFeatures}>
+              <Text
+                style={[
+                  styles.proBriefFeatureItem,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                ✓ Unlimited training history
+              </Text>
+              <Text
+                style={[
+                  styles.proBriefFeatureItem,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                ✓ Advanced analytics
+              </Text>
+              <Text
+                style={[
+                  styles.proBriefFeatureItem,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                ✓ Export your data
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.proBriefUpgradeButton,
+                { backgroundColor: currentTheme.colors.accent },
+              ]}
+              onPress={() => {
+                setShowProBrief(false);
+                router.push("/subscription");
+              }}
+            >
+              <Text style={styles.proBriefUpgradeButtonText}>
+                Upgrade to Pro
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.proBriefDismissButton}
+              onPress={() => setShowProBrief(false)}
+            >
+              <Text
+                style={[
+                  styles.proBriefDismissButtonText,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                Maybe Later
+              </Text>
+            </TouchableOpacity>
           </View>
-        )}
-      </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -974,6 +1035,92 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   dismissButtonText: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+  // Pro Brief Modal Styles
+  proBriefOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  proBriefContainer: {
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    maxWidth: 320,
+    width: "100%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  proBriefHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: 16,
+  },
+  proBriefTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    flex: 1,
+  },
+  proBriefCloseButton: {
+    padding: 4,
+    borderRadius: 12,
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+  },
+  proBriefCloseText: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  proBriefMessage: {
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  proBriefFeatures: {
+    alignSelf: "stretch",
+    marginBottom: 24,
+  },
+  proBriefFeatureItem: {
+    fontSize: 14,
+    marginBottom: 8,
+    textAlign: "left",
+  },
+  proBriefUpgradeButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  proBriefUpgradeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  proBriefDismissButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  proBriefDismissButtonText: {
     fontSize: 14,
     textAlign: "center",
   },
