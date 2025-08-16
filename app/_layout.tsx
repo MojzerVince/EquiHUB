@@ -1,11 +1,11 @@
 import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
+    DarkTheme,
+    DefaultTheme,
+    ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "react-native-reanimated";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
