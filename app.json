@@ -4,7 +4,7 @@
     "slug": "EquiHUB",
     "version": "0.2.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/icons/512x512.png",
     "scheme": "equihub",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
