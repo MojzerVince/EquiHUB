@@ -134,11 +134,11 @@ const SessionsScreen = () => {
       const swipeThreshold = screenWidth * 0.2; // 20% of screen width
       
       if (gestureState.dx > swipeThreshold) {
-        // Swipe right - go to next week (more recent)
-        handleNextWeek();
-      } else if (gestureState.dx < -swipeThreshold) {
-        // Swipe left - go to previous week (older)
+        // Swipe right - go to previous week (older)
         handlePreviousWeek();
+      } else if (gestureState.dx < -swipeThreshold) {
+        // Swipe left - go to next week (more recent)
+        handleNextWeek();
       }
     },
   });
@@ -458,7 +458,7 @@ const SessionsScreen = () => {
         {!checkingProStatus && !isProMember && currentWeekOffset === 0 && (
           <View style={styles.swipeInstructionContainer}>
             <Text style={[styles.swipeInstructionText, { color: currentTheme.colors.textSecondary }]}>
-              ← Swipe to view previous weeks (Pro feature)
+              Swipe right → to view previous weeks (Pro feature)
             </Text>
           </View>
         )}
