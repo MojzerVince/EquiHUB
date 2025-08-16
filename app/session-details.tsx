@@ -2,15 +2,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface TrainingSession {
   id: string;
@@ -36,21 +38,9 @@ interface TrainingSession {
 const SessionDetailsScreen = () => {
   const { sessionId } = useLocalSearchParams();
   const router = useRouter();
+  const { currentTheme } = useTheme();
   const [session, setSession] = useState<TrainingSession | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Hardcoded theme to match session-summary.tsx
-  const currentTheme = {
-    colors: {
-      primary: '#335C67',
-      background: '#FFFFFF',
-      surface: '#F8F9FA',
-      text: '#1A1A1A',
-      textSecondary: '#6B7280',
-      accent: '#E09F3E',
-      border: '#E0E0E0',
-    }
-  };
 
   useEffect(() => {
     loadSession();
@@ -62,7 +52,7 @@ const SessionDetailsScreen = () => {
       const savedSessions = await AsyncStorage.getItem("training_sessions");
       if (savedSessions) {
         const sessions: TrainingSession[] = JSON.parse(savedSessions);
-        const found = sessions.find(s => s.id === sessionId);
+        const found = sessions.find((s) => s.id === sessionId);
         setSession(found || null);
       }
     } catch (error) {
@@ -232,8 +222,12 @@ const SessionDetailsScreen = () => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
+            activeOpacity={0.7}
           >
-            <Text style={styles.backButtonText}>←</Text>
+            <Image
+              source={require("../assets/UI_resources/UI_white/arrow_white.png")}
+              style={styles.backIcon}
+            />
           </TouchableOpacity>
           <Text style={styles.header}>Session Details</Text>
           <View style={styles.placeholder} />
@@ -531,26 +525,26 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
-    position: "relative",
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    marginBottom: -45,
   },
   backButton: {
-    position: "absolute",
-    left: 20,
-    width: 40,
-    height: 40,
+    padding: 10,
     borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    zIndex: 10,
   },
-  backButtonText: {
-    fontSize: 20,
-    color: "#FFFFFF",
-    fontWeight: "bold",
+  backIcon: {
+    width: 24,
+    height: 24,
+    tintColor: "#fff",
   },
   header: {
     fontSize: 30,
@@ -558,9 +552,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     textAlign: "center",
     fontWeight: "600",
+    flex: 1,
   },
   placeholder: {
     width: 40,
+    height: 40,
   },
   content: {
     flex: 1,
@@ -568,6 +564,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: 5,
+    paddingTop: 30,
   },
   scrollContainer: {
     flex: 1,
