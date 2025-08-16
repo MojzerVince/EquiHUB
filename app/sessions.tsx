@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 import { supabase } from "../lib/supabase";
 
 // Training session interface to match map.tsx
@@ -41,17 +42,8 @@ interface TrainingSession {
 }
 
 const SessionsScreen = () => {
-  // Hardcoded theme to avoid context issues
-  const currentTheme = {
-    colors: {
-      primary: '#335C67',
-      background: '#FFFFFF',
-      surface: '#F8F9FA',
-      text: '#1A1A1A',
-      textSecondary: '#6B7280',
-      accent: '#E09F3E',
-    }
-  };
+  // Get current theme from context
+  const { currentTheme } = useTheme();
   
   // Get the authenticated user
   const { user } = useAuth();
@@ -582,16 +574,13 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
-    position: "relative",
     paddingHorizontal: 20,
     paddingVertical: 10,
     marginBottom: -45,
   },
   backButton: {
-    position: "absolute",
-    left: 20,
     padding: 10,
     borderRadius: 20,
     minWidth: 40,
@@ -613,9 +602,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     textAlign: "center",
     fontWeight: "600",
+    flex: 1,
   },
   placeholder: {
     width: 40,
+    height: 40,
   },
   content: {
     flex: 1,
