@@ -141,6 +141,11 @@ const SessionsScreen = () => {
     if (weekOffset === -1) return "Last Week";
 
     const { startOfWeek, endOfWeek } = getWeekBounds(weekOffset);
+    const weekYear = startOfWeek.getFullYear();
+
+    // Add year prefix with comma for weeks beyond last week
+    const yearPrefix = `${weekYear}, `;
+
     const startMonth = startOfWeek.toLocaleDateString("en-US", {
       month: "short",
     });
@@ -149,9 +154,9 @@ const SessionsScreen = () => {
     const endDay = endOfWeek.getDate();
 
     if (startMonth === endMonth) {
-      return `${startMonth} ${startDay}-${endDay}`;
+      return `${yearPrefix}${startMonth} ${startDay}-${endDay}`;
     } else {
-      return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
+      return `${yearPrefix}${startMonth} ${startDay} - ${endMonth} ${endDay}`;
     }
   };
 
