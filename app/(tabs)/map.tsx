@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -850,6 +851,17 @@ const MapScreen = () => {
                           onPress={() => setSelectedHorse(horse.id)}
                           activeOpacity={0.7}
                         >
+                          {(horse.image_url || horse.image_base64) && (
+                            <Image
+                              source={{
+                                uri: horse.image_base64 
+                                  ? `data:image/jpeg;base64,${horse.image_base64}`
+                                  : horse.image_url
+                              }}
+                              style={styles.horseImage}
+                              resizeMode="cover"
+                            />
+                          )}
                           <Text
                             style={[
                               styles.selectionCardTitle,
@@ -862,19 +874,6 @@ const MapScreen = () => {
                             ]}
                           >
                             {horse.name}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.selectionCardSubtitle,
-                              {
-                                color:
-                                  selectedHorse === horse.id
-                                    ? "rgba(255,255,255,0.8)"
-                                    : currentTheme.colors.textSecondary,
-                              },
-                            ]}
-                          >
-                            {horse.breed}
                           </Text>
                         </TouchableOpacity>
                       ))
@@ -1556,6 +1555,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 3,
+  },
+  horseImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginBottom: 8,
   },
   selectionCardTitle: {
     fontSize: 16,
