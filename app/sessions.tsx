@@ -7,6 +7,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Image,
   PanResponder,
   StyleSheet,
   Text,
@@ -461,8 +462,12 @@ const SessionsScreen = () => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
+            activeOpacity={0.7}
           >
-            <Text style={styles.backButtonText}>←</Text>
+            <Image
+              source={require("../assets/UI_resources/UI_white/arrow_white.png")}
+              style={styles.backIcon}
+            />
           </TouchableOpacity>
           <Text style={styles.header}>Training History</Text>
           <View style={styles.placeholder} />
@@ -646,17 +651,22 @@ const styles = StyleSheet.create({
     marginBottom: -45,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    position: "absolute",
+    left: 20,
+    padding: 10,
     borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    zIndex: 10,
   },
-  backButtonText: {
-    fontSize: 20,
-    color: "#FFFFFF",
-    fontWeight: "bold",
+  backIcon: {
+    width: 24,
+    height: 24,
+    tintColor: "#fff",
   },
   header: {
     fontSize: 30,
