@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Image,
+  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -54,6 +55,21 @@ const OptionsScreen = () => {
         console.log("Account deletion requested");
       }
     );
+  };
+
+  const handlePrivacyPolicy = async () => {
+    const url = "https://sites.google.com/view/equihub-privacy/f%C5%91oldal";
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        showError("Unable to open the privacy policy page.");
+      }
+    } catch (error) {
+      console.error("Error opening privacy policy:", error);
+      showError("Failed to open the privacy policy page.");
+    }
   };
 
   const SettingItem = ({
@@ -382,7 +398,7 @@ const OptionsScreen = () => {
               />
               <ActionButton
                 title="Privacy Policy"
-                onPress={() => console.log("Privacy Policy pressed")}
+                onPress={handlePrivacyPolicy}
               />
             </View>
           </View>
