@@ -974,10 +974,7 @@ const MapScreen = () => {
                               },
                             ]}
                           >
-                            <ScrollView
-                              style={{ maxHeight: 250 }}
-                              showsVerticalScrollIndicator={false}
-                            >
+                            <ScrollView showsVerticalScrollIndicator={false}>
                               {getSortedTrainingTypes().map(
                                 (training, index) => {
                                   const isFirstNonFavorite =
@@ -1633,10 +1630,10 @@ const styles = StyleSheet.create({
   trainingDropdownList: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    marginTop: 5,
+    marginTop: -100,
     borderWidth: 2,
     borderColor: "#E0E0E0",
-    maxHeight: 250,
+    height: 450,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
