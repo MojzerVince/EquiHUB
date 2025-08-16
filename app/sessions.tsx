@@ -44,10 +44,10 @@ interface TrainingSession {
 const SessionsScreen = () => {
   // Get current theme from context
   const { currentTheme } = useTheme();
-  
+
   // Get the authenticated user
   const { user } = useAuth();
-  
+
   const router = useRouter();
   const [trainingSessions, setTrainingSessions] = useState<TrainingSession[]>(
     []
@@ -58,7 +58,7 @@ const SessionsScreen = () => {
   const [checkingProStatus, setCheckingProStatus] = useState(false);
 
   // Get screen width for swipe gestures
-  const screenWidth = Dimensions.get('window').width;
+  const screenWidth = Dimensions.get("window").width;
 
   // Check if user is a pro member
   const checkProMembership = useCallback(async () => {
@@ -70,9 +70,9 @@ const SessionsScreen = () => {
     try {
       setCheckingProStatus(true);
       const { data, error } = await supabase
-        .from('profiles')
-        .select('is_pro_member')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("is_pro_member")
+        .eq("id", user.id)
         .single();
 
       if (error) {
@@ -92,15 +92,15 @@ const SessionsScreen = () => {
     const now = new Date();
     const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay; // Calculate days to Monday
-    
+
     const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() + mondayOffset + (weekOffset * 7));
+    startOfWeek.setDate(now.getDate() + mondayOffset + weekOffset * 7);
     startOfWeek.setHours(0, 0, 0, 0);
-    
+
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
-    
+
     return { startOfWeek, endOfWeek };
   };
 
@@ -108,13 +108,15 @@ const SessionsScreen = () => {
   const formatWeekDisplay = (weekOffset: number) => {
     if (weekOffset === 0) return "This Week";
     if (weekOffset === -1) return "Last Week";
-    
+
     const { startOfWeek, endOfWeek } = getWeekBounds(weekOffset);
-    const startMonth = startOfWeek.toLocaleDateString('en-US', { month: 'short' });
-    const endMonth = endOfWeek.toLocaleDateString('en-US', { month: 'short' });
+    const startMonth = startOfWeek.toLocaleDateString("en-US", {
+      month: "short",
+    });
+    const endMonth = endOfWeek.toLocaleDateString("en-US", { month: "short" });
     const startDay = startOfWeek.getDate();
     const endDay = endOfWeek.getDate();
-    
+
     if (startMonth === endMonth) {
       return `${startMonth} ${startDay}-${endDay}`;
     } else {
@@ -125,14 +127,17 @@ const SessionsScreen = () => {
   // Pan responder for swipe gestures
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 20;
+      return (
+        Math.abs(gestureState.dx) > Math.abs(gestureState.dy) &&
+        Math.abs(gestureState.dx) > 20
+      );
     },
     onPanResponderMove: (evt, gestureState) => {
       // Optional: Add visual feedback during swipe
     },
     onPanResponderRelease: (evt, gestureState) => {
       const swipeThreshold = screenWidth * 0.2; // 20% of screen width
-      
+
       if (gestureState.dx > swipeThreshold) {
         // Swipe right - go to previous week (older)
         handlePreviousWeek();
@@ -147,16 +152,16 @@ const SessionsScreen = () => {
   const handlePreviousWeek = () => {
     if (!isProMember && currentWeekOffset <= -1) {
       // Non-pro user trying to access older weeks
-      router.push('/subscription');
+      router.push("/subscription");
       return;
     }
-    setCurrentWeekOffset(prev => prev - 1);
+    setCurrentWeekOffset((prev) => prev - 1);
   };
 
   // Handle navigation to next week
   const handleNextWeek = () => {
     if (currentWeekOffset < 0) {
-      setCurrentWeekOffset(prev => prev + 1);
+      setCurrentWeekOffset((prev) => prev + 1);
     }
   };
 
@@ -165,10 +170,10 @@ const SessionsScreen = () => {
     try {
       setLoadingSessions(true);
       const savedSessions = await AsyncStorage.getItem("training_sessions");
-      
+
       if (savedSessions) {
         const parsedSessions: TrainingSession[] = JSON.parse(savedSessions);
-        
+
         // Filter sessions for current user if user ID is available
         const userSessions = user?.id
           ? parsedSessions.filter((session) => session.userId === user.id)
@@ -176,7 +181,7 @@ const SessionsScreen = () => {
 
         // Filter sessions by week
         const { startOfWeek, endOfWeek } = getWeekBounds(currentWeekOffset);
-        
+
         const weekSessions = userSessions.filter((session) => {
           const sessionDate = new Date(session.startTime);
           return sessionDate >= startOfWeek && sessionDate <= endOfWeek;
@@ -276,25 +281,50 @@ const SessionsScreen = () => {
 
   const renderTrainingSession = ({ item }: { item: TrainingSession }) => (
     <TouchableOpacity
-      style={[styles.sessionCard, { backgroundColor: currentTheme.colors.surface }]}
+      style={[
+        styles.sessionCard,
+        { backgroundColor: currentTheme.colors.surface },
+      ]}
       activeOpacity={0.85}
-      onPress={() => router.push({ pathname: '/session-details', params: { sessionId: item.id } })}
+      onPress={() =>
+        router.push({
+          pathname: "/session-details",
+          params: { sessionId: item.id },
+        })
+      }
     >
       <View style={styles.sessionHeader}>
         <View style={styles.sessionInfo}>
-          <Text style={[styles.sessionTitle, { color: currentTheme.colors.text }]}>
+          <Text
+            style={[styles.sessionTitle, { color: currentTheme.colors.text }]}
+          >
             {item.trainingType}
           </Text>
-          <Text style={[styles.sessionSubtitle, { color: currentTheme.colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.sessionSubtitle,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             {item.horseName}
           </Text>
-          <Text style={[styles.sessionDate, { color: currentTheme.colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.sessionDate,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             {formatDate(item.startTime)}
           </Text>
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => handleDeleteTrainingSession(item.id, `${item.trainingType} with ${item.horseName}`)}
+          onPress={() =>
+            handleDeleteTrainingSession(
+              item.id,
+              `${item.trainingType} with ${item.horseName}`
+            )
+          }
         >
           <Text style={styles.deleteButtonText}>🗑️</Text>
         </TouchableOpacity>
@@ -302,28 +332,58 @@ const SessionsScreen = () => {
 
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Duration</Text>
+          <Text
+            style={[
+              styles.statLabel,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            Duration
+          </Text>
           <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
             {item.duration ? formatTrainingDuration(item.duration) : "N/A"}
           </Text>
         </View>
 
         <View style={styles.statItem}>
-          <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Distance</Text>
+          <Text
+            style={[
+              styles.statLabel,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            Distance
+          </Text>
           <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
             {item.distance ? `${(item.distance / 1000).toFixed(2)} km` : "N/A"}
           </Text>
         </View>
 
         <View style={styles.statItem}>
-          <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Avg Speed</Text>
+          <Text
+            style={[
+              styles.statLabel,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            Avg Speed
+          </Text>
           <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
-            {item.averageSpeed ? `${(item.averageSpeed * 3.6).toFixed(1)} km/h` : "N/A"}
+            {item.averageSpeed
+              ? `${(item.averageSpeed * 3.6).toFixed(1)} km/h`
+              : "N/A"}
           </Text>
         </View>
 
         <View style={styles.statItem}>
-          <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Max Speed</Text>
+          <Text
+            style={[
+              styles.statLabel,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            Max Speed
+          </Text>
           <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
             {item.maxSpeed ? `${(item.maxSpeed * 3.6).toFixed(1)} km/h` : "N/A"}
           </Text>
@@ -413,42 +473,56 @@ const SessionsScreen = () => {
           <TouchableOpacity
             style={[
               styles.weekNavButton,
-              { 
+              {
                 backgroundColor: currentTheme.colors.surface,
-                opacity: (!isProMember && currentWeekOffset <= -1) ? 0.5 : 1
+                opacity: !isProMember && currentWeekOffset <= -1 ? 0.5 : 1,
               },
             ]}
             onPress={handlePreviousWeek}
             disabled={!isProMember && currentWeekOffset <= -1}
           >
-            <Text style={[styles.weekNavText, { color: currentTheme.colors.text }]}>
+            <Text
+              style={[styles.weekNavText, { color: currentTheme.colors.text }]}
+            >
               ←
             </Text>
           </TouchableOpacity>
-          
+
           <View style={styles.weekDisplayContainer}>
-            <Text style={[styles.weekDisplayText, { color: currentTheme.colors.text }]}>
+            <Text
+              style={[
+                styles.weekDisplayText,
+                { color: currentTheme.colors.text },
+              ]}
+            >
               {formatWeekDisplay(currentWeekOffset)}
             </Text>
             {!isProMember && currentWeekOffset < 0 && (
-              <View style={[styles.proRequiredBadge, { backgroundColor: currentTheme.colors.accent }]}>
+              <View
+                style={[
+                  styles.proRequiredBadge,
+                  { backgroundColor: currentTheme.colors.accent },
+                ]}
+              >
                 <Text style={styles.proRequiredText}>PRO</Text>
               </View>
             )}
           </View>
-          
+
           <TouchableOpacity
             style={[
               styles.weekNavButton,
-              { 
+              {
                 backgroundColor: currentTheme.colors.surface,
-                opacity: currentWeekOffset >= 0 ? 0.5 : 1
+                opacity: currentWeekOffset >= 0 ? 0.5 : 1,
               },
             ]}
             onPress={handleNextWeek}
             disabled={currentWeekOffset >= 0}
           >
-            <Text style={[styles.weekNavText, { color: currentTheme.colors.text }]}>
+            <Text
+              style={[styles.weekNavText, { color: currentTheme.colors.text }]}
+            >
               →
             </Text>
           </TouchableOpacity>
@@ -457,7 +531,12 @@ const SessionsScreen = () => {
         {/* Swipe instruction for non-Pro users */}
         {!checkingProStatus && !isProMember && currentWeekOffset === 0 && (
           <View style={styles.swipeInstructionContainer}>
-            <Text style={[styles.swipeInstructionText, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.swipeInstructionText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               Swipe right → to view previous weeks (Pro feature)
             </Text>
           </View>
@@ -484,7 +563,9 @@ const SessionsScreen = () => {
             <Text
               style={[styles.emptyText, { color: currentTheme.colors.text }]}
             >
-              {currentWeekOffset === 0 ? "No Training Sessions Yet" : "No recorded rides from this week."}
+              {currentWeekOffset === 0
+                ? "No Training Sessions Yet"
+                : "No recorded rides from this week."}
             </Text>
             {currentWeekOffset === 0 && (
               <>
@@ -535,16 +616,35 @@ const SessionsScreen = () => {
         {/* Pro Subscription Prompt Overlay */}
         {!checkingProStatus && !isProMember && currentWeekOffset < 0 && (
           <View style={styles.subscriptionOverlay}>
-            <View style={[styles.subscriptionPrompt, { backgroundColor: currentTheme.colors.surface }]}>
-              <Text style={[styles.subscriptionTitle, { color: currentTheme.colors.text }]}>
+            <View
+              style={[
+                styles.subscriptionPrompt,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.subscriptionTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
                 Unlock Full History
               </Text>
-              <Text style={[styles.subscriptionMessage, { color: currentTheme.colors.textSecondary }]}>
-                View all your training sessions from previous weeks with EquiHub Pro
+              <Text
+                style={[
+                  styles.subscriptionMessage,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                View all your training sessions from previous weeks with EquiHub
+                Pro
               </Text>
               <TouchableOpacity
-                style={[styles.upgradeButton, { backgroundColor: currentTheme.colors.accent }]}
-                onPress={() => router.push('/subscription')}
+                style={[
+                  styles.upgradeButton,
+                  { backgroundColor: currentTheme.colors.accent },
+                ]}
+                onPress={() => router.push("/subscription")}
               >
                 <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
               </TouchableOpacity>
@@ -552,7 +652,12 @@ const SessionsScreen = () => {
                 style={styles.dismissButton}
                 onPress={() => setCurrentWeekOffset(0)}
               >
-                <Text style={[styles.dismissButtonText, { color: currentTheme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.dismissButtonText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   Back to Current Week
                 </Text>
               </TouchableOpacity>
