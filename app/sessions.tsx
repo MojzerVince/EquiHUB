@@ -492,25 +492,29 @@ const SessionsScreen = () => {
             <Text
               style={[styles.emptyText, { color: currentTheme.colors.text }]}
             >
-              No Training Sessions Yet
+              {currentWeekOffset === 0 ? "No Training Sessions Yet" : "No recorded rides from this week."}
             </Text>
-            <Text
-              style={[
-                styles.emptySubtext,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              Start tracking your rides to see your training history here.
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.startButton,
-                { backgroundColor: currentTheme.colors.primary },
-              ]}
-              onPress={() => router.push("/(tabs)/map")}
-            >
-              <Text style={styles.startButtonText}>Start Training</Text>
-            </TouchableOpacity>
+            {currentWeekOffset === 0 && (
+              <>
+                <Text
+                  style={[
+                    styles.emptySubtext,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Start tracking your rides to see your training history here.
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.startButton,
+                    { backgroundColor: currentTheme.colors.primary },
+                  ]}
+                  onPress={() => router.push("/(tabs)/map")}
+                >
+                  <Text style={styles.startButtonText}>Start Training</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         ) : (
           <>
