@@ -220,7 +220,7 @@ const MapScreen = () => {
   // Sample data - these could come from API or context in real app
   const trainingTypes = [
     { id: "dressage", name: "Dressage" },
-    { id: "jumping", name: "Show Jumping" },
+    { id: "show_jumping", name: "Show Jumping" },
     { id: "trail", name: "Trail Riding" },
     { id: "endurance", name: "Endurance" },
     { id: "western", name: "Western" },
@@ -228,7 +228,6 @@ const MapScreen = () => {
     { id: "groundwork", name: "Groundwork" },
     { id: "liberty", name: "Liberty Training" },
     { id: "endurance_riding", name: "Endurance Riding" },
-    { id: "show_jumping", name: "Show Jumping" },
   ];
 
   // Helper function to calculate GPS strength
@@ -1307,6 +1306,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+    marginBottom: 100,
   },
   scrollContent: {
     flexGrow: 1,
@@ -1557,7 +1557,6 @@ const styles = StyleSheet.create({
   },
   trackingControls: {
     marginTop: 0,
-    marginBottom: 30,
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
