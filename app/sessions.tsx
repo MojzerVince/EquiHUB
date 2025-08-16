@@ -301,44 +301,26 @@ const SessionsScreen = () => {
   };
 
   const renderTrainingSession = ({ item }: { item: TrainingSession }) => (
-    <View
-      style={[
-        styles.sessionCard,
-        { backgroundColor: currentTheme.colors.surface },
-      ]}
+    <TouchableOpacity
+      style={[styles.sessionCard, { backgroundColor: currentTheme.colors.surface }]}
+      activeOpacity={0.85}
+      onPress={() => router.push({ pathname: '/session-details', params: { sessionId: item.id } })}
     >
       <View style={styles.sessionHeader}>
         <View style={styles.sessionInfo}>
-          <Text
-            style={[styles.sessionTitle, { color: currentTheme.colors.text }]}
-          >
+          <Text style={[styles.sessionTitle, { color: currentTheme.colors.text }]}>
             {item.trainingType}
           </Text>
-          <Text
-            style={[
-              styles.sessionSubtitle,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
+          <Text style={[styles.sessionSubtitle, { color: currentTheme.colors.textSecondary }]}>
             {item.horseName}
           </Text>
-          <Text
-            style={[
-              styles.sessionDate,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
+          <Text style={[styles.sessionDate, { color: currentTheme.colors.textSecondary }]}>
             {formatDate(item.startTime)}
           </Text>
         </View>
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() =>
-            handleDeleteTrainingSession(
-              item.id,
-              `${item.trainingType} with ${item.horseName}`
-            )
-          }
+          onPress={() => handleDeleteTrainingSession(item.id, `${item.trainingType} with ${item.horseName}`)}
         >
           <Text style={styles.deleteButtonText}>🗑️</Text>
         </TouchableOpacity>
@@ -346,64 +328,34 @@ const SessionsScreen = () => {
 
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text
-            style={[
-              styles.statLabel,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            Duration
-          </Text>
+          <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Duration</Text>
           <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
             {item.duration ? formatTrainingDuration(item.duration) : "N/A"}
           </Text>
         </View>
 
         <View style={styles.statItem}>
-          <Text
-            style={[
-              styles.statLabel,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            Distance
-          </Text>
+          <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Distance</Text>
           <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
             {item.distance ? `${(item.distance / 1000).toFixed(2)} km` : "N/A"}
           </Text>
         </View>
 
         <View style={styles.statItem}>
-          <Text
-            style={[
-              styles.statLabel,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            Avg Speed
-          </Text>
+          <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Avg Speed</Text>
           <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
-            {item.averageSpeed
-              ? `${(item.averageSpeed * 3.6).toFixed(1)} km/h`
-              : "N/A"}
+            {item.averageSpeed ? `${(item.averageSpeed * 3.6).toFixed(1)} km/h` : "N/A"}
           </Text>
         </View>
 
         <View style={styles.statItem}>
-          <Text
-            style={[
-              styles.statLabel,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            Max Speed
-          </Text>
+          <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Max Speed</Text>
           <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
             {item.maxSpeed ? `${(item.maxSpeed * 3.6).toFixed(1)} km/h` : "N/A"}
           </Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   if (loadingSessions) {
