@@ -1,28 +1,28 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-  Alert,
-  ActivityIndicator,
-  TouchableOpacity,
-  ScrollView,
-  Modal,
-} from "react-native";
-import MapView, {
-  Region,
-  PROVIDER_GOOGLE,
-  Polyline,
-} from "react-native-maps";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "../../contexts/ThemeContext";
-import { useDialog } from "../../contexts/DialogContext";
-import { useAuth } from "../../contexts/AuthContext";
-import { useRouter } from "expo-router";
-import { HorseAPI } from "../../lib/horseAPI";
-import { Horse } from "../../lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import MapView, {
+  PROVIDER_GOOGLE,
+  Polyline,
+  Region,
+} from "react-native-maps";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../contexts/AuthContext";
+import { useDialog } from "../../contexts/DialogContext";
+import { useTheme } from "../../contexts/ThemeContext";
+import { HorseAPI } from "../../lib/horseAPI";
+import { Horse } from "../../lib/supabase";
 
 // Types for tracking sessions
 interface TrackingPoint {
