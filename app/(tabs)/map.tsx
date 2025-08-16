@@ -13,11 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, {
-  PROVIDER_GOOGLE,
-  Polyline,
-  Region,
-} from "react-native-maps";
+import MapView, { PROVIDER_GOOGLE, Polyline, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDialog } from "../../contexts/DialogContext";
@@ -854,9 +850,9 @@ const MapScreen = () => {
                           {(horse.image_url || horse.image_base64) && (
                             <Image
                               source={{
-                                uri: horse.image_base64 
+                                uri: horse.image_base64
                                   ? `data:image/jpeg;base64,${horse.image_base64}`
-                                  : horse.image_url
+                                  : horse.image_url,
                               }}
                               style={styles.horseImage}
                               resizeMode="cover"
@@ -1273,7 +1269,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-    marginBottom: 100,
+    marginBottom: 80,
   },
   scrollContent: {
     flexGrow: 1,
@@ -1674,8 +1670,8 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     minWidth: 32,
     minHeight: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   favoriteIcon: {
     fontSize: 24,
