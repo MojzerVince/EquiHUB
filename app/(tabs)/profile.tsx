@@ -1092,12 +1092,20 @@ const ProfileScreen = () => {
                   </Text>
                 </View>
                 <View style={styles.badgeContainer}>
-                  <View
+                  <TouchableOpacity
                     style={[
                       styles.badge,
                       isProMember ? styles.proBadge : styles.regularBadge,
                       { backgroundColor: currentTheme.colors.surface },
                     ]}
+                    onPress={() => {
+                      if (isProMember) {
+                        router.push('/pro-features');
+                      } else {
+                        router.push('/subscription');
+                      }
+                    }}
+                    activeOpacity={0.7}
                   >
                     <Text
                       style={[
@@ -1108,9 +1116,9 @@ const ProfileScreen = () => {
                         { color: currentTheme.colors.text },
                       ]}
                     >
-                      {getMembershipDisplayText(isProMember)}
+                      {getMembershipDisplayText(isProMember)} →
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               </>
             ) : (
@@ -1598,6 +1606,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 15,
     borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   proBadge: {
     borderColor: "#FFA500",
