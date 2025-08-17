@@ -10,12 +10,42 @@ import "react-native-reanimated";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import SplashScreen from "@/components/SplashScreen";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DialogProvider } from "@/contexts/DialogContext";
 import { SplashProvider, useSplash } from "@/contexts/SplashContext";
 import { ThemeProvider as CustomThemeProvider } from "@/contexts/ThemeContext";
 import { TrackingProvider } from "@/contexts/TrackingContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { useRouter } from "expo-router";
+
+const SplashWithAuth = ({ onFinish }: { onFinish: () => void }) => {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const { setSplashActive } = useSplash();
+
+  const handleForceContinue = () => {
+    try {
+      router.replace("/login");
+    } catch (error) {
+      console.error("Error during force continue navigation:", error);
+    }
+  };
+
+  const handleSplashFinish = () => {
+    // Remove the extra delay - splash will handle timing internally
+    setSplashActive(false);
+    onFinish();
+  };
+
+  return (
+    <SplashScreen 
+      onFinish={handleSplashFinish}
+      loading={loading}
+      user={user}
+      onForceContinue={handleForceContinue}
+    />
+  );
+};
 
 const AppContent = () => {
   const colorScheme = useColorScheme();
@@ -23,32 +53,25 @@ const AppContent = () => {
     Inder: require("../assets/fonts/Inder-Regular.ttf"),
   });
   const [showSplash, setShowSplash] = useState(true);
-  const [splashAnimationFinished, setSplashAnimationFinished] = useState(false);
   const { setSplashActive } = useSplash();
 
-  // Update splash context when splash screen changes
+  // Initialize splash as active
   useEffect(() => {
-    setSplashActive(showSplash);
-  }, [showSplash, setSplashActive]);
+    setSplashActive(true);
+  }, [setSplashActive]);
 
-  // Show splash screen while fonts are loading
+  // Show splash screen while fonts are loading or splash is active
   if (!loaded || showSplash) {
     if (!loaded) {
       // Still loading fonts, don't show splash yet
       return null;
     }
     
-    // Fonts are loaded, show splash screen immediately
+    // Fonts are loaded, show splash screen immediately with auth integration
     return (
-      <SplashScreen 
-        onFinish={() => {
-          setSplashAnimationFinished(true);
-          // Start a timer to ensure minimum splash duration
-          setTimeout(() => {
-            setShowSplash(false);
-          }, 500); // Small delay to ensure smooth transition
-        }} 
-      />
+      <AuthProvider>
+        <SplashWithAuth onFinish={() => setShowSplash(false)} />
+      </AuthProvider>
     );
   }
 
