@@ -10,6 +10,7 @@ import {
   Image,
   Modal,
   PanResponder,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,7 +19,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
-import { supabase } from "../lib/supabase";
 
 // Training session interface to match map.tsx
 interface TrainingSession {
@@ -58,6 +58,7 @@ const SessionsScreen = () => {
   const [isProMember, setIsProMember] = useState(false);
   const [checkingProStatus, setCheckingProStatus] = useState(false);
   const [showProBrief, setShowProBrief] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   // Get screen width for swipe gestures
   const screenWidth = Dimensions.get("window").width;
@@ -135,6 +136,29 @@ const SessionsScreen = () => {
     return { startOfWeek, endOfWeek };
   };
 
+  // Calculate week offset from selected date
+  const getWeekOffsetFromDate = (selectedDate: Date) => {
+    const now = new Date();
+    const currentDay = now.getDay();
+    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+    
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() + mondayOffset);
+    currentWeekStart.setHours(0, 0, 0, 0);
+    
+    const selectedDay = selectedDate.getDay();
+    const selectedMondayOffset = selectedDay === 0 ? -6 : 1 - selectedDay;
+    
+    const selectedWeekStart = new Date(selectedDate);
+    selectedWeekStart.setDate(selectedDate.getDate() + selectedMondayOffset);
+    selectedWeekStart.setHours(0, 0, 0, 0);
+    
+    const timeDiff = selectedWeekStart.getTime() - currentWeekStart.getTime();
+    const weeksDiff = Math.round(timeDiff / (7 * 24 * 60 * 60 * 1000));
+    
+    return weeksDiff;
+  };
+
   // Format week display text
   const formatWeekDisplay = (weekOffset: number) => {
     if (weekOffset === 0) return "This Week";
@@ -200,6 +224,21 @@ const SessionsScreen = () => {
     if (currentWeekOffset < 0) {
       setCurrentWeekOffset((prev) => prev + 1);
     }
+  };
+
+  // Handle calendar date selection
+  const handleDateSelect = (selectedDate: Date) => {
+    const weekOffset = getWeekOffsetFromDate(selectedDate);
+    
+    // Check if non-pro user is trying to access past weeks
+    if (!isProMember && weekOffset < 0) {
+      setShowProBrief(true);
+      setShowCalendar(false);
+      return;
+    }
+    
+    setCurrentWeekOffset(weekOffset);
+    setShowCalendar(false);
   };
 
   // Load training sessions from AsyncStorage
@@ -495,7 +534,13 @@ const SessionsScreen = () => {
             />
           </TouchableOpacity>
           <Text style={styles.header}>Training History</Text>
-          <View style={styles.placeholder} />
+          <TouchableOpacity
+            style={styles.calendarButton}
+            onPress={() => setShowCalendar(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.calendarIcon}>📅</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
@@ -750,6 +795,141 @@ const SessionsScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Calendar Modal */}
+      <Modal
+        visible={showCalendar}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCalendar(false)}
+      >
+        <View style={styles.calendarOverlay}>
+          <View
+            style={[
+              styles.calendarContainer,
+              { backgroundColor: currentTheme.colors.surface },
+            ]}
+          >
+            <View style={styles.calendarHeader}>
+              <Text
+                style={[
+                  styles.calendarTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Select Week
+              </Text>
+              <TouchableOpacity
+                style={styles.calendarCloseButton}
+                onPress={() => setShowCalendar(false)}
+              >
+                <Text
+                  style={[
+                    styles.calendarCloseText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.calendarContent}>
+              {/* Generate calendar weeks */}
+              {Array.from({ length: isProMember ? 52 : 4 }, (_, index) => {
+                const weekOffset = -index;
+                const { startOfWeek, endOfWeek } = getWeekBounds(weekOffset);
+                const isCurrentWeek = weekOffset === 0;
+                const isSelectedWeek = weekOffset === currentWeekOffset;
+                
+                return (
+                  <TouchableOpacity
+                    key={weekOffset}
+                    style={[
+                      styles.calendarWeekItem,
+                      {
+                        backgroundColor: isSelectedWeek
+                          ? currentTheme.colors.primary
+                          : isCurrentWeek
+                          ? currentTheme.colors.accent + '20'
+                          : 'transparent',
+                        borderBottomColor: currentTheme.colors.border,
+                      },
+                    ]}
+                    onPress={() => handleDateSelect(startOfWeek)}
+                  >
+                    <View style={styles.calendarWeekInfo}>
+                      <Text
+                        style={[
+                          styles.calendarWeekTitle,
+                          {
+                            color: isSelectedWeek
+                              ? '#FFFFFF'
+                              : currentTheme.colors.text,
+                            fontWeight: isCurrentWeek ? 'bold' : 'normal',
+                          },
+                        ]}
+                      >
+                        {formatWeekDisplay(weekOffset)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.calendarWeekDate,
+                          {
+                            color: isSelectedWeek
+                              ? '#FFFFFF'
+                              : currentTheme.colors.textSecondary,
+                          },
+                        ]}
+                      >
+                        {startOfWeek.toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })} - {endOfWeek.toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </Text>
+                    </View>
+                    {isCurrentWeek && (
+                      <View style={styles.currentWeekBadge}>
+                        <Text style={styles.currentWeekBadgeText}>Today</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+              
+              {!isProMember && (
+                <View style={styles.calendarProNotice}>
+                  <Text
+                    style={[
+                      styles.calendarProNoticeText,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    📅 Upgrade to Pro for unlimited history access
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.calendarProButton,
+                      { backgroundColor: currentTheme.colors.accent },
+                    ]}
+                    onPress={() => {
+                      setShowCalendar(false);
+                      router.push("/subscription");
+                    }}
+                  >
+                    <Text style={styles.calendarProButtonText}>
+                      Get Pro
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -796,6 +976,21 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
     height: 40,
+  },
+  calendarButton: {
+    padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    zIndex: 10,
+  },
+  calendarIcon: {
+    fontSize: 20,
+    color: "#fff",
   },
   content: {
     flex: 1,
@@ -1145,6 +1340,103 @@ const styles = StyleSheet.create({
   },
   proBriefDismissButtonText: {
     fontSize: 14,
+    textAlign: "center",
+  },
+
+  // Calendar Modal Styles
+  calendarOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  calendarContainer: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "80%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  calendarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0, 0, 0, 0.1)",
+  },
+  calendarTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    flex: 1,
+  },
+  calendarCloseButton: {
+    padding: 4,
+    borderRadius: 12,
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+  },
+  calendarCloseText: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  calendarContent: {
+    maxHeight: 400,
+  },
+  calendarWeekItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  calendarWeekInfo: {
+    flex: 1,
+  },
+  calendarWeekTitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  calendarWeekDate: {
+    fontSize: 14,
+  },
+  currentWeekBadge: {
+    backgroundColor: "#4CAF50",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  currentWeekBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  calendarProNotice: {
+    padding: 20,
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0, 0, 0, 0.1)",
+  },
+  calendarProNoticeText: {
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  calendarProButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  calendarProButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
     textAlign: "center",
   },
 });
