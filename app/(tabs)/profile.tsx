@@ -1116,7 +1116,7 @@ const ProfileScreen = () => {
                         { color: currentTheme.colors.text },
                       ]}
                     >
-                      {getMembershipDisplayText(isProMember)} →
+                      {getMembershipDisplayText(isProMember)}
                     </Text>
                   </TouchableOpacity>
                 </View>
