@@ -1,20 +1,19 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
-import * as TaskManager from "expo-task-manager";
 import { useRouter } from "expo-router";
+import * as TaskManager from "expo-task-manager";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  AppState,
   Image,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import MapView, { PROVIDER_GOOGLE, Polyline, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
