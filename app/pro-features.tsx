@@ -116,11 +116,13 @@ const ProFeaturesPage = () => {
         </View>
       </SafeAreaView>
 
-      <ScrollView
-        style={[styles.content, { backgroundColor: currentTheme.colors.surface }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.container}>
+      <View style={[styles.viewPort, { backgroundColor: currentTheme.colors.surface }]}>
+        <ScrollView
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.profileContainer}>
           {/* Status Section */}
           <View style={[styles.statusSection, { backgroundColor: currentTheme.colors.background }]}>
             <View style={styles.statusHeader}>
@@ -247,8 +249,9 @@ const ProFeaturesPage = () => {
               Thank you for being a Pro member! Your support helps us continue improving EquiHUB.
             </Text>
           </View>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </View>
     </View>
   );
 };
@@ -256,8 +259,10 @@ const ProFeaturesPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#335C67",
   },
   safeArea: {
+    backgroundColor: "#335C67",
     paddingBottom: 5,
   },
   headerContainer: {
@@ -265,6 +270,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 10,
+    position: 'relative',
+    marginBottom: -35,
   },
   backButton: {
     padding: 10,
@@ -276,23 +283,46 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   header: {
-    fontSize: 24,
+    fontSize: 30,
     fontFamily: 'Inder',
     color: '#FFFFFF',
     fontWeight: '600',
-  },
-  content: {
+    textAlign: 'center',
     flex: 1,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingTop: 30,
-    marginTop: 10,
+  },
+  viewPort: {
+    backgroundColor: "#FFFFFF",
+    flex: 1,
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    marginTop: 5,
+    paddingTop: 20,
+  },
+  scrollContainer: {
+    flex: 1,
+    marginBottom: 80,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 30,
+  },
+  profileContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
   },
   statusSection: {
-    marginHorizontal: 20,
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 30,
+    padding: 30,
     marginBottom: 30,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   statusHeader: {
     flexDirection: 'row',
@@ -346,15 +376,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Inder',
   },
   featuresSection: {
-    paddingHorizontal: 20,
     marginBottom: 30,
   },
   sectionTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     fontFamily: 'Inder',
     textAlign: 'center',
-    marginBottom: 5,
+    marginBottom: 8,
   },
   sectionSubtitle: {
     fontSize: 14,
@@ -365,9 +394,17 @@ const styles = StyleSheet.create({
   featureItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 12,
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 3,
   },
   featureIcon: {
     fontSize: 24,
@@ -410,10 +447,18 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   benefitsSection: {
-    marginHorizontal: 20,
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 30,
+    padding: 30,
     marginBottom: 30,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   benefitsTitle: {
     fontSize: 20,
@@ -440,14 +485,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionsSection: {
-    paddingHorizontal: 20,
     marginBottom: 30,
     gap: 15,
   },
   actionButton: {
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 6,
   },
   supportButton: {
     backgroundColor: '#335C67',
@@ -458,25 +510,25 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'Inder',
   },
   manageButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'Inder',
   },
   footer: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
     alignItems: 'center',
+    paddingBottom: 30,
   },
   footerText: {
     fontSize: 14,
     fontFamily: 'Inder',
     textAlign: 'center',
     lineHeight: 20,
+    paddingHorizontal: 20,
   },
 });
 
