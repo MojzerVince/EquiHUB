@@ -59,6 +59,7 @@ const SessionsScreen = () => {
   const [checkingProStatus, setCheckingProStatus] = useState(false);
   const [showProBrief, setShowProBrief] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [earliestSessionDate, setEarliestSessionDate] = useState<Date | null>(null);
 
   // Get screen width for swipe gestures
   const screenWidth = Dimensions.get("window").width;
@@ -211,9 +212,18 @@ const SessionsScreen = () => {
   // Handle navigation to previous week
   const handlePreviousWeek = () => {
     if (!isProMember && currentWeekOffset === 0) {
-      // Non-pro user trying to access last week - show brief
+      // Non-pro user trying to access previous week - show brief
       setShowProBrief(true);
       return;
+    }
+
+    // For pro users, check if they can go further back
+    if (isProMember && earliestSessionDate) {
+      const earliestWeekOffset = getWeekOffsetFromDate(earliestSessionDate);
+      if (currentWeekOffset <= earliestWeekOffset) {
+        // Already at the earliest week with data
+        return;
+      }
     }
 
     setCurrentWeekOffset((prev) => prev - 1);
@@ -239,6 +249,54 @@ const SessionsScreen = () => {
     
     setCurrentWeekOffset(weekOffset);
     setShowCalendar(false);
+  };
+
+  // Find the earliest training session to determine calendar range
+  const findEarliestSession = useCallback(async () => {
+    try {
+      const savedSessions = await AsyncStorage.getItem("training_sessions");
+      if (savedSessions) {
+        const parsedSessions: TrainingSession[] = JSON.parse(savedSessions);
+        
+        // Filter sessions for current user
+        const userSessions = user?.id
+          ? parsedSessions.filter((session) => session.userId === user.id)
+          : parsedSessions;
+        
+        if (userSessions.length > 0) {
+          // Find the earliest session
+          const earliest = userSessions.reduce((earliest, session) => 
+            session.startTime < earliest.startTime ? session : earliest
+          );
+          
+          setEarliestSessionDate(new Date(earliest.startTime));
+        } else {
+          setEarliestSessionDate(null);
+        }
+      } else {
+        setEarliestSessionDate(null);
+      }
+    } catch (error) {
+      setEarliestSessionDate(null);
+    }
+  }, [user?.id]);
+
+  // Calculate the number of weeks to show in calendar
+  const getCalendarWeeksCount = () => {
+    if (!isProMember) {
+      return 1; // Non-pro users can only see current week
+    }
+    
+    if (!earliestSessionDate) {
+      return 4; // Default to 4 weeks if no sessions found
+    }
+    
+    // Calculate weeks from earliest session to current week
+    const earliestWeekOffset = getWeekOffsetFromDate(earliestSessionDate);
+    const weeksCount = Math.abs(earliestWeekOffset) + 1; // +1 to include current week
+    
+    // Cap at reasonable maximum (e.g., 5 years = ~260 weeks)
+    return Math.min(weeksCount, 260);
   };
 
   // Load training sessions from AsyncStorage
@@ -280,6 +338,7 @@ const SessionsScreen = () => {
   useEffect(() => {
     loadTrainingSessions();
     checkProMembership();
+    findEarliestSession();
   }, []);
 
   // Reload sessions when week changes
@@ -292,6 +351,7 @@ const SessionsScreen = () => {
     React.useCallback(() => {
       loadTrainingSessions();
       checkProMembership(); // Also refresh pro status when screen is focused
+      findEarliestSession();
     }, [])
   );
 
@@ -610,7 +670,7 @@ const SessionsScreen = () => {
                 { color: currentTheme.colors.textSecondary },
               ]}
             >
-              Swipe right → to view previous weeks (Pro feature)
+              📅 Tap calendar icon to view previous weeks (Pro feature)
             </Text>
           </View>
         )}
@@ -836,7 +896,7 @@ const SessionsScreen = () => {
 
             <ScrollView style={styles.calendarContent}>
               {/* Generate calendar weeks */}
-              {Array.from({ length: isProMember ? 52 : 4 }, (_, index) => {
+              {Array.from({ length: getCalendarWeeksCount() }, (_, index) => {
                 const weekOffset = -index;
                 const { startOfWeek, endOfWeek } = getWeekBounds(weekOffset);
                 const isCurrentWeek = weekOffset === 0;
