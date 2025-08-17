@@ -24,10 +24,9 @@ export const useAuth = () => {
 
 interface AuthProviderProps {
   children: React.ReactNode;
-  onAuthReady?: () => void;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthReady }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,15 +34,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRead
     // Get initial session
     getInitialSession();
 
-    // Add timeout fallback for auth loading - increased to 20 seconds
+    // Add timeout fallback for auth loading - reduced to 5 seconds
     const authLoadingTimeout = setTimeout(() => {
       if (loading) {
         console.log(
-          "⚠️ Auth loading timeout after 20 seconds - forcing loading to false"
+          "⚠️ Auth loading timeout after 5 seconds - forcing loading to false"
         );
         setLoading(false);
       }
-    }, 20000); // 20 second timeout for auth
+    }, 5000); // 5 second timeout for auth
 
     // Listen for auth changes
     const {
@@ -75,13 +74,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRead
       clearTimeout(authLoadingTimeout);
     };
   }, []);
-
-  // Call onAuthReady when loading is complete
-  useEffect(() => {
-    if (!loading && onAuthReady) {
-      onAuthReady();
-    }
-  }, [loading, onAuthReady]);
 
   const getInitialSession = async () => {
     try {

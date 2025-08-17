@@ -5,7 +5,7 @@ import {
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import "react-native-reanimated";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -23,7 +23,6 @@ const AppContent = () => {
     Inder: require("../assets/fonts/Inder-Regular.ttf"),
   });
   const [showSplash, setShowSplash] = useState(true);
-  const [appReady, setAppReady] = useState(false);
   const [splashAnimationFinished, setSplashAnimationFinished] = useState(false);
   const { setSplashActive } = useSplash();
 
@@ -32,37 +31,28 @@ const AppContent = () => {
     setSplashActive(showSplash);
   }, [showSplash, setSplashActive]);
 
-  // Hide splash when both splash animation is done AND app is ready
-  useEffect(() => {
-    if (splashAnimationFinished && appReady && showSplash) {
-      setShowSplash(false);
-    }
-  }, [splashAnimationFinished, appReady, showSplash]);
-
-  // Show splash screen while fonts are loading or during initial app load
+  // Show splash screen while fonts are loading
   if (!loaded || showSplash) {
     if (!loaded) {
       // Still loading fonts, don't show splash yet
       return null;
     }
     
-    // Fonts are loaded, show splash screen and start loading auth
+    // Fonts are loaded, show splash screen immediately
     return (
-      <AuthProvider onAuthReady={() => setAppReady(true)}>
-        <SplashScreen 
-          onFinish={() => {
-            setSplashAnimationFinished(true);
-            // Only hide splash if app is ready, otherwise keep showing it
-            if (appReady) {
-              setShowSplash(false);
-            }
-          }} 
-          keepVisible={!appReady}
-        />
-      </AuthProvider>
+      <SplashScreen 
+        onFinish={() => {
+          setSplashAnimationFinished(true);
+          // Start a timer to ensure minimum splash duration
+          setTimeout(() => {
+            setShowSplash(false);
+          }, 500); // Small delay to ensure smooth transition
+        }} 
+      />
     );
   }
 
+  // Main app with auth loading
   return (
     <AuthProvider>
       <CustomThemeProvider>
