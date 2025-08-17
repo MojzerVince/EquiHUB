@@ -169,7 +169,8 @@ const MapScreen = () => {
           const horses = await HorseAPI.getHorses(user.id);
           setUserHorses(horses || []);
         } catch (error) {
-          showError("Failed to load your horses");
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          showError(`Failed to load your horses\n\nError: ${errorMessage}`);
         } finally {
           setHorsesLoading(false);
         }
@@ -448,6 +449,9 @@ const MapScreen = () => {
       return identifier;
     } catch (error) {
       console.error("Error updating tracking notification:", error);
+      // Show user-facing error for notification issues
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showError(`Failed to update tracking notification\n\nError: ${errorMessage}`);
       return null;
     }
   };
@@ -504,6 +508,8 @@ const MapScreen = () => {
       console.log("✅ Tracking notification stopped and dismissed");
     } catch (error) {
       console.error("Error stopping tracking notification:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showError(`Failed to stop tracking notification\n\nError: ${errorMessage}`);
     }
   };
 
@@ -521,7 +527,8 @@ const MapScreen = () => {
       setLocationPermission(true);
       getCurrentLocation();
     } catch (error) {
-      showError("Failed to request location permission");
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showError(`Failed to request location permission\n\nError: ${errorMessage}`);
       setLocationPermission(false);
     } finally {
       setLoading(false);
@@ -550,7 +557,8 @@ const MapScreen = () => {
       setRegion(newRegion);
       setUserLocation({ latitude, longitude });
     } catch (error) {
-      showError("Unable to get your location");
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showError(`Unable to get your location\n\nError: ${errorMessage}`);
       setGpsStrength(0);
     } finally {
       setLoading(false);
@@ -745,7 +753,8 @@ const MapScreen = () => {
         selectedTrainingData?.name || "Unknown Training"
       );
     } catch (error) {
-      showError("Failed to start tracking. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showError(`Failed to start tracking. Please try again.\n\nError: ${errorMessage}`);
     }
   };
 
@@ -852,7 +861,8 @@ const MapScreen = () => {
         ]
       );
     } catch (error) {
-      showError("Failed to save session. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showError(`Failed to save session. Please try again.\n\nError: ${errorMessage}`);
     }
   };
 
