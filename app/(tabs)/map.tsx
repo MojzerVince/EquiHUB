@@ -674,6 +674,7 @@ const MapScreen = () => {
       setCurrentSession(newSession);
       setIsTracking(true);
       setSessionStartTime(startTime);
+      setCurrentTime(startTime); // Initialize currentTime to the same value as startTime
       setTrackingPoints([]);
 
       // Start background location tracking
@@ -1463,12 +1464,12 @@ const MapScreen = () => {
                         { color: currentTheme.colors.primary },
                       ]}
                     >
-                      {Math.floor((currentTime - sessionStartTime) / 60000)}:
-                      {String(
-                        Math.floor(
-                          ((currentTime - sessionStartTime) % 60000) / 1000
-                        )
-                      ).padStart(2, "0")}
+                      {(() => {
+                        const elapsed = Math.max(0, currentTime - sessionStartTime);
+                        const minutes = Math.floor(elapsed / 60000);
+                        const seconds = Math.floor((elapsed % 60000) / 1000);
+                        return `${minutes}:${String(seconds).padStart(2, "0")}`;
+                      })()}
                     </Text>
                   </View>
 
