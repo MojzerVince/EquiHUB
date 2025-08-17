@@ -5,23 +5,39 @@ import {
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "react-native-reanimated";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import SplashScreen from "@/components/SplashScreen";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DialogProvider } from "@/contexts/DialogContext";
+import { SplashProvider, useSplash } from "@/contexts/SplashContext";
 import { ThemeProvider as CustomThemeProvider } from "@/contexts/ThemeContext";
 import { TrackingProvider } from "@/contexts/TrackingContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
-export default function RootLayout() {
+const AppContent = () => {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     Inder: require("../assets/fonts/Inder-Regular.ttf"),
   });
   const [showSplash, setShowSplash] = useState(true);
+  const [appReady, setAppReady] = useState(false);
+  const [splashAnimationFinished, setSplashAnimationFinished] = useState(false);
+  const { setSplashActive } = useSplash();
+
+  // Update splash context when splash screen changes
+  useEffect(() => {
+    setSplashActive(showSplash);
+  }, [showSplash, setSplashActive]);
+
+  // Hide splash when both splash animation is done AND app is ready
+  useEffect(() => {
+    if (splashAnimationFinished && appReady && showSplash) {
+      setShowSplash(false);
+    }
+  }, [splashAnimationFinished, appReady, showSplash]);
 
   // Show splash screen while fonts are loading or during initial app load
   if (!loaded || showSplash) {
@@ -30,8 +46,21 @@ export default function RootLayout() {
       return null;
     }
     
-    // Fonts are loaded, show splash screen
-    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+    // Fonts are loaded, show splash screen and start loading auth
+    return (
+      <AuthProvider onAuthReady={() => setAppReady(true)}>
+        <SplashScreen 
+          onFinish={() => {
+            setSplashAnimationFinished(true);
+            // Only hide splash if app is ready, otherwise keep showing it
+            if (appReady) {
+              setShowSplash(false);
+            }
+          }} 
+          keepVisible={!appReady}
+        />
+      </AuthProvider>
+    );
   }
 
   return (
@@ -70,6 +99,10 @@ export default function RootLayout() {
                     name="subscription"
                     options={{ headerShown: false }}
                   />
+                  <Stack.Screen
+                    name="pro-features"
+                    options={{ headerShown: false }}
+                  />
                 </Stack>
               </ProtectedRoute>
             </ThemeProvider>
@@ -77,5 +110,13 @@ export default function RootLayout() {
         </DialogProvider>
       </CustomThemeProvider>
     </AuthProvider>
+  );
+};
+
+export default function RootLayout() {
+  return (
+    <SplashProvider>
+      <AppContent />
+    </SplashProvider>
   );
 }

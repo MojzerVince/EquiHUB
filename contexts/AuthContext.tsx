@@ -24,9 +24,10 @@ export const useAuth = () => {
 
 interface AuthProviderProps {
   children: React.ReactNode;
+  onAuthReady?: () => void;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthReady }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -74,6 +75,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       clearTimeout(authLoadingTimeout);
     };
   }, []);
+
+  // Call onAuthReady when loading is complete
+  useEffect(() => {
+    if (!loading && onAuthReady) {
+      onAuthReady();
+    }
+  }, [loading, onAuthReady]);
 
   const getInitialSession = async () => {
     try {

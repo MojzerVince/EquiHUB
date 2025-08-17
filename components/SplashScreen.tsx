@@ -14,15 +14,16 @@ const { width, height } = Dimensions.get('window');
 
 interface SplashScreenProps {
   onFinish: () => void;
+  keepVisible?: boolean;
 }
 
-const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
+const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish, keepVisible = false }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
     // Start the animation sequence
-    const animationSequence = Animated.sequence([
+    const initialAnimation = Animated.sequence([
       // Fade in and scale up the logo
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -38,18 +39,35 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
       ]),
       // Hold for a moment
       Animated.delay(1200),
-      // Fade out
+    ]);
+
+    initialAnimation.start(() => {
+      if (!keepVisible) {
+        // Fade out if not keeping visible
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }).start(() => {
+          onFinish();
+        });
+      } else {
+        // Just call onFinish but keep showing the splash
+        onFinish();
+      }
+    });
+  }, [fadeAnim, scaleAnim, onFinish, keepVisible]);
+
+  // When keepVisible changes to false, fade out
+  useEffect(() => {
+    if (!keepVisible) {
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 500,
         useNativeDriver: true,
-      }),
-    ]);
-
-    animationSequence.start(() => {
-      onFinish();
-    });
-  }, [fadeAnim, scaleAnim, onFinish]);
+      }).start();
+    }
+  }, [keepVisible, fadeAnim]);
 
   return (
     <LinearGradient

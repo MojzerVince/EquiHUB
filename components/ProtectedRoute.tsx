@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
+import { useSplash } from "../contexts/SplashContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
+  const { splashActive } = useSplash();
   const router = useRouter();
   const segments = useSegments();
   const [showForceButton, setShowForceButton] = useState(false);
@@ -79,6 +81,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       console.error("Error during force continue navigation:", error);
     }
   };
+
+  // Don't show loading screens while splash is active
+  if (splashActive) {
+    return null;
+  }
 
   if (loading) {
     return (
