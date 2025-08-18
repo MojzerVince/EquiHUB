@@ -2,7 +2,7 @@
   "expo": {
     "name": "EquiHUB",
     "slug": "EquiHUB",
-    "version": "0.3.4",
+    "version": "0.3.4.1",
     "orientation": "portrait",
     "icon": "./assets/icons/512x512.png",
     "scheme": "equihub",
@@ -28,6 +28,7 @@
       "versionCode": 12,
       "permissions": [
         "INTERNET",
+  "FOREGROUND_SERVICE",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
@@ -39,6 +40,12 @@
         "googleMaps": {
           "apiKey": "AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg"
         }
+      }
+      ,
+      "foregroundService": {
+        "notificationTitle": "EquiHUB GPS Tracking",
+        "notificationBody": "Tracking your riding session",
+        "notificationColor": "#4A90E2"
       }
     },
     "web": {

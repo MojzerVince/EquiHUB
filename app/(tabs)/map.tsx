@@ -232,13 +232,16 @@ const MapScreen = () => {
       Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME)
         .then((isRunning) => {
           if (isRunning) {
-            Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-            console.log(
-              "🧹 Cleaned up background location tracking on unmount"
-            );
+            return Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
           }
+          return Promise.resolve();
         })
-        .catch(console.error);
+        .then(() => {
+          console.log("🧹 Cleaned up background location tracking on unmount");
+        })
+        .catch((error) => {
+          console.error("Error cleaning up background location tracking:", error);
+        });
     };
   }, []);
 
@@ -683,6 +686,13 @@ const MapScreen = () => {
       // Clear any existing tracking points in storage
       await AsyncStorage.removeItem("current_tracking_points");
 
+      // Ensure the task is not already running
+      const isAlreadyRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      if (isAlreadyRunning) {
+        console.log("⚠️ Background location task already running, stopping first...");
+        await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+      }
+
       // Start background location tracking
       await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
         accuracy: Location.Accuracy.BestForNavigation,
@@ -702,6 +712,14 @@ const MapScreen = () => {
       // Set up a timer to sync background data with the app state
       const syncInterval = setInterval(async () => {
         try {
+          // Check if the background task is still running
+          const isStillRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+          if (!isStillRunning) {
+            console.warn("⚠️ Background location task stopped unexpectedly");
+            // Don't automatically restart - let user know there was an issue
+            return;
+          }
+
           const backgroundData = await AsyncStorage.getItem(
             "current_tracking_points"
           );
@@ -772,7 +790,15 @@ const MapScreen = () => {
 
       // Stop background location tracking
       console.log("🛑 Stopping background location tracking...");
-      await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+      
+      // Check if the task is actually running before trying to stop it
+      const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      if (isTaskRunning) {
+        await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+        console.log("✅ Background location task stopped successfully");
+      } else {
+        console.log("ℹ️ Background location task was not running");
+      }
 
       // Stop sync interval
       if (trackingIntervalRef.current) {
