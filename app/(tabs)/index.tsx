@@ -1,4 +1,7 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Notifications from "expo-notifications";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -143,6 +146,15 @@ const MyHorsesScreen = () => {
   // Image picker state
   const [editImage, setEditImage] = useState<any>(null);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
+
+  // Vaccination reminder state
+  const [vaccinationModalVisible, setVaccinationModalVisible] = useState(false);
+  const [selectedHorseForVaccination, setSelectedHorseForVaccination] = useState<Horse | null>(null);
+  const [vaccinationName, setVaccinationName] = useState("");
+  const [vaccinationDate, setVaccinationDate] = useState<Date | null>(null);
+  const [vaccinationNotes, setVaccinationNotes] = useState("");
+  const [showVaccinationDatePicker, setShowVaccinationDatePicker] = useState(false);
+  const [horseVaccinations, setHorseVaccinations] = useState<{[horseId: string]: any[]}>({});
 
   // Load horses when user is authenticated
   useEffect(() => {
@@ -613,6 +625,239 @@ const MyHorsesScreen = () => {
       setShowImagePickerModal(false);
     }
   };
+
+  // Vaccination reminder functions
+  const loadVaccinationReminders = async () => {
+    try {
+      const savedVaccinations = await AsyncStorage.getItem(`vaccination_reminders_${user?.id}`);
+      if (savedVaccinations) {
+        setHorseVaccinations(JSON.parse(savedVaccinations));
+      }
+    } catch (error) {
+      console.error("Error loading vaccination reminders:", error);
+    }
+  };
+
+  const saveVaccinationReminders = async (vaccinations: {[horseId: string]: any[]}) => {
+    try {
+      await AsyncStorage.setItem(`vaccination_reminders_${user?.id}`, JSON.stringify(vaccinations));
+      setHorseVaccinations(vaccinations);
+    } catch (error) {
+      console.error("Error saving vaccination reminders:", error);
+      showError("Failed to save vaccination reminder");
+    }
+  };
+
+  const openVaccinationModal = (horse: Horse) => {
+    setSelectedHorseForVaccination(horse);
+    setVaccinationName("");
+    setVaccinationDate(null);
+    setVaccinationNotes("");
+    setShowVaccinationDatePicker(false);
+    setVaccinationModalVisible(true);
+  };
+
+  const closeVaccinationModal = () => {
+    setVaccinationModalVisible(false);
+    setSelectedHorseForVaccination(null);
+    setVaccinationName("");
+    setVaccinationDate(null);
+    setVaccinationNotes("");
+    setShowVaccinationDatePicker(false);
+  };
+
+  const saveVaccinationReminder = async () => {
+    if (!selectedHorseForVaccination || !vaccinationName.trim() || !vaccinationDate) {
+      showError("Please fill in all required fields");
+      return;
+    }
+
+    const newVaccination = {
+      id: Date.now().toString(),
+      name: vaccinationName.trim(),
+      date: vaccinationDate.toISOString(),
+      notes: vaccinationNotes.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedVaccinations = { ...horseVaccinations };
+    if (!updatedVaccinations[selectedHorseForVaccination.id]) {
+      updatedVaccinations[selectedHorseForVaccination.id] = [];
+    }
+    updatedVaccinations[selectedHorseForVaccination.id].push(newVaccination);
+
+    await saveVaccinationReminders(updatedVaccinations);
+    
+    // Schedule notifications for the new vaccination
+    await scheduleVaccinationNotifications(newVaccination, selectedHorseForVaccination.name);
+    
+    closeVaccinationModal();
+    setSuccessMessage(`Vaccination reminder set for ${selectedHorseForVaccination.name}`);
+    setShowSuccessModal(true);
+  };
+
+  const deleteVaccinationReminder = async (horseId: string, vaccinationId: string) => {
+    // Cancel notifications first
+    await cancelVaccinationNotifications(vaccinationId);
+    
+    const updatedVaccinations = { ...horseVaccinations };
+    if (updatedVaccinations[horseId]) {
+      updatedVaccinations[horseId] = updatedVaccinations[horseId].filter(
+        v => v.id !== vaccinationId
+      );
+      if (updatedVaccinations[horseId].length === 0) {
+        delete updatedVaccinations[horseId];
+      }
+    }
+    await saveVaccinationReminders(updatedVaccinations);
+  };
+
+  const getUpcomingVaccinations = (horseId: string) => {
+    const vaccinations = horseVaccinations[horseId] || [];
+    const now = new Date();
+    return vaccinations.filter(v => new Date(v.date) >= now);
+  };
+
+  const getOverdueVaccinations = (horseId: string) => {
+    const vaccinations = horseVaccinations[horseId] || [];
+    const now = new Date();
+    return vaccinations.filter(v => new Date(v.date) < now);
+  };
+
+  // Notification functions
+  const requestNotificationPermissions = async () => {
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        showError('Notification permissions are required for vaccination reminders');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error requesting notification permissions:', error);
+      return false;
+    }
+  };
+
+  const scheduleVaccinationNotifications = async (vaccination: any, horseName: string) => {
+    try {
+      const hasPermission = await requestNotificationPermissions();
+      if (!hasPermission) return;
+
+      const dueDate = new Date(vaccination.date);
+      const now = new Date();
+
+      // Calculate notification dates
+      const oneWeekBefore = new Date(dueDate);
+      oneWeekBefore.setDate(dueDate.getDate() - 7);
+      
+      const twoDaysBefore = new Date(dueDate);
+      twoDaysBefore.setDate(dueDate.getDate() - 2);
+      
+      const oneDayBefore = new Date(dueDate);
+      oneDayBefore.setDate(dueDate.getDate() - 1);
+      
+      const onTheDay = new Date(dueDate);
+      onTheDay.setHours(9, 0, 0, 0); // 9 AM on the day
+
+      // Schedule notifications if they're in the future
+      const notifications = [
+        {
+          date: oneWeekBefore,
+          title: `🩺 Vaccination Reminder - 1 Week`,
+          body: `${horseName} has a vaccination (${vaccination.name}) due in 1 week on ${dueDate.toLocaleDateString()}`,
+          identifier: `${vaccination.id}_week`
+        },
+        {
+          date: twoDaysBefore,
+          title: `💉 Vaccination Reminder - 2 Days`,
+          body: `${horseName} has a vaccination (${vaccination.name}) due in 2 days`,
+          identifier: `${vaccination.id}_2days`
+        },
+        {
+          date: oneDayBefore,
+          title: `⚠️ Vaccination Reminder - Tomorrow`,
+          body: `${horseName} has a vaccination (${vaccination.name}) due tomorrow!`,
+          identifier: `${vaccination.id}_1day`
+        },
+        {
+          date: onTheDay,
+          title: `🚨 Vaccination Due Today!`,
+          body: `${horseName} vaccination (${vaccination.name}) is due today!`,
+          identifier: `${vaccination.id}_today`
+        }
+      ];
+
+      for (const notification of notifications) {
+        if (notification.date > now) {
+          await Notifications.scheduleNotificationAsync({
+            identifier: notification.identifier,
+            content: {
+              title: notification.title,
+              body: notification.body,
+              data: {
+                vaccinationId: vaccination.id,
+                horseName: horseName,
+                type: 'vaccination_reminder'
+              }
+            },
+            trigger: { 
+              type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+              seconds: Math.floor((notification.date.getTime() - now.getTime()) / 1000), 
+              repeats: false 
+            }
+          });
+        }
+      }
+
+      console.log(`Scheduled notifications for ${vaccination.name} vaccination for ${horseName}`);
+    } catch (error) {
+      console.error('Error scheduling notifications:', error);
+    }
+  };
+
+  const cancelVaccinationNotifications = async (vaccinationId: string) => {
+    try {
+      const identifiers = [
+        `${vaccinationId}_week`,
+        `${vaccinationId}_2days`,
+        `${vaccinationId}_1day`,
+        `${vaccinationId}_today`
+      ];
+      
+      await Notifications.cancelScheduledNotificationAsync(identifiers[0]);
+      await Notifications.cancelScheduledNotificationAsync(identifiers[1]);
+      await Notifications.cancelScheduledNotificationAsync(identifiers[2]);
+      await Notifications.cancelScheduledNotificationAsync(identifiers[3]);
+      console.log(`Cancelled notifications for vaccination ${vaccinationId}`);
+    } catch (error) {
+      console.error('Error cancelling notifications:', error);
+    }
+  };
+
+  // Load vaccination reminders when component mounts
+  useEffect(() => {
+    if (user?.id) {
+      loadVaccinationReminders();
+    }
+  }, [user?.id]);
+
+  // Initialize notifications
+  useEffect(() => {
+    // Configure notification behavior
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+
+    // Request permissions on app start
+    requestNotificationPermissions();
+  }, []);
 
   // Custom Dropdown Component
   const CustomDropdown = ({
@@ -1712,37 +1957,117 @@ const MyHorsesScreen = () => {
                         </Text>
                       </View>
                     </View>
+
+                    {/* Vaccination Status Section */}
+                    {(getUpcomingVaccinations(horse.id).length > 0 || getOverdueVaccinations(horse.id).length > 0) && (
+                      <View style={[styles.vaccinationSection, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.border }]}>
+                        <Text style={[styles.vaccinationSectionTitle, { color: currentTheme.colors.text }]}>
+                          💉 Vaccination Status
+                        </Text>
+                        
+                        {getOverdueVaccinations(horse.id).length > 0 && (
+                          <View style={styles.vaccinationAlert}>
+                            <Text style={[styles.vaccinationAlertText, { color: currentTheme.colors.error }]}>
+                              ⚠️ {getOverdueVaccinations(horse.id).length} overdue vaccination(s)
+                            </Text>
+                          </View>
+                        )}
+                        
+                        {getUpcomingVaccinations(horse.id).length > 0 && (
+                          <View style={styles.vaccinationUpcoming}>
+                            <Text style={[styles.vaccinationUpcomingText, { color: currentTheme.colors.success }]}>
+                              📅 {getUpcomingVaccinations(horse.id).length} upcoming vaccination(s)
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
                   </View>
 
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
                       style={[
                         styles.actionButton,
-                        styles.editButton,
-                        { backgroundColor: currentTheme.colors.secondary },
+                        styles.vaccinationButton,
                       ]}
-                      onPress={() => openEditModal(horse)}
+                      onPress={() => openVaccinationModal(horse)}
+                      activeOpacity={0.9}
                     >
-                      <Text
-                        style={[styles.editButtonText, { color: "#FFFFFF" }]}
+                      <LinearGradient
+                        colors={
+                          getOverdueVaccinations(horse.id).length > 0
+                            ? ['#ff6b6b', '#ff5252'] // Red gradient for overdue
+                            : getUpcomingVaccinations(horse.id).length > 0
+                            ? ['#4ecdc4', '#26a69a'] // Teal gradient for upcoming
+                            : ['#667eea', '#764ba2'] // Purple gradient for normal
+                        }
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.vaccinationGradient}
                       >
-                        ✏️ Edit
-                      </Text>
+                        <View style={styles.vaccinationButtonContent}>
+                          <View style={styles.vaccinationButtonIcon}>
+                            <Text style={styles.vaccinationButtonEmoji}>
+                              {getOverdueVaccinations(horse.id).length > 0
+                                ? '⚠️'
+                                : getUpcomingVaccinations(horse.id).length > 0
+                                ? '📅'
+                                : '💉'}
+                            </Text>
+                          </View>
+                          <View style={styles.vaccinationButtonTextContainer}>
+                            <Text style={[styles.vaccinationButtonText, { color: "#FFFFFF" }]}>
+                              Vaccinations
+                            </Text>
+                            {(getOverdueVaccinations(horse.id).length > 0 || getUpcomingVaccinations(horse.id).length > 0) && (
+                              <Text style={styles.vaccinationButtonSubtext}>
+                                {getOverdueVaccinations(horse.id).length > 0
+                                  ? `${getOverdueVaccinations(horse.id).length} overdue`
+                                  : `${getUpcomingVaccinations(horse.id).length} upcoming`}
+                              </Text>
+                            )}
+                          </View>
+                          {(getOverdueVaccinations(horse.id).length > 0 || getUpcomingVaccinations(horse.id).length > 0) && (
+                            <View style={styles.vaccinationButtonBadge}>
+                              <Text style={styles.vaccinationButtonBadgeText}>
+                                {getOverdueVaccinations(horse.id).length + getUpcomingVaccinations(horse.id).length}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      </LinearGradient>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.actionButton,
-                        styles.deleteButton,
-                        { backgroundColor: currentTheme.colors.error },
-                      ]}
-                      onPress={() => deleteHorse(horse)}
-                    >
-                      <Text
-                        style={[styles.deleteButtonText, { color: "#FFFFFF" }]}
+                    
+                    <View style={styles.secondaryButtons}>
+                      <TouchableOpacity
+                        style={[
+                          styles.actionButton,
+                          styles.editButton,
+                          { backgroundColor: currentTheme.colors.secondary, flex: 1 },
+                        ]}
+                        onPress={() => openEditModal(horse)}
                       >
-                        🗑️ Delete
-                      </Text>
-                    </TouchableOpacity>
+                        <Text
+                          style={[styles.editButtonText, { color: "#FFFFFF" }]}
+                        >
+                          ✏️ Edit
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.actionButton,
+                          styles.deleteButton,
+                          { backgroundColor: currentTheme.colors.error, flex: 1 },
+                        ]}
+                        onPress={() => deleteHorse(horse)}
+                      >
+                        <Text
+                          style={[styles.deleteButtonText, { color: "#FFFFFF" }]}
+                        >
+                          🗑️ Delete
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -2296,6 +2621,340 @@ const MyHorsesScreen = () => {
 
       {/* Image Picker Modal */}
       <ImagePickerModal />
+
+      {/* Vaccination Reminder Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={vaccinationModalVisible}
+        onRequestClose={closeVaccinationModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContainer,
+              { backgroundColor: currentTheme.colors.surface },
+            ]}
+          >
+            <View
+              style={[
+                styles.modalHeader,
+                { backgroundColor: currentTheme.colors.accent },
+              ]}
+            >
+              <Text style={[styles.modalTitle, { color: "#FFFFFF" }]}>
+                💉 Vaccination Reminders
+              </Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={closeVaccinationModal}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              {selectedHorseForVaccination && (
+                <>
+                  <Text
+                    style={[
+                      styles.vaccinationHorseName,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Setting reminder for: {selectedHorseForVaccination.name}
+                  </Text>
+
+                  {/* Existing Vaccinations */}
+                  {horseVaccinations[selectedHorseForVaccination.id] && 
+                   horseVaccinations[selectedHorseForVaccination.id].length > 0 && (
+                    <View style={styles.existingVaccinations}>
+                      <Text
+                        style={[
+                          styles.existingVaccinationsTitle,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        Existing Reminders:
+                      </Text>
+                      {horseVaccinations[selectedHorseForVaccination.id].map((vaccination) => {
+                        const isOverdue = new Date(vaccination.date) < new Date();
+                        return (
+                          <View
+                            key={vaccination.id}
+                            style={[
+                              styles.vaccinationItem,
+                              {
+                                backgroundColor: isOverdue 
+                                  ? currentTheme.colors.error + '20'
+                                  : currentTheme.colors.success + '20',
+                                borderColor: isOverdue 
+                                  ? currentTheme.colors.error
+                                  : currentTheme.colors.success,
+                              },
+                            ]}
+                          >
+                            <View style={styles.vaccinationItemContent}>
+                              <Text
+                                style={[
+                                  styles.vaccinationItemName,
+                                  { color: currentTheme.colors.text },
+                                ]}
+                              >
+                                {vaccination.name}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.vaccinationItemDate,
+                                  { 
+                                    color: isOverdue 
+                                      ? currentTheme.colors.error 
+                                      : currentTheme.colors.success 
+                                  },
+                                ]}
+                              >
+                                {isOverdue ? '⚠️ Overdue: ' : '📅 Due: '}
+                                {new Date(vaccination.date).toLocaleDateString()}
+                              </Text>
+                              {vaccination.notes && (
+                                <Text
+                                  style={[
+                                    styles.vaccinationItemNotes,
+                                    { color: currentTheme.colors.textSecondary },
+                                  ]}
+                                >
+                                  {vaccination.notes}
+                                </Text>
+                              )}
+                            </View>
+                            <TouchableOpacity
+                              style={styles.deleteVaccinationButton}
+                              onPress={() => deleteVaccinationReminder(
+                                selectedHorseForVaccination.id,
+                                vaccination.id
+                              )}
+                            >
+                              <Text style={styles.deleteVaccinationButtonText}>🗑️</Text>
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  {/* Add New Vaccination Form */}
+                  <View style={styles.addVaccinationForm}>
+                    <Text
+                      style={[
+                        styles.addVaccinationTitle,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      Add New Reminder:
+                    </Text>
+
+                    <View style={styles.inputGroup}>
+                      <Text
+                        style={[
+                          styles.inputLabel,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        Vaccination Name *
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.textInput,
+                          {
+                            backgroundColor: currentTheme.colors.surface,
+                            borderColor: currentTheme.colors.border,
+                            color: currentTheme.colors.text,
+                          },
+                        ]}
+                        value={vaccinationName}
+                        onChangeText={setVaccinationName}
+                        placeholder="e.g., Annual Vaccinations, Flu Shot, etc."
+                        placeholderTextColor={currentTheme.colors.textSecondary}
+                        maxLength={50}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text
+                        style={[
+                          styles.inputLabel,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        Due Date *
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.datePickerButton,
+                          {
+                            backgroundColor: currentTheme.colors.surface,
+                            borderColor: currentTheme.colors.border,
+                          },
+                        ]}
+                        onPress={() => setShowVaccinationDatePicker(true)}
+                      >
+                        <Text
+                          style={[
+                            styles.datePickerButtonText,
+                            {
+                              color: vaccinationDate
+                                ? currentTheme.colors.text
+                                : currentTheme.colors.textSecondary,
+                            },
+                          ]}
+                        >
+                          {vaccinationDate
+                            ? vaccinationDate.toLocaleDateString()
+                            : "Select due date"}
+                        </Text>
+                        <Text style={[styles.datePickerArrow, { color: currentTheme.colors.text }]}>
+                          📅
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text
+                        style={[
+                          styles.inputLabel,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        Notes (Optional)
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.textInput,
+                          styles.textInputMultiline,
+                          {
+                            backgroundColor: currentTheme.colors.surface,
+                            borderColor: currentTheme.colors.border,
+                            color: currentTheme.colors.text,
+                          },
+                        ]}
+                        value={vaccinationNotes}
+                        onChangeText={setVaccinationNotes}
+                        placeholder="Additional notes about this vaccination..."
+                        placeholderTextColor={currentTheme.colors.textSecondary}
+                        multiline={true}
+                        numberOfLines={3}
+                        maxLength={200}
+                      />
+                    </View>
+                  </View>
+                </>
+              )}
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.cancelButton,
+                  { backgroundColor: currentTheme.colors.textSecondary },
+                ]}
+                onPress={closeVaccinationModal}
+              >
+                <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.saveButton,
+                  { backgroundColor: currentTheme.colors.accent },
+                ]}
+                onPress={saveVaccinationReminder}
+              >
+                <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
+                  Save Reminder
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Vaccination Date Picker Modal */}
+      {showVaccinationDatePicker && (
+        <Modal
+          transparent={true}
+          visible={showVaccinationDatePicker}
+          animationType="fade"
+          onRequestClose={() => setShowVaccinationDatePicker(false)}
+        >
+          <TouchableOpacity
+            style={styles.datePickerOverlay}
+            onPress={() => setShowVaccinationDatePicker(false)}
+          >
+            <View
+              style={[
+                styles.datePickerContainer,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.datePickerTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Select Due Date
+              </Text>
+              
+              <ScrollView style={styles.datePickerScroll}>
+                {Array.from({ length: 365 }, (_, index) => {
+                  const date = new Date();
+                  date.setDate(date.getDate() + index);
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.datePickerOption,
+                        {
+                          backgroundColor: 
+                            vaccinationDate?.toDateString() === date.toDateString()
+                              ? currentTheme.colors.accent
+                              : 'transparent',
+                        },
+                      ]}
+                      onPress={() => {
+                        setVaccinationDate(date);
+                        setShowVaccinationDatePicker(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.datePickerOptionText,
+                          {
+                            color: 
+                              vaccinationDate?.toDateString() === date.toDateString()
+                                ? '#FFFFFF'
+                                : currentTheme.colors.text,
+                          },
+                        ]}
+                      >
+                        {date.toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </View>
   );
 };
@@ -2448,8 +3107,12 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   actionButtons: {
+    flexDirection: "column",
+    gap: 12,
+    marginTop: 8,
+  },
+  secondaryButtons: {
     flexDirection: "row",
-    justifyContent: "space-between",
     gap: 10,
   },
   actionButton: {
@@ -2458,6 +3121,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 15,
     alignItems: "center",
+    minHeight: 50,
   },
   editButton: {
     backgroundColor: "#335C67",
@@ -2840,6 +3504,238 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: "#335C67",
+    fontFamily: "Inder",
+  },
+
+  // Vaccination Reminder Styles
+  vaccinationSection: {
+    marginTop: 15,
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  vaccinationSectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 10,
+    fontFamily: "Inder",
+  },
+  vaccinationAlert: {
+    marginBottom: 8,
+  },
+  vaccinationAlertText: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  vaccinationUpcoming: {
+    marginBottom: 8,
+  },
+  vaccinationUpcomingText: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  vaccinationButton: {
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+    borderRadius: 16,
+    overflow: "hidden",
+    minHeight: 60,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  vaccinationGradient: {
+    flex: 1,
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  vaccinationButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flex: 1,
+  },
+  vaccinationButtonIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  vaccinationButtonEmoji: {
+    fontSize: 18,
+    textAlign: "center",
+  },
+  vaccinationButtonTextContainer: {
+    flex: 1,
+    alignItems: "center",
+  },
+  vaccinationButtonText: {
+    fontSize: 15,
+    fontFamily: "Inder",
+    fontWeight: "700",
+    textAlign: "center",
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    letterSpacing: 0.5,
+  },
+  vaccinationButtonSubtext: {
+    fontSize: 11,
+    fontFamily: "Inder",
+    fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.9)",
+    textAlign: "center",
+    marginTop: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
+  },
+  vaccinationButtonBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  vaccinationButtonBadgeText: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    fontWeight: "700",
+    color: "#333",
+    textAlign: "center",
+  },
+  vaccinationHorseName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  existingVaccinations: {
+    marginBottom: 25,
+  },
+  existingVaccinationsTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 15,
+    fontFamily: "Inder",
+  },
+  vaccinationItem: {
+    flexDirection: "row",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  vaccinationItemContent: {
+    flex: 1,
+  },
+  vaccinationItemName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 4,
+    fontFamily: "Inder",
+  },
+  vaccinationItemDate: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 4,
+    fontFamily: "Inder",
+  },
+  vaccinationItemNotes: {
+    fontSize: 12,
+    fontStyle: "italic",
+    fontFamily: "Inder",
+  },
+  deleteVaccinationButton: {
+    padding: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteVaccinationButtonText: {
+    fontSize: 16,
+  },
+  addVaccinationForm: {
+    marginTop: 10,
+  },
+  addVaccinationTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 15,
+    fontFamily: "Inder",
+  },
+  datePickerButton: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 15,
+    padding: 18,
+  },
+  datePickerButtonText: {
+    fontSize: 17,
+    fontFamily: "Inder",
+  },
+  datePickerArrow: {
+    fontSize: 16,
+  },
+  textInputMultiline: {
+    height: 80,
+    textAlignVertical: "top",
+    paddingTop: 18,
+  },
+  datePickerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  datePickerContainer: {
+    width: "90%",
+    maxWidth: 400,
+    maxHeight: "70%",
+    borderRadius: 15,
+    padding: 20,
+  },
+  datePickerTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 20,
+    fontFamily: "Inder",
+  },
+  datePickerScroll: {
+    maxHeight: 300,
+  },
+  datePickerOption: {
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 5,
+  },
+  datePickerOptionText: {
+    fontSize: 16,
+    textAlign: "center",
     fontFamily: "Inder",
   },
 });
