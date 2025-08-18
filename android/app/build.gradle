@@ -92,8 +92,8 @@ android {
         applicationId 'com.mojzi1969.EquiHUB'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 12
-        versionName "0.3.2"
+        versionCode 15
+        versionName "0.3.4.1"
     }
     signingConfigs {
         debug {

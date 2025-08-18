@@ -25,10 +25,11 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
-      "versionCode": 12,
+      "versionCode": 15,
       "permissions": [
         "INTERNET",
-  "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
@@ -40,8 +41,7 @@
         "googleMaps": {
           "apiKey": "AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg"
         }
-      }
-      ,
+      },
       "foregroundService": {
         "notificationTitle": "EquiHUB GPS Tracking",
         "notificationBody": "Tracking your riding session",
