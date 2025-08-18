@@ -13,7 +13,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import MapView, { PROVIDER_GOOGLE, Polyline, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -169,7 +169,8 @@ const MapScreen = () => {
           const horses = await HorseAPI.getHorses(user.id);
           setUserHorses(horses || []);
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           showError(`Failed to load your horses\n\nError: ${errorMessage}`);
         } finally {
           setHorsesLoading(false);
@@ -240,7 +241,10 @@ const MapScreen = () => {
           console.log("🧹 Cleaned up background location tracking on unmount");
         })
         .catch((error) => {
-          console.error("Error cleaning up background location tracking:", error);
+          console.error(
+            "Error cleaning up background location tracking:",
+            error
+          );
         });
     };
   }, []);
@@ -453,8 +457,11 @@ const MapScreen = () => {
     } catch (error) {
       console.error("Error updating tracking notification:", error);
       // Show user-facing error for notification issues
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      showError(`Failed to update tracking notification\n\nError: ${errorMessage}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      showError(
+        `Failed to update tracking notification\n\nError: ${errorMessage}`
+      );
       return null;
     }
   };
@@ -511,8 +518,11 @@ const MapScreen = () => {
       console.log("✅ Tracking notification stopped and dismissed");
     } catch (error) {
       console.error("Error stopping tracking notification:", error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      showError(`Failed to stop tracking notification\n\nError: ${errorMessage}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      showError(
+        `Failed to stop tracking notification\n\nError: ${errorMessage}`
+      );
     }
   };
 
@@ -530,8 +540,11 @@ const MapScreen = () => {
       setLocationPermission(true);
       getCurrentLocation();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      showError(`Failed to request location permission\n\nError: ${errorMessage}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      showError(
+        `Failed to request location permission\n\nError: ${errorMessage}`
+      );
       setLocationPermission(false);
     } finally {
       setLoading(false);
@@ -560,7 +573,8 @@ const MapScreen = () => {
       setRegion(newRegion);
       setUserLocation({ latitude, longitude });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       showError(`Unable to get your location\n\nError: ${errorMessage}`);
       setGpsStrength(0);
     } finally {
@@ -687,9 +701,13 @@ const MapScreen = () => {
       await AsyncStorage.removeItem("current_tracking_points");
 
       // Ensure the task is not already running
-      const isAlreadyRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      const isAlreadyRunning = await Location.hasStartedLocationUpdatesAsync(
+        LOCATION_TASK_NAME
+      );
       if (isAlreadyRunning) {
-        console.log("⚠️ Background location task already running, stopping first...");
+        console.log(
+          "⚠️ Background location task already running, stopping first..."
+        );
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
       }
 
@@ -713,7 +731,9 @@ const MapScreen = () => {
       const syncInterval = setInterval(async () => {
         try {
           // Check if the background task is still running
-          const isStillRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+          const isStillRunning = await Location.hasStartedLocationUpdatesAsync(
+            LOCATION_TASK_NAME
+          );
           if (!isStillRunning) {
             console.warn("⚠️ Background location task stopped unexpectedly");
             // Don't automatically restart - let user know there was an issue
@@ -772,8 +792,11 @@ const MapScreen = () => {
         selectedTrainingData?.name || "Unknown Training"
       );
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      showError(`Failed to start tracking. Please try again.\n\nError: ${errorMessage}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      showError(
+        `Failed to start tracking. Please try again.\n\nError: ${errorMessage}`
+      );
     }
   };
 
@@ -790,9 +813,11 @@ const MapScreen = () => {
 
       // Stop background location tracking
       console.log("🛑 Stopping background location tracking...");
-      
+
       // Check if the task is actually running before trying to stop it
-      const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(
+        LOCATION_TASK_NAME
+      );
       if (isTaskRunning) {
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
         console.log("✅ Background location task stopped successfully");
@@ -888,8 +913,11 @@ const MapScreen = () => {
         ]
       );
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      showError(`Failed to save session. Please try again.\n\nError: ${errorMessage}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      showError(
+        `Failed to save session. Please try again.\n\nError: ${errorMessage}`
+      );
     }
   };
 
@@ -1491,7 +1519,10 @@ const MapScreen = () => {
                       ]}
                     >
                       {(() => {
-                        const elapsed = Math.max(0, currentTime - sessionStartTime);
+                        const elapsed = Math.max(
+                          0,
+                          currentTime - sessionStartTime
+                        );
                         const minutes = Math.floor(elapsed / 60000);
                         const seconds = Math.floor((elapsed % 60000) / 1000);
                         return `${minutes}:${String(seconds).padStart(2, "0")}`;
