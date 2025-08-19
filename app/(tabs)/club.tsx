@@ -1,10 +1,40 @@
+import * as Notifications from "expo-notifications";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../contexts/ThemeContext";
 
 const ClubScreen = () => {
   const { currentTheme } = useTheme();
+
+  const sendTestNotification = async () => {
+    try {
+      // Request notification permissions
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Notification permissions are required to send test notifications');
+        return;
+      }
+
+      // Send immediate test notification
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "🐴 EquiHub Test Notification",
+          body: "This is a test notification from the Club screen! Your notifications are working correctly.",
+          data: {
+            type: 'test_notification',
+            source: 'club_screen'
+          }
+        },
+        trigger: null, // Send immediately
+      });
+
+      alert('Test notification sent successfully!');
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      alert('Failed to send test notification');
+    }
+  };
 
   return (
     <View
@@ -43,6 +73,19 @@ const ClubScreen = () => {
           >
             This feature is under development.
           </Text>
+          
+          <TouchableOpacity
+            style={[
+              styles.testNotificationButton,
+              { backgroundColor: currentTheme.colors.primary }
+            ]}
+            onPress={sendTestNotification}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.testNotificationButtonText}>
+              🔔 Send Test Notification
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -88,6 +131,28 @@ const styles = StyleSheet.create({
   comingSoonSubtext: {
     fontSize: 16,
     fontFamily: "Inder",
+    textAlign: "center",
+  },
+  testNotificationButton: {
+    backgroundColor: "#335C67",
+    borderRadius: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 25,
+    marginTop: 30,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  testNotificationButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
     textAlign: "center",
   },
 });
