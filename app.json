@@ -2,7 +2,7 @@
   "expo": {
     "name": "EquiHUB",
     "slug": "EquiHUB",
-    "version": "0.3.4.1",
+    "version": "0.3.4.2",
     "orientation": "portrait",
     "icon": "./assets/icons/512x512.png",
     "scheme": "equihub",
@@ -25,7 +25,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
-      "versionCode": 15,
+      "versionCode": 16,
       "permissions": [
         "INTERNET",
         "FOREGROUND_SERVICE",
@@ -63,9 +63,7 @@
           "locationWhenInUsePermission": "This app needs location access to track your riding routes and show your position on the map."
         }
       ],
-      [
-        "expo-task-manager"
-      ],
+      ["expo-task-manager"],
       "expo-font",
       [
         "expo-notifications",
