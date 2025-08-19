@@ -1,6 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Notifications from "expo-notifications";
 import React, { useEffect, useState } from "react";
 import {
@@ -1989,53 +1988,29 @@ const MyHorsesScreen = () => {
                       style={[
                         styles.actionButton,
                         styles.vaccinationButton,
+                        { 
+                          backgroundColor: getOverdueVaccinations(horse.id).length > 0
+                            ? "#FF6B6B" // Red for overdue
+                            : getUpcomingVaccinations(horse.id).length > 0
+                            ? "#4ECDC4" // Teal for upcoming
+                            : "#335C67" // Default theme color for normal
+                        },
                       ]}
                       onPress={() => openVaccinationModal(horse)}
                       activeOpacity={0.9}
                     >
-                      <LinearGradient
-                        colors={
-                          getOverdueVaccinations(horse.id).length > 0
-                            ? ['#ff6b6b', '#ff5252'] // Red gradient for overdue
-                            : getUpcomingVaccinations(horse.id).length > 0
-                            ? ['#4ecdc4', '#26a69a'] // Teal gradient for upcoming
-                            : ['#667eea', '#764ba2'] // Purple gradient for normal
-                        }
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.vaccinationGradient}
+                      <Text
+                        style={[styles.vaccinationButtonText, { color: "#FFFFFF" }]}
                       >
-                        <View style={styles.vaccinationButtonContent}>
-                          <View style={styles.vaccinationButtonIcon}>
-                            <Text style={styles.vaccinationButtonEmoji}>
-                              {getOverdueVaccinations(horse.id).length > 0
-                                ? '⚠️'
-                                : getUpcomingVaccinations(horse.id).length > 0
-                                ? '📅'
-                                : '💉'}
-                            </Text>
-                          </View>
-                          <View style={styles.vaccinationButtonTextContainer}>
-                            <Text style={[styles.vaccinationButtonText, { color: "#FFFFFF" }]}>
-                              Vaccinations
-                            </Text>
-                            {(getOverdueVaccinations(horse.id).length > 0 || getUpcomingVaccinations(horse.id).length > 0) && (
-                              <Text style={styles.vaccinationButtonSubtext}>
-                                {getOverdueVaccinations(horse.id).length > 0
-                                  ? `${getOverdueVaccinations(horse.id).length} overdue`
-                                  : `${getUpcomingVaccinations(horse.id).length} upcoming`}
-                              </Text>
-                            )}
-                          </View>
-                          {(getOverdueVaccinations(horse.id).length > 0 || getUpcomingVaccinations(horse.id).length > 0) && (
-                            <View style={styles.vaccinationButtonBadge}>
-                              <Text style={styles.vaccinationButtonBadgeText}>
-                                {getOverdueVaccinations(horse.id).length + getUpcomingVaccinations(horse.id).length}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                      </LinearGradient>
+                        {getOverdueVaccinations(horse.id).length > 0
+                          ? '⚠️'
+                          : getUpcomingVaccinations(horse.id).length > 0
+                          ? '📅'
+                          : '💉'} Vaccinations
+                        {(getOverdueVaccinations(horse.id).length > 0 || getUpcomingVaccinations(horse.id).length > 0) && (
+                          ` (${getOverdueVaccinations(horse.id).length + getUpcomingVaccinations(horse.id).length})`
+                        )}
+                      </Text>
                     </TouchableOpacity>
                     
                     <View style={styles.secondaryButtons}>
@@ -3537,93 +3512,13 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
   },
   vaccinationButton: {
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-    borderRadius: 16,
-    overflow: "hidden",
-    minHeight: 60,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  vaccinationGradient: {
-    flex: 1,
-    borderRadius: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  vaccinationButtonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flex: 1,
-  },
-  vaccinationButtonIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  vaccinationButtonEmoji: {
-    fontSize: 18,
-    textAlign: "center",
-  },
-  vaccinationButtonTextContainer: {
-    flex: 1,
-    alignItems: "center",
+    backgroundColor: "#335C67",
   },
   vaccinationButtonText: {
-    fontSize: 15,
+    color: "#fff",
+    fontSize: 16,
     fontFamily: "Inder",
-    fontWeight: "700",
-    textAlign: "center",
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    letterSpacing: 0.5,
-  },
-  vaccinationButtonSubtext: {
-    fontSize: 11,
-    fontFamily: "Inder",
-    fontWeight: "500",
-    color: "rgba(255, 255, 255, 0.9)",
-    textAlign: "center",
-    marginTop: 2,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
-  },
-  vaccinationButtonBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 6,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  vaccinationButtonBadgeText: {
-    fontSize: 12,
-    fontFamily: "Inder",
-    fontWeight: "700",
-    color: "#333",
-    textAlign: "center",
+    fontWeight: "600",
   },
   vaccinationHorseName: {
     fontSize: 18,
