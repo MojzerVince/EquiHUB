@@ -2,10 +2,13 @@ import * as Notifications from "expo-notifications";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { SessionManager } from "../../lib/sessionManager";
 
 const ClubScreen = () => {
   const { currentTheme } = useTheme();
+  const { signOut } = useAuth();
 
   const sendTestNotification = async () => {
     try {
@@ -33,6 +36,18 @@ const ClubScreen = () => {
     } catch (error) {
       console.error('Error sending test notification:', error);
       alert('Failed to send test notification');
+    }
+  };
+
+  const resetAppForWelcomeTest = async () => {
+    try {
+      // Reset all app data and sign out
+      await SessionManager.resetAppState();
+      await signOut();
+      alert('App reset! You should now see the welcome screen on next app launch.');
+    } catch (error) {
+      console.error('Error resetting app:', error);
+      alert('Failed to reset app');
     }
   };
 
@@ -84,6 +99,19 @@ const ClubScreen = () => {
           >
             <Text style={styles.testNotificationButtonText}>
               🔔 Send Test Notification
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.resetButton,
+              { backgroundColor: "#FF6B6B" }
+            ]}
+            onPress={resetAppForWelcomeTest}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.resetButtonText}>
+              🔄 Reset App (Test Welcome Screen)
             </Text>
           </TouchableOpacity>
         </View>
@@ -149,6 +177,28 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   testNotificationButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  resetButton: {
+    backgroundColor: "#FF6B6B",
+    borderRadius: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 25,
+    marginTop: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  resetButtonText: {
     color: "#fff",
     fontSize: 16,
     fontFamily: "Inder",

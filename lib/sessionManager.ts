@@ -99,7 +99,8 @@ export class SessionManager {
       const promises = [
         AsyncStorage.removeItem('last_login_time'),
         AsyncStorage.removeItem('user_preferences'),
-        AsyncStorage.removeItem('app_settings')
+        AsyncStorage.removeItem('app_settings'),
+        AsyncStorage.removeItem('user_has_used_app')
       ];
 
       // Use Promise.allSettled to prevent one failure from breaking the others
@@ -108,7 +109,7 @@ export class SessionManager {
       // Log any failures but don't throw
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
-          const keys = ['last_login_time', 'user_preferences', 'app_settings'];
+          const keys = ['last_login_time', 'user_preferences', 'app_settings', 'user_has_used_app'];
           console.warn(`Failed to clear ${keys[index]}:`, result.reason);
         }
       });
@@ -117,6 +118,38 @@ export class SessionManager {
     } catch (error) {
       console.error('Error clearing session data:', error);
       // Don't throw the error to prevent crashes during logout
+    }
+  }
+
+  // Mark user as having used the app
+  static async markUserAsUsedApp(): Promise<void> {
+    try {
+      await AsyncStorage.setItem('user_has_used_app', 'true');
+      console.log('Marked user as having used the app');
+    } catch (error) {
+      console.error('Error marking user as used app:', error);
+    }
+  }
+
+  // Check if user has used the app before
+  static async hasUserUsedApp(): Promise<boolean> {
+    try {
+      const hasUsed = await AsyncStorage.getItem('user_has_used_app');
+      return hasUsed === 'true';
+    } catch (error) {
+      console.error('Error checking if user has used app:', error);
+      return false;
+    }
+  }
+
+  // Reset app state (for testing purposes)
+  static async resetAppState(): Promise<void> {
+    try {
+      const allKeys = await AsyncStorage.getAllKeys();
+      await AsyncStorage.multiRemove(allKeys);
+      console.log('App state reset completely');
+    } catch (error) {
+      console.error('Error resetting app state:', error);
     }
   }
 

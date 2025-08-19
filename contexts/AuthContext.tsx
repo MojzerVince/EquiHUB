@@ -10,6 +10,8 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   clearStoredCredentials: () => Promise<void>;
   isSessionValid: () => Promise<boolean>;
+  hasStoredUserData: () => Promise<boolean>;
+  hasUserData: boolean | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,10 +31,14 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasUserData, setHasUserData] = useState<boolean | null>(null);
 
   useEffect(() => {
     // Get initial session
     getInitialSession();
+    
+    // Check stored user data
+    checkStoredUserData();
 
     // Add timeout fallback for auth loading - reduced to 5 seconds
     const authLoadingTimeout = setTimeout(() => {
@@ -57,6 +63,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           created_at: session.user.created_at!,
         });
 
+        // Mark user as having used the app whenever they successfully authenticate
+        await SessionManager.markUserAsUsedApp();
+        setHasUserData(true);
+
         // Refresh session if needed
         await SessionManager.refreshSessionIfNeeded();
       } else {
@@ -64,6 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Clear session data on logout
         if (event === "SIGNED_OUT") {
           await SessionManager.clearSessionData();
+          setHasUserData(false);
         }
       }
       setLoading(false);
@@ -74,6 +85,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       clearTimeout(authLoadingTimeout);
     };
   }, []);
+
+  const checkStoredUserData = async () => {
+    try {
+      const hasData = await hasStoredUserData();
+      setHasUserData(hasData);
+    } catch (error) {
+      console.error("Error checking stored user data:", error);
+      setHasUserData(false);
+    }
+  };
 
   const getInitialSession = async () => {
     try {
@@ -96,6 +117,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             email: session.user.email!,
             created_at: session.user.created_at!,
           });
+          // Mark user as having used the app
+          await SessionManager.markUserAsUsedApp();
+          setHasUserData(true);
           setLoading(false);
           return;
         }
@@ -148,6 +172,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: session.user.email!,
           created_at: session.user.created_at!,
         });
+        // Mark user as having used the app
+        await SessionManager.markUserAsUsedApp();
+        setHasUserData(true);
       } else {
         console.log(
           "Timeout-protected session check - no existing session found"
@@ -182,6 +209,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 email: session.user.email!,
                 created_at: session.user.created_at!,
               });
+              // Mark user as having used the app
+              await SessionManager.markUserAsUsedApp();
+              setHasUserData(true);
             }
           } catch (retryError) {
             console.log("Background session retry failed:", retryError);
@@ -224,6 +254,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Use session manager to clear all session data
       await SessionManager.clearSessionData();
+      // Reset the user data flag
+      setHasUserData(false);
       console.log("Cleared stored credentials");
     } catch (error) {
       console.error("Error clearing stored credentials:", error);
@@ -235,6 +267,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return await SessionManager.hasValidSession();
     } catch (error) {
       console.error("Error in isSessionValid:", error);
+      return false;
+    }
+  };
+
+  const hasStoredUserData = async (): Promise<boolean> => {
+    try {
+      // Check for any stored user data that indicates the app has been used before
+      const checks = await Promise.allSettled([
+        SessionManager.hasUserUsedApp(),
+        SessionManager.getLastLoginTime(),
+        SessionManager.getUserPreferences(),
+        // Check for vaccination reminders (user-specific data)
+        import('@react-native-async-storage/async-storage').then(async (AsyncStorage) => {
+          const keys = await AsyncStorage.default.getAllKeys();
+          return keys.some(key => key.includes('vaccination_reminders_'));
+        })
+      ]);
+
+      // If any of these checks return data, the user has used the app before
+      const hasData = checks.some(result => 
+        result.status === 'fulfilled' && 
+        result.value !== null && 
+        result.value !== undefined &&
+        (typeof result.value === 'boolean' ? result.value : 
+         typeof result.value === 'string' ? result.value.length > 0 : true)
+      );
+      
+      // Update the local state
+      setHasUserData(hasData);
+      return hasData;
+    } catch (error) {
+      console.error("Error checking stored user data:", error);
+      setHasUserData(false);
       return false;
     }
   };
@@ -272,6 +337,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshUser,
     clearStoredCredentials,
     isSessionValid,
+    hasStoredUserData,
+    hasUserData,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
