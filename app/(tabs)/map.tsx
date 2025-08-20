@@ -142,6 +142,8 @@ const MapScreen = () => {
   const [trackingPoints, setTrackingPoints] = useState<TrackingPoint[]>([]);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
+  const [highAccuracyMode, setHighAccuracyMode] = useState<boolean>(false);
+  const [showBatteryInfoModal, setShowBatteryInfoModal] = useState<boolean>(false);
 
   // Notification state
   const [notificationId, setNotificationId] = useState<string | null>(null);
@@ -714,13 +716,15 @@ const MapScreen = () => {
       // Start background location tracking
       await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
         accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: 5000, // Update every 5 seconds
+        timeInterval: highAccuracyMode ? 1000 : 5000, // Update every 1 second in high accuracy mode, 5 seconds otherwise
         distanceInterval: 10, // Update every 10 meters
-        deferredUpdatesInterval: 5000,
+        deferredUpdatesInterval: highAccuracyMode ? 1000 : 5000,
         showsBackgroundLocationIndicator: true,
         foregroundService: {
           notificationTitle: "EquiHUB GPS Tracking",
-          notificationBody: "Tracking your riding session",
+          notificationBody: highAccuracyMode 
+            ? "High accuracy tracking active" 
+            : "Tracking your riding session",
           notificationColor: "#4A90E2",
         },
       });
@@ -1453,8 +1457,98 @@ const MapScreen = () => {
                       </TouchableOpacity>
                     </Modal>
                   )}
+
+                  {/* Battery Info Modal */}
+                  <Modal
+                    visible={showBatteryInfoModal}
+                    animationType="fade"
+                    transparent={true}
+                    onRequestClose={() => setShowBatteryInfoModal(false)}
+                  >
+                    <TouchableOpacity
+                      style={styles.modalOverlay}
+                      activeOpacity={1}
+                      onPress={() => setShowBatteryInfoModal(false)}
+                    >
+                      <TouchableOpacity
+                        style={[styles.batteryInfoModal, { backgroundColor: currentTheme.colors.surface }]}
+                        activeOpacity={1}
+                        onPress={(e) => e.stopPropagation()}
+                      >
+                        <View style={styles.batteryInfoHeader}>
+                          <Text style={[styles.batteryInfoTitle, { color: currentTheme.colors.text }]}>
+                            High Accuracy Tracking
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => setShowBatteryInfoModal(false)}
+                            style={styles.closeModalButton}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={[styles.closeModalText, { color: currentTheme.colors.textSecondary }]}>✕</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.batteryInfoContent}>
+                          <Text style={[styles.batteryInfoText, { color: currentTheme.colors.text }]}>
+                            High accuracy tracking provides more precise location updates by checking your position every 1 second instead of every 5 seconds.
+                          </Text>
+                          <Text style={[styles.batteryWarningText, { color: "#FF6B35" }]}>
+                            ⚠️ Warning: Enabling this feature will significantly increase battery usage during tracking sessions.
+                          </Text>
+                          <Text style={[styles.batteryRecommendationText, { color: currentTheme.colors.textSecondary }]}>
+                            Recommended for short sessions or when using external power.
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={[styles.batteryInfoButton, { backgroundColor: currentTheme.colors.primary }]}
+                          onPress={() => setShowBatteryInfoModal(false)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.batteryInfoButtonText}>Got it</Text>
+                        </TouchableOpacity>
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  </Modal>
                 </View>
               )}
+
+              {/* High Accuracy Toggle */}
+              <View style={[styles.highAccuracyContainer, { backgroundColor: currentTheme.colors.surface }]}>
+                <View style={styles.highAccuracyRow}>
+                  <Text style={[styles.highAccuracyLabel, { color: currentTheme.colors.text }]}>
+                    High Accuracy Tracking
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowBatteryInfoModal(true)}
+                    style={styles.infoButton}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.infoButtonText, { color: currentTheme.colors.primary }]}>ⓘ</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleSwitch,
+                      {
+                        backgroundColor: highAccuracyMode
+                          ? currentTheme.colors.primary
+                          : currentTheme.colors.border,
+                      },
+                    ]}
+                    onPress={() => setHighAccuracyMode(!highAccuracyMode)}
+                    disabled={isTracking}
+                    activeOpacity={0.8}
+                  >
+                    <View
+                      style={[
+                        styles.toggleKnob,
+                        {
+                          backgroundColor: "#FFFFFF",
+                          transform: [{ translateX: highAccuracyMode ? 20 : 0 }],
+                        },
+                      ]}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
               {/* Start/Stop Tracking Button */}
               <TouchableOpacity
@@ -2142,6 +2236,143 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   trackingStatusValue: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  // High Accuracy Toggle Styles
+  highAccuracyContainer: {
+    padding: 16,
+    marginTop: 10,
+    marginBottom: 5,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 3,
+  },
+  highAccuracyRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  highAccuracyLabel: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    flex: 1,
+  },
+  infoButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
+  infoButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  toggleSwitch: {
+    width: 50,
+    height: 26,
+    borderRadius: 13,
+    padding: 3,
+    justifyContent: "center",
+  },
+  toggleKnob: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  // Battery Info Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  batteryInfoModal: {
+    margin: 20,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 8,
+    maxWidth: 400,
+    alignSelf: "center",
+  },
+  batteryInfoHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  batteryInfoTitle: {
+    fontSize: 20,
+    fontFamily: "Inder",
+    fontWeight: "700",
+    flex: 1,
+  },
+  closeModalButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeModalText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  batteryInfoContent: {
+    marginBottom: 20,
+  },
+  batteryInfoText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    lineHeight: 24,
+    marginBottom: 12,
+  },
+  batteryWarningText: {
+    fontSize: 15,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  batteryRecommendationText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 20,
+    fontStyle: "italic",
+  },
+  batteryInfoButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  batteryInfoButtonText: {
+    color: "#FFFFFF",
     fontSize: 16,
     fontFamily: "Inder",
     fontWeight: "600",
