@@ -1823,7 +1823,10 @@ const MyHorsesScreen = () => {
               >
                 <View style={styles.horseImageContainer}>
                   <Image
-                    style={styles.horseImage}
+                    style={[
+                      styles.horseImage,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
                     resizeMode="cover"
                     source={
                       horse.image_url
@@ -1993,7 +1996,7 @@ const MyHorsesScreen = () => {
                             ? "#FF6B6B" // Red for overdue
                             : getUpcomingVaccinations(horse.id).length > 0
                             ? "#4ECDC4" // Teal for upcoming
-                            : "#335C67" // Default theme color for normal
+                            : currentTheme.colors.primary // Use theme color for normal
                         },
                       ]}
                       onPress={() => openVaccinationModal(horse)}
@@ -2002,11 +2005,7 @@ const MyHorsesScreen = () => {
                       <Text
                         style={[styles.vaccinationButtonText, { color: "#FFFFFF" }]}
                       >
-                        {getOverdueVaccinations(horse.id).length > 0
-                          ? '⚠️'
-                          : getUpcomingVaccinations(horse.id).length > 0
-                          ? '📅'
-                          : '💉'} Vaccinations
+                        Records
                         {(getOverdueVaccinations(horse.id).length > 0 || getUpcomingVaccinations(horse.id).length > 0) && (
                           ` (${getOverdueVaccinations(horse.id).length + getUpcomingVaccinations(horse.id).length})`
                         )}
@@ -2140,9 +2139,15 @@ const MyHorsesScreen = () => {
                 >
                   Photo
                 </Text>
-                <View style={styles.imageContainer}>
+                <View style={[
+                  styles.imageContainer,
+                  { backgroundColor: currentTheme.colors.surface }
+                ]}>
                   <Image
-                    style={styles.selectedImage}
+                    style={[
+                      styles.selectedImage,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
                     source={
                       editImage
                         ? editImage
@@ -2389,9 +2394,15 @@ const MyHorsesScreen = () => {
                 >
                   Photo
                 </Text>
-                <View style={styles.imageContainer}>
+                <View style={[
+                  styles.imageContainer,
+                  { backgroundColor: currentTheme.colors.surface }
+                ]}>
                   <Image
-                    style={styles.selectedImage}
+                    style={[
+                      styles.selectedImage,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
                     source={
                       addImage || require("../../assets/images/horses/pony.jpg")
                     }
@@ -3040,7 +3051,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: "#335C67",
+    // borderColor applied dynamically with theme
   },
   horseContent: {
     flex: 1,
@@ -3407,7 +3418,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: "#335C67",
+    // borderColor applied dynamically with theme
   },
   changePhotoButton: {
     flexDirection: "row",
