@@ -109,10 +109,10 @@ const MapScreen = () => {
   const { user } = useAuth();
   const router = useRouter();
   const [region, setRegion] = useState<Region>({
-    latitude: 37.78825,
-    longitude: -122.4324,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
+    latitude: 0, // Start at center of world map
+    longitude: 0,
+    latitudeDelta: 180, // Wide view to show the world
+    longitudeDelta: 180,
   });
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
@@ -160,7 +160,52 @@ const MapScreen = () => {
 
   useEffect(() => {
     requestLocationPermission();
+    // Start watching for location immediately when component mounts
+    startLocationWatcher();
   }, []);
+
+  // Add location watcher for continuous updates
+  const startLocationWatcher = async () => {
+    try {
+      // Check if we have permission first
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status === 'granted') {
+        // Start watching location immediately
+        const subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 2000, // Update every 2 seconds
+            distanceInterval: 10, // Update every 10 meters
+          },
+          (location) => {
+            const { latitude, longitude, accuracy } = location.coords;
+            
+            // Update user location
+            setUserLocation({ latitude, longitude });
+            
+            // Update region if this is the first location fix or if we're still showing world view
+            if (!userLocation || (region.latitudeDelta > 1)) {
+              const newRegion = {
+                latitude,
+                longitude,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              };
+              setRegion(newRegion);
+            }
+            
+            // Update GPS strength
+            const strength = calculateGpsStrength(accuracy);
+            setGpsStrength(strength);
+          }
+        );
+        
+        locationSubscriptionRef.current = subscription;
+      }
+    } catch (error) {
+      console.log('Location watcher failed:', error);
+    }
+  };
 
   // Load user's horses
   useEffect(() => {
@@ -223,6 +268,11 @@ const MapScreen = () => {
       // Cleanup notification interval
       if (notificationIntervalRef.current) {
         clearInterval(notificationIntervalRef.current);
+      }
+
+      // Cleanup location subscription
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
       }
 
       // Dismiss any active tracking notification
@@ -556,6 +606,8 @@ const MapScreen = () => {
   const getCurrentLocation = async () => {
     try {
       setLoading(true);
+      
+      // Try high accuracy first
       let location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
@@ -575,10 +627,29 @@ const MapScreen = () => {
       setRegion(newRegion);
       setUserLocation({ latitude, longitude });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      showError(`Unable to get your location\n\nError: ${errorMessage}`);
-      setGpsStrength(0);
+      try {
+        // If high accuracy fails, try balanced accuracy
+        let location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        const { latitude, longitude, accuracy } = location.coords;
+        const strength = calculateGpsStrength(accuracy);
+        setGpsStrength(strength);
+
+        const newRegion = {
+          latitude,
+          longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        setRegion(newRegion);
+        setUserLocation({ latitude, longitude });
+      } catch (secondError) {
+        const errorMessage = secondError instanceof Error ? secondError.message : String(secondError);
+        showError(`Unable to get your location. Please check GPS settings.\n\nError: ${errorMessage}`);
+        setGpsStrength(0);
+      }
     } finally {
       setLoading(false);
     }
@@ -592,7 +663,7 @@ const MapScreen = () => {
     setMapType(mapType === "standard" ? "satellite" : "standard");
   };
 
-  const centerToCurrentLocation = () => {
+  const centerToCurrentLocation = async () => {
     if (userLocation) {
       const newRegion = {
         latitude: userLocation.latitude,
@@ -602,7 +673,52 @@ const MapScreen = () => {
       };
       setRegion(newRegion);
     } else {
-      getCurrentLocation();
+      // If no location, try multiple times with increasing accuracy
+      setLoading(true);
+      try {
+        // First try high accuracy
+        let location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        
+        const { latitude, longitude, accuracy } = location.coords;
+        const strength = calculateGpsStrength(accuracy);
+        setGpsStrength(strength);
+        
+        const newRegion = {
+          latitude,
+          longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        setRegion(newRegion);
+        setUserLocation({ latitude, longitude });
+      } catch (error) {
+        try {
+          // If high accuracy fails, try balanced accuracy
+          let location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          
+          const { latitude, longitude, accuracy } = location.coords;
+          const strength = calculateGpsStrength(accuracy);
+          setGpsStrength(strength);
+          
+          const newRegion = {
+            latitude,
+            longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          };
+          setRegion(newRegion);
+          setUserLocation({ latitude, longitude });
+        } catch (secondError) {
+          const errorMessage = secondError instanceof Error ? secondError.message : String(secondError);
+          showError(`Unable to get your location. Please check GPS settings.\n\nError: ${errorMessage}`);
+        }
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
