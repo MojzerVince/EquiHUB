@@ -1884,7 +1884,7 @@ const MyHorsesScreen = () => {
                 styles.addHorseButton,
                 {
                   backgroundColor: (!isProMember && horses.length >= 2) 
-                    ? currentTheme.colors.textSecondary 
+                    ? currentTheme.colors.primary
                     : currentTheme.colors.primary,
                   borderColor: currentTheme.colors.border,
                   opacity: (!isProMember && horses.length >= 2) ? 0.6 : 1,
@@ -1894,7 +1894,7 @@ const MyHorsesScreen = () => {
               disabled={!isProMember && horses.length >= 2}
             >
               <Text style={styles.addHorseButtonIcon}>🐴</Text>
-              <Text style={[styles.addHorseButtonText, { color: "#FFFFFF" }]}>
+              <Text style={[styles.addHorseButtonText]}>
                 Add New Horse
               </Text>
             </TouchableOpacity>
@@ -1910,15 +1910,31 @@ const MyHorsesScreen = () => {
                 key={horse.id}
               >
                 <View style={styles.horseImageContainer}>
-                  <Image
-                    style={styles.horseImage}
-                    resizeMode="cover"
-                    source={
-                      horse.image_url
-                        ? { uri: horse.image_url }
-                        : require("../../assets/images/horses/pony.jpg")
-                    }
-                  />
+                  {horse.image_url ? (
+                    <Image
+                      style={[
+                        styles.horseImage,
+                        { borderColor: currentTheme.colors.primary }
+                      ]}
+                      resizeMode="cover"
+                      source={{ uri: horse.image_url }}
+                    />
+                  ) : (
+                    <View style={[
+                      styles.horseImagePlaceholder,
+                      { 
+                        backgroundColor: currentTheme.colors.surface,
+                        borderColor: currentTheme.colors.primary
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.horseImagePlaceholderIcon,
+                        { color: currentTheme.colors.primary }
+                      ]}>
+                        🐴
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.horseContent}>
@@ -2081,14 +2097,14 @@ const MyHorsesScreen = () => {
                             ? "#FF6B6B" // Red for overdue
                             : getUpcomingVaccinations(horse.id).length > 0
                             ? "#4ECDC4" // Teal for upcoming
-                            : "#335C67" // Default theme color for normal
+                            : currentTheme.colors.primary // Use theme color for normal
                         },
                       ]}
                       onPress={() => openVaccinationModal(horse)}
                       activeOpacity={0.9}
                     >
                       <Text
-                        style={[styles.vaccinationButtonText, { color: "#FFFFFF" }]}
+                        style={[styles.vaccinationButtonText]}
                       >
                         {getOverdueVaccinations(horse.id).length > 0
                           ? '⚠️'
@@ -2229,17 +2245,34 @@ const MyHorsesScreen = () => {
                   Photo
                 </Text>
                 <View style={styles.imageContainer}>
-                  <Image
-                    style={styles.selectedImage}
-                    source={
-                      editImage
-                        ? editImage
-                        : editingHorse?.image_url
-                        ? { uri: editingHorse.image_url }
-                        : require("../../assets/images/horses/pony.jpg")
-                    }
-                    resizeMode="cover"
-                  />
+                  {(editImage || editingHorse?.image_url) ? (
+                    <Image
+                      style={[
+                        styles.selectedImage,
+                        { borderColor: currentTheme.colors.primary }
+                      ]}
+                      source={
+                        editImage
+                          ? editImage
+                          : { uri: editingHorse.image_url }
+                      }
+                    />
+                  ) : (
+                    <View style={[
+                      styles.selectedImagePlaceholder,
+                      { 
+                        backgroundColor: currentTheme.colors.surface,
+                        borderColor: currentTheme.colors.primary
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.selectedImagePlaceholderIcon,
+                        { color: currentTheme.colors.primary }
+                      ]}>
+                        🐴
+                      </Text>
+                    </View>
+                  )}
                   <TouchableOpacity
                     style={[
                       styles.changePhotoButton,
@@ -2478,13 +2511,31 @@ const MyHorsesScreen = () => {
                   Photo
                 </Text>
                 <View style={styles.imageContainer}>
-                  <Image
-                    style={styles.selectedImage}
-                    source={
-                      addImage || require("../../assets/images/horses/pony.jpg")
-                    }
-                    resizeMode="cover"
-                  />
+                  {addImage ? (
+                    <Image
+                      style={[
+                        styles.selectedImage,
+                        { borderColor: currentTheme.colors.primary }
+                      ]}
+                      source={addImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[
+                      styles.selectedImagePlaceholder,
+                      { 
+                        backgroundColor: currentTheme.colors.surface,
+                        borderColor: currentTheme.colors.primary
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.selectedImagePlaceholderIcon,
+                        { color: currentTheme.colors.primary }
+                      ]}>
+                        🐴
+                      </Text>
+                    </View>
+                  )}
                   <TouchableOpacity
                     style={[
                       styles.changePhotoButton,
@@ -3107,7 +3158,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#335C67",
+    // backgroundColor will be set dynamically based on theme
     borderRadius: 20,
     paddingVertical: 15,
     paddingHorizontal: 25,
@@ -3155,7 +3206,18 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: "#335C67",
+  },
+  horseImagePlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  horseImagePlaceholderIcon: {
+    fontSize: 48,
+    textAlign: "center",
   },
   horseContent: {
     flex: 1,
@@ -3522,7 +3584,18 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: "#335C67",
+  },
+  selectedImagePlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  selectedImagePlaceholderIcon: {
+    fontSize: 48,
+    textAlign: "center",
   },
   changePhotoButton: {
     flexDirection: "row",
@@ -3627,7 +3700,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
   },
   vaccinationButton: {
-    backgroundColor: "#335C67",
+    // backgroundColor will be set dynamically based on vaccination status
   },
   vaccinationButtonText: {
     color: "#fff",

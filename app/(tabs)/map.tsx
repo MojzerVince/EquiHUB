@@ -1220,7 +1220,7 @@ const MapScreen = () => {
                           onPress={() => setSelectedHorse(horse.id)}
                           activeOpacity={0.7}
                         >
-                          {(horse.image_url || horse.image_base64) && (
+                          {(horse.image_url || horse.image_base64) ? (
                             <Image
                               source={{
                                 uri: horse.image_base64
@@ -1230,6 +1230,26 @@ const MapScreen = () => {
                               style={styles.horseImage}
                               resizeMode="cover"
                             />
+                          ) : (
+                            <View style={[
+                              styles.horseImagePlaceholder,
+                              {
+                                backgroundColor: selectedHorse === horse.id
+                                  ? "rgba(255, 255, 255, 0.2)"
+                                  : currentTheme.colors.border,
+                              }
+                            ]}>
+                              <Text style={[
+                                styles.horseImagePlaceholderIcon,
+                                {
+                                  color: selectedHorse === horse.id
+                                    ? "#FFFFFF"
+                                    : currentTheme.colors.textSecondary,
+                                }
+                              ]}>
+                                🐴
+                              </Text>
+                            </View>
                           )}
                           <Text
                             style={[
@@ -1239,6 +1259,7 @@ const MapScreen = () => {
                                   selectedHorse === horse.id
                                     ? "#FFFFFF"
                                     : currentTheme.colors.text,
+                                textAlign: "center",
                               },
                             ]}
                           >
@@ -1931,11 +1952,27 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginBottom: 8,
   },
+  horseImagePlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginBottom: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
+  },
+  horseImagePlaceholderIcon: {
+    fontSize: 24,
+    textAlign: "center",
+  },
   selectionCardTitle: {
     fontSize: 16,
     fontFamily: "Inder",
     fontWeight: "600",
     marginBottom: 4,
+    textAlign: "center",
+    lineHeight: 20,
   },
   selectionCardSubtitle: {
     fontSize: 12,
