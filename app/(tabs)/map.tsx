@@ -1220,7 +1220,7 @@ const MapScreen = () => {
                           onPress={() => setSelectedHorse(horse.id)}
                           activeOpacity={0.7}
                         >
-                          {(horse.image_url || horse.image_base64) && (
+                          {(horse.image_url || horse.image_base64) ? (
                             <Image
                               source={{
                                 uri: horse.image_base64
@@ -1230,6 +1230,10 @@ const MapScreen = () => {
                               style={styles.horseImage}
                               resizeMode="cover"
                             />
+                          ) : (
+                            <View style={[styles.horseImage, { backgroundColor: currentTheme.colors.surface, justifyContent: 'center', alignItems: 'center' }]}>
+                              <Text style={{ fontSize: 24 }}>🐴</Text>
+                            </View>
                           )}
                           <Text
                             style={[
