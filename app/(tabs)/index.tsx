@@ -1822,18 +1822,30 @@ const MyHorsesScreen = () => {
                 key={horse.id}
               >
                 <View style={styles.horseImageContainer}>
-                  <Image
-                    style={[
-                      styles.horseImage,
-                      { borderColor: currentTheme.colors.primary }
-                    ]}
-                    resizeMode="cover"
-                    source={
-                      horse.image_url
-                        ? { uri: horse.image_url }
-                        : require("../../assets/images/horses/pony.jpg")
-                    }
-                  />
+                  {horse.image_url ? (
+                    <Image
+                      style={[
+                        styles.horseImage,
+                        { borderColor: currentTheme.colors.primary }
+                      ]}
+                      resizeMode="cover"
+                      source={{ uri: horse.image_url }}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.horseImage,
+                        { 
+                          borderColor: currentTheme.colors.primary,
+                          backgroundColor: currentTheme.colors.surface,
+                          justifyContent: "center",
+                          alignItems: "center"
+                        }
+                      ]}
+                    >
+                      <Text style={{ fontSize: 60 }}>🐴</Text>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.horseContent}>
