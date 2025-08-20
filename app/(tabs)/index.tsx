@@ -1,7 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import * as Notifications from "expo-notifications";
-import React, { useEffect, useState } from "react";
+import { router } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -100,6 +101,10 @@ const MyHorsesScreen = () => {
   const [loading, setLoading] = useState(false);
   const [horsesLoaded, setHorsesLoaded] = useState(false);
 
+  // PRO membership state
+  const [isProMember, setIsProMember] = useState(false);
+  const [checkingProStatus, setCheckingProStatus] = useState(false);
+
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingHorse, setEditingHorse] = useState<any>(null);
@@ -189,6 +194,58 @@ const MyHorsesScreen = () => {
       clearTimeout(authTimeout);
     };
   }, [authLoading]);
+
+  // Check PRO membership when user is available
+  const checkProMembership = useCallback(async () => {
+    if (!user?.id) {
+      setIsProMember(false);
+      return;
+    }
+
+    setCheckingProStatus(true);
+    try {
+      // First try to get from profiles table using direct REST API
+      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
+      const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
+      
+      try {
+        const response = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${user.id}&select=is_pro_member`, {
+          headers: {
+            'apikey': apiKey,
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.length > 0) {
+            const proStatus = data[0].is_pro_member || false;
+            setIsProMember(proStatus);
+            return; // Success, exit early
+          } else {
+            setIsProMember(false);
+            return;
+          }
+        } else {
+          setIsProMember(false);
+        }
+      } catch (restError) {
+        setIsProMember(false);
+      }
+    } catch (error) {
+      // Default to non-Pro if everything fails
+      setIsProMember(false);
+    } finally {
+      setCheckingProStatus(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id && !checkingProStatus) {
+      checkProMembership();
+    }
+  }, [user?.id, checkProMembership, checkingProStatus]);
 
   const loadHorses = async (userId: string) => {
     try {
@@ -289,6 +346,19 @@ const MyHorsesScreen = () => {
   };
 
   const openAddModal = () => {
+    // Check horse limit for non-PRO users
+    if (!isProMember && horses.length >= 2) {
+      showConfirm(
+        "Horse Limit Reached",
+        "Free users can only add up to 2 horses. Upgrade to PRO for unlimited horses!",
+        () => {
+          // Navigate to subscription page
+          router.push("/subscription");
+        }
+      );
+      return;
+    }
+
     setAddName("");
     setAddGender("");
     setAddHeight("");
@@ -1795,15 +1865,33 @@ const MyHorsesScreen = () => {
           }
         >
           <View style={styles.horsesContainer}>
+            {/* Unlock with PRO widget - shown when non-PRO user reaches limit */}
+            {!isProMember && horses.length >= 2 && (
+              <TouchableOpacity
+                style={[
+                  styles.unlockProWidget,
+                  { backgroundColor: currentTheme.colors.primary }
+                ]}
+                onPress={() => router.push("/subscription")}
+              >
+                <Text style={styles.unlockProIcon}>✨</Text>
+                <Text style={styles.unlockProText}>Unlock more with PRO</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={[
                 styles.addHorseButton,
                 {
-                  backgroundColor: currentTheme.colors.primary,
+                  backgroundColor: (!isProMember && horses.length >= 2) 
+                    ? currentTheme.colors.textSecondary 
+                    : currentTheme.colors.primary,
                   borderColor: currentTheme.colors.border,
+                  opacity: (!isProMember && horses.length >= 2) ? 0.6 : 1,
                 },
               ]}
-              onPress={openAddModal}
+              onPress={(!isProMember && horses.length >= 2) ? undefined : openAddModal}
+              disabled={!isProMember && horses.length >= 2}
             >
               <Text style={styles.addHorseButtonIcon}>🐴</Text>
               <Text style={[styles.addHorseButtonText, { color: "#FFFFFF" }]}>
@@ -2986,6 +3074,33 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "Inder",
     color: "#335C67",
+    fontWeight: "600",
+  },
+  unlockProWidget: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#335C67",
+    borderRadius: 15,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  unlockProIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  unlockProText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontFamily: "Inder",
     fontWeight: "600",
   },
   addHorseButton: {
