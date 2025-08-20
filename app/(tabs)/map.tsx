@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
+import * as MediaLibrary from "expo-media-library";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import * as TaskManager from "expo-task-manager";
@@ -32,6 +34,17 @@ interface TrackingPoint {
   speed?: number;
 }
 
+interface MediaItem {
+  id: string;
+  uri: string;
+  type: 'photo' | 'video';
+  timestamp: number;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
 interface TrainingSession {
   id: string;
   userId: string;
@@ -45,6 +58,7 @@ interface TrainingSession {
   path: TrackingPoint[];
   averageSpeed?: number; // in m/s
   maxSpeed?: number; // in m/s
+  media?: MediaItem[]; // Photos and videos taken during session
 }
 
 // Configure notification behavior
@@ -144,6 +158,11 @@ const MapScreen = () => {
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
   const [highAccuracyMode, setHighAccuracyMode] = useState<boolean>(false);
   const [showBatteryInfoModal, setShowBatteryInfoModal] = useState<boolean>(false);
+  
+  // Media capture state
+  const [sessionMedia, setSessionMedia] = useState<MediaItem[]>([]);
+  const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
+  const [mediaLibraryPermission, setMediaLibraryPermission] = useState<boolean | null>(null);
 
   // Notification state
   const [notificationId, setNotificationId] = useState<string | null>(null);
@@ -162,7 +181,26 @@ const MapScreen = () => {
     requestLocationPermission();
     // Start watching for location immediately when component mounts
     startLocationWatcher();
+    // Request camera and media library permissions
+    requestCameraPermissions();
   }, []);
+
+  // Request camera and media library permissions
+  const requestCameraPermissions = async () => {
+    try {
+      // Request camera permission
+      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+      setCameraPermission(cameraStatus === 'granted');
+      
+      // Request media library permission
+      const { status: mediaStatus } = await MediaLibrary.requestPermissionsAsync();
+      setMediaLibraryPermission(mediaStatus === 'granted');
+    } catch (error) {
+      console.error('Error requesting camera permissions:', error);
+      setCameraPermission(false);
+      setMediaLibraryPermission(false);
+    }
+  };
 
   // Add location watcher for continuous updates
   const startLocationWatcher = async () => {
@@ -659,6 +697,92 @@ const MapScreen = () => {
     setRegion(newRegion);
   };
 
+  // Camera and media functions
+  const takePhoto = async () => {
+    if (!cameraPermission) {
+      showError("Camera permission is required to take photos");
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        
+        // Save to device gallery
+        if (mediaLibraryPermission) {
+          await MediaLibrary.saveToLibraryAsync(asset.uri);
+        }
+
+        // Create media item
+        const mediaItem: MediaItem = {
+          id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          uri: asset.uri,
+          type: 'photo',
+          timestamp: Date.now(),
+          location: userLocation || undefined,
+        };
+
+        // Add to session media
+        setSessionMedia(prev => [...prev, mediaItem]);
+        
+        // Show success message
+        Alert.alert("Photo Captured", "Photo saved to gallery and will be included in session summary");
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showError(`Failed to take photo: ${errorMessage}`);
+    }
+  };
+
+  const takeVideo = async () => {
+    if (!cameraPermission) {
+      showError("Camera permission is required to record videos");
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        allowsEditing: false,
+        quality: ImagePicker.UIImagePickerControllerQualityType.Medium,
+        videoMaxDuration: 60, // 60 seconds max
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        
+        // Save to device gallery
+        if (mediaLibraryPermission) {
+          await MediaLibrary.saveToLibraryAsync(asset.uri);
+        }
+
+        // Create media item
+        const mediaItem: MediaItem = {
+          id: `video_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          uri: asset.uri,
+          type: 'video',
+          timestamp: Date.now(),
+          location: userLocation || undefined,
+        };
+
+        // Add to session media
+        setSessionMedia(prev => [...prev, mediaItem]);
+        
+        // Show success message
+        Alert.alert("Video Recorded", "Video saved to gallery and will be included in session summary");
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showError(`Failed to record video: ${errorMessage}`);
+    }
+  };
+
   const toggleMapType = () => {
     setMapType(mapType === "standard" ? "satellite" : "standard");
   };
@@ -811,6 +935,7 @@ const MapScreen = () => {
       setSessionStartTime(startTime);
       setCurrentTime(startTime); // Initialize currentTime to the same value as startTime
       setTrackingPoints([]);
+      setSessionMedia([]); // Initialize empty media array for the session
 
       // Start background location tracking
       console.log("📍 Starting background location tracking...");
@@ -997,6 +1122,7 @@ const MapScreen = () => {
         path: trackingPoints,
         averageSpeed,
         maxSpeed,
+        media: sessionMedia, // Include captured media
       };
 
       // Save session to storage
@@ -1013,6 +1139,7 @@ const MapScreen = () => {
       setCurrentSession(null);
       setSessionStartTime(null);
       setTrackingPoints([]);
+      setSessionMedia([]); // Reset media array
 
       // Show completion alert
       Alert.alert(
@@ -1627,30 +1754,31 @@ const MapScreen = () => {
                 </View>
               )}
 
-              {/* High Accuracy Toggle */}
-              <View style={[styles.highAccuracyContainer, { backgroundColor: currentTheme.colors.surface }]}>
-                <View style={styles.highAccuracyRow}>
-                  <Text style={[styles.highAccuracyLabel, { color: currentTheme.colors.text }]}>
-                    High Accuracy Tracking
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setShowBatteryInfoModal(true)}
-                    style={styles.infoButton}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.infoButtonText, { color: currentTheme.colors.primary }]}>ⓘ</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.toggleSwitch,
-                      {
-                        backgroundColor: highAccuracyMode
-                          ? currentTheme.colors.primary
-                          : currentTheme.colors.border,
-                      },
-                    ]}
-                    onPress={() => setHighAccuracyMode(!highAccuracyMode)}
-                    disabled={isTracking}
+              {/* High Accuracy Toggle - Hidden during tracking */}
+              {!isTracking && (
+                <View style={[styles.highAccuracyContainer, { backgroundColor: currentTheme.colors.surface }]}>
+                  <View style={styles.highAccuracyRow}>
+                    <Text style={[styles.highAccuracyLabel, { color: currentTheme.colors.text }]}>
+                      High Accuracy Tracking
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setShowBatteryInfoModal(true)}
+                      style={styles.infoButton}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.infoButtonText, { color: currentTheme.colors.primary }]}>ⓘ</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.toggleSwitch,
+                        {
+                          backgroundColor: highAccuracyMode
+                            ? currentTheme.colors.primary
+                            : currentTheme.colors.border,
+                        },
+                      ]}
+                      onPress={() => setHighAccuracyMode(!highAccuracyMode)}
+                      disabled={isTracking}
                     activeOpacity={0.8}
                   >
                     <View
@@ -1665,6 +1793,7 @@ const MapScreen = () => {
                   </TouchableOpacity>
                 </View>
               </View>
+              )}
 
               {/* Start/Stop Tracking Button */}
               <TouchableOpacity
@@ -1784,6 +1913,56 @@ const MapScreen = () => {
                         {trackingPoints.length}
                       </Text>
                     </View>
+                  </View>
+
+                  {/* Camera Controls */}
+                  <View style={styles.cameraControlsContainer}>
+                    <Text
+                      style={[
+                        styles.cameraControlsTitle,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      Capture Memories
+                    </Text>
+                    <View style={styles.cameraButtonsRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.cameraButton,
+                          { backgroundColor: currentTheme.colors.primary },
+                        ]}
+                        onPress={takePhoto}
+                        activeOpacity={0.8}
+                        disabled={!cameraPermission}
+                      >
+                        <Text style={styles.cameraButtonIcon}>📸</Text>
+                        <Text style={styles.cameraButtonText}>Photo</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.cameraButton,
+                          { backgroundColor: currentTheme.colors.primary },
+                        ]}
+                        onPress={takeVideo}
+                        activeOpacity={0.8}
+                        disabled={!cameraPermission}
+                      >
+                        <Text style={styles.cameraButtonIcon}>🎥</Text>
+                        <Text style={styles.cameraButtonText}>Video</Text>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    {sessionMedia.length > 0 && (
+                      <Text
+                        style={[
+                          styles.mediaCountText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        {sessionMedia.length} item{sessionMedia.length !== 1 ? 's' : ''} captured
+                      </Text>
+                    )}
                   </View>
                 </View>
               )}
@@ -2492,6 +2671,58 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inder",
     fontWeight: "600",
+  },
+  // Camera Controls Styles
+  cameraControlsContainer: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.1)",
+  },
+  cameraControlsTitle: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 15,
+  },
+  cameraButtonsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  cameraButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    minWidth: 80,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  cameraButtonIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  cameraButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  mediaCountText: {
+    textAlign: "center",
+    fontSize: 12,
+    fontFamily: "Inder",
+    marginTop: 10,
+    fontStyle: "italic",
   },
 });
 

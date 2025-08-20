@@ -1,18 +1,32 @@
-import React, { useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
-  Alert,
+  View
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
-import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// Media item interface
+interface MediaItem {
+  id: string;
+  uri: string;
+  type: 'photo' | 'video';
+  timestamp: number;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+}
 
 // Training session interface
 interface TrainingSession {
@@ -34,6 +48,7 @@ interface TrainingSession {
   }>;
   averageSpeed?: number; // in m/s
   maxSpeed?: number; // in m/s
+  media?: MediaItem[]; // Photos and videos taken during session
 }
 
 const SessionSummaryScreen = () => {
@@ -129,6 +144,48 @@ const SessionSummaryScreen = () => {
       latitudeDelta: Math.max(deltaLat, 0.01),
       longitudeDelta: Math.max(deltaLon, 0.01),
     };
+  };
+
+  const openInGoogleMaps = () => {
+    if (!session || session.path.length === 0) {
+      Alert.alert("No Route", "No route data available to display in Google Maps");
+      return;
+    }
+
+    try {
+      // Get start and end points
+      const startPoint = session.path[0];
+      const endPoint = session.path[session.path.length - 1];
+      
+      // Create waypoints string for the route (using a subset of points to avoid URL length limits)
+      const maxWaypoints = 8; // Google Maps URL limit
+      const step = Math.max(1, Math.floor(session.path.length / maxWaypoints));
+      const waypoints = session.path
+        .filter((_, index) => index % step === 0 && index > 0 && index < session.path.length - 1)
+        .slice(0, maxWaypoints)
+        .map(point => `${point.latitude},${point.longitude}`)
+        .join('|');
+
+      // Construct Google Maps URL
+      let url = `https://www.google.com/maps/dir/?api=1`;
+      url += `&origin=${startPoint.latitude},${startPoint.longitude}`;
+      url += `&destination=${endPoint.latitude},${endPoint.longitude}`;
+      
+      if (waypoints) {
+        url += `&waypoints=${waypoints}`;
+      }
+      
+      url += `&travelmode=driving`;
+
+      // Open in Google Maps
+      Linking.openURL(url).catch((err) => {
+        console.error('Error opening Google Maps:', err);
+        Alert.alert("Error", "Could not open Google Maps. Please make sure you have Google Maps installed.");
+      });
+    } catch (error) {
+      console.error('Error creating Google Maps URL:', error);
+      Alert.alert("Error", "Failed to open route in Google Maps");
+    }
   };
 
   const saveAndContinue = () => {
@@ -436,6 +493,58 @@ const SessionSummaryScreen = () => {
             </View>
           </View>
 
+          {/* Media Gallery */}
+          {session.media && session.media.length > 0 && (
+            <View
+              style={[
+                styles.mediaCard,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
+              <Text
+                style={[styles.mediaTitle, { color: currentTheme.colors.text }]}
+              >
+                Session Media ({session.media.length})
+              </Text>
+              <ScrollView 
+                horizontal 
+                style={styles.mediaScrollView}
+                showsHorizontalScrollIndicator={false}
+              >
+                {session.media.map((item, index) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.mediaItem}
+                    onPress={() => {
+                      // You can add a full-screen media viewer here if needed
+                      Alert.alert(
+                        item.type === 'photo' ? 'Photo' : 'Video',
+                        `Captured at ${new Date(item.timestamp).toLocaleTimeString()}`
+                      );
+                    }}
+                  >
+                    <Image
+                      source={{ uri: item.uri }}
+                      style={styles.mediaThumbnail}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.mediaOverlay}>
+                      <Text style={styles.mediaTypeIcon}>
+                        {item.type === 'photo' ? '📸' : '🎥'}
+                      </Text>
+                    </View>
+                    <Text style={[styles.mediaTime, { color: currentTheme.colors.textSecondary }]}>
+                      {new Date(item.timestamp).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           {/* Route Map */}
           {session.path.length > 0 && (
             <View
@@ -492,6 +601,21 @@ const SessionSummaryScreen = () => {
                     pinColor="red"
                   />
                 </MapView>
+              </View>
+              
+              {/* Google Maps Button */}
+              <View style={styles.mapActionContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.googleMapsButton,
+                    { backgroundColor: currentTheme.colors.primary },
+                  ]}
+                  onPress={openInGoogleMaps}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.googleMapsButtonIcon}>🗺️</Text>
+                  <Text style={styles.googleMapsButtonText}>View Route in Google Maps</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -780,6 +904,80 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inder",
     color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  // Media Gallery Styles
+  mediaCard: {
+    margin: 20,
+    padding: 20,
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  mediaTitle: {
+    fontSize: 20,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 15,
+  },
+  mediaScrollView: {
+    paddingVertical: 10,
+  },
+  mediaItem: {
+    marginRight: 15,
+    alignItems: "center",
+  },
+  mediaThumbnail: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  mediaOverlay: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    borderRadius: 12,
+    padding: 4,
+  },
+  mediaTypeIcon: {
+    fontSize: 16,
+  },
+  mediaTime: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    textAlign: "center",
+  },
+  // Google Maps Button Styles
+  mapActionContainer: {
+    marginTop: 15,
+    paddingHorizontal: 20,
+  },
+  googleMapsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  googleMapsButtonIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  googleMapsButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontFamily: "Inder",
     fontWeight: "600",
   },
 });
