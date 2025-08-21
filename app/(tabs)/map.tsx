@@ -104,33 +104,40 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   }
   if (data) {
     const { locations } = data as any;
-    console.log("📍 Background location update:", locations);
 
-    // Store location data in AsyncStorage for the app to retrieve
+    // Process all location updates, not just the first one
     if (locations && locations.length > 0) {
-      const location = locations[0];
-      const trackingPoint = {
+      const trackingPoints = locations.map((location: any) => ({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        timestamp: Date.now(),
+        timestamp: Date.now() + Math.random(), // Add small random to avoid timestamp collisions
         accuracy: location.coords.accuracy,
         speed: location.coords.speed,
-      };
+      }));
 
       try {
-        // Save to AsyncStorage
+        // Get existing points
         const existingData = await AsyncStorage.getItem(
           "current_tracking_points"
         );
         const existingPoints = existingData ? JSON.parse(existingData) : [];
-        const updatedPoints = [...existingPoints, trackingPoint];
+
+        // Add new points
+        const updatedPoints = [...existingPoints, ...trackingPoints];
+
+        // Limit stored points to prevent memory issues (keep last 1000 points)
+        const limitedPoints = updatedPoints.slice(-1000);
+
         await AsyncStorage.setItem(
           "current_tracking_points",
-          JSON.stringify(updatedPoints)
+          JSON.stringify(limitedPoints)
         );
+
         console.log(
-          "📊 Background location saved, total points:",
-          updatedPoints.length
+          "📊 Background locations saved:",
+          trackingPoints.length,
+          "total:",
+          limitedPoints.length
         );
       } catch (error) {
         console.error("Error saving background location:", error);
@@ -243,15 +250,15 @@ const MapScreen = () => {
       // Check if we have permission first
       const { status } = await Location.getForegroundPermissionsAsync();
       if (status === "granted") {
-        // Start watching location immediately
+        // Start watching location immediately with optimized settings
         const subscription = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.High,
-            timeInterval: 2000, // Update every 2 seconds
-            distanceInterval: 10, // Update every 10 meters
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: 500, // Update every 500ms for maximum responsiveness
+            distanceInterval: 1, // Update every 1 meter movement
           },
           (location) => {
-            const { latitude, longitude, accuracy } = location.coords;
+            const { latitude, longitude, accuracy, speed } = location.coords;
 
             // Update user location
             setUserLocation({ latitude, longitude });
@@ -270,6 +277,48 @@ const MapScreen = () => {
             // Update GPS strength
             const strength = calculateGpsStrength(accuracy);
             setGpsStrength(strength);
+
+            // If actively tracking, immediately add point to tracking points
+            if (isTracking) {
+              const trackingPoint: TrackingPoint = {
+                latitude,
+                longitude,
+                timestamp: Date.now(),
+                accuracy: accuracy || undefined,
+                speed: speed || undefined,
+              };
+
+              setTrackingPoints((prev) => {
+                // Check if this point is significantly different from the last one
+                if (prev.length > 0) {
+                  const lastPoint = prev[prev.length - 1];
+                  const timeDiff =
+                    trackingPoint.timestamp - lastPoint.timestamp;
+                  const distance = calculateDistance(
+                    lastPoint.latitude,
+                    lastPoint.longitude,
+                    latitude,
+                    longitude
+                  );
+
+                  // Only add if enough time has passed (500ms) or significant movement (2m)
+                  if (timeDiff >= 500 || distance >= 2) {
+                    console.log("📍 Real-time tracking point added:", {
+                      lat: latitude.toFixed(6),
+                      lng: longitude.toFixed(6),
+                      accuracy: accuracy?.toFixed(1),
+                      speed: speed?.toFixed(1),
+                    });
+                    return [...prev, trackingPoint];
+                  }
+                  return prev;
+                } else {
+                  // First tracking point
+                  console.log("📍 First tracking point added");
+                  return [trackingPoint];
+                }
+              });
+            }
           }
         );
 
@@ -990,6 +1039,9 @@ const MapScreen = () => {
       setTrackingPoints([]);
       setSessionMedia([]); // Initialize empty media array for the session
 
+      // Restart location watcher with optimized settings for tracking
+      await restartLocationWatcherForTracking();
+
       // Start background location tracking
       console.log("📍 Starting background location tracking...");
 
@@ -1010,15 +1062,15 @@ const MapScreen = () => {
       // Start background location tracking
       await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
         accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: highAccuracyMode ? 1000 : 5000, // Update every 1 second in high accuracy mode, 5 seconds otherwise
-        distanceInterval: 10, // Update every 10 meters
-        deferredUpdatesInterval: highAccuracyMode ? 1000 : 5000,
+        timeInterval: highAccuracyMode ? 250 : 1000, // Update every 250ms in high accuracy mode, 1 second otherwise
+        distanceInterval: 1, // Update every 1 meter movement
+        deferredUpdatesInterval: highAccuracyMode ? 250 : 1000,
         showsBackgroundLocationIndicator: true,
         foregroundService: {
           notificationTitle: "EquiHUB GPS Tracking",
           notificationBody: highAccuracyMode
-            ? "High accuracy tracking active"
-            : "Tracking your riding session",
+            ? "Ultra-high accuracy tracking active"
+            : "High precision tracking active",
           notificationColor: "#4A90E2",
         },
       });
@@ -1026,58 +1078,63 @@ const MapScreen = () => {
       console.log("✅ Background location tracking started successfully");
 
       // Set up a timer to sync background data with the app state
-      const syncInterval = setInterval(async () => {
-        try {
-          // Check if the background task is still running
-          const isStillRunning = await Location.hasStartedLocationUpdatesAsync(
-            LOCATION_TASK_NAME
-          );
-          if (!isStillRunning) {
-            console.warn("⚠️ Background location task stopped unexpectedly");
-            // Don't automatically restart - let user know there was an issue
-            return;
-          }
-
-          const backgroundData = await AsyncStorage.getItem(
-            "current_tracking_points"
-          );
-          if (backgroundData) {
-            const backgroundPoints = JSON.parse(backgroundData);
-            if (backgroundPoints.length > 0) {
-              setTrackingPoints((prev) => {
-                // Merge with existing points, avoiding duplicates
-                const existingTimestamps = new Set(
-                  prev.map((p) => p.timestamp)
-                );
-                const newPoints = backgroundPoints.filter(
-                  (p: TrackingPoint) => !existingTimestamps.has(p.timestamp)
-                );
-
-                if (newPoints.length > 0) {
-                  console.log(
-                    "📊 Syncing background points:",
-                    newPoints.length
-                  );
-                  // Update current location to the most recent point
-                  const latestPoint = newPoints[newPoints.length - 1];
-                  setUserLocation({
-                    latitude: latestPoint.latitude,
-                    longitude: latestPoint.longitude,
-                  });
-
-                  // Update GPS strength
-                  const strength = calculateGpsStrength(latestPoint.accuracy);
-                  setGpsStrength(strength);
-                }
-
-                return [...prev, ...newPoints];
-              });
+      const syncInterval = setInterval(
+        async () => {
+          try {
+            // Check if the background task is still running
+            const isStillRunning =
+              await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+            if (!isStillRunning) {
+              console.warn("⚠️ Background location task stopped unexpectedly");
+              // Don't automatically restart - let user know there was an issue
+              return;
             }
+
+            const backgroundData = await AsyncStorage.getItem(
+              "current_tracking_points"
+            );
+            if (backgroundData) {
+              const backgroundPoints = JSON.parse(backgroundData);
+              if (backgroundPoints.length > 0) {
+                setTrackingPoints((prev) => {
+                  // Merge with existing points, avoiding duplicates
+                  const existingTimestamps = new Set(
+                    prev.map((p) => p.timestamp)
+                  );
+                  const newPoints = backgroundPoints.filter(
+                    (p: TrackingPoint) => !existingTimestamps.has(p.timestamp)
+                  );
+
+                  if (newPoints.length > 0) {
+                    console.log(
+                      "📊 Syncing background points:",
+                      newPoints.length
+                    );
+                    // Update current location to the most recent point
+                    const latestPoint = newPoints[newPoints.length - 1];
+                    setUserLocation({
+                      latitude: latestPoint.latitude,
+                      longitude: latestPoint.longitude,
+                    });
+
+                    // Update GPS strength
+                    const strength = calculateGpsStrength(latestPoint.accuracy);
+                    setGpsStrength(strength);
+
+                    // Clear processed background data to prevent memory buildup
+                    AsyncStorage.removeItem("current_tracking_points");
+                  }
+
+                  return [...prev, ...newPoints];
+                });
+              }
+            }
+          } catch (error) {
+            console.error("Error syncing background data:", error);
           }
-        } catch (error) {
-          console.error("Error syncing background data:", error);
-        }
-      }, 2000); // Sync every 2 seconds
+        },
+        highAccuracyMode ? 500 : 1000
+      ); // Sync every 500ms in high accuracy mode, 1 second otherwise
 
       // Store the sync interval reference for cleanup
       trackingIntervalRef.current = syncInterval;
@@ -1187,6 +1244,9 @@ const MapScreen = () => {
       setSessionStartTime(null);
       setTrackingPoints([]);
       setSessionMedia([]); // Reset media array
+
+      // Restart location watcher with normal settings
+      await startLocationWatcher();
 
       // Show completion alert
       Alert.alert(
@@ -1370,6 +1430,87 @@ const MapScreen = () => {
         return "#F44336"; // Red
       default:
         return "#757575"; // Gray
+    }
+  };
+
+  // Restart location watcher with optimized settings for tracking
+  const restartLocationWatcherForTracking = async () => {
+    try {
+      // Stop current watcher
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
+        locationSubscriptionRef.current = null;
+      }
+
+      // Start optimized watcher for tracking
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status === "granted") {
+        const subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: highAccuracyMode ? 250 : 500, // Ultra-fast updates during tracking
+            distanceInterval: 0.5, // Update every 0.5 meters during tracking
+          },
+          (location) => {
+            const { latitude, longitude, accuracy, speed } = location.coords;
+
+            // Update user location
+            setUserLocation({ latitude, longitude });
+
+            // Update GPS strength
+            const strength = calculateGpsStrength(accuracy);
+            setGpsStrength(strength);
+
+            // Immediately add point to tracking points
+            const trackingPoint: TrackingPoint = {
+              latitude,
+              longitude,
+              timestamp: Date.now(),
+              accuracy: accuracy || undefined,
+              speed: speed || undefined,
+            };
+
+            setTrackingPoints((prev) => {
+              // For active tracking, be more aggressive about capturing points
+              if (prev.length > 0) {
+                const lastPoint = prev[prev.length - 1];
+                const timeDiff = trackingPoint.timestamp - lastPoint.timestamp;
+                const distance = calculateDistance(
+                  lastPoint.latitude,
+                  lastPoint.longitude,
+                  latitude,
+                  longitude
+                );
+
+                // During tracking, capture more frequent updates
+                if (
+                  timeDiff >= (highAccuracyMode ? 250 : 500) ||
+                  distance >= 0.5
+                ) {
+                  console.log("🎯 High-speed tracking point:", {
+                    lat: latitude.toFixed(7),
+                    lng: longitude.toFixed(7),
+                    accuracy: accuracy?.toFixed(1),
+                    speed: speed?.toFixed(2),
+                    timeDiff: timeDiff,
+                    distance: distance.toFixed(1),
+                  });
+                  return [...prev, trackingPoint];
+                }
+                return prev;
+              } else {
+                console.log("🎯 Starting high-speed tracking");
+                return [trackingPoint];
+              }
+            });
+          }
+        );
+
+        locationSubscriptionRef.current = subscription;
+        console.log("🚀 High-speed location tracking activated");
+      }
+    } catch (error) {
+      console.error("Failed to restart location watcher for tracking:", error);
     }
   };
 
@@ -1983,7 +2124,7 @@ const MapScreen = () => {
                               { color: currentTheme.colors.text },
                             ]}
                           >
-                            High Accuracy Tracking
+                            Ultra-Fast GPS Tracking
                           </Text>
                           <TouchableOpacity
                             onPress={() => setShowBatteryInfoModal(false)}
@@ -2007,9 +2148,11 @@ const MapScreen = () => {
                               { color: currentTheme.colors.text },
                             ]}
                           >
-                            High accuracy tracking provides more precise
-                            location updates by checking your position every 1
-                            second instead of every 5 seconds.
+                            Ultra-fast GPS tracking provides maximum precision
+                            location updates by checking your position every
+                            250ms and capturing movement down to 0.5 meters.
+                            Normal mode updates every 500ms with 1-meter
+                            precision.
                           </Text>
                           <Text
                             style={[
@@ -2017,8 +2160,9 @@ const MapScreen = () => {
                               { color: "#FF6B35" },
                             ]}
                           >
-                            ⚠️ Warning: Enabling this feature will significantly
-                            increase battery usage during tracking sessions.
+                            ⚠️ Warning: Ultra-fast mode will significantly
+                            increase battery usage due to extremely frequent GPS
+                            polling.
                           </Text>
                           <Text
                             style={[
@@ -2026,8 +2170,8 @@ const MapScreen = () => {
                               { color: currentTheme.colors.textSecondary },
                             ]}
                           >
-                            Recommended for short sessions or when using
-                            external power.
+                            Recommended for precision training sessions or when
+                            using external power source.
                           </Text>
                         </View>
                         <TouchableOpacity
@@ -2063,7 +2207,7 @@ const MapScreen = () => {
                         { color: currentTheme.colors.text },
                       ]}
                     >
-                      High Accuracy Tracking
+                      Ultra-Fast GPS Tracking
                     </Text>
                     <TouchableOpacity
                       onPress={() => setShowBatteryInfoModal(true)}
