@@ -292,7 +292,7 @@ const MapScreen = () => {
         const subscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: 500, // Update every 500ms for maximum responsiveness
+            timeInterval: 1000, // Update every 1s for general location monitoring
             distanceInterval: 1, // Update every 1 meter movement
           },
           (location) => {
@@ -1320,9 +1320,9 @@ const MapScreen = () => {
       // Start background location tracking
       await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
         accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: highAccuracyMode ? 250 : 1000, // Update every 250ms in high accuracy mode, 1 second otherwise
+        timeInterval: highAccuracyMode ? 250 : 1000, // Ultra-fast in high accuracy, 1s in normal
         distanceInterval: 1, // Update every 1 meter movement
-        deferredUpdatesInterval: highAccuracyMode ? 250 : 1000,
+        deferredUpdatesInterval: highAccuracyMode ? 250 : 1000, // Match timeInterval
         showsBackgroundLocationIndicator: true,
         foregroundService: {
           notificationTitle: "EquiHUB GPS Tracking",
@@ -1394,8 +1394,8 @@ const MapScreen = () => {
             console.error("Error syncing background data:", error);
           }
         },
-        highAccuracyMode ? 500 : 1000
-      ); // Sync every 500ms in high accuracy mode, 1 second otherwise
+        highAccuracyMode ? 250 : 1000
+      ); // Sync every 250ms in high accuracy mode, 1s in normal mode
 
       // Store the sync interval reference for cleanup
       trackingIntervalRef.current = syncInterval;
@@ -1710,6 +1710,110 @@ const MapScreen = () => {
     }
   };
 
+  // Update high accuracy mode and restart tracking if active
+  const updateHighAccuracyMode = async (newMode: boolean) => {
+    const previousMode = highAccuracyMode;
+    setHighAccuracyMode(newMode);
+
+    // If tracking is active, restart both background and foreground tracking with new settings
+    if (isTracking) {
+      try {
+        console.log(
+          `🔄 Updating tracking mode: ${previousMode ? "High" : "Normal"} → ${
+            newMode ? "High" : "Normal"
+          } Accuracy`
+        );
+
+        // Restart foreground tracking
+        await restartLocationWatcherForTracking();
+
+        // Restart background tracking
+        const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(
+          LOCATION_TASK_NAME
+        );
+        if (isTaskRunning) {
+          await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+
+          // Restart with new settings
+          await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: newMode ? 250 : 1000,
+            distanceInterval: 1,
+            deferredUpdatesInterval: newMode ? 250 : 1000,
+            showsBackgroundLocationIndicator: true,
+            foregroundService: {
+              notificationTitle: "EquiHUB GPS Tracking",
+              notificationBody: newMode
+                ? "Ultra-high accuracy tracking active"
+                : "High precision tracking active",
+              notificationColor: "#4A90E2",
+            },
+          });
+        }
+
+        // Restart sync interval with new timing
+        if (trackingIntervalRef.current) {
+          clearInterval(trackingIntervalRef.current);
+          const syncInterval = setInterval(
+            async () => {
+              try {
+                const isStillRunning =
+                  await Location.hasStartedLocationUpdatesAsync(
+                    LOCATION_TASK_NAME
+                  );
+                if (!isStillRunning) {
+                  console.warn(
+                    "⚠️ Background location task stopped unexpectedly"
+                  );
+                  return;
+                }
+
+                const backgroundData = await AsyncStorage.getItem(
+                  "current_tracking_points"
+                );
+                if (backgroundData) {
+                  const backgroundPoints = JSON.parse(backgroundData);
+                  if (backgroundPoints.length > 0) {
+                    setTrackingPoints((prev) => {
+                      const existingTimestamps = new Set(
+                        prev.map((p) => p.timestamp)
+                      );
+                      const newPoints = backgroundPoints.filter(
+                        (p: TrackingPoint) =>
+                          !existingTimestamps.has(p.timestamp)
+                      );
+
+                      if (newPoints.length > 0) {
+                        const latestPoint = newPoints[newPoints.length - 1];
+                        setUserLocation({
+                          latitude: latestPoint.latitude,
+                          longitude: latestPoint.longitude,
+                        });
+                        updateCurrentGait(latestPoint);
+                        return [...prev, ...newPoints];
+                      }
+                      return prev;
+                    });
+                  }
+                }
+              } catch (error) {
+                console.error("Error syncing background data:", error);
+              }
+            },
+            newMode ? 250 : 1000
+          );
+          trackingIntervalRef.current = syncInterval;
+        }
+
+        console.log(`✅ Tracking mode updated successfully`);
+      } catch (error) {
+        console.error("Error updating tracking mode:", error);
+        // Revert the state if update failed
+        setHighAccuracyMode(previousMode);
+      }
+    }
+  };
+
   // Restart location watcher with optimized settings for tracking
   const restartLocationWatcherForTracking = async () => {
     try {
@@ -1725,7 +1829,7 @@ const MapScreen = () => {
         const subscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: highAccuracyMode ? 250 : 500, // Ultra-fast updates during tracking
+            timeInterval: highAccuracyMode ? 250 : 1000, // Ultra-fast updates during tracking
             distanceInterval: 0.5, // Update every 0.5 meters during tracking
           },
           (location) => {
@@ -2512,8 +2616,7 @@ const MapScreen = () => {
                             : currentTheme.colors.border,
                         },
                       ]}
-                      onPress={() => setHighAccuracyMode(!highAccuracyMode)}
-                      disabled={isTracking}
+                      onPress={() => updateHighAccuracyMode(!highAccuracyMode)}
                       activeOpacity={0.8}
                     >
                       <View
