@@ -816,6 +816,26 @@ const MapScreen = () => {
     }
   };
 
+  // Setup tracking notification channel
+  const setupTrackingNotificationChannel = async () => {
+    try {
+      await Notifications.setNotificationChannelAsync("tracking", {
+        name: "GPS Tracking",
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0], // No vibration
+        lightColor: "#4A90E2",
+        sound: null, // Silent notifications
+        enableLights: true,
+        enableVibrate: false,
+        showBadge: false,
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+    } catch (error) {
+      console.error("Error setting up notification channel:", error);
+    }
+  };
+
   // Request notification permissions
   const requestNotificationPermissions = async () => {
     try {
@@ -851,33 +871,31 @@ const MapScreen = () => {
               .padStart(2, "0")}`
           : `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
-      const notificationContent = {
-        title: "🐎 GPS Tracking Active",
-        body: `${horseName} • ${trainingType}\nElapsed time: ${timeString}`,
-        data: {
-          type: "tracking",
-          startTime,
-          horseName,
-          trainingType,
+      // Use scheduleNotificationAsync with the same identifier to update in place
+      // The channel settings will make it silent
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "🐎 GPS Tracking Active",
+          body: `${horseName} • ${trainingType}\nElapsed time: ${timeString}`,
+          data: {
+            type: "tracking",
+            startTime,
+            horseName,
+            trainingType,
+          },
+          sound: false,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          sticky: true,
         },
-        categoryIdentifier: "tracking",
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-        sticky: true,
-      };
-
-      if (notificationId) {
-        // Update existing notification
-        await Notifications.dismissNotificationAsync(notificationId);
-      }
-
-      const identifier = await Notifications.scheduleNotificationAsync({
-        content: notificationContent,
-        trigger: null, // Show immediately
-        identifier: TRACKING_NOTIFICATION_IDENTIFIER,
+        trigger: null,
+        identifier: TRACKING_NOTIFICATION_IDENTIFIER, // Always same identifier
       });
 
-      setNotificationId(identifier);
-      return identifier;
+      // Only set notificationId if it's not already set
+      if (!notificationId) {
+        setNotificationId(TRACKING_NOTIFICATION_IDENTIFIER);
+      }
+      return TRACKING_NOTIFICATION_IDENTIFIER;
     } catch (error) {
       console.error("Error updating tracking notification:", error);
       // Show user-facing error for notification issues
@@ -902,6 +920,9 @@ const MapScreen = () => {
       console.warn("Cannot show tracking notifications - permissions denied");
       return;
     }
+
+    // Setup notification channel for silent, persistent notifications
+    await setupTrackingNotificationChannel();
 
     // Show initial notification
     const initialNotificationId = await updateTrackingNotification(
