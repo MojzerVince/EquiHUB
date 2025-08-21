@@ -1886,6 +1886,7 @@ const MapScreen = () => {
                                   selectedHorse === horse.id
                                     ? "#FFFFFF"
                                     : currentTheme.colors.text,
+                                textAlign: "center",
                               },
                             ]}
                           >
@@ -2782,11 +2783,27 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginBottom: 8,
   },
+  horseImagePlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginBottom: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
+  },
+  horseImagePlaceholderIcon: {
+    fontSize: 24,
+    textAlign: "center",
+  },
   selectionCardTitle: {
     fontSize: 16,
     fontFamily: "Inder",
     fontWeight: "600",
     marginBottom: 4,
+    textAlign: "center",
+    lineHeight: 20,
   },
   selectionCardSubtitle: {
     fontSize: 12,
