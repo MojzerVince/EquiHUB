@@ -37,7 +37,7 @@ interface TrackingPoint {
 interface MediaItem {
   id: string;
   uri: string;
-  type: 'photo' | 'video';
+  type: "photo" | "video";
   timestamp: number;
   location?: {
     latitude: number;
@@ -157,12 +157,17 @@ const MapScreen = () => {
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
   const [highAccuracyMode, setHighAccuracyMode] = useState<boolean>(false);
-  const [showBatteryInfoModal, setShowBatteryInfoModal] = useState<boolean>(false);
-  
+  const [showBatteryInfoModal, setShowBatteryInfoModal] =
+    useState<boolean>(false);
+
   // Media capture state
   const [sessionMedia, setSessionMedia] = useState<MediaItem[]>([]);
-  const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
-  const [mediaLibraryPermission, setMediaLibraryPermission] = useState<boolean | null>(null);
+  const [cameraPermission, setCameraPermission] = useState<boolean | null>(
+    null
+  );
+  const [mediaLibraryPermission, setMediaLibraryPermission] = useState<
+    boolean | null
+  >(null);
 
   // Notification state
   const [notificationId, setNotificationId] = useState<string | null>(null);
@@ -189,14 +194,16 @@ const MapScreen = () => {
   const requestCameraPermissions = async () => {
     try {
       // Request camera permission
-      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-      setCameraPermission(cameraStatus === 'granted');
-      
+      const { status: cameraStatus } =
+        await ImagePicker.requestCameraPermissionsAsync();
+      setCameraPermission(cameraStatus === "granted");
+
       // Request media library permission
-      const { status: mediaStatus } = await MediaLibrary.requestPermissionsAsync();
-      setMediaLibraryPermission(mediaStatus === 'granted');
+      const { status: mediaStatus } =
+        await MediaLibrary.requestPermissionsAsync();
+      setMediaLibraryPermission(mediaStatus === "granted");
     } catch (error) {
-      console.error('Error requesting camera permissions:', error);
+      console.error("Error requesting camera permissions:", error);
       setCameraPermission(false);
       setMediaLibraryPermission(false);
     }
@@ -207,7 +214,7 @@ const MapScreen = () => {
     try {
       // Check if we have permission first
       const { status } = await Location.getForegroundPermissionsAsync();
-      if (status === 'granted') {
+      if (status === "granted") {
         // Start watching location immediately
         const subscription = await Location.watchPositionAsync(
           {
@@ -217,12 +224,12 @@ const MapScreen = () => {
           },
           (location) => {
             const { latitude, longitude, accuracy } = location.coords;
-            
+
             // Update user location
             setUserLocation({ latitude, longitude });
-            
+
             // Update region if this is the first location fix or if we're still showing world view
-            if (!userLocation || (region.latitudeDelta > 1)) {
+            if (!userLocation || region.latitudeDelta > 1) {
               const newRegion = {
                 latitude,
                 longitude,
@@ -231,17 +238,17 @@ const MapScreen = () => {
               };
               setRegion(newRegion);
             }
-            
+
             // Update GPS strength
             const strength = calculateGpsStrength(accuracy);
             setGpsStrength(strength);
           }
         );
-        
+
         locationSubscriptionRef.current = subscription;
       }
     } catch (error) {
-      console.log('Location watcher failed:', error);
+      console.log("Location watcher failed:", error);
     }
   };
 
@@ -644,7 +651,7 @@ const MapScreen = () => {
   const getCurrentLocation = async () => {
     try {
       setLoading(true);
-      
+
       // Try high accuracy first
       let location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
@@ -684,8 +691,13 @@ const MapScreen = () => {
         setRegion(newRegion);
         setUserLocation({ latitude, longitude });
       } catch (secondError) {
-        const errorMessage = secondError instanceof Error ? secondError.message : String(secondError);
-        showError(`Unable to get your location. Please check GPS settings.\n\nError: ${errorMessage}`);
+        const errorMessage =
+          secondError instanceof Error
+            ? secondError.message
+            : String(secondError);
+        showError(
+          `Unable to get your location. Please check GPS settings.\n\nError: ${errorMessage}`
+        );
         setGpsStrength(0);
       }
     } finally {
@@ -713,7 +725,7 @@ const MapScreen = () => {
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        
+
         // Save to device gallery
         if (mediaLibraryPermission) {
           await MediaLibrary.saveToLibraryAsync(asset.uri);
@@ -723,19 +735,23 @@ const MapScreen = () => {
         const mediaItem: MediaItem = {
           id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           uri: asset.uri,
-          type: 'photo',
+          type: "photo",
           timestamp: Date.now(),
           location: userLocation || undefined,
         };
 
         // Add to session media
-        setSessionMedia(prev => [...prev, mediaItem]);
-        
+        setSessionMedia((prev) => [...prev, mediaItem]);
+
         // Show success message
-        Alert.alert("Photo Captured", "Photo saved to gallery and will be included in session summary");
+        Alert.alert(
+          "Photo Captured",
+          "Photo saved to gallery and will be included in session summary"
+        );
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       showError(`Failed to take photo: ${errorMessage}`);
     }
   };
@@ -756,7 +772,7 @@ const MapScreen = () => {
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        
+
         // Save to device gallery
         if (mediaLibraryPermission) {
           await MediaLibrary.saveToLibraryAsync(asset.uri);
@@ -766,19 +782,23 @@ const MapScreen = () => {
         const mediaItem: MediaItem = {
           id: `video_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           uri: asset.uri,
-          type: 'video',
+          type: "video",
           timestamp: Date.now(),
           location: userLocation || undefined,
         };
 
         // Add to session media
-        setSessionMedia(prev => [...prev, mediaItem]);
-        
+        setSessionMedia((prev) => [...prev, mediaItem]);
+
         // Show success message
-        Alert.alert("Video Recorded", "Video saved to gallery and will be included in session summary");
+        Alert.alert(
+          "Video Recorded",
+          "Video saved to gallery and will be included in session summary"
+        );
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       showError(`Failed to record video: ${errorMessage}`);
     }
   };
@@ -804,11 +824,11 @@ const MapScreen = () => {
         let location = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.High,
         });
-        
+
         const { latitude, longitude, accuracy } = location.coords;
         const strength = calculateGpsStrength(accuracy);
         setGpsStrength(strength);
-        
+
         const newRegion = {
           latitude,
           longitude,
@@ -823,11 +843,11 @@ const MapScreen = () => {
           let location = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Balanced,
           });
-          
+
           const { latitude, longitude, accuracy } = location.coords;
           const strength = calculateGpsStrength(accuracy);
           setGpsStrength(strength);
-          
+
           const newRegion = {
             latitude,
             longitude,
@@ -837,8 +857,13 @@ const MapScreen = () => {
           setRegion(newRegion);
           setUserLocation({ latitude, longitude });
         } catch (secondError) {
-          const errorMessage = secondError instanceof Error ? secondError.message : String(secondError);
-          showError(`Unable to get your location. Please check GPS settings.\n\nError: ${errorMessage}`);
+          const errorMessage =
+            secondError instanceof Error
+              ? secondError.message
+              : String(secondError);
+          showError(
+            `Unable to get your location. Please check GPS settings.\n\nError: ${errorMessage}`
+          );
         }
       } finally {
         setLoading(false);
@@ -963,8 +988,8 @@ const MapScreen = () => {
         showsBackgroundLocationIndicator: true,
         foregroundService: {
           notificationTitle: "EquiHUB GPS Tracking",
-          notificationBody: highAccuracyMode 
-            ? "High accuracy tracking active" 
+          notificationBody: highAccuracyMode
+            ? "High accuracy tracking active"
             : "Tracking your riding session",
           notificationColor: "#4A90E2",
         },
@@ -1128,12 +1153,6 @@ const MapScreen = () => {
       // Save session to storage
       await saveSessionToStorage(completedSession);
 
-      // Save current session for summary page
-      await AsyncStorage.setItem(
-        "current_session_summary",
-        JSON.stringify(completedSession)
-      );
-
       // Reset tracking state
       setIsTracking(false);
       setCurrentSession(null);
@@ -1151,8 +1170,12 @@ const MapScreen = () => {
         )} km\nAverage Speed: ${(averageSpeed * 3.6).toFixed(1)} km/h`,
         [
           {
-            text: "View Summary",
-            onPress: () => router.push("/session-summary"),
+            text: "View Details",
+            onPress: () =>
+              router.push({
+                pathname: "/session-details",
+                params: { sessionId: completedSession.id },
+              }),
           },
           {
             text: "Back to Map",
@@ -1467,7 +1490,7 @@ const MapScreen = () => {
                           onPress={() => setSelectedHorse(horse.id)}
                           activeOpacity={0.7}
                         >
-                          {(horse.image_url || horse.image_base64) ? (
+                          {horse.image_url || horse.image_base64 ? (
                             <Image
                               source={{
                                 uri: horse.image_base64
@@ -1478,7 +1501,16 @@ const MapScreen = () => {
                               resizeMode="cover"
                             />
                           ) : (
-                            <View style={[styles.horseImage, { backgroundColor: currentTheme.colors.surface, justifyContent: 'center', alignItems: 'center' }]}>
+                            <View
+                              style={[
+                                styles.horseImage,
+                                {
+                                  backgroundColor: currentTheme.colors.surface,
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                },
+                              ]}
+                            >
                               <Text style={{ fontSize: 24 }}>🐴</Text>
                             </View>
                           )}
@@ -1714,12 +1746,20 @@ const MapScreen = () => {
                       onPress={() => setShowBatteryInfoModal(false)}
                     >
                       <TouchableOpacity
-                        style={[styles.batteryInfoModal, { backgroundColor: currentTheme.colors.surface }]}
+                        style={[
+                          styles.batteryInfoModal,
+                          { backgroundColor: currentTheme.colors.surface },
+                        ]}
                         activeOpacity={1}
                         onPress={(e) => e.stopPropagation()}
                       >
                         <View style={styles.batteryInfoHeader}>
-                          <Text style={[styles.batteryInfoTitle, { color: currentTheme.colors.text }]}>
+                          <Text
+                            style={[
+                              styles.batteryInfoTitle,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
                             High Accuracy Tracking
                           </Text>
                           <TouchableOpacity
@@ -1727,26 +1767,57 @@ const MapScreen = () => {
                             style={styles.closeModalButton}
                             activeOpacity={0.7}
                           >
-                            <Text style={[styles.closeModalText, { color: currentTheme.colors.textSecondary }]}>✕</Text>
+                            <Text
+                              style={[
+                                styles.closeModalText,
+                                { color: currentTheme.colors.textSecondary },
+                              ]}
+                            >
+                              ✕
+                            </Text>
                           </TouchableOpacity>
                         </View>
                         <View style={styles.batteryInfoContent}>
-                          <Text style={[styles.batteryInfoText, { color: currentTheme.colors.text }]}>
-                            High accuracy tracking provides more precise location updates by checking your position every 1 second instead of every 5 seconds.
+                          <Text
+                            style={[
+                              styles.batteryInfoText,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            High accuracy tracking provides more precise
+                            location updates by checking your position every 1
+                            second instead of every 5 seconds.
                           </Text>
-                          <Text style={[styles.batteryWarningText, { color: "#FF6B35" }]}>
-                            ⚠️ Warning: Enabling this feature will significantly increase battery usage during tracking sessions.
+                          <Text
+                            style={[
+                              styles.batteryWarningText,
+                              { color: "#FF6B35" },
+                            ]}
+                          >
+                            ⚠️ Warning: Enabling this feature will significantly
+                            increase battery usage during tracking sessions.
                           </Text>
-                          <Text style={[styles.batteryRecommendationText, { color: currentTheme.colors.textSecondary }]}>
-                            Recommended for short sessions or when using external power.
+                          <Text
+                            style={[
+                              styles.batteryRecommendationText,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            Recommended for short sessions or when using
+                            external power.
                           </Text>
                         </View>
                         <TouchableOpacity
-                          style={[styles.batteryInfoButton, { backgroundColor: currentTheme.colors.primary }]}
+                          style={[
+                            styles.batteryInfoButton,
+                            { backgroundColor: currentTheme.colors.primary },
+                          ]}
                           onPress={() => setShowBatteryInfoModal(false)}
                           activeOpacity={0.8}
                         >
-                          <Text style={styles.batteryInfoButtonText}>Got it</Text>
+                          <Text style={styles.batteryInfoButtonText}>
+                            Got it
+                          </Text>
                         </TouchableOpacity>
                       </TouchableOpacity>
                     </TouchableOpacity>
@@ -1756,9 +1827,19 @@ const MapScreen = () => {
 
               {/* High Accuracy Toggle - Hidden during tracking */}
               {!isTracking && (
-                <View style={[styles.highAccuracyContainer, { backgroundColor: currentTheme.colors.surface }]}>
+                <View
+                  style={[
+                    styles.highAccuracyContainer,
+                    { backgroundColor: currentTheme.colors.surface },
+                  ]}
+                >
                   <View style={styles.highAccuracyRow}>
-                    <Text style={[styles.highAccuracyLabel, { color: currentTheme.colors.text }]}>
+                    <Text
+                      style={[
+                        styles.highAccuracyLabel,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
                       High Accuracy Tracking
                     </Text>
                     <TouchableOpacity
@@ -1766,7 +1847,14 @@ const MapScreen = () => {
                       style={styles.infoButton}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.infoButtonText, { color: currentTheme.colors.primary }]}>ⓘ</Text>
+                      <Text
+                        style={[
+                          styles.infoButtonText,
+                          { color: currentTheme.colors.primary },
+                        ]}
+                      >
+                        ⓘ
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[
@@ -1779,20 +1867,22 @@ const MapScreen = () => {
                       ]}
                       onPress={() => setHighAccuracyMode(!highAccuracyMode)}
                       disabled={isTracking}
-                    activeOpacity={0.8}
-                  >
-                    <View
-                      style={[
-                        styles.toggleKnob,
-                        {
-                          backgroundColor: "#FFFFFF",
-                          transform: [{ translateX: highAccuracyMode ? 20 : 0 }],
-                        },
-                      ]}
-                    />
-                  </TouchableOpacity>
+                      activeOpacity={0.8}
+                    >
+                      <View
+                        style={[
+                          styles.toggleKnob,
+                          {
+                            backgroundColor: "#FFFFFF",
+                            transform: [
+                              { translateX: highAccuracyMode ? 20 : 0 },
+                            ],
+                          },
+                        ]}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
               )}
 
               {/* Start/Stop Tracking Button */}
@@ -1952,7 +2042,7 @@ const MapScreen = () => {
                         <Text style={styles.cameraButtonText}>Video</Text>
                       </TouchableOpacity>
                     </View>
-                    
+
                     {sessionMedia.length > 0 && (
                       <Text
                         style={[
@@ -1960,7 +2050,8 @@ const MapScreen = () => {
                           { color: currentTheme.colors.textSecondary },
                         ]}
                       >
-                        {sessionMedia.length} item{sessionMedia.length !== 1 ? 's' : ''} captured
+                        {sessionMedia.length} item
+                        {sessionMedia.length !== 1 ? "s" : ""} captured
                       </Text>
                     )}
                   </View>
