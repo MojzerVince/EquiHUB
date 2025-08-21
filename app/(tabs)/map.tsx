@@ -17,7 +17,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { PROVIDER_GOOGLE, Polyline, Region } from "react-native-maps";
+import MapView, {
+  Marker,
+  PROVIDER_GOOGLE,
+  Polyline,
+  Region,
+} from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDialog } from "../../contexts/DialogContext";
@@ -59,6 +64,23 @@ interface TrainingSession {
   averageSpeed?: number; // in m/s
   maxSpeed?: number; // in m/s
   media?: MediaItem[]; // Photos and videos taken during session
+}
+
+interface PublishedTrail {
+  id: string;
+  name: string;
+  description?: string;
+  userId: string;
+  userName: string;
+  path: TrackingPoint[];
+  difficulty: "easy" | "moderate" | "difficult";
+  distance: number; // in meters
+  duration: number; // in seconds
+  trainingType: string;
+  rating: number; // 1-5 stars
+  reviewsCount: number;
+  isPublic: boolean;
+  createdAt: number;
 }
 
 // Configure notification behavior
@@ -174,6 +196,12 @@ const MapScreen = () => {
   const notificationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
   );
+
+  // Published trails state
+  const [showPublishedTrails, setShowPublishedTrails] =
+    useState<boolean>(false);
+  const [publishedTrails, setPublishedTrails] = useState<PublishedTrail[]>([]);
+  const [trailsLoading, setTrailsLoading] = useState<boolean>(false);
 
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
@@ -1217,6 +1245,134 @@ const MapScreen = () => {
     });
   };
 
+  // Load published trails from storage or API
+  const loadPublishedTrails = async () => {
+    setTrailsLoading(true);
+    try {
+      // For now, we'll use sample data stored in AsyncStorage
+      // In a real app, this would be an API call
+      const storedTrails = await AsyncStorage.getItem("published_trails");
+      if (storedTrails) {
+        const trails = JSON.parse(storedTrails);
+        setPublishedTrails(trails);
+      } else {
+        // Sample trails data - in a real app this would come from your backend
+        const sampleTrails: PublishedTrail[] = [
+          {
+            id: "trail_1",
+            name: "Peaceful Valley Loop",
+            description:
+              "A scenic trail through the valley with gentle terrain",
+            userId: "user_1",
+            userName: "Sarah Johnson",
+            path: [
+              {
+                latitude: userLocation?.latitude || 0,
+                longitude: userLocation?.longitude || 0,
+                timestamp: Date.now(),
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.001,
+                longitude: (userLocation?.longitude || 0) + 0.002,
+                timestamp: Date.now() + 1000,
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.003,
+                longitude: (userLocation?.longitude || 0) + 0.001,
+                timestamp: Date.now() + 2000,
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.002,
+                longitude: (userLocation?.longitude || 0) - 0.001,
+                timestamp: Date.now() + 3000,
+              },
+            ],
+            difficulty: "easy",
+            distance: 2500,
+            duration: 1800,
+            trainingType: "Trail Riding",
+            rating: 4.5,
+            reviewsCount: 12,
+            isPublic: true,
+            createdAt: Date.now() - 86400000,
+          },
+          {
+            id: "trail_2",
+            name: "Mountain Ridge Challenge",
+            description:
+              "Challenging trail with steep climbs and stunning views",
+            userId: "user_2",
+            userName: "Mike Thompson",
+            path: [
+              {
+                latitude: (userLocation?.latitude || 0) + 0.005,
+                longitude: (userLocation?.longitude || 0) + 0.003,
+                timestamp: Date.now(),
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.007,
+                longitude: (userLocation?.longitude || 0) + 0.005,
+                timestamp: Date.now() + 1000,
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.009,
+                longitude: (userLocation?.longitude || 0) + 0.004,
+                timestamp: Date.now() + 2000,
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.006,
+                longitude: (userLocation?.longitude || 0) + 0.002,
+                timestamp: Date.now() + 3000,
+              },
+            ],
+            difficulty: "difficult",
+            distance: 4200,
+            duration: 3600,
+            trainingType: "Endurance",
+            rating: 4.8,
+            reviewsCount: 8,
+            isPublic: true,
+            createdAt: Date.now() - 172800000,
+          },
+        ];
+        setPublishedTrails(sampleTrails);
+        // Save sample data for future use
+        await AsyncStorage.setItem(
+          "published_trails",
+          JSON.stringify(sampleTrails)
+        );
+      }
+    } catch (error) {
+      console.error("Error loading published trails:", error);
+      showError("Failed to load published trails");
+    } finally {
+      setTrailsLoading(false);
+    }
+  };
+
+  // Toggle published trails visibility
+  const togglePublishedTrails = async () => {
+    if (!showPublishedTrails && publishedTrails.length === 0) {
+      // Load trails if we don't have them yet
+      await loadPublishedTrails();
+    }
+    setShowPublishedTrails(!showPublishedTrails);
+  };
+
+  // Get difficulty color for trails
+  const getDifficultyColor = (difficulty: string): string => {
+    switch (difficulty) {
+      case "easy":
+        return "#4CAF50"; // Green
+      case "moderate":
+        return "#FF9800"; // Orange
+      case "difficult":
+        return "#F44336"; // Red
+      default:
+        return "#757575"; // Gray
+    }
+  };
+
   if (loading && !userLocation) {
     return (
       <View
@@ -1359,6 +1515,39 @@ const MapScreen = () => {
                 >
                   <Text style={styles.mapControlButtonText}>📍</Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.mapControlButton,
+                    {
+                      marginTop: 10,
+                      backgroundColor: showPublishedTrails
+                        ? currentTheme.colors.primary
+                        : "rgba(255, 255, 255, 0.9)",
+                    },
+                  ]}
+                  onPress={togglePublishedTrails}
+                  activeOpacity={0.7}
+                  disabled={trailsLoading}
+                >
+                  {trailsLoading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={currentTheme.colors.primary}
+                    />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.mapControlButtonText,
+                        {
+                          color: showPublishedTrails ? "#FFFFFF" : "#333333",
+                        },
+                      ]}
+                    >
+                      🥾
+                    </Text>
+                  )}
+                </TouchableOpacity>
               </View>
 
               {/* Coordinates display box */}
@@ -1400,6 +1589,40 @@ const MapScreen = () => {
                     strokeWidth={4}
                   />
                 )}
+
+                {/* Show published trails */}
+                {showPublishedTrails &&
+                  publishedTrails.map((trail) => (
+                    <React.Fragment key={trail.id}>
+                      {/* Trail path */}
+                      <Polyline
+                        coordinates={trail.path.map((point) => ({
+                          latitude: point.latitude,
+                          longitude: point.longitude,
+                        }))}
+                        strokeColor={getDifficultyColor(trail.difficulty)}
+                        strokeWidth={3}
+                      />
+
+                      {/* Trail start marker */}
+                      {trail.path.length > 0 && (
+                        <Marker
+                          coordinate={{
+                            latitude: trail.path[0].latitude,
+                            longitude: trail.path[0].longitude,
+                          }}
+                          title={trail.name}
+                          description={`${
+                            trail.difficulty.charAt(0).toUpperCase() +
+                            trail.difficulty.slice(1)
+                          } • ${(trail.distance / 1000).toFixed(
+                            1
+                          )} km • ⭐ ${trail.rating.toFixed(1)}`}
+                          pinColor={getDifficultyColor(trail.difficulty)}
+                        />
+                      )}
+                    </React.Fragment>
+                  ))}
               </MapView>
             </View>
 
