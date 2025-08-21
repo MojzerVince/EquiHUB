@@ -5,11 +5,12 @@ import {
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import "react-native-reanimated";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import SplashScreen from "@/components/SplashScreen";
+import CustomSplashScreen from "@/components/SplashScreen";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DialogProvider } from "@/contexts/DialogContext";
 import { SplashProvider, useSplash } from "@/contexts/SplashContext";
@@ -17,6 +18,9 @@ import { ThemeProvider as CustomThemeProvider } from "@/contexts/ThemeContext";
 import { TrackingProvider } from "@/contexts/TrackingContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useRouter } from "expo-router";
+
+// Hide Expo's default splash screen immediately
+SplashScreen.hideAsync();
 
 const SplashWithAuth = ({ onFinish }: { onFinish: () => void }) => {
   const { user, loading } = useAuth();
@@ -38,7 +42,7 @@ const SplashWithAuth = ({ onFinish }: { onFinish: () => void }) => {
   };
 
   return (
-    <SplashScreen 
+    <CustomSplashScreen 
       onFinish={handleSplashFinish}
       loading={loading}
       user={user}
