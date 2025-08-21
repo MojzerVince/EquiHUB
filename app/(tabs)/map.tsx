@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
+import * as MediaLibrary from "expo-media-library";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import * as TaskManager from "expo-task-manager";
@@ -15,7 +17,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { PROVIDER_GOOGLE, Polyline, Region } from "react-native-maps";
+import MapView, {
+  Marker,
+  PROVIDER_GOOGLE,
+  Polyline,
+  Region,
+} from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDialog } from "../../contexts/DialogContext";
@@ -32,6 +39,17 @@ interface TrackingPoint {
   speed?: number;
 }
 
+interface MediaItem {
+  id: string;
+  uri: string;
+  type: "photo" | "video";
+  timestamp: number;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
 interface TrainingSession {
   id: string;
   userId: string;
@@ -45,6 +63,24 @@ interface TrainingSession {
   path: TrackingPoint[];
   averageSpeed?: number; // in m/s
   maxSpeed?: number; // in m/s
+  media?: MediaItem[]; // Photos and videos taken during session
+}
+
+interface PublishedTrail {
+  id: string;
+  name: string;
+  description?: string;
+  userId: string;
+  userName: string;
+  path: TrackingPoint[];
+  difficulty: "easy" | "moderate" | "difficult";
+  distance: number; // in meters
+  duration: number; // in seconds
+  trainingType: string;
+  rating: number; // 1-5 stars
+  reviewsCount: number;
+  isPublic: boolean;
+  createdAt: number;
 }
 
 // Configure notification behavior
@@ -68,33 +104,40 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   }
   if (data) {
     const { locations } = data as any;
-    console.log("📍 Background location update:", locations);
 
-    // Store location data in AsyncStorage for the app to retrieve
+    // Process all location updates, not just the first one
     if (locations && locations.length > 0) {
-      const location = locations[0];
-      const trackingPoint = {
+      const trackingPoints = locations.map((location: any) => ({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        timestamp: Date.now(),
+        timestamp: Date.now() + Math.random(), // Add small random to avoid timestamp collisions
         accuracy: location.coords.accuracy,
         speed: location.coords.speed,
-      };
+      }));
 
       try {
-        // Save to AsyncStorage
+        // Get existing points
         const existingData = await AsyncStorage.getItem(
           "current_tracking_points"
         );
         const existingPoints = existingData ? JSON.parse(existingData) : [];
-        const updatedPoints = [...existingPoints, trackingPoint];
+
+        // Add new points
+        const updatedPoints = [...existingPoints, ...trackingPoints];
+
+        // Limit stored points to prevent memory issues (keep last 1000 points)
+        const limitedPoints = updatedPoints.slice(-1000);
+
         await AsyncStorage.setItem(
           "current_tracking_points",
-          JSON.stringify(updatedPoints)
+          JSON.stringify(limitedPoints)
         );
+
         console.log(
-          "📊 Background location saved, total points:",
-          updatedPoints.length
+          "📊 Background locations saved:",
+          trackingPoints.length,
+          "total:",
+          limitedPoints.length
         );
       } catch (error) {
         console.error("Error saving background location:", error);
@@ -109,10 +152,10 @@ const MapScreen = () => {
   const { user } = useAuth();
   const router = useRouter();
   const [region, setRegion] = useState<Region>({
-    latitude: 37.78825,
-    longitude: -122.4324,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
+    latitude: 0, // Start at center of world map
+    longitude: 0,
+    latitudeDelta: 180, // Wide view to show the world
+    longitudeDelta: 180,
   });
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
@@ -142,12 +185,30 @@ const MapScreen = () => {
   const [trackingPoints, setTrackingPoints] = useState<TrackingPoint[]>([]);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
+  const [highAccuracyMode, setHighAccuracyMode] = useState<boolean>(false);
+  const [showBatteryInfoModal, setShowBatteryInfoModal] =
+    useState<boolean>(false);
+
+  // Media capture state
+  const [sessionMedia, setSessionMedia] = useState<MediaItem[]>([]);
+  const [cameraPermission, setCameraPermission] = useState<boolean | null>(
+    null
+  );
+  const [mediaLibraryPermission, setMediaLibraryPermission] = useState<
+    boolean | null
+  >(null);
 
   // Notification state
   const [notificationId, setNotificationId] = useState<string | null>(null);
   const notificationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
   );
+
+  // Published trails state
+  const [showPublishedTrails, setShowPublishedTrails] =
+    useState<boolean>(false);
+  const [publishedTrails, setPublishedTrails] = useState<PublishedTrail[]>([]);
+  const [trailsLoading, setTrailsLoading] = useState<boolean>(false);
 
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
@@ -158,7 +219,115 @@ const MapScreen = () => {
 
   useEffect(() => {
     requestLocationPermission();
+    // Start watching for location immediately when component mounts
+    startLocationWatcher();
+    // Request camera and media library permissions
+    requestCameraPermissions();
   }, []);
+
+  // Request camera and media library permissions
+  const requestCameraPermissions = async () => {
+    try {
+      // Request camera permission
+      const { status: cameraStatus } =
+        await ImagePicker.requestCameraPermissionsAsync();
+      setCameraPermission(cameraStatus === "granted");
+
+      // Request media library permission
+      const { status: mediaStatus } =
+        await MediaLibrary.requestPermissionsAsync();
+      setMediaLibraryPermission(mediaStatus === "granted");
+    } catch (error) {
+      console.error("Error requesting camera permissions:", error);
+      setCameraPermission(false);
+      setMediaLibraryPermission(false);
+    }
+  };
+
+  // Add location watcher for continuous updates
+  const startLocationWatcher = async () => {
+    try {
+      // Check if we have permission first
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status === "granted") {
+        // Start watching location immediately with optimized settings
+        const subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: 500, // Update every 500ms for maximum responsiveness
+            distanceInterval: 1, // Update every 1 meter movement
+          },
+          (location) => {
+            const { latitude, longitude, accuracy, speed } = location.coords;
+
+            // Update user location
+            setUserLocation({ latitude, longitude });
+
+            // Update region if this is the first location fix or if we're still showing world view
+            if (!userLocation || region.latitudeDelta > 1) {
+              const newRegion = {
+                latitude,
+                longitude,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              };
+              setRegion(newRegion);
+            }
+
+            // Update GPS strength
+            const strength = calculateGpsStrength(accuracy);
+            setGpsStrength(strength);
+
+            // If actively tracking, immediately add point to tracking points
+            if (isTracking) {
+              const trackingPoint: TrackingPoint = {
+                latitude,
+                longitude,
+                timestamp: Date.now(),
+                accuracy: accuracy || undefined,
+                speed: speed || undefined,
+              };
+
+              setTrackingPoints((prev) => {
+                // Check if this point is significantly different from the last one
+                if (prev.length > 0) {
+                  const lastPoint = prev[prev.length - 1];
+                  const timeDiff =
+                    trackingPoint.timestamp - lastPoint.timestamp;
+                  const distance = calculateDistance(
+                    lastPoint.latitude,
+                    lastPoint.longitude,
+                    latitude,
+                    longitude
+                  );
+
+                  // Only add if enough time has passed (500ms) or significant movement (2m)
+                  if (timeDiff >= 500 || distance >= 2) {
+                    console.log("📍 Real-time tracking point added:", {
+                      lat: latitude.toFixed(6),
+                      lng: longitude.toFixed(6),
+                      accuracy: accuracy?.toFixed(1),
+                      speed: speed?.toFixed(1),
+                    });
+                    return [...prev, trackingPoint];
+                  }
+                  return prev;
+                } else {
+                  // First tracking point
+                  console.log("📍 First tracking point added");
+                  return [trackingPoint];
+                }
+              });
+            }
+          }
+        );
+
+        locationSubscriptionRef.current = subscription;
+      }
+    } catch (error) {
+      console.log("Location watcher failed:", error);
+    }
+  };
 
   // Load user's horses
   useEffect(() => {
@@ -221,6 +390,11 @@ const MapScreen = () => {
       // Cleanup notification interval
       if (notificationIntervalRef.current) {
         clearInterval(notificationIntervalRef.current);
+      }
+
+      // Cleanup location subscription
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
       }
 
       // Dismiss any active tracking notification
@@ -554,6 +728,8 @@ const MapScreen = () => {
   const getCurrentLocation = async () => {
     try {
       setLoading(true);
+
+      // Try high accuracy first
       let location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
@@ -573,10 +749,34 @@ const MapScreen = () => {
       setRegion(newRegion);
       setUserLocation({ latitude, longitude });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      showError(`Unable to get your location\n\nError: ${errorMessage}`);
-      setGpsStrength(0);
+      try {
+        // If high accuracy fails, try balanced accuracy
+        let location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        const { latitude, longitude, accuracy } = location.coords;
+        const strength = calculateGpsStrength(accuracy);
+        setGpsStrength(strength);
+
+        const newRegion = {
+          latitude,
+          longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        setRegion(newRegion);
+        setUserLocation({ latitude, longitude });
+      } catch (secondError) {
+        const errorMessage =
+          secondError instanceof Error
+            ? secondError.message
+            : String(secondError);
+        showError(
+          `Unable to get your location. Please check GPS settings.\n\nError: ${errorMessage}`
+        );
+        setGpsStrength(0);
+      }
     } finally {
       setLoading(false);
     }
@@ -586,11 +786,105 @@ const MapScreen = () => {
     setRegion(newRegion);
   };
 
+  // Camera and media functions
+  const takePhoto = async () => {
+    if (!cameraPermission) {
+      showError("Camera permission is required to take photos");
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+
+        // Save to device gallery
+        if (mediaLibraryPermission) {
+          await MediaLibrary.saveToLibraryAsync(asset.uri);
+        }
+
+        // Create media item
+        const mediaItem: MediaItem = {
+          id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          uri: asset.uri,
+          type: "photo",
+          timestamp: Date.now(),
+          location: userLocation || undefined,
+        };
+
+        // Add to session media
+        setSessionMedia((prev) => [...prev, mediaItem]);
+
+        // Show success message
+        Alert.alert(
+          "Photo Captured",
+          "Photo saved to gallery and will be included in session summary"
+        );
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      showError(`Failed to take photo: ${errorMessage}`);
+    }
+  };
+
+  const takeVideo = async () => {
+    if (!cameraPermission) {
+      showError("Camera permission is required to record videos");
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        allowsEditing: false,
+        quality: ImagePicker.UIImagePickerControllerQualityType.Medium,
+        videoMaxDuration: 60, // 60 seconds max
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+
+        // Save to device gallery
+        if (mediaLibraryPermission) {
+          await MediaLibrary.saveToLibraryAsync(asset.uri);
+        }
+
+        // Create media item
+        const mediaItem: MediaItem = {
+          id: `video_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          uri: asset.uri,
+          type: "video",
+          timestamp: Date.now(),
+          location: userLocation || undefined,
+        };
+
+        // Add to session media
+        setSessionMedia((prev) => [...prev, mediaItem]);
+
+        // Show success message
+        Alert.alert(
+          "Video Recorded",
+          "Video saved to gallery and will be included in session summary"
+        );
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      showError(`Failed to record video: ${errorMessage}`);
+    }
+  };
+
   const toggleMapType = () => {
     setMapType(mapType === "standard" ? "satellite" : "standard");
   };
 
-  const centerToCurrentLocation = () => {
+  const centerToCurrentLocation = async () => {
     if (userLocation) {
       const newRegion = {
         latitude: userLocation.latitude,
@@ -600,7 +894,57 @@ const MapScreen = () => {
       };
       setRegion(newRegion);
     } else {
-      getCurrentLocation();
+      // If no location, try multiple times with increasing accuracy
+      setLoading(true);
+      try {
+        // First try high accuracy
+        let location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+
+        const { latitude, longitude, accuracy } = location.coords;
+        const strength = calculateGpsStrength(accuracy);
+        setGpsStrength(strength);
+
+        const newRegion = {
+          latitude,
+          longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        setRegion(newRegion);
+        setUserLocation({ latitude, longitude });
+      } catch (error) {
+        try {
+          // If high accuracy fails, try balanced accuracy
+          let location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+
+          const { latitude, longitude, accuracy } = location.coords;
+          const strength = calculateGpsStrength(accuracy);
+          setGpsStrength(strength);
+
+          const newRegion = {
+            latitude,
+            longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          };
+          setRegion(newRegion);
+          setUserLocation({ latitude, longitude });
+        } catch (secondError) {
+          const errorMessage =
+            secondError instanceof Error
+              ? secondError.message
+              : String(secondError);
+          showError(
+            `Unable to get your location. Please check GPS settings.\n\nError: ${errorMessage}`
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -693,6 +1037,10 @@ const MapScreen = () => {
       setSessionStartTime(startTime);
       setCurrentTime(startTime); // Initialize currentTime to the same value as startTime
       setTrackingPoints([]);
+      setSessionMedia([]); // Initialize empty media array for the session
+
+      // Restart location watcher with optimized settings for tracking
+      await restartLocationWatcherForTracking();
 
       // Start background location tracking
       console.log("📍 Starting background location tracking...");
@@ -714,13 +1062,15 @@ const MapScreen = () => {
       // Start background location tracking
       await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
         accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: 5000, // Update every 5 seconds
-        distanceInterval: 10, // Update every 10 meters
-        deferredUpdatesInterval: 5000,
+        timeInterval: highAccuracyMode ? 250 : 1000, // Update every 250ms in high accuracy mode, 1 second otherwise
+        distanceInterval: 1, // Update every 1 meter movement
+        deferredUpdatesInterval: highAccuracyMode ? 250 : 1000,
         showsBackgroundLocationIndicator: true,
         foregroundService: {
           notificationTitle: "EquiHUB GPS Tracking",
-          notificationBody: "Tracking your riding session",
+          notificationBody: highAccuracyMode
+            ? "Ultra-high accuracy tracking active"
+            : "High precision tracking active",
           notificationColor: "#4A90E2",
         },
       });
@@ -728,58 +1078,63 @@ const MapScreen = () => {
       console.log("✅ Background location tracking started successfully");
 
       // Set up a timer to sync background data with the app state
-      const syncInterval = setInterval(async () => {
-        try {
-          // Check if the background task is still running
-          const isStillRunning = await Location.hasStartedLocationUpdatesAsync(
-            LOCATION_TASK_NAME
-          );
-          if (!isStillRunning) {
-            console.warn("⚠️ Background location task stopped unexpectedly");
-            // Don't automatically restart - let user know there was an issue
-            return;
-          }
-
-          const backgroundData = await AsyncStorage.getItem(
-            "current_tracking_points"
-          );
-          if (backgroundData) {
-            const backgroundPoints = JSON.parse(backgroundData);
-            if (backgroundPoints.length > 0) {
-              setTrackingPoints((prev) => {
-                // Merge with existing points, avoiding duplicates
-                const existingTimestamps = new Set(
-                  prev.map((p) => p.timestamp)
-                );
-                const newPoints = backgroundPoints.filter(
-                  (p: TrackingPoint) => !existingTimestamps.has(p.timestamp)
-                );
-
-                if (newPoints.length > 0) {
-                  console.log(
-                    "📊 Syncing background points:",
-                    newPoints.length
-                  );
-                  // Update current location to the most recent point
-                  const latestPoint = newPoints[newPoints.length - 1];
-                  setUserLocation({
-                    latitude: latestPoint.latitude,
-                    longitude: latestPoint.longitude,
-                  });
-
-                  // Update GPS strength
-                  const strength = calculateGpsStrength(latestPoint.accuracy);
-                  setGpsStrength(strength);
-                }
-
-                return [...prev, ...newPoints];
-              });
+      const syncInterval = setInterval(
+        async () => {
+          try {
+            // Check if the background task is still running
+            const isStillRunning =
+              await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+            if (!isStillRunning) {
+              console.warn("⚠️ Background location task stopped unexpectedly");
+              // Don't automatically restart - let user know there was an issue
+              return;
             }
+
+            const backgroundData = await AsyncStorage.getItem(
+              "current_tracking_points"
+            );
+            if (backgroundData) {
+              const backgroundPoints = JSON.parse(backgroundData);
+              if (backgroundPoints.length > 0) {
+                setTrackingPoints((prev) => {
+                  // Merge with existing points, avoiding duplicates
+                  const existingTimestamps = new Set(
+                    prev.map((p) => p.timestamp)
+                  );
+                  const newPoints = backgroundPoints.filter(
+                    (p: TrackingPoint) => !existingTimestamps.has(p.timestamp)
+                  );
+
+                  if (newPoints.length > 0) {
+                    console.log(
+                      "📊 Syncing background points:",
+                      newPoints.length
+                    );
+                    // Update current location to the most recent point
+                    const latestPoint = newPoints[newPoints.length - 1];
+                    setUserLocation({
+                      latitude: latestPoint.latitude,
+                      longitude: latestPoint.longitude,
+                    });
+
+                    // Update GPS strength
+                    const strength = calculateGpsStrength(latestPoint.accuracy);
+                    setGpsStrength(strength);
+
+                    // Clear processed background data to prevent memory buildup
+                    AsyncStorage.removeItem("current_tracking_points");
+                  }
+
+                  return [...prev, ...newPoints];
+                });
+              }
+            }
+          } catch (error) {
+            console.error("Error syncing background data:", error);
           }
-        } catch (error) {
-          console.error("Error syncing background data:", error);
-        }
-      }, 2000); // Sync every 2 seconds
+        },
+        highAccuracyMode ? 500 : 1000
+      ); // Sync every 500ms in high accuracy mode, 1 second otherwise
 
       // Store the sync interval reference for cleanup
       trackingIntervalRef.current = syncInterval;
@@ -877,22 +1232,21 @@ const MapScreen = () => {
         path: trackingPoints,
         averageSpeed,
         maxSpeed,
+        media: sessionMedia, // Include captured media
       };
 
       // Save session to storage
       await saveSessionToStorage(completedSession);
-
-      // Save current session for summary page
-      await AsyncStorage.setItem(
-        "current_session_summary",
-        JSON.stringify(completedSession)
-      );
 
       // Reset tracking state
       setIsTracking(false);
       setCurrentSession(null);
       setSessionStartTime(null);
       setTrackingPoints([]);
+      setSessionMedia([]); // Reset media array
+
+      // Restart location watcher with normal settings
+      await startLocationWatcher();
 
       // Show completion alert
       Alert.alert(
@@ -904,8 +1258,12 @@ const MapScreen = () => {
         )} km\nAverage Speed: ${(averageSpeed * 3.6).toFixed(1)} km/h`,
         [
           {
-            text: "View Summary",
-            onPress: () => router.push("/session-summary"),
+            text: "View Details",
+            onPress: () =>
+              router.push({
+                pathname: "/session-details",
+                params: { sessionId: completedSession.id },
+              }),
           },
           {
             text: "Back to Map",
@@ -945,6 +1303,215 @@ const MapScreen = () => {
       if (!aIsFavorite && bIsFavorite) return 1;
       return 0;
     });
+  };
+
+  // Load published trails from storage or API
+  const loadPublishedTrails = async () => {
+    setTrailsLoading(true);
+    try {
+      // For now, we'll use sample data stored in AsyncStorage
+      // In a real app, this would be an API call
+      const storedTrails = await AsyncStorage.getItem("published_trails");
+      if (storedTrails) {
+        const trails = JSON.parse(storedTrails);
+        setPublishedTrails(trails);
+      } else {
+        // Sample trails data - in a real app this would come from your backend
+        const sampleTrails: PublishedTrail[] = [
+          {
+            id: "trail_1",
+            name: "Peaceful Valley Loop",
+            description:
+              "A scenic trail through the valley with gentle terrain",
+            userId: "user_1",
+            userName: "Sarah Johnson",
+            path: [
+              {
+                latitude: userLocation?.latitude || 0,
+                longitude: userLocation?.longitude || 0,
+                timestamp: Date.now(),
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.001,
+                longitude: (userLocation?.longitude || 0) + 0.002,
+                timestamp: Date.now() + 1000,
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.003,
+                longitude: (userLocation?.longitude || 0) + 0.001,
+                timestamp: Date.now() + 2000,
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.002,
+                longitude: (userLocation?.longitude || 0) - 0.001,
+                timestamp: Date.now() + 3000,
+              },
+            ],
+            difficulty: "easy",
+            distance: 2500,
+            duration: 1800,
+            trainingType: "Trail Riding",
+            rating: 4.5,
+            reviewsCount: 12,
+            isPublic: true,
+            createdAt: Date.now() - 86400000,
+          },
+          {
+            id: "trail_2",
+            name: "Mountain Ridge Challenge",
+            description:
+              "Challenging trail with steep climbs and stunning views",
+            userId: "user_2",
+            userName: "Mike Thompson",
+            path: [
+              {
+                latitude: (userLocation?.latitude || 0) + 0.005,
+                longitude: (userLocation?.longitude || 0) + 0.003,
+                timestamp: Date.now(),
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.007,
+                longitude: (userLocation?.longitude || 0) + 0.005,
+                timestamp: Date.now() + 1000,
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.009,
+                longitude: (userLocation?.longitude || 0) + 0.004,
+                timestamp: Date.now() + 2000,
+              },
+              {
+                latitude: (userLocation?.latitude || 0) + 0.006,
+                longitude: (userLocation?.longitude || 0) + 0.002,
+                timestamp: Date.now() + 3000,
+              },
+            ],
+            difficulty: "difficult",
+            distance: 4200,
+            duration: 3600,
+            trainingType: "Endurance",
+            rating: 4.8,
+            reviewsCount: 8,
+            isPublic: true,
+            createdAt: Date.now() - 172800000,
+          },
+        ];
+        setPublishedTrails(sampleTrails);
+        // Save sample data for future use
+        await AsyncStorage.setItem(
+          "published_trails",
+          JSON.stringify(sampleTrails)
+        );
+      }
+    } catch (error) {
+      console.error("Error loading published trails:", error);
+      showError("Failed to load published trails");
+    } finally {
+      setTrailsLoading(false);
+    }
+  };
+
+  // Toggle published trails visibility
+  const togglePublishedTrails = async () => {
+    if (!showPublishedTrails && publishedTrails.length === 0) {
+      // Load trails if we don't have them yet
+      await loadPublishedTrails();
+    }
+    setShowPublishedTrails(!showPublishedTrails);
+  };
+
+  // Get difficulty color for trails
+  const getDifficultyColor = (difficulty: string): string => {
+    switch (difficulty) {
+      case "easy":
+        return "#4CAF50"; // Green
+      case "moderate":
+        return "#FF9800"; // Orange
+      case "difficult":
+        return "#F44336"; // Red
+      default:
+        return "#757575"; // Gray
+    }
+  };
+
+  // Restart location watcher with optimized settings for tracking
+  const restartLocationWatcherForTracking = async () => {
+    try {
+      // Stop current watcher
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
+        locationSubscriptionRef.current = null;
+      }
+
+      // Start optimized watcher for tracking
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status === "granted") {
+        const subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: highAccuracyMode ? 250 : 500, // Ultra-fast updates during tracking
+            distanceInterval: 0.5, // Update every 0.5 meters during tracking
+          },
+          (location) => {
+            const { latitude, longitude, accuracy, speed } = location.coords;
+
+            // Update user location
+            setUserLocation({ latitude, longitude });
+
+            // Update GPS strength
+            const strength = calculateGpsStrength(accuracy);
+            setGpsStrength(strength);
+
+            // Immediately add point to tracking points
+            const trackingPoint: TrackingPoint = {
+              latitude,
+              longitude,
+              timestamp: Date.now(),
+              accuracy: accuracy || undefined,
+              speed: speed || undefined,
+            };
+
+            setTrackingPoints((prev) => {
+              // For active tracking, be more aggressive about capturing points
+              if (prev.length > 0) {
+                const lastPoint = prev[prev.length - 1];
+                const timeDiff = trackingPoint.timestamp - lastPoint.timestamp;
+                const distance = calculateDistance(
+                  lastPoint.latitude,
+                  lastPoint.longitude,
+                  latitude,
+                  longitude
+                );
+
+                // During tracking, capture more frequent updates
+                if (
+                  timeDiff >= (highAccuracyMode ? 250 : 500) ||
+                  distance >= 0.5
+                ) {
+                  console.log("🎯 High-speed tracking point:", {
+                    lat: latitude.toFixed(7),
+                    lng: longitude.toFixed(7),
+                    accuracy: accuracy?.toFixed(1),
+                    speed: speed?.toFixed(2),
+                    timeDiff: timeDiff,
+                    distance: distance.toFixed(1),
+                  });
+                  return [...prev, trackingPoint];
+                }
+                return prev;
+              } else {
+                console.log("🎯 Starting high-speed tracking");
+                return [trackingPoint];
+              }
+            });
+          }
+        );
+
+        locationSubscriptionRef.current = subscription;
+        console.log("🚀 High-speed location tracking activated");
+      }
+    } catch (error) {
+      console.error("Failed to restart location watcher for tracking:", error);
+    }
   };
 
   if (loading && !userLocation) {
@@ -1089,6 +1656,39 @@ const MapScreen = () => {
                 >
                   <Text style={styles.mapControlButtonText}>📍</Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.mapControlButton,
+                    {
+                      marginTop: 10,
+                      backgroundColor: showPublishedTrails
+                        ? currentTheme.colors.primary
+                        : "rgba(255, 255, 255, 0.9)",
+                    },
+                  ]}
+                  onPress={togglePublishedTrails}
+                  activeOpacity={0.7}
+                  disabled={trailsLoading}
+                >
+                  {trailsLoading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={currentTheme.colors.primary}
+                    />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.mapControlButtonText,
+                        {
+                          color: showPublishedTrails ? "#FFFFFF" : "#333333",
+                        },
+                      ]}
+                    >
+                      🥾
+                    </Text>
+                  )}
+                </TouchableOpacity>
               </View>
 
               {/* Coordinates display box */}
@@ -1130,6 +1730,40 @@ const MapScreen = () => {
                     strokeWidth={4}
                   />
                 )}
+
+                {/* Show published trails */}
+                {showPublishedTrails &&
+                  publishedTrails.map((trail) => (
+                    <React.Fragment key={trail.id}>
+                      {/* Trail path */}
+                      <Polyline
+                        coordinates={trail.path.map((point) => ({
+                          latitude: point.latitude,
+                          longitude: point.longitude,
+                        }))}
+                        strokeColor={getDifficultyColor(trail.difficulty)}
+                        strokeWidth={3}
+                      />
+
+                      {/* Trail start marker */}
+                      {trail.path.length > 0 && (
+                        <Marker
+                          coordinate={{
+                            latitude: trail.path[0].latitude,
+                            longitude: trail.path[0].longitude,
+                          }}
+                          title={trail.name}
+                          description={`${
+                            trail.difficulty.charAt(0).toUpperCase() +
+                            trail.difficulty.slice(1)
+                          } • ${(trail.distance / 1000).toFixed(
+                            1
+                          )} km • ⭐ ${trail.rating.toFixed(1)}`}
+                          pinColor={getDifficultyColor(trail.difficulty)}
+                        />
+                      )}
+                    </React.Fragment>
+                  ))}
               </MapView>
             </View>
 
@@ -1220,7 +1854,7 @@ const MapScreen = () => {
                           onPress={() => setSelectedHorse(horse.id)}
                           activeOpacity={0.7}
                         >
-                          {(horse.image_url || horse.image_base64) ? (
+                          {horse.image_url || horse.image_base64 ? (
                             <Image
                               source={{
                                 uri: horse.image_base64
@@ -1231,24 +1865,17 @@ const MapScreen = () => {
                               resizeMode="cover"
                             />
                           ) : (
-                            <View style={[
-                              styles.horseImagePlaceholder,
-                              {
-                                backgroundColor: selectedHorse === horse.id
-                                  ? "rgba(255, 255, 255, 0.2)"
-                                  : currentTheme.colors.border,
-                              }
-                            ]}>
-                              <Text style={[
-                                styles.horseImagePlaceholderIcon,
+                            <View
+                              style={[
+                                styles.horseImage,
                                 {
-                                  color: selectedHorse === horse.id
-                                    ? "#FFFFFF"
-                                    : currentTheme.colors.textSecondary,
-                                }
-                              ]}>
-                                🐴
-                              </Text>
+                                  backgroundColor: currentTheme.colors.surface,
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                },
+                              ]}
+                            >
+                              <Text style={{ fontSize: 24 }}>🐴</Text>
                             </View>
                           )}
                           <Text
@@ -1470,6 +2097,159 @@ const MapScreen = () => {
                       </TouchableOpacity>
                     </Modal>
                   )}
+
+                  {/* Battery Info Modal */}
+                  <Modal
+                    visible={showBatteryInfoModal}
+                    animationType="fade"
+                    transparent={true}
+                    onRequestClose={() => setShowBatteryInfoModal(false)}
+                  >
+                    <TouchableOpacity
+                      style={styles.modalOverlay}
+                      activeOpacity={1}
+                      onPress={() => setShowBatteryInfoModal(false)}
+                    >
+                      <TouchableOpacity
+                        style={[
+                          styles.batteryInfoModal,
+                          { backgroundColor: currentTheme.colors.surface },
+                        ]}
+                        activeOpacity={1}
+                        onPress={(e) => e.stopPropagation()}
+                      >
+                        <View style={styles.batteryInfoHeader}>
+                          <Text
+                            style={[
+                              styles.batteryInfoTitle,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            Ultra-Fast GPS Tracking
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => setShowBatteryInfoModal(false)}
+                            style={styles.closeModalButton}
+                            activeOpacity={0.7}
+                          >
+                            <Text
+                              style={[
+                                styles.closeModalText,
+                                { color: currentTheme.colors.textSecondary },
+                              ]}
+                            >
+                              ✕
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.batteryInfoContent}>
+                          <Text
+                            style={[
+                              styles.batteryInfoText,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            Ultra-fast GPS tracking provides maximum precision
+                            location updates by checking your position every
+                            250ms and capturing movement down to 0.5 meters.
+                            Normal mode updates every 500ms with 1-meter
+                            precision.
+                          </Text>
+                          <Text
+                            style={[
+                              styles.batteryWarningText,
+                              { color: "#FF6B35" },
+                            ]}
+                          >
+                            ⚠️ Warning: Ultra-fast mode will significantly
+                            increase battery usage due to extremely frequent GPS
+                            polling.
+                          </Text>
+                          <Text
+                            style={[
+                              styles.batteryRecommendationText,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            Recommended for precision training sessions or when
+                            using external power source.
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={[
+                            styles.batteryInfoButton,
+                            { backgroundColor: currentTheme.colors.primary },
+                          ]}
+                          onPress={() => setShowBatteryInfoModal(false)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.batteryInfoButtonText}>
+                            Got it
+                          </Text>
+                        </TouchableOpacity>
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  </Modal>
+                </View>
+              )}
+
+              {/* High Accuracy Toggle - Hidden during tracking */}
+              {!isTracking && (
+                <View
+                  style={[
+                    styles.highAccuracyContainer,
+                    { backgroundColor: currentTheme.colors.surface },
+                  ]}
+                >
+                  <View style={styles.highAccuracyRow}>
+                    <Text
+                      style={[
+                        styles.highAccuracyLabel,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      Ultra-Fast GPS Tracking
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setShowBatteryInfoModal(true)}
+                      style={styles.infoButton}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.infoButtonText,
+                          { color: currentTheme.colors.primary },
+                        ]}
+                      >
+                        ⓘ
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.toggleSwitch,
+                        {
+                          backgroundColor: highAccuracyMode
+                            ? currentTheme.colors.primary
+                            : currentTheme.colors.border,
+                        },
+                      ]}
+                      onPress={() => setHighAccuracyMode(!highAccuracyMode)}
+                      disabled={isTracking}
+                      activeOpacity={0.8}
+                    >
+                      <View
+                        style={[
+                          styles.toggleKnob,
+                          {
+                            backgroundColor: "#FFFFFF",
+                            transform: [
+                              { translateX: highAccuracyMode ? 20 : 0 },
+                            ],
+                          },
+                        ]}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
 
@@ -1591,6 +2371,57 @@ const MapScreen = () => {
                         {trackingPoints.length}
                       </Text>
                     </View>
+                  </View>
+
+                  {/* Camera Controls */}
+                  <View style={styles.cameraControlsContainer}>
+                    <Text
+                      style={[
+                        styles.cameraControlsTitle,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      Capture Memories
+                    </Text>
+                    <View style={styles.cameraButtonsRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.cameraButton,
+                          { backgroundColor: currentTheme.colors.primary },
+                        ]}
+                        onPress={takePhoto}
+                        activeOpacity={0.8}
+                        disabled={!cameraPermission}
+                      >
+                        <Text style={styles.cameraButtonIcon}>📸</Text>
+                        <Text style={styles.cameraButtonText}>Photo</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.cameraButton,
+                          { backgroundColor: currentTheme.colors.primary },
+                        ]}
+                        onPress={takeVideo}
+                        activeOpacity={0.8}
+                        disabled={!cameraPermission}
+                      >
+                        <Text style={styles.cameraButtonIcon}>🎥</Text>
+                        <Text style={styles.cameraButtonText}>Video</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {sessionMedia.length > 0 && (
+                      <Text
+                        style={[
+                          styles.mediaCountText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        {sessionMedia.length} item
+                        {sessionMedia.length !== 1 ? "s" : ""} captured
+                      </Text>
+                    )}
                   </View>
                 </View>
               )}
@@ -2178,6 +3009,195 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inder",
     fontWeight: "600",
+  },
+  // High Accuracy Toggle Styles
+  highAccuracyContainer: {
+    padding: 16,
+    marginTop: 10,
+    marginBottom: 5,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 3,
+  },
+  highAccuracyRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  highAccuracyLabel: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    flex: 1,
+  },
+  infoButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
+  infoButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  toggleSwitch: {
+    width: 50,
+    height: 26,
+    borderRadius: 13,
+    padding: 3,
+    justifyContent: "center",
+  },
+  toggleKnob: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  // Battery Info Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  batteryInfoModal: {
+    margin: 20,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 8,
+    maxWidth: 400,
+    alignSelf: "center",
+  },
+  batteryInfoHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  batteryInfoTitle: {
+    fontSize: 20,
+    fontFamily: "Inder",
+    fontWeight: "700",
+    flex: 1,
+  },
+  closeModalButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeModalText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  batteryInfoContent: {
+    marginBottom: 20,
+  },
+  batteryInfoText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    lineHeight: 24,
+    marginBottom: 12,
+  },
+  batteryWarningText: {
+    fontSize: 15,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  batteryRecommendationText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 20,
+    fontStyle: "italic",
+  },
+  batteryInfoButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  batteryInfoButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  // Camera Controls Styles
+  cameraControlsContainer: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.1)",
+  },
+  cameraControlsTitle: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 15,
+  },
+  cameraButtonsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  cameraButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    minWidth: 80,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  cameraButtonIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  cameraButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  mediaCountText: {
+    textAlign: "center",
+    fontSize: 12,
+    fontFamily: "Inder",
+    marginTop: 10,
+    fontStyle: "italic",
   },
 });
 

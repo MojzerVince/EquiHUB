@@ -569,6 +569,13 @@ const ProfileScreen = () => {
     setSelectedBadge(null);
   };
 
+  const handleDescriptionChange = (text: string) => {
+    // Limit to 150 characters
+    if (text.length <= 150) {
+      setUserDescription(text);
+    }
+  };
+
   const pickImage = async () => {
     // Request permission to access media library
     const permissionResult =
@@ -631,6 +638,10 @@ const ProfileScreen = () => {
     }
     if (userExperience.trim() === "" || isNaN(Number(userExperience))) {
       showError("Please enter a valid experience number");
+      return;
+    }
+    if (userDescription.length > 150) {
+      showError("Description must be 150 characters or less");
       return;
     }
 
@@ -1163,12 +1174,25 @@ const ProfileScreen = () => {
                     },
                   ]}
                   value={userDescription}
-                  onChangeText={setUserDescription}
+                  onChangeText={handleDescriptionChange}
                   placeholder="Enter your description"
                   placeholderTextColor={currentTheme.colors.textSecondary}
                   multiline
-                  numberOfLines={4}
+                  numberOfLines={8}
+                  maxLength={150}
                 />
+                <Text
+                  style={[
+                    styles.characterCounter,
+                    { 
+                      color: userDescription.length > 140 
+                        ? '#FF6B6B' 
+                        : currentTheme.colors.textSecondary 
+                    },
+                  ]}
+                >
+                  {userDescription.length}/150 characters
+                </Text>
                 <TextInput
                   style={[
                     styles.editInput,
@@ -1529,8 +1553,16 @@ const styles = StyleSheet.create({
   },
   editDescriptionInput: {
     textAlign: "left",
-    minHeight: 80,
+    minHeight: 120,
     textAlignVertical: "top",
+  },
+  characterCounter: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    textAlign: "right",
+    marginTop: 5,
+    marginBottom: 10,
+    marginRight: 5,
   },
   profileImageContainer: {
     marginTop: 20,

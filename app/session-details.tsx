@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,18 @@ import {
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
+
+// Media item interface
+interface MediaItem {
+  id: string;
+  uri: string;
+  type: "photo" | "video";
+  timestamp: number;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+}
 
 interface TrainingSession {
   id: string;
@@ -33,6 +46,7 @@ interface TrainingSession {
   }>;
   averageSpeed?: number;
   maxSpeed?: number;
+  media?: MediaItem[]; // Photos and videos taken during session
 }
 
 const SessionDetailsScreen = () => {
@@ -425,6 +439,64 @@ const SessionDetailsScreen = () => {
             </View>
           </View>
 
+          {/* Media Gallery */}
+          {session.media && session.media.length > 0 && (
+            <View
+              style={[
+                styles.mediaCard,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
+              <Text
+                style={[styles.mediaTitle, { color: currentTheme.colors.text }]}
+              >
+                Session Media ({session.media.length})
+              </Text>
+              <ScrollView
+                horizontal
+                style={styles.mediaScrollView}
+                showsHorizontalScrollIndicator={false}
+              >
+                {session.media.map((item, index) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.mediaItem}
+                    onPress={() => {
+                      Alert.alert(
+                        item.type === "photo" ? "Photo" : "Video",
+                        `Captured at ${new Date(
+                          item.timestamp
+                        ).toLocaleTimeString()}`
+                      );
+                    }}
+                  >
+                    <Image
+                      source={{ uri: item.uri }}
+                      style={styles.mediaThumbnail}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.mediaOverlay}>
+                      <Text style={styles.mediaTypeIcon}>
+                        {item.type === "photo" ? "📸" : "🎥"}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.mediaTime,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      {new Date(item.timestamp).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           {/* Route Map */}
           {session.path.length > 0 && (
             <View
@@ -771,6 +843,57 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     color: "#FFFFFF",
     fontWeight: "600",
+  },
+
+  // Media Gallery Styles
+  mediaCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  mediaTitle: {
+    fontSize: 20,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  mediaScrollView: {
+    paddingVertical: 10,
+  },
+  mediaItem: {
+    marginRight: 15,
+    alignItems: "center",
+  },
+  mediaThumbnail: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  mediaOverlay: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    borderRadius: 12,
+    padding: 4,
+  },
+  mediaTypeIcon: {
+    fontSize: 16,
+  },
+  mediaTime: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    textAlign: "center",
   },
 });
 

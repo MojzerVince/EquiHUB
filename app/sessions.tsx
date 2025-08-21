@@ -40,6 +40,19 @@ interface TrainingSession {
   }>;
   averageSpeed?: number; // in m/s
   maxSpeed?: number; // in m/s
+  media?: MediaItem[]; // Photos and videos taken during session
+}
+
+// Media item interface
+interface MediaItem {
+  id: string;
+  uri: string;
+  type: "photo" | "video";
+  timestamp: number;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 const SessionsScreen = () => {
@@ -55,70 +68,13 @@ const SessionsScreen = () => {
   );
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
-  const [isProMember, setIsProMember] = useState(false);
-  const [checkingProStatus, setCheckingProStatus] = useState(false);
-  const [showProBrief, setShowProBrief] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [earliestSessionDate, setEarliestSessionDate] = useState<Date | null>(null);
+  const [earliestSessionDate, setEarliestSessionDate] = useState<Date | null>(
+    null
+  );
 
   // Get screen width for swipe gestures
   const screenWidth = Dimensions.get("window").width;
-
-  // Check if user is a pro member
-  const checkProMembership = useCallback(async () => {
-    if (!user?.id) {
-      setIsProMember(false);
-      return;
-    }
-
-    try {
-      setCheckingProStatus(true);
-
-      // Try REST API approach first
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-        const response = await fetch(
-          `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${user.id}&select=is_pro_member`,
-          {
-            method: "GET",
-            headers: {
-              apikey:
-                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms",
-              Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms`,
-              "Content-Type": "application/json",
-            },
-            signal: controller.signal,
-          }
-        );
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data = await response.json();
-
-          if (data && data.length > 0) {
-            const proStatus = data[0]?.is_pro_member || false;
-            setIsProMember(proStatus);
-            return; // Success, exit early
-          } else {
-            setIsProMember(false);
-            return;
-          }
-        } else {
-          setIsProMember(false);
-        }
-      } catch (restError) {
-        setIsProMember(false);
-      }
-    } catch (error) {
-      // Default to non-Pro if everything fails
-      setIsProMember(false);
-    } finally {
-      setCheckingProStatus(false);
-    }
-  }, [user?.id]);
 
   // Get the start and end dates for a specific week offset
   const getWeekBounds = (weekOffset: number) => {
@@ -142,21 +98,21 @@ const SessionsScreen = () => {
     const now = new Date();
     const currentDay = now.getDay();
     const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
-    
+
     const currentWeekStart = new Date(now);
     currentWeekStart.setDate(now.getDate() + mondayOffset);
     currentWeekStart.setHours(0, 0, 0, 0);
-    
+
     const selectedDay = selectedDate.getDay();
     const selectedMondayOffset = selectedDay === 0 ? -6 : 1 - selectedDay;
-    
+
     const selectedWeekStart = new Date(selectedDate);
     selectedWeekStart.setDate(selectedDate.getDate() + selectedMondayOffset);
     selectedWeekStart.setHours(0, 0, 0, 0);
-    
+
     const timeDiff = selectedWeekStart.getTime() - currentWeekStart.getTime();
     const weeksDiff = Math.round(timeDiff / (7 * 24 * 60 * 60 * 1000));
-    
+
     return weeksDiff;
   };
 
@@ -211,14 +167,8 @@ const SessionsScreen = () => {
 
   // Handle navigation to previous week
   const handlePreviousWeek = () => {
-    if (!isProMember && currentWeekOffset === 0) {
-      // Non-pro user trying to access previous week - show brief
-      setShowProBrief(true);
-      return;
-    }
-
-    // For pro users, check if they can go further back
-    if (isProMember && earliestSessionDate) {
+    // Check if they can go further back based on earliest session data
+    if (earliestSessionDate) {
       const earliestWeekOffset = getWeekOffsetFromDate(earliestSessionDate);
       if (currentWeekOffset <= earliestWeekOffset) {
         // Already at the earliest week with data
@@ -239,14 +189,6 @@ const SessionsScreen = () => {
   // Handle calendar date selection
   const handleDateSelect = (selectedDate: Date) => {
     const weekOffset = getWeekOffsetFromDate(selectedDate);
-    
-    // Check if non-pro user is trying to access past weeks
-    if (!isProMember && weekOffset < 0) {
-      setShowProBrief(true);
-      setShowCalendar(false);
-      return;
-    }
-    
     setCurrentWeekOffset(weekOffset);
     setShowCalendar(false);
   };
@@ -257,18 +199,18 @@ const SessionsScreen = () => {
       const savedSessions = await AsyncStorage.getItem("training_sessions");
       if (savedSessions) {
         const parsedSessions: TrainingSession[] = JSON.parse(savedSessions);
-        
+
         // Filter sessions for current user
         const userSessions = user?.id
           ? parsedSessions.filter((session) => session.userId === user.id)
           : parsedSessions;
-        
+
         if (userSessions.length > 0) {
           // Find the earliest session
-          const earliest = userSessions.reduce((earliest, session) => 
+          const earliest = userSessions.reduce((earliest, session) =>
             session.startTime < earliest.startTime ? session : earliest
           );
-          
+
           setEarliestSessionDate(new Date(earliest.startTime));
         } else {
           setEarliestSessionDate(null);
@@ -283,18 +225,14 @@ const SessionsScreen = () => {
 
   // Calculate the number of weeks to show in calendar
   const getCalendarWeeksCount = () => {
-    if (!isProMember) {
-      return 1; // Non-pro users can only see current week
-    }
-    
     if (!earliestSessionDate) {
       return 4; // Default to 4 weeks if no sessions found
     }
-    
+
     // Calculate weeks from earliest session to current week
     const earliestWeekOffset = getWeekOffsetFromDate(earliestSessionDate);
     const weeksCount = Math.abs(earliestWeekOffset) + 1; // +1 to include current week
-    
+
     // Cap at reasonable maximum (e.g., 5 years = ~260 weeks)
     return Math.min(weeksCount, 260);
   };
@@ -337,7 +275,6 @@ const SessionsScreen = () => {
   // Load training sessions when component mounts
   useEffect(() => {
     loadTrainingSessions();
-    checkProMembership();
     findEarliestSession();
   }, []);
 
@@ -350,7 +287,6 @@ const SessionsScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       loadTrainingSessions();
-      checkProMembership(); // Also refresh pro status when screen is focused
       findEarliestSession();
     }, [])
   );
@@ -526,6 +462,58 @@ const SessionsScreen = () => {
           </Text>
         </View>
       </View>
+
+      {/* Media Gallery */}
+      {item.media && item.media.length > 0 && (
+        <View style={styles.mediaContainer}>
+          <Text
+            style={[styles.mediaTitle, { color: currentTheme.colors.text }]}
+          >
+            Session Media ({item.media.length})
+          </Text>
+          <ScrollView
+            horizontal
+            style={styles.mediaScrollView}
+            showsHorizontalScrollIndicator={false}
+          >
+            {item.media.slice(0, 5).map((mediaItem, index) => (
+              <TouchableOpacity
+                key={mediaItem.id}
+                style={styles.mediaItem}
+                onPress={() => {
+                  Alert.alert(
+                    mediaItem.type === "photo" ? "Photo" : "Video",
+                    `Captured at ${new Date(
+                      mediaItem.timestamp
+                    ).toLocaleTimeString()}`
+                  );
+                }}
+              >
+                <Image
+                  source={{ uri: mediaItem.uri }}
+                  style={styles.mediaThumbnail}
+                  resizeMode="cover"
+                />
+                <View style={styles.mediaOverlay}>
+                  <Text style={styles.mediaTypeIcon}>
+                    {mediaItem.type === "photo" ? "📸" : "🎥"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            {item.media.length > 5 && (
+              <View style={styles.moreMediaItem}>
+                <View style={styles.moreMediaContainer}>
+                  <Text style={styles.moreMediaText}>
+                    +{item.media.length - 5}
+                  </Text>
+                  <Text style={styles.moreMediaSubtext}>more</Text>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      )}
     </TouchableOpacity>
   );
 
@@ -618,11 +606,11 @@ const SessionsScreen = () => {
               styles.weekNavButton,
               {
                 backgroundColor: currentTheme.colors.surface,
-                opacity: !isProMember && currentWeekOffset === 0 ? 0.5 : 1,
+                opacity: (earliestSessionDate && currentWeekOffset <= getWeekOffsetFromDate(earliestSessionDate)) ? 0.5 : 1,
               },
             ]}
             onPress={handlePreviousWeek}
-            disabled={!isProMember && currentWeekOffset === 0}
+            disabled={!!earliestSessionDate && currentWeekOffset <= getWeekOffsetFromDate(earliestSessionDate)}
           >
             <Text
               style={[styles.weekNavText, { color: currentTheme.colors.text }]}
@@ -660,20 +648,6 @@ const SessionsScreen = () => {
             </Text>
           </TouchableOpacity>
         </View>
-
-        {/* Swipe instruction for non-Pro users */}
-        {!checkingProStatus && !isProMember && currentWeekOffset === 0 && (
-          <View style={styles.swipeInstructionContainer}>
-            <Text
-              style={[
-                styles.swipeInstructionText,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              📅 Tap calendar icon to view previous weeks (Pro feature)
-            </Text>
-          </View>
-        )}
 
         {loadingSessions ? (
           <View style={styles.loadingContainer}>
@@ -749,113 +723,6 @@ const SessionsScreen = () => {
         {/* Pro Subscription Prompt Overlay - Removed since non-pro users can't access previous weeks */}
       </View>
 
-      {/* Pro Brief Modal */}
-      <Modal
-        visible={showProBrief}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowProBrief(false)}
-      >
-        <View style={styles.proBriefOverlay}>
-          <View
-            style={[
-              styles.proBriefContainer,
-              { backgroundColor: currentTheme.colors.surface },
-            ]}
-          >
-            <View style={styles.proBriefHeader}>
-              <Text
-                style={[
-                  styles.proBriefTitle,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                🔓 Pro Feature
-              </Text>
-              <TouchableOpacity
-                style={styles.proBriefCloseButton}
-                onPress={() => setShowProBrief(false)}
-              >
-                <Text
-                  style={[
-                    styles.proBriefCloseText,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  ✕
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text
-              style={[
-                styles.proBriefMessage,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              Access to previous weeks' training history is available with
-              EquiHub Pro.
-            </Text>
-
-            <View style={styles.proBriefFeatures}>
-              <Text
-                style={[
-                  styles.proBriefFeatureItem,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                ✓ Unlimited training history
-              </Text>
-              <Text
-                style={[
-                  styles.proBriefFeatureItem,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                ✓ Advanced analytics
-              </Text>
-              <Text
-                style={[
-                  styles.proBriefFeatureItem,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                ✓ Export your data
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.proBriefUpgradeButton,
-                { backgroundColor: currentTheme.colors.accent },
-              ]}
-              onPress={() => {
-                setShowProBrief(false);
-                router.push("/subscription");
-              }}
-            >
-              <Text style={styles.proBriefUpgradeButtonText}>
-                Upgrade to Pro
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.proBriefDismissButton}
-              onPress={() => setShowProBrief(false)}
-            >
-              <Text
-                style={[
-                  styles.proBriefDismissButtonText,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
-                Maybe Later
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
       {/* Calendar Modal */}
       <Modal
         visible={showCalendar}
@@ -901,7 +768,7 @@ const SessionsScreen = () => {
                 const { startOfWeek, endOfWeek } = getWeekBounds(weekOffset);
                 const isCurrentWeek = weekOffset === 0;
                 const isSelectedWeek = weekOffset === currentWeekOffset;
-                
+
                 return (
                   <TouchableOpacity
                     key={weekOffset}
@@ -911,8 +778,8 @@ const SessionsScreen = () => {
                         backgroundColor: isSelectedWeek
                           ? currentTheme.colors.primary
                           : isCurrentWeek
-                          ? currentTheme.colors.accent + '20'
-                          : 'transparent',
+                          ? currentTheme.colors.accent + "20"
+                          : "transparent",
                         borderBottomColor: currentTheme.colors.border,
                       },
                     ]}
@@ -924,9 +791,9 @@ const SessionsScreen = () => {
                           styles.calendarWeekTitle,
                           {
                             color: isSelectedWeek
-                              ? '#FFFFFF'
+                              ? "#FFFFFF"
                               : currentTheme.colors.text,
-                            fontWeight: isCurrentWeek ? 'bold' : 'normal',
+                            fontWeight: isCurrentWeek ? "bold" : "normal",
                           },
                         ]}
                       >
@@ -937,17 +804,19 @@ const SessionsScreen = () => {
                           styles.calendarWeekDate,
                           {
                             color: isSelectedWeek
-                              ? '#FFFFFF'
+                              ? "#FFFFFF"
                               : currentTheme.colors.textSecondary,
                           },
                         ]}
                       >
-                        {startOfWeek.toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })} - {endOfWeek.toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
+                        {startOfWeek.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}{" "}
+                        -{" "}
+                        {endOfWeek.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
                         })}
                       </Text>
                     </View>
@@ -959,33 +828,6 @@ const SessionsScreen = () => {
                   </TouchableOpacity>
                 );
               })}
-              
-              {!isProMember && (
-                <View style={styles.calendarProNotice}>
-                  <Text
-                    style={[
-                      styles.calendarProNoticeText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    📅 Upgrade to Pro for unlimited history access
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.calendarProButton,
-                      { backgroundColor: currentTheme.colors.accent },
-                    ]}
-                    onPress={() => {
-                      setShowCalendar(false);
-                      router.push("/subscription");
-                    }}
-                  >
-                    <Text style={styles.calendarProButtonText}>
-                      Get Pro
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
             </ScrollView>
           </View>
         </View>
@@ -1246,17 +1088,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FFFFFF",
   },
-  swipeInstructionContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    marginBottom: 12,
-    alignItems: "center",
-  },
-  swipeInstructionText: {
-    fontSize: 12,
-    fontStyle: "italic",
-    textAlign: "center",
-  },
   subscriptionOverlay: {
     position: "absolute",
     top: 0,
@@ -1313,92 +1144,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   dismissButtonText: {
-    fontSize: 14,
-    textAlign: "center",
-  },
-  // Pro Brief Modal Styles
-  proBriefOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  proBriefContainer: {
-    borderRadius: 16,
-    padding: 24,
-    alignItems: "center",
-    maxWidth: 320,
-    width: "100%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  proBriefHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
-    marginBottom: 16,
-  },
-  proBriefTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
-    flex: 1,
-  },
-  proBriefCloseButton: {
-    padding: 4,
-    borderRadius: 12,
-    backgroundColor: "rgba(0, 0, 0, 0.1)",
-  },
-  proBriefCloseText: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  proBriefMessage: {
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  proBriefFeatures: {
-    alignSelf: "stretch",
-    marginBottom: 24,
-  },
-  proBriefFeatureItem: {
-    fontSize: 14,
-    marginBottom: 8,
-    textAlign: "left",
-  },
-  proBriefUpgradeButton: {
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 25,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  proBriefUpgradeButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  proBriefDismissButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  proBriefDismissButtonText: {
     fontSize: 14,
     textAlign: "center",
   },
@@ -1477,27 +1222,67 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
   },
-  calendarProNotice: {
-    padding: 20,
-    alignItems: "center",
+
+  // Media Gallery Styles
+  mediaContainer: {
+    marginTop: 15,
+    paddingTop: 15,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.1)",
+    borderTopColor: "#E0E0E0",
   },
-  calendarProNoticeText: {
+  mediaTitle: {
     fontSize: 14,
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  calendarProButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  calendarProButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
+    fontFamily: "Inder",
     fontWeight: "600",
-    textAlign: "center",
+    marginBottom: 10,
+  },
+  mediaScrollView: {
+    paddingVertical: 5,
+  },
+  mediaItem: {
+    marginRight: 10,
+    alignItems: "center",
+  },
+  mediaThumbnail: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  mediaOverlay: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    borderRadius: 6,
+    padding: 2,
+  },
+  mediaTypeIcon: {
+    fontSize: 12,
+  },
+  moreMediaItem: {
+    marginRight: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  moreMediaContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    borderStyle: "dashed",
+  },
+  moreMediaText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#666",
+  },
+  moreMediaSubtext: {
+    fontSize: 10,
+    color: "#666",
   },
 });
 

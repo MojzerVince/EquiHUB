@@ -1920,19 +1920,18 @@ const MyHorsesScreen = () => {
                       source={{ uri: horse.image_url }}
                     />
                   ) : (
-                    <View style={[
-                      styles.horseImagePlaceholder,
-                      { 
-                        backgroundColor: currentTheme.colors.surface,
-                        borderColor: currentTheme.colors.primary
-                      }
-                    ]}>
-                      <Text style={[
-                        styles.horseImagePlaceholderIcon,
-                        { color: currentTheme.colors.primary }
-                      ]}>
-                        🐴
-                      </Text>
+                    <View
+                      style={[
+                        styles.horseImage,
+                        { 
+                          borderColor: currentTheme.colors.primary,
+                          backgroundColor: currentTheme.colors.surface,
+                          justifyContent: "center",
+                          alignItems: "center"
+                        }
+                      ]}
+                    >
+                      <Text style={{ fontSize: 60 }}>🐴</Text>
                     </View>
                   )}
                 </View>
@@ -2106,11 +2105,7 @@ const MyHorsesScreen = () => {
                       <Text
                         style={[styles.vaccinationButtonText]}
                       >
-                        {getOverdueVaccinations(horse.id).length > 0
-                          ? '⚠️'
-                          : getUpcomingVaccinations(horse.id).length > 0
-                          ? '📅'
-                          : '💉'} Vaccinations
+                        Records
                         {(getOverdueVaccinations(horse.id).length > 0 || getUpcomingVaccinations(horse.id).length > 0) && (
                           ` (${getOverdueVaccinations(horse.id).length + getUpcomingVaccinations(horse.id).length})`
                         )}
@@ -2244,35 +2239,24 @@ const MyHorsesScreen = () => {
                 >
                   Photo
                 </Text>
-                <View style={styles.imageContainer}>
-                  {(editImage || editingHorse?.image_url) ? (
-                    <Image
-                      style={[
-                        styles.selectedImage,
-                        { borderColor: currentTheme.colors.primary }
-                      ]}
-                      source={
-                        editImage
-                          ? editImage
-                          : { uri: editingHorse.image_url }
-                      }
-                    />
-                  ) : (
-                    <View style={[
-                      styles.selectedImagePlaceholder,
-                      { 
-                        backgroundColor: currentTheme.colors.surface,
-                        borderColor: currentTheme.colors.primary
-                      }
-                    ]}>
-                      <Text style={[
-                        styles.selectedImagePlaceholderIcon,
-                        { color: currentTheme.colors.primary }
-                      ]}>
-                        🐴
-                      </Text>
-                    </View>
-                  )}
+                <View style={[
+                  styles.imageContainer,
+                  { backgroundColor: currentTheme.colors.surface }
+                ]}>
+                  <Image
+                    style={[
+                      styles.selectedImage,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
+                    source={
+                      editImage
+                        ? editImage
+                        : editingHorse?.image_url
+                        ? { uri: editingHorse.image_url }
+                        : require("../../assets/images/horses/pony.jpg")
+                    }
+                    resizeMode="cover"
+                  />
                   <TouchableOpacity
                     style={[
                       styles.changePhotoButton,
@@ -2510,32 +2494,20 @@ const MyHorsesScreen = () => {
                 >
                   Photo
                 </Text>
-                <View style={styles.imageContainer}>
-                  {addImage ? (
-                    <Image
-                      style={[
-                        styles.selectedImage,
-                        { borderColor: currentTheme.colors.primary }
-                      ]}
-                      source={addImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={[
-                      styles.selectedImagePlaceholder,
-                      { 
-                        backgroundColor: currentTheme.colors.surface,
-                        borderColor: currentTheme.colors.primary
-                      }
-                    ]}>
-                      <Text style={[
-                        styles.selectedImagePlaceholderIcon,
-                        { color: currentTheme.colors.primary }
-                      ]}>
-                        🐴
-                      </Text>
-                    </View>
-                  )}
+                <View style={[
+                  styles.imageContainer,
+                  { backgroundColor: currentTheme.colors.surface }
+                ]}>
+                  <Image
+                    style={[
+                      styles.selectedImage,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
+                    source={
+                      addImage || require("../../assets/images/horses/pony.jpg")
+                    }
+                    resizeMode="cover"
+                  />
                   <TouchableOpacity
                     style={[
                       styles.changePhotoButton,
@@ -3206,18 +3178,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-  },
-  horseImagePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  horseImagePlaceholderIcon: {
-    fontSize: 48,
-    textAlign: "center",
+    // borderColor applied dynamically with theme
   },
   horseContent: {
     flex: 1,
@@ -3584,18 +3545,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-  },
-  selectedImagePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  selectedImagePlaceholderIcon: {
-    fontSize: 48,
-    textAlign: "center",
+    // borderColor applied dynamically with theme
   },
   changePhotoButton: {
     flexDirection: "row",
