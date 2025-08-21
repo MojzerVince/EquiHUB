@@ -50,6 +50,38 @@ interface MediaItem {
   };
 }
 
+interface GaitSegment {
+  gait: "walk" | "trot" | "canter" | "gallop" | "halt";
+  startTime: number;
+  endTime: number;
+  duration: number; // in seconds
+  distance: number; // in meters
+  averageSpeed: number; // in m/s
+  startIndex: number; // index in path array
+  endIndex: number; // index in path array
+}
+
+interface GaitAnalysis {
+  totalDuration: number;
+  gaitDurations: {
+    walk: number;
+    trot: number;
+    canter: number;
+    gallop: number;
+    halt: number;
+  };
+  gaitPercentages: {
+    walk: number;
+    trot: number;
+    canter: number;
+    gallop: number;
+    halt: number;
+  };
+  segments: GaitSegment[];
+  transitionCount: number;
+  predominantGait: "walk" | "trot" | "canter" | "gallop" | "halt";
+}
+
 interface TrainingSession {
   id: string;
   userId: string;
@@ -64,6 +96,7 @@ interface TrainingSession {
   averageSpeed?: number; // in m/s
   maxSpeed?: number; // in m/s
   media?: MediaItem[]; // Photos and videos taken during session
+  gaitAnalysis?: GaitAnalysis; // Horse gait analysis
 }
 
 interface PublishedTrail {
@@ -209,6 +242,11 @@ const MapScreen = () => {
     useState<boolean>(false);
   const [publishedTrails, setPublishedTrails] = useState<PublishedTrail[]>([]);
   const [trailsLoading, setTrailsLoading] = useState<boolean>(false);
+
+  // Real-time gait detection state
+  const [currentGait, setCurrentGait] = useState<
+    "walk" | "trot" | "canter" | "gallop" | "halt"
+  >("halt");
 
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
@@ -549,6 +587,225 @@ const MapScreen = () => {
       );
     }
     return totalDistance;
+  };
+
+  // Horse gait detection based on speed
+  const detectGaitFromSpeed = (
+    speedMs: number
+  ): "walk" | "trot" | "canter" | "gallop" | "halt" => {
+    // Convert m/s to km/h for easier understanding
+    const speedKmh = speedMs * 3.6;
+
+    // Horse gait speed ranges (in km/h):
+    // Halt: 0-2 km/h
+    // Walk: 2-8 km/h
+    // Trot: 8-16 km/h
+    // Canter: 16-25 km/h
+    // Gallop: 25+ km/h
+
+    if (speedKmh < 2) return "halt";
+    if (speedKmh < 8) return "walk";
+    if (speedKmh < 16) return "trot";
+    if (speedKmh < 25) return "canter";
+    return "gallop";
+  };
+
+  // Smooth speed data to reduce GPS noise
+  const smoothSpeeds = (
+    points: TrackingPoint[],
+    windowSize: number = 5
+  ): number[] => {
+    const speeds: number[] = [];
+
+    for (let i = 0; i < points.length; i++) {
+      if (i === 0) {
+        speeds.push(points[i].speed || 0);
+        continue;
+      }
+
+      // Calculate speed from GPS points if not provided
+      let speed = points[i].speed;
+      if (!speed) {
+        const distance = calculateDistance(
+          points[i - 1].latitude,
+          points[i - 1].longitude,
+          points[i].latitude,
+          points[i].longitude
+        );
+        const timeDiff = (points[i].timestamp - points[i - 1].timestamp) / 1000; // seconds
+        speed = timeDiff > 0 ? distance / timeDiff : 0;
+      }
+
+      // Apply moving average smoothing
+      const startIdx = Math.max(0, i - Math.floor(windowSize / 2));
+      const endIdx = Math.min(
+        points.length - 1,
+        i + Math.floor(windowSize / 2)
+      );
+      let sumSpeed = 0;
+      let count = 0;
+
+      for (let j = startIdx; j <= endIdx; j++) {
+        const pointSpeed = j === 0 ? points[j].speed || 0 : speeds[j] || speed;
+        sumSpeed += pointSpeed;
+        count++;
+      }
+
+      speeds.push(count > 0 ? sumSpeed / count : speed);
+    }
+
+    return speeds;
+  };
+
+  // Analyze horse gaits from tracking data
+  const analyzeGaits = (points: TrackingPoint[]): GaitAnalysis => {
+    if (points.length < 2) {
+      return {
+        totalDuration: 0,
+        gaitDurations: { walk: 0, trot: 0, canter: 0, gallop: 0, halt: 0 },
+        gaitPercentages: { walk: 0, trot: 0, canter: 0, gallop: 0, halt: 0 },
+        segments: [],
+        transitionCount: 0,
+        predominantGait: "halt",
+      };
+    }
+
+    const smoothedSpeeds = smoothSpeeds(points);
+    const segments: GaitSegment[] = [];
+    const gaitDurations = { walk: 0, trot: 0, canter: 0, gallop: 0, halt: 0 };
+
+    let currentGait = detectGaitFromSpeed(smoothedSpeeds[0]);
+    let segmentStartIndex = 0;
+    let segmentStartTime = points[0].timestamp;
+    let transitionCount = 0;
+
+    // Minimum segment duration (3 seconds) to filter out noise
+    const minSegmentDuration = 3000; // milliseconds
+
+    for (let i = 1; i < points.length; i++) {
+      const detectedGait = detectGaitFromSpeed(smoothedSpeeds[i]);
+
+      // Check for gait change
+      if (detectedGait !== currentGait) {
+        const segmentDuration = points[i].timestamp - segmentStartTime;
+
+        // Only create segment if it meets minimum duration
+        if (segmentDuration >= minSegmentDuration) {
+          const segmentDistance = calculateTotalDistance(
+            points.slice(segmentStartIndex, i + 1)
+          );
+          const avgSpeed =
+            segmentDuration > 0
+              ? segmentDistance / (segmentDuration / 1000)
+              : 0;
+
+          segments.push({
+            gait: currentGait,
+            startTime: segmentStartTime,
+            endTime: points[i].timestamp,
+            duration: segmentDuration / 1000, // convert to seconds
+            distance: segmentDistance,
+            averageSpeed: avgSpeed,
+            startIndex: segmentStartIndex,
+            endIndex: i,
+          });
+
+          gaitDurations[currentGait] += segmentDuration / 1000;
+          transitionCount++;
+
+          // Start new segment
+          currentGait = detectedGait;
+          segmentStartIndex = i;
+          segmentStartTime = points[i].timestamp;
+        } else {
+          // Segment too short, continue with current gait
+          currentGait = detectedGait;
+        }
+      }
+    }
+
+    // Add final segment
+    const finalDuration =
+      points[points.length - 1].timestamp - segmentStartTime;
+    if (finalDuration >= minSegmentDuration) {
+      const segmentDistance = calculateTotalDistance(
+        points.slice(segmentStartIndex)
+      );
+      const avgSpeed =
+        finalDuration > 0 ? segmentDistance / (finalDuration / 1000) : 0;
+
+      segments.push({
+        gait: currentGait,
+        startTime: segmentStartTime,
+        endTime: points[points.length - 1].timestamp,
+        duration: finalDuration / 1000,
+        distance: segmentDistance,
+        averageSpeed: avgSpeed,
+        startIndex: segmentStartIndex,
+        endIndex: points.length - 1,
+      });
+
+      gaitDurations[currentGait] += finalDuration / 1000;
+    }
+
+    const totalDuration = Object.values(gaitDurations).reduce(
+      (sum, duration) => sum + duration,
+      0
+    );
+
+    // Calculate percentages
+    const gaitPercentages = {
+      walk: totalDuration > 0 ? (gaitDurations.walk / totalDuration) * 100 : 0,
+      trot: totalDuration > 0 ? (gaitDurations.trot / totalDuration) * 100 : 0,
+      canter:
+        totalDuration > 0 ? (gaitDurations.canter / totalDuration) * 100 : 0,
+      gallop:
+        totalDuration > 0 ? (gaitDurations.gallop / totalDuration) * 100 : 0,
+      halt: totalDuration > 0 ? (gaitDurations.halt / totalDuration) * 100 : 0,
+    };
+
+    // Find predominant gait
+    const predominantGait = Object.entries(gaitDurations).reduce((a, b) =>
+      gaitDurations[a[0] as keyof typeof gaitDurations] >
+      gaitDurations[b[0] as keyof typeof gaitDurations]
+        ? a
+        : b
+    )[0] as "walk" | "trot" | "canter" | "gallop" | "halt";
+
+    return {
+      totalDuration,
+      gaitDurations,
+      gaitPercentages,
+      segments,
+      transitionCount: Math.max(0, transitionCount - 1), // Subtract 1 as we count segment starts
+      predominantGait,
+    };
+  };
+
+  // Update current gait based on latest tracking point
+  const updateCurrentGait = (newPoint: TrackingPoint) => {
+    if (isTracking && newPoint.speed !== undefined) {
+      const detectedGait = detectGaitFromSpeed(newPoint.speed);
+      setCurrentGait(detectedGait);
+    }
+  };
+
+  // Get gait emoji for display
+  const getGaitEmoji = (gait: string): string => {
+    switch (gait) {
+      case "walk":
+        return "🚶";
+      case "trot":
+        return "🏃";
+      case "canter":
+        return "🏇";
+      case "gallop":
+        return "🏇💨";
+      case "halt":
+        return "⏹️";
+      default:
+        return "🐎";
+    }
   };
 
   // Save session to AsyncStorage
@@ -1038,6 +1295,7 @@ const MapScreen = () => {
       setCurrentTime(startTime); // Initialize currentTime to the same value as startTime
       setTrackingPoints([]);
       setSessionMedia([]); // Initialize empty media array for the session
+      setCurrentGait("halt"); // Reset gait to halt at session start
 
       // Restart location watcher with optimized settings for tracking
       await restartLocationWatcherForTracking();
@@ -1116,6 +1374,9 @@ const MapScreen = () => {
                       latitude: latestPoint.latitude,
                       longitude: latestPoint.longitude,
                     });
+
+                    // Update current gait based on latest point
+                    updateCurrentGait(latestPoint);
 
                     // Update GPS strength
                     const strength = calculateGpsStrength(latestPoint.accuracy);
@@ -1224,6 +1485,15 @@ const MapScreen = () => {
 
       const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0;
 
+      // Analyze horse gaits from tracking data
+      console.log("🐎 Analyzing horse gaits...");
+      const gaitAnalysis = analyzeGaits(trackingPoints);
+      console.log("✅ Gait analysis completed:", {
+        predominantGait: gaitAnalysis.predominantGait,
+        segments: gaitAnalysis.segments.length,
+        transitions: gaitAnalysis.transitionCount,
+      });
+
       const completedSession: TrainingSession = {
         ...currentSession,
         endTime,
@@ -1233,6 +1503,7 @@ const MapScreen = () => {
         averageSpeed,
         maxSpeed,
         media: sessionMedia, // Include captured media
+        gaitAnalysis, // Include gait analysis
       };
 
       // Save session to storage
@@ -1244,6 +1515,7 @@ const MapScreen = () => {
       setSessionStartTime(null);
       setTrackingPoints([]);
       setSessionMedia([]); // Reset media array
+      setCurrentGait("halt"); // Reset gait when tracking stops
 
       // Restart location watcher with normal settings
       await startLocationWatcher();
@@ -1255,7 +1527,12 @@ const MapScreen = () => {
           duration / 60
         )}m ${duration % 60}s\nDistance: ${(totalDistance / 1000).toFixed(
           2
-        )} km\nAverage Speed: ${(averageSpeed * 3.6).toFixed(1)} km/h`,
+        )} km\nAverage Speed: ${(averageSpeed * 3.6).toFixed(
+          1
+        )} km/h\nPredominant Gait: ${
+          gaitAnalysis.predominantGait.charAt(0).toUpperCase() +
+          gaitAnalysis.predominantGait.slice(1)
+        }\nGait Transitions: ${gaitAnalysis.transitionCount}`,
         [
           {
             text: "View Details",
@@ -1495,6 +1772,8 @@ const MapScreen = () => {
                     timeDiff: timeDiff,
                     distance: distance.toFixed(1),
                   });
+                  // Update current gait based on new tracking point
+                  updateCurrentGait(trackingPoint);
                   return [...prev, trackingPoint];
                 }
                 return prev;
@@ -2360,6 +2639,30 @@ const MapScreen = () => {
                           { color: currentTheme.colors.textSecondary },
                         ]}
                       >
+                        Gait
+                      </Text>
+                      <View style={styles.gaitDisplayContainer}>
+                        <Text style={styles.gaitDisplayEmoji}>
+                          {getGaitEmoji(currentGait)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.trackingStatValue,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          {currentGait.charAt(0).toUpperCase() +
+                            currentGait.slice(1)}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.trackingStatItem}>
+                      <Text
+                        style={[
+                          styles.trackingStatLabel,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
                         Points
                       </Text>
                       <Text
@@ -3198,6 +3501,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     marginTop: 10,
     fontStyle: "italic",
+  },
+
+  // Gait Display Styles
+  gaitDisplayContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  gaitDisplayEmoji: {
+    fontSize: 20,
+    marginRight: 6,
   },
 });
 
