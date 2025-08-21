@@ -1491,7 +1491,9 @@ const MapScreen = () => {
       const durationSeconds = duration % 60;
       const distanceKm = (totalDistance / 1000).toFixed(2);
       const avgSpeedKmh = (averageSpeed * 3.6).toFixed(1);
-      const predominantGaitName = gaitAnalysis.predominantGait.charAt(0).toUpperCase() + gaitAnalysis.predominantGait.slice(1);
+      const predominantGaitName =
+        gaitAnalysis.predominantGait.charAt(0).toUpperCase() +
+        gaitAnalysis.predominantGait.slice(1);
 
       showDialog({
         title: "🎉 Session Completed!",
