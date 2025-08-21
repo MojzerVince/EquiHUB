@@ -1321,17 +1321,18 @@ const MapScreen = () => {
       }
 
       // Start background location tracking
+      console.log(
+        `🚀 Starting background tracking with highAccuracyMode: ${highAccuracyMode}`
+      );
       await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
         accuracy: Location.Accuracy.BestForNavigation,
         timeInterval: highAccuracyMode ? 250 : 1000, // Ultra-fast in high accuracy, 1s in normal
         distanceInterval: 1, // Update every 1 meter movement
         deferredUpdatesInterval: highAccuracyMode ? 250 : 1000, // Match timeInterval
-        showsBackgroundLocationIndicator: true,
+        showsBackgroundLocationIndicator: false, // Hide the background indicator
         foregroundService: {
-          notificationTitle: "EquiHUB GPS Tracking",
-          notificationBody: highAccuracyMode
-            ? "Ultra-high accuracy tracking active"
-            : "High precision tracking active",
+          notificationTitle: "🐎 EquiHUB",
+          notificationBody: "GPS tracking in background",
           notificationColor: "#4A90E2",
         },
       });
@@ -1705,6 +1706,9 @@ const MapScreen = () => {
   // Update high accuracy mode and restart tracking if active
   const updateHighAccuracyMode = async (newMode: boolean) => {
     const previousMode = highAccuracyMode;
+    console.log(
+      `🔄 updateHighAccuracyMode called: ${previousMode} → ${newMode}, isTracking: ${isTracking}`
+    );
     setHighAccuracyMode(newMode);
 
     // If tracking is active, restart both background and foreground tracking with new settings
@@ -1732,12 +1736,10 @@ const MapScreen = () => {
             timeInterval: newMode ? 250 : 1000,
             distanceInterval: 1,
             deferredUpdatesInterval: newMode ? 250 : 1000,
-            showsBackgroundLocationIndicator: true,
+            showsBackgroundLocationIndicator: false, // Hide the background indicator
             foregroundService: {
-              notificationTitle: "EquiHUB GPS Tracking",
-              notificationBody: newMode
-                ? "Ultra-high accuracy tracking active"
-                : "High precision tracking active",
+              notificationTitle: "🐎 EquiHUB",
+              notificationBody: "GPS tracking in background",
               notificationColor: "#4A90E2",
             },
           });
@@ -1801,6 +1803,22 @@ const MapScreen = () => {
         // Revert the state if update failed
         setHighAccuracyMode(previousMode);
       }
+    }
+
+    // Show notification when ultra-fast mode is enabled (whether tracking or not)
+    if (newMode && !previousMode) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "⚡ Ultra-Fast GPS Enabled",
+          body: isTracking
+            ? "Ultra-high precision tracking is now active. Battery usage will increase."
+            : "Ultra-fast GPS is ready. Start tracking for maximum precision.",
+          sound: false,
+          priority: Notifications.AndroidNotificationPriority.DEFAULT,
+        },
+        trigger: null,
+        identifier: "ultra-fast-gps-enabled",
+      });
     }
   };
 
