@@ -14,6 +14,8 @@ import {
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
+import { HorseAPI } from "../lib/horseAPI";
+import { Horse } from "../lib/supabase";
 
 // Media item interface
 interface MediaItem {
@@ -87,6 +89,7 @@ const SessionDetailsScreen = () => {
   const router = useRouter();
   const { currentTheme } = useTheme();
   const [session, setSession] = useState<TrainingSession | null>(null);
+  const [horse, setHorse] = useState<Horse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -101,6 +104,18 @@ const SessionDetailsScreen = () => {
         const sessions: TrainingSession[] = JSON.parse(savedSessions);
         const found = sessions.find((s) => s.id === sessionId);
         setSession(found || null);
+
+        // Load horse data if session is found
+        if (found && found.horseId) {
+          try {
+            const horses = await HorseAPI.getHorses(found.userId);
+            const sessionHorse = horses?.find((h) => h.id === found.horseId);
+            setHorse(sessionHorse || null);
+          } catch (error) {
+            console.error("Error loading horse data:", error);
+            setHorse(null);
+          }
+        }
       }
     } catch (error) {
       console.error("Error loading session:", error);
@@ -348,7 +363,15 @@ const SessionDetailsScreen = () => {
                 { backgroundColor: currentTheme.colors.primary },
               ]}
             >
-              <Text style={styles.sessionIcon}>🏇</Text>
+              {horse && horse.image_url ? (
+                <Image
+                  source={{ uri: horse.image_url }}
+                  style={styles.horseImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.sessionIcon}>🐎</Text>
+              )}
             </View>
             <Text
               style={[styles.sessionTitle, { color: currentTheme.colors.text }]}
@@ -980,6 +1003,11 @@ const styles = StyleSheet.create({
   },
   sessionIcon: {
     fontSize: 40,
+  },
+  horseImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
   },
   sessionTitle: {
     fontSize: 24,
