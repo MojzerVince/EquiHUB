@@ -181,7 +181,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
 const MapScreen = () => {
   const { currentTheme } = useTheme();
-  const { showError } = useDialog();
+  const { showError, showDialog } = useDialog();
   const { user } = useAuth();
   const router = useRouter();
   const [region, setRegion] = useState<Region>({
@@ -1486,33 +1486,36 @@ const MapScreen = () => {
       // Restart location watcher with normal settings
       await startLocationWatcher();
 
-      // Show completion alert
-      Alert.alert(
-        "Session Completed",
-        `Training session completed!\n\nDuration: ${Math.floor(
-          duration / 60
-        )}m ${duration % 60}s\nDistance: ${(totalDistance / 1000).toFixed(
-          2
-        )} km\nAverage Speed: ${(averageSpeed * 3.6).toFixed(
-          1
-        )} km/h\nPredominant Gait: ${
-          gaitAnalysis.predominantGait.charAt(0).toUpperCase() +
-          gaitAnalysis.predominantGait.slice(1)
-        }\nGait Transitions: ${gaitAnalysis.transitionCount}`,
-        [
+      // Show custom completion dialog
+      const durationMinutes = Math.floor(duration / 60);
+      const durationSeconds = duration % 60;
+      const distanceKm = (totalDistance / 1000).toFixed(2);
+      const avgSpeedKmh = (averageSpeed * 3.6).toFixed(1);
+      const predominantGaitName = gaitAnalysis.predominantGait.charAt(0).toUpperCase() + gaitAnalysis.predominantGait.slice(1);
+
+      showDialog({
+        title: "🎉 Session Completed!",
+        message: `Congratulations! Your training session with ${completedSession.horseName} has been successfully completed.\n\n📊 Session Summary:\n• Duration: ${durationMinutes}m ${durationSeconds}s\n• Distance: ${distanceKm} km\n• Average Speed: ${avgSpeedKmh} km/h\n• Predominant Gait: ${predominantGaitName}\n• Gait Transitions: ${gaitAnalysis.transitionCount}`,
+        buttons: [
           {
             text: "View Details",
-            onPress: () =>
+            style: "default",
+            onPress: () => {
               router.push({
                 pathname: "/session-details",
                 params: { sessionId: completedSession.id },
-              }),
+              });
+            },
           },
           {
             text: "Back to Map",
+            style: "cancel",
+            onPress: () => {
+              // Just close the dialog
+            },
           },
-        ]
-      );
+        ],
+      });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
