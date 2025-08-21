@@ -40,6 +40,19 @@ interface TrainingSession {
   }>;
   averageSpeed?: number; // in m/s
   maxSpeed?: number; // in m/s
+  media?: MediaItem[]; // Photos and videos taken during session
+}
+
+// Media item interface
+interface MediaItem {
+  id: string;
+  uri: string;
+  type: "photo" | "video";
+  timestamp: number;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 const SessionsScreen = () => {
@@ -59,7 +72,9 @@ const SessionsScreen = () => {
   const [checkingProStatus, setCheckingProStatus] = useState(false);
   const [showProBrief, setShowProBrief] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [earliestSessionDate, setEarliestSessionDate] = useState<Date | null>(null);
+  const [earliestSessionDate, setEarliestSessionDate] = useState<Date | null>(
+    null
+  );
 
   // Get screen width for swipe gestures
   const screenWidth = Dimensions.get("window").width;
@@ -142,21 +157,21 @@ const SessionsScreen = () => {
     const now = new Date();
     const currentDay = now.getDay();
     const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
-    
+
     const currentWeekStart = new Date(now);
     currentWeekStart.setDate(now.getDate() + mondayOffset);
     currentWeekStart.setHours(0, 0, 0, 0);
-    
+
     const selectedDay = selectedDate.getDay();
     const selectedMondayOffset = selectedDay === 0 ? -6 : 1 - selectedDay;
-    
+
     const selectedWeekStart = new Date(selectedDate);
     selectedWeekStart.setDate(selectedDate.getDate() + selectedMondayOffset);
     selectedWeekStart.setHours(0, 0, 0, 0);
-    
+
     const timeDiff = selectedWeekStart.getTime() - currentWeekStart.getTime();
     const weeksDiff = Math.round(timeDiff / (7 * 24 * 60 * 60 * 1000));
-    
+
     return weeksDiff;
   };
 
@@ -239,14 +254,14 @@ const SessionsScreen = () => {
   // Handle calendar date selection
   const handleDateSelect = (selectedDate: Date) => {
     const weekOffset = getWeekOffsetFromDate(selectedDate);
-    
+
     // Check if non-pro user is trying to access past weeks
     if (!isProMember && weekOffset < 0) {
       setShowProBrief(true);
       setShowCalendar(false);
       return;
     }
-    
+
     setCurrentWeekOffset(weekOffset);
     setShowCalendar(false);
   };
@@ -257,18 +272,18 @@ const SessionsScreen = () => {
       const savedSessions = await AsyncStorage.getItem("training_sessions");
       if (savedSessions) {
         const parsedSessions: TrainingSession[] = JSON.parse(savedSessions);
-        
+
         // Filter sessions for current user
         const userSessions = user?.id
           ? parsedSessions.filter((session) => session.userId === user.id)
           : parsedSessions;
-        
+
         if (userSessions.length > 0) {
           // Find the earliest session
-          const earliest = userSessions.reduce((earliest, session) => 
+          const earliest = userSessions.reduce((earliest, session) =>
             session.startTime < earliest.startTime ? session : earliest
           );
-          
+
           setEarliestSessionDate(new Date(earliest.startTime));
         } else {
           setEarliestSessionDate(null);
@@ -286,15 +301,15 @@ const SessionsScreen = () => {
     if (!isProMember) {
       return 1; // Non-pro users can only see current week
     }
-    
+
     if (!earliestSessionDate) {
       return 4; // Default to 4 weeks if no sessions found
     }
-    
+
     // Calculate weeks from earliest session to current week
     const earliestWeekOffset = getWeekOffsetFromDate(earliestSessionDate);
     const weeksCount = Math.abs(earliestWeekOffset) + 1; // +1 to include current week
-    
+
     // Cap at reasonable maximum (e.g., 5 years = ~260 weeks)
     return Math.min(weeksCount, 260);
   };
@@ -526,6 +541,58 @@ const SessionsScreen = () => {
           </Text>
         </View>
       </View>
+
+      {/* Media Gallery */}
+      {item.media && item.media.length > 0 && (
+        <View style={styles.mediaContainer}>
+          <Text
+            style={[styles.mediaTitle, { color: currentTheme.colors.text }]}
+          >
+            Session Media ({item.media.length})
+          </Text>
+          <ScrollView
+            horizontal
+            style={styles.mediaScrollView}
+            showsHorizontalScrollIndicator={false}
+          >
+            {item.media.slice(0, 5).map((mediaItem, index) => (
+              <TouchableOpacity
+                key={mediaItem.id}
+                style={styles.mediaItem}
+                onPress={() => {
+                  Alert.alert(
+                    mediaItem.type === "photo" ? "Photo" : "Video",
+                    `Captured at ${new Date(
+                      mediaItem.timestamp
+                    ).toLocaleTimeString()}`
+                  );
+                }}
+              >
+                <Image
+                  source={{ uri: mediaItem.uri }}
+                  style={styles.mediaThumbnail}
+                  resizeMode="cover"
+                />
+                <View style={styles.mediaOverlay}>
+                  <Text style={styles.mediaTypeIcon}>
+                    {mediaItem.type === "photo" ? "📸" : "🎥"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            {item.media.length > 5 && (
+              <View style={styles.moreMediaItem}>
+                <View style={styles.moreMediaContainer}>
+                  <Text style={styles.moreMediaText}>
+                    +{item.media.length - 5}
+                  </Text>
+                  <Text style={styles.moreMediaSubtext}>more</Text>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      )}
     </TouchableOpacity>
   );
 
@@ -901,7 +968,7 @@ const SessionsScreen = () => {
                 const { startOfWeek, endOfWeek } = getWeekBounds(weekOffset);
                 const isCurrentWeek = weekOffset === 0;
                 const isSelectedWeek = weekOffset === currentWeekOffset;
-                
+
                 return (
                   <TouchableOpacity
                     key={weekOffset}
@@ -911,8 +978,8 @@ const SessionsScreen = () => {
                         backgroundColor: isSelectedWeek
                           ? currentTheme.colors.primary
                           : isCurrentWeek
-                          ? currentTheme.colors.accent + '20'
-                          : 'transparent',
+                          ? currentTheme.colors.accent + "20"
+                          : "transparent",
                         borderBottomColor: currentTheme.colors.border,
                       },
                     ]}
@@ -924,9 +991,9 @@ const SessionsScreen = () => {
                           styles.calendarWeekTitle,
                           {
                             color: isSelectedWeek
-                              ? '#FFFFFF'
+                              ? "#FFFFFF"
                               : currentTheme.colors.text,
-                            fontWeight: isCurrentWeek ? 'bold' : 'normal',
+                            fontWeight: isCurrentWeek ? "bold" : "normal",
                           },
                         ]}
                       >
@@ -937,17 +1004,19 @@ const SessionsScreen = () => {
                           styles.calendarWeekDate,
                           {
                             color: isSelectedWeek
-                              ? '#FFFFFF'
+                              ? "#FFFFFF"
                               : currentTheme.colors.textSecondary,
                           },
                         ]}
                       >
-                        {startOfWeek.toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })} - {endOfWeek.toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
+                        {startOfWeek.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}{" "}
+                        -{" "}
+                        {endOfWeek.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
                         })}
                       </Text>
                     </View>
@@ -959,7 +1028,7 @@ const SessionsScreen = () => {
                   </TouchableOpacity>
                 );
               })}
-              
+
               {!isProMember && (
                 <View style={styles.calendarProNotice}>
                   <Text
@@ -980,9 +1049,7 @@ const SessionsScreen = () => {
                       router.push("/subscription");
                     }}
                   >
-                    <Text style={styles.calendarProButtonText}>
-                      Get Pro
-                    </Text>
+                    <Text style={styles.calendarProButtonText}>Get Pro</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1498,6 +1565,68 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     textAlign: "center",
+  },
+
+  // Media Gallery Styles
+  mediaContainer: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: "#E0E0E0",
+  },
+  mediaTitle: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 10,
+  },
+  mediaScrollView: {
+    paddingVertical: 5,
+  },
+  mediaItem: {
+    marginRight: 10,
+    alignItems: "center",
+  },
+  mediaThumbnail: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  mediaOverlay: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    borderRadius: 6,
+    padding: 2,
+  },
+  mediaTypeIcon: {
+    fontSize: 12,
+  },
+  moreMediaItem: {
+    marginRight: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  moreMediaContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    borderStyle: "dashed",
+  },
+  moreMediaText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#666",
+  },
+  moreMediaSubtext: {
+    fontSize: 10,
+    color: "#666",
   },
 });
 
