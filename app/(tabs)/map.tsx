@@ -341,18 +341,11 @@ const MapScreen = () => {
 
                   // Only add if enough time has passed (500ms) or significant movement (2m)
                   if (timeDiff >= 500 || distance >= 2) {
-                    console.log("📍 Real-time tracking point added:", {
-                      lat: latitude.toFixed(6),
-                      lng: longitude.toFixed(6),
-                      accuracy: accuracy?.toFixed(1),
-                      speed: speed?.toFixed(1),
-                    });
                     return [...prev, trackingPoint];
                   }
                   return prev;
                 } else {
                   // First tracking point
-                  console.log("📍 First tracking point added");
                   return [trackingPoint];
                 }
               });
@@ -450,7 +443,7 @@ const MapScreen = () => {
           return Promise.resolve();
         })
         .then(() => {
-          console.log("🧹 Cleaned up background location tracking on unmount");
+          // Background location tracking cleaned up
         })
         .catch((error) => {
           console.error(
@@ -945,8 +938,6 @@ const MapScreen = () => {
       await Notifications.dismissNotificationAsync(
         TRACKING_NOTIFICATION_IDENTIFIER
       );
-
-      console.log("✅ Tracking notification stopped and dismissed");
     } catch (error) {
       console.error("Error stopping tracking notification:", error);
       const errorMessage =
@@ -1255,19 +1246,14 @@ const MapScreen = () => {
 
     try {
       // Request background location permission for continuous tracking
-      console.log("🔐 Requesting background location permission...");
       const { status } = await Location.requestBackgroundPermissionsAsync();
-      console.log("🔐 Background permission status:", status);
 
       if (status !== "granted") {
-        console.log("❌ Background location permission denied");
         showError(
           "Background location permission is required for continuous tracking when screen is off"
         );
         return;
       }
-
-      console.log("✅ Background location permission granted");
 
       const selectedHorseData = userHorses.find((h) => h.id === selectedHorse);
       const selectedTrainingData = trainingTypes.find(
@@ -1301,7 +1287,6 @@ const MapScreen = () => {
       await restartLocationWatcherForTracking();
 
       // Start background location tracking
-      console.log("📍 Starting background location tracking...");
 
       // Clear any existing tracking points in storage
       await AsyncStorage.removeItem("current_tracking_points");
@@ -1311,9 +1296,6 @@ const MapScreen = () => {
         LOCATION_TASK_NAME
       );
       if (isAlreadyRunning) {
-        console.log(
-          "⚠️ Background location task already running, stopping first..."
-        );
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
       }
 
@@ -1332,8 +1314,6 @@ const MapScreen = () => {
           notificationColor: "#4A90E2",
         },
       });
-
-      console.log("✅ Background location tracking started successfully");
 
       // Set up a timer to sync background data with the app state
       const syncInterval = setInterval(
@@ -1401,7 +1381,6 @@ const MapScreen = () => {
       trackingIntervalRef.current = syncInterval;
 
       // Start tracking notification
-      console.log("📱 Starting tracking notification...");
       await startTrackingNotification(
         startTime,
         selectedHorseData?.name || "Unknown Horse",
@@ -1424,11 +1403,9 @@ const MapScreen = () => {
 
     try {
       // Stop tracking notification first
-      console.log("📱 Stopping tracking notification...");
       await stopTrackingNotification();
 
       // Stop background location tracking
-      console.log("🛑 Stopping background location tracking...");
 
       // Check if the task is actually running before trying to stop it
       const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(
@@ -1436,9 +1413,6 @@ const MapScreen = () => {
       );
       if (isTaskRunning) {
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-        console.log("✅ Background location task stopped successfully");
-      } else {
-        console.log("ℹ️ Background location task was not running");
       }
 
       // Stop sync interval
@@ -1467,8 +1441,6 @@ const MapScreen = () => {
       // Clean up storage
       await AsyncStorage.removeItem("current_tracking_points");
 
-      console.log("✅ Background location tracking stopped successfully");
-
       const endTime = Date.now();
       const duration = Math.floor((endTime - sessionStartTime) / 1000); // Duration in seconds
       const totalDistance = calculateTotalDistance(trackingPoints);
@@ -1486,13 +1458,7 @@ const MapScreen = () => {
       const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0;
 
       // Analyze horse gaits from tracking data
-      console.log("🐎 Analyzing horse gaits...");
       const gaitAnalysis = analyzeGaits(trackingPoints);
-      console.log("✅ Gait analysis completed:", {
-        predominantGait: gaitAnalysis.predominantGait,
-        segments: gaitAnalysis.segments.length,
-        transitions: gaitAnalysis.transitionCount,
-      });
 
       const completedSession: TrainingSession = {
         ...currentSession,
@@ -1804,8 +1770,6 @@ const MapScreen = () => {
           );
           trackingIntervalRef.current = syncInterval;
         }
-
-        console.log(`✅ Tracking mode updated successfully`);
       } catch (error) {
         console.error("Error updating tracking mode:", error);
         // Revert the state if update failed
@@ -1868,21 +1832,12 @@ const MapScreen = () => {
                   timeDiff >= (highAccuracyMode ? 250 : 500) ||
                   distance >= 0.5
                 ) {
-                  console.log("🎯 High-speed tracking point:", {
-                    lat: latitude.toFixed(7),
-                    lng: longitude.toFixed(7),
-                    accuracy: accuracy?.toFixed(1),
-                    speed: speed?.toFixed(2),
-                    timeDiff: timeDiff,
-                    distance: distance.toFixed(1),
-                  });
                   // Update current gait based on new tracking point
                   updateCurrentGait(trackingPoint);
                   return [...prev, trackingPoint];
                 }
                 return prev;
               } else {
-                console.log("🎯 Starting high-speed tracking");
                 return [trackingPoint];
               }
             });
@@ -1890,7 +1845,6 @@ const MapScreen = () => {
         );
 
         locationSubscriptionRef.current = subscription;
-        console.log("🚀 High-speed location tracking activated");
       }
     } catch (error) {
       console.error("Failed to restart location watcher for tracking:", error);
