@@ -2,7 +2,7 @@
   "expo": {
     "name": "EquiHUB",
     "slug": "EquiHUB",
-    "version": "0.3.5",
+    "version": "0.3.6",
     "orientation": "portrait",
     "icon": "./assets/icons/512x512.png",
     "scheme": "equihub",
@@ -25,7 +25,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
-      "versionCode": 18,
+      "versionCode": 19,
       "permissions": [
         "INTERNET",
         "FOREGROUND_SERVICE",
@@ -35,7 +35,10 @@
         "ACCESS_BACKGROUND_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "WAKE_LOCK"
+        "WAKE_LOCK",
+        "POST_NOTIFICATIONS",
+        "SCHEDULE_EXACT_ALARM",
+        "USE_EXACT_ALARM"
       ],
       "config": {
         "googleMaps": {
@@ -45,7 +48,8 @@
       "foregroundService": {
         "notificationTitle": "EquiHUB GPS Tracking",
         "notificationBody": "Tracking your riding session",
-        "notificationColor": "#4A90E2"
+        "notificationColor": "#4A90E2",
+        "killServiceOnDestroy": false
       }
     },
     "web": {
@@ -63,7 +67,9 @@
           "locationWhenInUsePermission": "This app needs location access to track your riding routes and show your position on the map."
         }
       ],
-      ["expo-task-manager"],
+      [
+        "expo-task-manager"
+      ],
       "expo-font",
       [
         "expo-notifications",

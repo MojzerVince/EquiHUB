@@ -14,6 +14,8 @@ import {
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
+import { HorseAPI } from "../lib/horseAPI";
+import { Horse } from "../lib/supabase";
 
 // Media item interface
 interface MediaItem {
@@ -25,6 +27,38 @@ interface MediaItem {
     latitude: number;
     longitude: number;
   };
+}
+
+interface GaitSegment {
+  gait: "walk" | "trot" | "canter" | "gallop" | "halt";
+  startTime: number;
+  endTime: number;
+  duration: number; // in seconds
+  distance: number; // in meters
+  averageSpeed: number; // in m/s
+  startIndex: number; // index in path array
+  endIndex: number; // index in path array
+}
+
+interface GaitAnalysis {
+  totalDuration: number;
+  gaitDurations: {
+    walk: number;
+    trot: number;
+    canter: number;
+    gallop: number;
+    halt: number;
+  };
+  gaitPercentages: {
+    walk: number;
+    trot: number;
+    canter: number;
+    gallop: number;
+    halt: number;
+  };
+  segments: GaitSegment[];
+  transitionCount: number;
+  predominantGait: "walk" | "trot" | "canter" | "gallop" | "halt";
 }
 
 interface TrainingSession {
@@ -47,6 +81,7 @@ interface TrainingSession {
   averageSpeed?: number;
   maxSpeed?: number;
   media?: MediaItem[]; // Photos and videos taken during session
+  gaitAnalysis?: GaitAnalysis; // Horse gait analysis
 }
 
 const SessionDetailsScreen = () => {
@@ -54,6 +89,7 @@ const SessionDetailsScreen = () => {
   const router = useRouter();
   const { currentTheme } = useTheme();
   const [session, setSession] = useState<TrainingSession | null>(null);
+  const [horse, setHorse] = useState<Horse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -68,6 +104,18 @@ const SessionDetailsScreen = () => {
         const sessions: TrainingSession[] = JSON.parse(savedSessions);
         const found = sessions.find((s) => s.id === sessionId);
         setSession(found || null);
+
+        // Load horse data if session is found
+        if (found && found.horseId) {
+          try {
+            const horses = await HorseAPI.getHorses(found.userId);
+            const sessionHorse = horses?.find((h) => h.id === found.horseId);
+            setHorse(sessionHorse || null);
+          } catch (error) {
+            console.error("Error loading horse data:", error);
+            setHorse(null);
+          }
+        }
       }
     } catch (error) {
       console.error("Error loading session:", error);
@@ -99,6 +147,49 @@ const SessionDetailsScreen = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const getGaitEmoji = (gait: string): string => {
+    switch (gait) {
+      case "walk":
+        return "🚶";
+      case "trot":
+        return "🏃";
+      case "canter":
+        return "🏇";
+      case "gallop":
+        return "🏇💨";
+      case "halt":
+        return "⏹️";
+      default:
+        return "🐎";
+    }
+  };
+
+  const getGaitColor = (gait: string): string => {
+    switch (gait) {
+      case "walk":
+        return "#4CAF50";
+      case "trot":
+        return "#FF9800";
+      case "canter":
+        return "#F44336";
+      case "gallop":
+        return "#9C27B0";
+      case "halt":
+        return "#757575";
+      default:
+        return "#335C67";
+    }
+  };
+
+  const formatGaitDuration = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    if (minutes > 0) {
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+    return `${remainingSeconds}s`;
   };
 
   const getMapRegion = () => {
@@ -272,7 +363,15 @@ const SessionDetailsScreen = () => {
                 { backgroundColor: currentTheme.colors.primary },
               ]}
             >
-              <Text style={styles.sessionIcon}>🏇</Text>
+              {horse && horse.image_url ? (
+                <Image
+                  source={{ uri: horse.image_url }}
+                  style={styles.horseImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.sessionIcon}>🐎</Text>
+              )}
             </View>
             <Text
               style={[styles.sessionTitle, { color: currentTheme.colors.text }]}
@@ -438,6 +537,207 @@ const SessionDetailsScreen = () => {
               </View>
             </View>
           </View>
+
+          {/* Gait Analysis */}
+          {session.gaitAnalysis && (
+            <View
+              style={[
+                styles.gaitCard,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
+              <Text
+                style={[styles.gaitTitle, { color: currentTheme.colors.text }]}
+              >
+                🐎 Gait Analysis
+              </Text>
+
+              {/* Gait Summary */}
+              <View style={styles.gaitSummary}>
+                <View style={styles.gaitSummaryItem}>
+                  <Text
+                    style={[
+                      styles.gaitSummaryLabel,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Predominant Gait
+                  </Text>
+                  <View style={styles.gaitSummaryValue}>
+                    <Text style={styles.gaitEmoji}>
+                      {getGaitEmoji(session.gaitAnalysis.predominantGait)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.gaitSummaryText,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      {session.gaitAnalysis.predominantGait
+                        .charAt(0)
+                        .toUpperCase() +
+                        session.gaitAnalysis.predominantGait.slice(1)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.gaitSummaryItem}>
+                  <Text
+                    style={[
+                      styles.gaitSummaryLabel,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Transitions
+                  </Text>
+                  <Text
+                    style={[
+                      styles.gaitSummaryText,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    {session.gaitAnalysis.transitionCount}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Gait Breakdown */}
+              <View style={styles.gaitBreakdown}>
+                <Text
+                  style={[
+                    styles.gaitBreakdownTitle,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Time Distribution
+                </Text>
+                {Object.entries(session.gaitAnalysis.gaitPercentages).map(
+                  ([gait, percentage]) =>
+                    percentage > 0 && (
+                      <View key={gait} style={styles.gaitBreakdownItem}>
+                        <View style={styles.gaitBreakdownHeader}>
+                          <View style={styles.gaitBreakdownLabelContainer}>
+                            <Text style={styles.gaitBreakdownEmoji}>
+                              {getGaitEmoji(gait)}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.gaitBreakdownLabel,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              {gait.charAt(0).toUpperCase() + gait.slice(1)}
+                            </Text>
+                          </View>
+                          <View style={styles.gaitBreakdownStats}>
+                            <Text
+                              style={[
+                                styles.gaitBreakdownPercentage,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              {percentage.toFixed(1)}%
+                            </Text>
+                            <Text
+                              style={[
+                                styles.gaitBreakdownDuration,
+                                { color: currentTheme.colors.textSecondary },
+                              ]}
+                            >
+                              (
+                              {formatGaitDuration(
+                                session.gaitAnalysis?.gaitDurations[
+                                  gait as keyof typeof session.gaitAnalysis.gaitDurations
+                                ] || 0
+                              )}
+                              )
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.gaitProgressBarContainer}>
+                          <View
+                            style={[
+                              styles.gaitProgressBar,
+                              {
+                                width: `${percentage}%`,
+                                backgroundColor: getGaitColor(gait),
+                              },
+                            ]}
+                          />
+                        </View>
+                      </View>
+                    )
+                )}
+              </View>
+
+              {/* Gait Segments */}
+              {session.gaitAnalysis.segments.length > 0 && (
+                <View style={styles.gaitSegments}>
+                  <Text
+                    style={[
+                      styles.gaitSegmentsTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Session Timeline ({session.gaitAnalysis.segments.length}{" "}
+                    segments)
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    style={styles.gaitSegmentsScroll}
+                    showsHorizontalScrollIndicator={false}
+                  >
+                    {session.gaitAnalysis.segments.map((segment, index) => (
+                      <View
+                        key={index}
+                        style={[
+                          styles.gaitSegmentItem,
+                          { borderLeftColor: getGaitColor(segment.gait) },
+                        ]}
+                      >
+                        <Text style={styles.gaitSegmentEmoji}>
+                          {getGaitEmoji(segment.gait)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.gaitSegmentGait,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          {segment.gait.charAt(0).toUpperCase() +
+                            segment.gait.slice(1)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.gaitSegmentDuration,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          {formatGaitDuration(segment.duration)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.gaitSegmentDistance,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          {(segment.distance / 1000).toFixed(2)} km
+                        </Text>
+                        <Text
+                          style={[
+                            styles.gaitSegmentSpeed,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          {(segment.averageSpeed * 3.6).toFixed(1)} km/h
+                        </Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Media Gallery */}
           {session.media && session.media.length > 0 && (
@@ -704,6 +1004,11 @@ const styles = StyleSheet.create({
   sessionIcon: {
     fontSize: 40,
   },
+  horseImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+  },
   sessionTitle: {
     fontSize: 24,
     fontFamily: "Inder",
@@ -892,6 +1197,172 @@ const styles = StyleSheet.create({
   },
   mediaTime: {
     fontSize: 12,
+    fontFamily: "Inder",
+    textAlign: "center",
+  },
+
+  // Gait Analysis Styles
+  gaitCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  gaitTitle: {
+    fontSize: 20,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  gaitSummary: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: 25,
+    padding: 15,
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+  },
+  gaitSummaryItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  gaitSummaryLabel: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    textTransform: "uppercase",
+    fontWeight: "500",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  gaitSummaryValue: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  gaitEmoji: {
+    fontSize: 24,
+    marginRight: 8,
+  },
+  gaitSummaryText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  gaitBreakdown: {
+    marginBottom: 25,
+  },
+  gaitBreakdownTitle: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  gaitBreakdownItem: {
+    marginBottom: 15,
+  },
+  gaitBreakdownHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  gaitBreakdownLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  gaitBreakdownEmoji: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  gaitBreakdownLabel: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "500",
+  },
+  gaitBreakdownStats: {
+    alignItems: "flex-end",
+  },
+  gaitBreakdownPercentage: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  gaitBreakdownDuration: {
+    fontSize: 12,
+    fontFamily: "Inder",
+  },
+  gaitProgressBarContainer: {
+    height: 6,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  gaitProgressBar: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  gaitSegments: {
+    marginTop: 10,
+  },
+  gaitSegmentsTitle: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  gaitSegmentsScroll: {
+    paddingVertical: 10,
+  },
+  gaitSegmentItem: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 12,
+    minWidth: 100,
+    alignItems: "center",
+    borderLeftWidth: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  gaitSegmentEmoji: {
+    fontSize: 24,
+    marginBottom: 6,
+  },
+  gaitSegmentGait: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  gaitSegmentDuration: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  gaitSegmentDistance: {
+    fontSize: 11,
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  gaitSegmentSpeed: {
+    fontSize: 11,
     fontFamily: "Inder",
     textAlign: "center",
   },

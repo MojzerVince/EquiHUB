@@ -50,6 +50,38 @@ interface MediaItem {
   };
 }
 
+interface GaitSegment {
+  gait: "walk" | "trot" | "canter" | "gallop" | "halt";
+  startTime: number;
+  endTime: number;
+  duration: number; // in seconds
+  distance: number; // in meters
+  averageSpeed: number; // in m/s
+  startIndex: number; // index in path array
+  endIndex: number; // index in path array
+}
+
+interface GaitAnalysis {
+  totalDuration: number;
+  gaitDurations: {
+    walk: number;
+    trot: number;
+    canter: number;
+    gallop: number;
+    halt: number;
+  };
+  gaitPercentages: {
+    walk: number;
+    trot: number;
+    canter: number;
+    gallop: number;
+    halt: number;
+  };
+  segments: GaitSegment[];
+  transitionCount: number;
+  predominantGait: "walk" | "trot" | "canter" | "gallop" | "halt";
+}
+
 interface TrainingSession {
   id: string;
   userId: string;
@@ -64,6 +96,7 @@ interface TrainingSession {
   averageSpeed?: number; // in m/s
   maxSpeed?: number; // in m/s
   media?: MediaItem[]; // Photos and videos taken during session
+  gaitAnalysis?: GaitAnalysis; // Horse gait analysis
 }
 
 interface PublishedTrail {
@@ -148,7 +181,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
 const MapScreen = () => {
   const { currentTheme } = useTheme();
-  const { showError } = useDialog();
+  const { showError, showDialog } = useDialog();
   const { user } = useAuth();
   const router = useRouter();
   const [region, setRegion] = useState<Region>({
@@ -210,6 +243,11 @@ const MapScreen = () => {
   const [publishedTrails, setPublishedTrails] = useState<PublishedTrail[]>([]);
   const [trailsLoading, setTrailsLoading] = useState<boolean>(false);
 
+  // Real-time gait detection state
+  const [currentGait, setCurrentGait] = useState<
+    "walk" | "trot" | "canter" | "gallop" | "halt"
+  >("halt");
+
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
   );
@@ -254,7 +292,7 @@ const MapScreen = () => {
         const subscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: 500, // Update every 500ms for maximum responsiveness
+            timeInterval: 1000, // Update every 1s for general location monitoring
             distanceInterval: 1, // Update every 1 meter movement
           },
           (location) => {
@@ -303,18 +341,11 @@ const MapScreen = () => {
 
                   // Only add if enough time has passed (500ms) or significant movement (2m)
                   if (timeDiff >= 500 || distance >= 2) {
-                    console.log("📍 Real-time tracking point added:", {
-                      lat: latitude.toFixed(6),
-                      lng: longitude.toFixed(6),
-                      accuracy: accuracy?.toFixed(1),
-                      speed: speed?.toFixed(1),
-                    });
                     return [...prev, trackingPoint];
                   }
                   return prev;
                 } else {
                   // First tracking point
-                  console.log("📍 First tracking point added");
                   return [trackingPoint];
                 }
               });
@@ -412,7 +443,7 @@ const MapScreen = () => {
           return Promise.resolve();
         })
         .then(() => {
-          console.log("🧹 Cleaned up background location tracking on unmount");
+          // Background location tracking cleaned up
         })
         .catch((error) => {
           console.error(
@@ -551,6 +582,225 @@ const MapScreen = () => {
     return totalDistance;
   };
 
+  // Horse gait detection based on speed
+  const detectGaitFromSpeed = (
+    speedMs: number
+  ): "walk" | "trot" | "canter" | "gallop" | "halt" => {
+    // Convert m/s to km/h for easier understanding
+    const speedKmh = speedMs * 3.6;
+
+    // Horse gait speed ranges (in km/h):
+    // Halt: 0-2 km/h
+    // Walk: 2-8 km/h
+    // Trot: 8-16 km/h
+    // Canter: 16-25 km/h
+    // Gallop: 25+ km/h
+
+    if (speedKmh < 2) return "halt";
+    if (speedKmh < 8) return "walk";
+    if (speedKmh < 16) return "trot";
+    if (speedKmh < 25) return "canter";
+    return "gallop";
+  };
+
+  // Smooth speed data to reduce GPS noise
+  const smoothSpeeds = (
+    points: TrackingPoint[],
+    windowSize: number = 5
+  ): number[] => {
+    const speeds: number[] = [];
+
+    for (let i = 0; i < points.length; i++) {
+      if (i === 0) {
+        speeds.push(points[i].speed || 0);
+        continue;
+      }
+
+      // Calculate speed from GPS points if not provided
+      let speed = points[i].speed;
+      if (!speed) {
+        const distance = calculateDistance(
+          points[i - 1].latitude,
+          points[i - 1].longitude,
+          points[i].latitude,
+          points[i].longitude
+        );
+        const timeDiff = (points[i].timestamp - points[i - 1].timestamp) / 1000; // seconds
+        speed = timeDiff > 0 ? distance / timeDiff : 0;
+      }
+
+      // Apply moving average smoothing
+      const startIdx = Math.max(0, i - Math.floor(windowSize / 2));
+      const endIdx = Math.min(
+        points.length - 1,
+        i + Math.floor(windowSize / 2)
+      );
+      let sumSpeed = 0;
+      let count = 0;
+
+      for (let j = startIdx; j <= endIdx; j++) {
+        const pointSpeed = j === 0 ? points[j].speed || 0 : speeds[j] || speed;
+        sumSpeed += pointSpeed;
+        count++;
+      }
+
+      speeds.push(count > 0 ? sumSpeed / count : speed);
+    }
+
+    return speeds;
+  };
+
+  // Analyze horse gaits from tracking data
+  const analyzeGaits = (points: TrackingPoint[]): GaitAnalysis => {
+    if (points.length < 2) {
+      return {
+        totalDuration: 0,
+        gaitDurations: { walk: 0, trot: 0, canter: 0, gallop: 0, halt: 0 },
+        gaitPercentages: { walk: 0, trot: 0, canter: 0, gallop: 0, halt: 0 },
+        segments: [],
+        transitionCount: 0,
+        predominantGait: "halt",
+      };
+    }
+
+    const smoothedSpeeds = smoothSpeeds(points);
+    const segments: GaitSegment[] = [];
+    const gaitDurations = { walk: 0, trot: 0, canter: 0, gallop: 0, halt: 0 };
+
+    let currentGait = detectGaitFromSpeed(smoothedSpeeds[0]);
+    let segmentStartIndex = 0;
+    let segmentStartTime = points[0].timestamp;
+    let transitionCount = 0;
+
+    // Minimum segment duration (3 seconds) to filter out noise
+    const minSegmentDuration = 3000; // milliseconds
+
+    for (let i = 1; i < points.length; i++) {
+      const detectedGait = detectGaitFromSpeed(smoothedSpeeds[i]);
+
+      // Check for gait change
+      if (detectedGait !== currentGait) {
+        const segmentDuration = points[i].timestamp - segmentStartTime;
+
+        // Only create segment if it meets minimum duration
+        if (segmentDuration >= minSegmentDuration) {
+          const segmentDistance = calculateTotalDistance(
+            points.slice(segmentStartIndex, i + 1)
+          );
+          const avgSpeed =
+            segmentDuration > 0
+              ? segmentDistance / (segmentDuration / 1000)
+              : 0;
+
+          segments.push({
+            gait: currentGait,
+            startTime: segmentStartTime,
+            endTime: points[i].timestamp,
+            duration: segmentDuration / 1000, // convert to seconds
+            distance: segmentDistance,
+            averageSpeed: avgSpeed,
+            startIndex: segmentStartIndex,
+            endIndex: i,
+          });
+
+          gaitDurations[currentGait] += segmentDuration / 1000;
+          transitionCount++;
+
+          // Start new segment
+          currentGait = detectedGait;
+          segmentStartIndex = i;
+          segmentStartTime = points[i].timestamp;
+        } else {
+          // Segment too short, continue with current gait
+          currentGait = detectedGait;
+        }
+      }
+    }
+
+    // Add final segment
+    const finalDuration =
+      points[points.length - 1].timestamp - segmentStartTime;
+    if (finalDuration >= minSegmentDuration) {
+      const segmentDistance = calculateTotalDistance(
+        points.slice(segmentStartIndex)
+      );
+      const avgSpeed =
+        finalDuration > 0 ? segmentDistance / (finalDuration / 1000) : 0;
+
+      segments.push({
+        gait: currentGait,
+        startTime: segmentStartTime,
+        endTime: points[points.length - 1].timestamp,
+        duration: finalDuration / 1000,
+        distance: segmentDistance,
+        averageSpeed: avgSpeed,
+        startIndex: segmentStartIndex,
+        endIndex: points.length - 1,
+      });
+
+      gaitDurations[currentGait] += finalDuration / 1000;
+    }
+
+    const totalDuration = Object.values(gaitDurations).reduce(
+      (sum, duration) => sum + duration,
+      0
+    );
+
+    // Calculate percentages
+    const gaitPercentages = {
+      walk: totalDuration > 0 ? (gaitDurations.walk / totalDuration) * 100 : 0,
+      trot: totalDuration > 0 ? (gaitDurations.trot / totalDuration) * 100 : 0,
+      canter:
+        totalDuration > 0 ? (gaitDurations.canter / totalDuration) * 100 : 0,
+      gallop:
+        totalDuration > 0 ? (gaitDurations.gallop / totalDuration) * 100 : 0,
+      halt: totalDuration > 0 ? (gaitDurations.halt / totalDuration) * 100 : 0,
+    };
+
+    // Find predominant gait
+    const predominantGait = Object.entries(gaitDurations).reduce((a, b) =>
+      gaitDurations[a[0] as keyof typeof gaitDurations] >
+      gaitDurations[b[0] as keyof typeof gaitDurations]
+        ? a
+        : b
+    )[0] as "walk" | "trot" | "canter" | "gallop" | "halt";
+
+    return {
+      totalDuration,
+      gaitDurations,
+      gaitPercentages,
+      segments,
+      transitionCount: Math.max(0, transitionCount - 1), // Subtract 1 as we count segment starts
+      predominantGait,
+    };
+  };
+
+  // Update current gait based on latest tracking point
+  const updateCurrentGait = (newPoint: TrackingPoint) => {
+    if (isTracking && newPoint.speed !== undefined) {
+      const detectedGait = detectGaitFromSpeed(newPoint.speed);
+      setCurrentGait(detectedGait);
+    }
+  };
+
+  // Get gait emoji for display
+  const getGaitEmoji = (gait: string): string => {
+    switch (gait) {
+      case "walk":
+        return "🚶";
+      case "trot":
+        return "🏃";
+      case "canter":
+        return "🏇";
+      case "gallop":
+        return "🏇💨";
+      case "halt":
+        return "⏹️";
+      default:
+        return "🐎";
+    }
+  };
+
   // Save session to AsyncStorage
   const saveSessionToStorage = async (session: TrainingSession) => {
     try {
@@ -563,6 +813,26 @@ const MapScreen = () => {
       await AsyncStorage.setItem("training_sessions", JSON.stringify(sessions));
     } catch (error) {
       throw error;
+    }
+  };
+
+  // Setup tracking notification channel
+  const setupTrackingNotificationChannel = async () => {
+    try {
+      await Notifications.setNotificationChannelAsync("tracking", {
+        name: "GPS Tracking",
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0], // No vibration
+        lightColor: "#4A90E2",
+        sound: null, // Silent notifications
+        enableLights: true,
+        enableVibrate: false,
+        showBadge: false,
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+    } catch (error) {
+      console.error("Error setting up notification channel:", error);
     }
   };
 
@@ -601,33 +871,31 @@ const MapScreen = () => {
               .padStart(2, "0")}`
           : `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
-      const notificationContent = {
-        title: "🐎 GPS Tracking Active",
-        body: `${horseName} • ${trainingType}\nElapsed time: ${timeString}`,
-        data: {
-          type: "tracking",
-          startTime,
-          horseName,
-          trainingType,
+      // Use scheduleNotificationAsync with the same identifier to update in place
+      // The channel settings will make it silent
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "🐎 GPS Tracking Active",
+          body: `${horseName} • ${trainingType}\nElapsed time: ${timeString}`,
+          data: {
+            type: "tracking",
+            startTime,
+            horseName,
+            trainingType,
+          },
+          sound: false,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          sticky: true,
         },
-        categoryIdentifier: "tracking",
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-        sticky: true,
-      };
-
-      if (notificationId) {
-        // Update existing notification
-        await Notifications.dismissNotificationAsync(notificationId);
-      }
-
-      const identifier = await Notifications.scheduleNotificationAsync({
-        content: notificationContent,
-        trigger: null, // Show immediately
-        identifier: TRACKING_NOTIFICATION_IDENTIFIER,
+        trigger: null,
+        identifier: TRACKING_NOTIFICATION_IDENTIFIER, // Always same identifier
       });
 
-      setNotificationId(identifier);
-      return identifier;
+      // Only set notificationId if it's not already set
+      if (!notificationId) {
+        setNotificationId(TRACKING_NOTIFICATION_IDENTIFIER);
+      }
+      return TRACKING_NOTIFICATION_IDENTIFIER;
     } catch (error) {
       console.error("Error updating tracking notification:", error);
       // Show user-facing error for notification issues
@@ -652,6 +920,9 @@ const MapScreen = () => {
       console.warn("Cannot show tracking notifications - permissions denied");
       return;
     }
+
+    // Setup notification channel for silent, persistent notifications
+    await setupTrackingNotificationChannel();
 
     // Show initial notification
     const initialNotificationId = await updateTrackingNotification(
@@ -688,8 +959,6 @@ const MapScreen = () => {
       await Notifications.dismissNotificationAsync(
         TRACKING_NOTIFICATION_IDENTIFIER
       );
-
-      console.log("✅ Tracking notification stopped and dismissed");
     } catch (error) {
       console.error("Error stopping tracking notification:", error);
       const errorMessage =
@@ -998,19 +1267,14 @@ const MapScreen = () => {
 
     try {
       // Request background location permission for continuous tracking
-      console.log("🔐 Requesting background location permission...");
       const { status } = await Location.requestBackgroundPermissionsAsync();
-      console.log("🔐 Background permission status:", status);
 
       if (status !== "granted") {
-        console.log("❌ Background location permission denied");
         showError(
           "Background location permission is required for continuous tracking when screen is off"
         );
         return;
       }
-
-      console.log("✅ Background location permission granted");
 
       const selectedHorseData = userHorses.find((h) => h.id === selectedHorse);
       const selectedTrainingData = trainingTypes.find(
@@ -1038,12 +1302,12 @@ const MapScreen = () => {
       setCurrentTime(startTime); // Initialize currentTime to the same value as startTime
       setTrackingPoints([]);
       setSessionMedia([]); // Initialize empty media array for the session
+      setCurrentGait("halt"); // Reset gait to halt at session start
 
       // Restart location watcher with optimized settings for tracking
       await restartLocationWatcherForTracking();
 
       // Start background location tracking
-      console.log("📍 Starting background location tracking...");
 
       // Clear any existing tracking points in storage
       await AsyncStorage.removeItem("current_tracking_points");
@@ -1053,29 +1317,25 @@ const MapScreen = () => {
         LOCATION_TASK_NAME
       );
       if (isAlreadyRunning) {
-        console.log(
-          "⚠️ Background location task already running, stopping first..."
-        );
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
       }
 
       // Start background location tracking
+      console.log(
+        `🚀 Starting background tracking with highAccuracyMode: ${highAccuracyMode}`
+      );
       await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
         accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: highAccuracyMode ? 250 : 1000, // Update every 250ms in high accuracy mode, 1 second otherwise
+        timeInterval: highAccuracyMode ? 250 : 1000, // Ultra-fast in high accuracy, 1s in normal
         distanceInterval: 1, // Update every 1 meter movement
-        deferredUpdatesInterval: highAccuracyMode ? 250 : 1000,
-        showsBackgroundLocationIndicator: true,
+        deferredUpdatesInterval: highAccuracyMode ? 250 : 1000, // Match timeInterval
+        showsBackgroundLocationIndicator: false, // Hide the background indicator
         foregroundService: {
-          notificationTitle: "EquiHUB GPS Tracking",
-          notificationBody: highAccuracyMode
-            ? "Ultra-high accuracy tracking active"
-            : "High precision tracking active",
+          notificationTitle: "🐎 EquiHUB",
+          notificationBody: "GPS tracking in background",
           notificationColor: "#4A90E2",
         },
       });
-
-      console.log("✅ Background location tracking started successfully");
 
       // Set up a timer to sync background data with the app state
       const syncInterval = setInterval(
@@ -1117,6 +1377,9 @@ const MapScreen = () => {
                       longitude: latestPoint.longitude,
                     });
 
+                    // Update current gait based on latest point
+                    updateCurrentGait(latestPoint);
+
                     // Update GPS strength
                     const strength = calculateGpsStrength(latestPoint.accuracy);
                     setGpsStrength(strength);
@@ -1133,14 +1396,13 @@ const MapScreen = () => {
             console.error("Error syncing background data:", error);
           }
         },
-        highAccuracyMode ? 500 : 1000
-      ); // Sync every 500ms in high accuracy mode, 1 second otherwise
+        highAccuracyMode ? 250 : 1000
+      ); // Sync every 250ms in high accuracy mode, 1s in normal mode
 
       // Store the sync interval reference for cleanup
       trackingIntervalRef.current = syncInterval;
 
       // Start tracking notification
-      console.log("📱 Starting tracking notification...");
       await startTrackingNotification(
         startTime,
         selectedHorseData?.name || "Unknown Horse",
@@ -1163,11 +1425,9 @@ const MapScreen = () => {
 
     try {
       // Stop tracking notification first
-      console.log("📱 Stopping tracking notification...");
       await stopTrackingNotification();
 
       // Stop background location tracking
-      console.log("🛑 Stopping background location tracking...");
 
       // Check if the task is actually running before trying to stop it
       const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(
@@ -1175,9 +1435,6 @@ const MapScreen = () => {
       );
       if (isTaskRunning) {
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-        console.log("✅ Background location task stopped successfully");
-      } else {
-        console.log("ℹ️ Background location task was not running");
       }
 
       // Stop sync interval
@@ -1206,8 +1463,6 @@ const MapScreen = () => {
       // Clean up storage
       await AsyncStorage.removeItem("current_tracking_points");
 
-      console.log("✅ Background location tracking stopped successfully");
-
       const endTime = Date.now();
       const duration = Math.floor((endTime - sessionStartTime) / 1000); // Duration in seconds
       const totalDistance = calculateTotalDistance(trackingPoints);
@@ -1224,6 +1479,9 @@ const MapScreen = () => {
 
       const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0;
 
+      // Analyze horse gaits from tracking data
+      const gaitAnalysis = analyzeGaits(trackingPoints);
+
       const completedSession: TrainingSession = {
         ...currentSession,
         endTime,
@@ -1233,6 +1491,7 @@ const MapScreen = () => {
         averageSpeed,
         maxSpeed,
         media: sessionMedia, // Include captured media
+        gaitAnalysis, // Include gait analysis
       };
 
       // Save session to storage
@@ -1244,32 +1503,43 @@ const MapScreen = () => {
       setSessionStartTime(null);
       setTrackingPoints([]);
       setSessionMedia([]); // Reset media array
+      setCurrentGait("halt"); // Reset gait when tracking stops
 
       // Restart location watcher with normal settings
       await startLocationWatcher();
 
-      // Show completion alert
-      Alert.alert(
-        "Session Completed",
-        `Training session completed!\n\nDuration: ${Math.floor(
-          duration / 60
-        )}m ${duration % 60}s\nDistance: ${(totalDistance / 1000).toFixed(
-          2
-        )} km\nAverage Speed: ${(averageSpeed * 3.6).toFixed(1)} km/h`,
-        [
+      // Show custom completion dialog
+      const durationMinutes = Math.floor(duration / 60);
+      const durationSeconds = duration % 60;
+      const distanceKm = (totalDistance / 1000).toFixed(2);
+      const avgSpeedKmh = (averageSpeed * 3.6).toFixed(1);
+      const predominantGaitName =
+        gaitAnalysis.predominantGait.charAt(0).toUpperCase() +
+        gaitAnalysis.predominantGait.slice(1);
+
+      showDialog({
+        title: "🎉 Session Completed!",
+        message: `Congratulations! Your training session with ${completedSession.horseName} has been successfully completed.\n\n📊 Session Summary:\n• Duration: ${durationMinutes}m ${durationSeconds}s\n• Distance: ${distanceKm} km\n• Average Speed: ${avgSpeedKmh} km/h\n• Predominant Gait: ${predominantGaitName}\n• Gait Transitions: ${gaitAnalysis.transitionCount}`,
+        buttons: [
           {
             text: "View Details",
-            onPress: () =>
+            style: "default",
+            onPress: () => {
               router.push({
                 pathname: "/session-details",
                 params: { sessionId: completedSession.id },
-              }),
+              });
+            },
           },
           {
             text: "Back to Map",
+            style: "cancel",
+            onPress: () => {
+              // Just close the dialog
+            },
           },
-        ]
-      );
+        ],
+      });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -1433,6 +1703,125 @@ const MapScreen = () => {
     }
   };
 
+  // Update high accuracy mode and restart tracking if active
+  const updateHighAccuracyMode = async (newMode: boolean) => {
+    const previousMode = highAccuracyMode;
+    console.log(
+      `🔄 updateHighAccuracyMode called: ${previousMode} → ${newMode}, isTracking: ${isTracking}`
+    );
+    setHighAccuracyMode(newMode);
+
+    // If tracking is active, restart both background and foreground tracking with new settings
+    if (isTracking) {
+      try {
+        console.log(
+          `🔄 Updating tracking mode: ${previousMode ? "High" : "Normal"} → ${
+            newMode ? "High" : "Normal"
+          } Accuracy`
+        );
+
+        // Restart foreground tracking
+        await restartLocationWatcherForTracking();
+
+        // Restart background tracking
+        const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(
+          LOCATION_TASK_NAME
+        );
+        if (isTaskRunning) {
+          await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+
+          // Restart with new settings
+          await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: newMode ? 250 : 1000,
+            distanceInterval: 1,
+            deferredUpdatesInterval: newMode ? 250 : 1000,
+            showsBackgroundLocationIndicator: false, // Hide the background indicator
+            foregroundService: {
+              notificationTitle: "🐎 EquiHUB",
+              notificationBody: "GPS tracking in background",
+              notificationColor: "#4A90E2",
+            },
+          });
+        }
+
+        // Restart sync interval with new timing
+        if (trackingIntervalRef.current) {
+          clearInterval(trackingIntervalRef.current);
+          const syncInterval = setInterval(
+            async () => {
+              try {
+                const isStillRunning =
+                  await Location.hasStartedLocationUpdatesAsync(
+                    LOCATION_TASK_NAME
+                  );
+                if (!isStillRunning) {
+                  console.warn(
+                    "⚠️ Background location task stopped unexpectedly"
+                  );
+                  return;
+                }
+
+                const backgroundData = await AsyncStorage.getItem(
+                  "current_tracking_points"
+                );
+                if (backgroundData) {
+                  const backgroundPoints = JSON.parse(backgroundData);
+                  if (backgroundPoints.length > 0) {
+                    setTrackingPoints((prev) => {
+                      const existingTimestamps = new Set(
+                        prev.map((p) => p.timestamp)
+                      );
+                      const newPoints = backgroundPoints.filter(
+                        (p: TrackingPoint) =>
+                          !existingTimestamps.has(p.timestamp)
+                      );
+
+                      if (newPoints.length > 0) {
+                        const latestPoint = newPoints[newPoints.length - 1];
+                        setUserLocation({
+                          latitude: latestPoint.latitude,
+                          longitude: latestPoint.longitude,
+                        });
+                        updateCurrentGait(latestPoint);
+                        return [...prev, ...newPoints];
+                      }
+                      return prev;
+                    });
+                  }
+                }
+              } catch (error) {
+                console.error("Error syncing background data:", error);
+              }
+            },
+            newMode ? 250 : 1000
+          );
+          trackingIntervalRef.current = syncInterval;
+        }
+      } catch (error) {
+        console.error("Error updating tracking mode:", error);
+        // Revert the state if update failed
+        setHighAccuracyMode(previousMode);
+      }
+    }
+
+    // Show notification when ultra-fast mode is enabled (whether tracking or not)
+    if (newMode && !previousMode) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "⚡ Ultra-Fast GPS Enabled",
+          body: isTracking
+            ? "Ultra-high precision tracking is now active. Battery usage will increase."
+            : "Ultra-fast GPS is ready. Start tracking for maximum precision.",
+          sound: false,
+          priority: Notifications.AndroidNotificationPriority.DEFAULT,
+        },
+        trigger: null,
+        identifier: "ultra-fast-gps-enabled",
+      });
+    }
+  };
+
   // Restart location watcher with optimized settings for tracking
   const restartLocationWatcherForTracking = async () => {
     try {
@@ -1448,7 +1837,7 @@ const MapScreen = () => {
         const subscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: highAccuracyMode ? 250 : 500, // Ultra-fast updates during tracking
+            timeInterval: highAccuracyMode ? 250 : 1000, // Ultra-fast updates during tracking
             distanceInterval: 0.5, // Update every 0.5 meters during tracking
           },
           (location) => {
@@ -1487,19 +1876,12 @@ const MapScreen = () => {
                   timeDiff >= (highAccuracyMode ? 250 : 500) ||
                   distance >= 0.5
                 ) {
-                  console.log("🎯 High-speed tracking point:", {
-                    lat: latitude.toFixed(7),
-                    lng: longitude.toFixed(7),
-                    accuracy: accuracy?.toFixed(1),
-                    speed: speed?.toFixed(2),
-                    timeDiff: timeDiff,
-                    distance: distance.toFixed(1),
-                  });
+                  // Update current gait based on new tracking point
+                  updateCurrentGait(trackingPoint);
                   return [...prev, trackingPoint];
                 }
                 return prev;
               } else {
-                console.log("🎯 Starting high-speed tracking");
                 return [trackingPoint];
               }
             });
@@ -1507,7 +1889,6 @@ const MapScreen = () => {
         );
 
         locationSubscriptionRef.current = subscription;
-        console.log("🚀 High-speed location tracking activated");
       }
     } catch (error) {
       console.error("Failed to restart location watcher for tracking:", error);
@@ -2233,8 +2614,7 @@ const MapScreen = () => {
                             : currentTheme.colors.border,
                         },
                       ]}
-                      onPress={() => setHighAccuracyMode(!highAccuracyMode)}
-                      disabled={isTracking}
+                      onPress={() => updateHighAccuracyMode(!highAccuracyMode)}
                       activeOpacity={0.8}
                     >
                       <View
@@ -2352,6 +2732,30 @@ const MapScreen = () => {
                         ).toFixed(2)}{" "}
                         km
                       </Text>
+                    </View>
+                    <View style={styles.trackingStatItem}>
+                      <Text
+                        style={[
+                          styles.trackingStatLabel,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Gait
+                      </Text>
+                      <View style={styles.gaitDisplayContainer}>
+                        <Text style={styles.gaitDisplayEmoji}>
+                          {getGaitEmoji(currentGait)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.trackingStatValue,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          {currentGait.charAt(0).toUpperCase() +
+                            currentGait.slice(1)}
+                        </Text>
+                      </View>
                     </View>
                     <View style={styles.trackingStatItem}>
                       <Text
@@ -3198,6 +3602,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     marginTop: 10,
     fontStyle: "italic",
+  },
+
+  // Gait Display Styles
+  gaitDisplayContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  gaitDisplayEmoji: {
+    fontSize: 20,
+    marginRight: 6,
   },
 });
 
