@@ -182,108 +182,67 @@ export default function CommunityScreen() {
 
   // Load friends when component mounts and user is available
   useEffect(() => {
-    console.log("🚀 UseEffect: Component mounted or user changed");
-    console.log("  - User ID:", user?.id);
-    console.log("  - User email:", user?.email);
-
     if (user?.id) {
-      console.log("✅ UseEffect: Valid user found, loading friends");
       loadFriends();
-    } else {
-      console.log("⏹️ UseEffect: No valid user, skipping friend load");
     }
 
     // Load mock posts (you can replace this with real post data later)
-    console.log("📝 UseEffect: Loading mock posts");
     setPosts(mockPosts);
-    console.log("  - Mock posts loaded:", mockPosts.length, "posts");
   }, [user]);
 
   // Debug effect to track isSearching state changes
   useEffect(() => {
-    console.log("🔄 UseEffect: isSearching state changed to:", isSearching);
-    console.log("  - searchResults.length:", searchResults.length);
-    console.log("  - searchQuery:", `"${searchQuery}"`);
+    // Removed console logs for cleaner code
   }, [isSearching, searchResults.length, searchQuery]);
 
   // Load friends from database
   const loadFriends = async () => {
     if (!user?.id) {
-      console.log("❌ LoadFriends: No user ID available");
       return;
     }
 
-    console.log("🔄 LoadFriends: Starting to load friends for user:", user.id);
     setIsLoadingFriends(true);
     try {
-      console.log("📡 LoadFriends: Making API call to UserAPI.getFriends");
       const { friends: userFriends, error } = await UserAPI.getFriends(user.id);
 
-      console.log("📥 LoadFriends: API Response received");
-      console.log("  - Error:", error);
-      console.log("  - Friends count:", userFriends?.length || 0);
-      console.log("  - Friends data:", userFriends);
-
       if (error) {
-        console.error("❌ LoadFriends: Error loading friends:", error);
         Alert.alert("Error", "Failed to load friends");
         setFriends([]); // Set empty array on error
         return;
       }
 
       // Set friends regardless of whether the array is empty or not
-      console.log(
-        "✅ LoadFriends: Successfully set friends:",
-        userFriends?.length || 0,
-        "friends"
-      );
       setFriends(userFriends || []);
     } catch (error) {
-      console.error("💥 LoadFriends: Exception caught:", error);
       Alert.alert("Error", "Failed to load friends");
       setFriends([]); // Set empty array on error
     } finally {
-      console.log("🏁 LoadFriends: Setting loading state to false");
       setIsLoadingFriends(false);
     }
   };
 
   // Search for users with manual trigger
   const handleSearchInput = (query: string) => {
-    console.log("✏️ HandleSearchInput: Query updated:", `"${query}"`);
     setSearchQuery(query);
     // Clear results when query changes but don't search automatically
     if (!query.trim()) {
-      console.log(
-        "🧹 HandleSearchInput: Clearing search results - empty query"
-      );
       setSearchResults([]);
     }
   };
 
   const performSearch = useCallback(async () => {
     const query = searchQuery.trim();
-    console.log("🔍 PerformSearch: Manual search triggered");
-    console.log("  - Query:", `"${query}"`);
 
     if (!query || !user?.id) {
-      console.log("⏹️ PerformSearch: Early exit - empty query or no user");
-      console.log("  - Query:", `"${query}"`);
-      console.log("  - User ID:", user?.id);
       setSearchResults([]);
       return;
     }
 
     if (query.length < 2) {
-      console.log("⏹️ PerformSearch: Query too short (less than 2 characters)");
       Alert.alert("Search", "Please enter at least 2 characters to search");
       return;
     }
 
-    console.log("🔄 PerformSearch: Starting search with valid query");
-    console.log("  - Search term:", `"${query}"`);
-    console.log("  - Current user ID:", user.id);
-    console.log("🔄 PerformSearch: Setting isSearching to true");
     setIsSearching(true);
 
     // Create a timeout promise that rejects after 20 seconds (increased from 10)
@@ -294,75 +253,22 @@ export default function CommunityScreen() {
     });
 
     try {
-      console.log(
-        "📡 PerformSearch: Making API call to UserAPI.searchUsersDirectAPI"
-      );
-      const startTime = Date.now();
-
       // Race between the API call and the timeout
       const { users, error } = (await Promise.race([
         UserAPI.searchUsersDirectAPI(query, user.id),
         timeoutPromise,
       ])) as { users: UserSearchResult[]; error: string | null };
 
-      const endTime = Date.now();
-      console.log(
-        `📥 PerformSearch: API Response received (${endTime - startTime}ms)`
-      );
-      console.log("  - Error:", error);
-      console.log("  - Users count:", users?.length || 0);
-
-      // Log only essential user info (name, age, description)
-      if (users && users.length > 0) {
-        console.log("  - Found users:");
-        users.forEach((foundUser, index) => {
-          console.log(`    ${index + 1}. Name: ${foundUser.name}`);
-          console.log(`       Age: ${foundUser.age}`);
-          console.log(
-            `       Description: ${foundUser.description || "No description"}`
-          );
-          console.log(
-            `       Is Pro: ${foundUser.is_pro_member ? "Yes" : "No"}`
-          );
-          console.log(`       ID: ${foundUser.id}`);
-          console.log(
-            `       Is Friend: ${foundUser.is_friend ? "Yes" : "No"}`
-          );
-          console.log("       ---");
-        });
-      }
-
       if (error) {
-        console.error("❌ PerformSearch: API returned error:", error);
         Alert.alert("Search Error", error);
         setSearchResults([]); // Set empty results on error
         return;
       }
 
-      console.log(
-        "✅ PerformSearch: Successfully received search results:",
-        users?.length || 0,
-        "users"
-      );
-      console.log("🔄 PerformSearch: Setting search results state");
-
       // Ensure we have valid users array before setting state
       const validUsers = users && Array.isArray(users) ? users : [];
       setSearchResults(validUsers);
-
-      console.log(
-        "✅ PerformSearch: Search results state updated with",
-        validUsers.length,
-        "users"
-      );
     } catch (error) {
-      console.error("💥 PerformSearch: Exception caught:", error);
-      console.error("  - Error type:", typeof error);
-      console.error(
-        "  - Error message:",
-        error instanceof Error ? error.message : "Unknown error"
-      );
-
       // Handle timeout specifically
       if (error instanceof Error && error.message.includes("timed out")) {
         Alert.alert(
@@ -375,87 +281,45 @@ export default function CommunityScreen() {
 
       setSearchResults([]); // Set empty results on error
     } finally {
-      console.log(
-        "🏁 PerformSearch: Finally block - Setting search loading state to false"
-      );
-      console.log(
-        "🏁 PerformSearch: Current isSearching state before setting to false:",
-        isSearching
-      );
       setIsSearching(false);
-      console.log("🏁 PerformSearch: isSearching set to false");
     }
   }, [searchQuery, user?.id]);
 
   // Add friend functionality
   const handleAddFriend = async (userToAdd: UserSearchResult) => {
     if (!user?.id) {
-      console.log("❌ HandleAddFriend: No user ID available");
       return;
     }
 
-    console.log("👥 HandleAddFriend: Attempting to add friend");
-    console.log("  - Current user ID:", user.id);
-    console.log("  - Target user:", userToAdd.name, `(${userToAdd.id})`);
-
     try {
-      console.log(
-        "📡 HandleAddFriend: Making API call to UserAPI.sendFriendRequest"
-      );
-      const startTime = Date.now();
-
       const { success, error } = await UserAPI.sendFriendRequest(
         user.id,
         userToAdd.id
       );
 
-      const endTime = Date.now();
-      console.log(
-        `📥 HandleAddFriend: API Response received (${endTime - startTime}ms)`
-      );
-      console.log("  - Success:", success);
-      console.log("  - Error:", error);
-
       if (error) {
-        console.error("❌ HandleAddFriend: API returned error:", error);
         Alert.alert("Error", error);
         return;
       }
 
       if (success) {
-        console.log("✅ HandleAddFriend: Friend request sent successfully");
-        console.log("  - Removing user from search results");
-
         // Remove from search results
         const updatedResults = searchResults.filter(
           (u) => u.id !== userToAdd.id
         );
         setSearchResults(updatedResults);
-        console.log("  - Updated search results count:", updatedResults.length);
 
         Alert.alert("Success", `Friend request sent to ${userToAdd.name}!`);
       }
     } catch (error) {
-      console.error("💥 HandleAddFriend: Exception caught:", error);
-      console.error("  - Error type:", typeof error);
-      console.error(
-        "  - Error message:",
-        error instanceof Error ? error.message : "Unknown error"
-      );
       Alert.alert("Error", "Failed to send friend request");
     }
   };
 
   // Test database connection
   const testDatabaseConnection = async () => {
-    console.log("🧪 TestDatabaseConnection: Starting database test");
     try {
       const { success, error, data } = await UserAPI.testDatabaseConnection();
-
-      console.log("📥 TestDatabaseConnection: Test completed");
-      console.log("  - Success:", success);
-      console.log("  - Error:", error);
-      console.log("  - Data:", data);
 
       if (success) {
         Alert.alert(
@@ -469,7 +333,6 @@ export default function CommunityScreen() {
         ]);
       }
     } catch (error) {
-      console.error("💥 TestDatabaseConnection: Exception:", error);
       Alert.alert(
         "Database Test ❌",
         `Test failed!\nException: ${
@@ -598,7 +461,6 @@ export default function CommunityScreen() {
   );
 
   const renderSearchResult = ({ item }: { item: UserSearchResult }) => {
-    console.log("🎨 RenderSearchResult: Rendering user:", item.name, item.id);
     return (
       <View
         key={item.id}
@@ -651,17 +513,6 @@ export default function CommunityScreen() {
       </View>
     );
   };
-
-  console.log(
-    "🎨 RENDER: isSearching =",
-    isSearching,
-    "| results =",
-    searchResults.length,
-    "| query =",
-    `"${searchQuery}"`,
-    "| searchResults IDs =",
-    searchResults.map((r) => r.id).join(", ")
-  );
 
   return (
     <View
@@ -883,12 +734,6 @@ export default function CommunityScreen() {
                     contentContainerStyle={{ paddingRight: 4 }}
                   >
                     {searchResults.map((item, index) => {
-                      console.log(
-                        `🎨 Mapping search result ${index + 1}:`,
-                        item.name,
-                        "ID:",
-                        item.id
-                      );
                       return (
                         <View key={`search-result-${item.id}-${index}`}>
                           {renderSearchResult({ item })}
