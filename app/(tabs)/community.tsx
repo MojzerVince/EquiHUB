@@ -182,98 +182,301 @@ export default function CommunityScreen() {
 
   // Load friends when component mounts and user is available
   useEffect(() => {
+    console.log("🚀 UseEffect: Component mounted or user changed");
+    console.log("  - User ID:", user?.id);
+    console.log("  - User email:", user?.email);
+
     if (user?.id) {
+      console.log("✅ UseEffect: Valid user found, loading friends");
       loadFriends();
+    } else {
+      console.log("⏹️ UseEffect: No valid user, skipping friend load");
     }
+
     // Load mock posts (you can replace this with real post data later)
+    console.log("📝 UseEffect: Loading mock posts");
     setPosts(mockPosts);
+    console.log("  - Mock posts loaded:", mockPosts.length, "posts");
   }, [user]);
+
+  // Debug effect to track isSearching state changes
+  useEffect(() => {
+    console.log("🔄 UseEffect: isSearching state changed to:", isSearching);
+    console.log("  - searchResults.length:", searchResults.length);
+    console.log("  - searchQuery:", `"${searchQuery}"`);
+  }, [isSearching, searchResults.length, searchQuery]);
 
   // Load friends from database
   const loadFriends = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log("❌ LoadFriends: No user ID available");
+      return;
+    }
 
+    console.log("🔄 LoadFriends: Starting to load friends for user:", user.id);
     setIsLoadingFriends(true);
     try {
+      console.log("📡 LoadFriends: Making API call to UserAPI.getFriends");
       const { friends: userFriends, error } = await UserAPI.getFriends(user.id);
 
+      console.log("📥 LoadFriends: API Response received");
+      console.log("  - Error:", error);
+      console.log("  - Friends count:", userFriends?.length || 0);
+      console.log("  - Friends data:", userFriends);
+
       if (error) {
-        console.error("Error loading friends:", error);
+        console.error("❌ LoadFriends: Error loading friends:", error);
         Alert.alert("Error", "Failed to load friends");
+        setFriends([]); // Set empty array on error
         return;
       }
 
-      setFriends(userFriends);
+      // Set friends regardless of whether the array is empty or not
+      console.log(
+        "✅ LoadFriends: Successfully set friends:",
+        userFriends?.length || 0,
+        "friends"
+      );
+      setFriends(userFriends || []);
     } catch (error) {
-      console.error("Error loading friends:", error);
+      console.error("💥 LoadFriends: Exception caught:", error);
       Alert.alert("Error", "Failed to load friends");
+      setFriends([]); // Set empty array on error
     } finally {
+      console.log("🏁 LoadFriends: Setting loading state to false");
       setIsLoadingFriends(false);
     }
   };
 
-  // Search for users with debouncing
-  const handleSearch = useCallback(
-    async (query: string) => {
-      setSearchQuery(query);
+  // Search for users with manual trigger
+  const handleSearchInput = (query: string) => {
+    console.log("✏️ HandleSearchInput: Query updated:", `"${query}"`);
+    setSearchQuery(query);
+    // Clear results when query changes but don't search automatically
+    if (!query.trim()) {
+      console.log(
+        "🧹 HandleSearchInput: Clearing search results - empty query"
+      );
+      setSearchResults([]);
+    }
+  };
 
-      if (!query.trim() || !user?.id) {
-        setSearchResults([]);
+  const performSearch = useCallback(async () => {
+    const query = searchQuery.trim();
+    console.log("🔍 PerformSearch: Manual search triggered");
+    console.log("  - Query:", `"${query}"`);
+
+    if (!query || !user?.id) {
+      console.log("⏹️ PerformSearch: Early exit - empty query or no user");
+      console.log("  - Query:", `"${query}"`);
+      console.log("  - User ID:", user?.id);
+      setSearchResults([]);
+      return;
+    }
+
+    if (query.length < 2) {
+      console.log("⏹️ PerformSearch: Query too short (less than 2 characters)");
+      Alert.alert("Search", "Please enter at least 2 characters to search");
+      return;
+    }
+
+    console.log("🔄 PerformSearch: Starting search with valid query");
+    console.log("  - Search term:", `"${query}"`);
+    console.log("  - Current user ID:", user.id);
+    console.log("🔄 PerformSearch: Setting isSearching to true");
+    setIsSearching(true);
+
+    // Create a timeout promise that rejects after 20 seconds (increased from 10)
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Search timed out after 20 seconds"));
+      }, 20000);
+    });
+
+    try {
+      console.log(
+        "📡 PerformSearch: Making API call to UserAPI.searchUsersDirectAPI"
+      );
+      const startTime = Date.now();
+
+      // Race between the API call and the timeout
+      const { users, error } = (await Promise.race([
+        UserAPI.searchUsersDirectAPI(query, user.id),
+        timeoutPromise,
+      ])) as { users: UserSearchResult[]; error: string | null };
+
+      const endTime = Date.now();
+      console.log(
+        `📥 PerformSearch: API Response received (${endTime - startTime}ms)`
+      );
+      console.log("  - Error:", error);
+      console.log("  - Users count:", users?.length || 0);
+
+      // Log only essential user info (name, age, description)
+      if (users && users.length > 0) {
+        console.log("  - Found users:");
+        users.forEach((foundUser, index) => {
+          console.log(`    ${index + 1}. Name: ${foundUser.name}`);
+          console.log(`       Age: ${foundUser.age}`);
+          console.log(
+            `       Description: ${foundUser.description || "No description"}`
+          );
+          console.log(
+            `       Is Pro: ${foundUser.is_pro_member ? "Yes" : "No"}`
+          );
+          console.log(`       ID: ${foundUser.id}`);
+          console.log(
+            `       Is Friend: ${foundUser.is_friend ? "Yes" : "No"}`
+          );
+          console.log("       ---");
+        });
+      }
+
+      if (error) {
+        console.error("❌ PerformSearch: API returned error:", error);
+        Alert.alert("Search Error", error);
+        setSearchResults([]); // Set empty results on error
         return;
       }
 
-      if (query.trim().length < 2) {
-        setSearchResults([]);
-        return;
-      }
+      console.log(
+        "✅ PerformSearch: Successfully received search results:",
+        users?.length || 0,
+        "users"
+      );
+      console.log("🔄 PerformSearch: Setting search results state");
 
-      setIsSearching(true);
-      try {
-        const { users, error } = await UserAPI.searchUsers(
-          query.trim(),
-          user.id
+      // Ensure we have valid users array before setting state
+      const validUsers = users && Array.isArray(users) ? users : [];
+      setSearchResults(validUsers);
+
+      console.log(
+        "✅ PerformSearch: Search results state updated with",
+        validUsers.length,
+        "users"
+      );
+    } catch (error) {
+      console.error("💥 PerformSearch: Exception caught:", error);
+      console.error("  - Error type:", typeof error);
+      console.error(
+        "  - Error message:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+
+      // Handle timeout specifically
+      if (error instanceof Error && error.message.includes("timed out")) {
+        Alert.alert(
+          "Search Timeout",
+          "Search took too long. Please try again with a more specific query."
         );
-
-        if (error) {
-          console.error("Error searching users:", error);
-          Alert.alert("Error", "Failed to search users");
-          return;
-        }
-
-        setSearchResults(users);
-      } catch (error) {
-        console.error("Error searching users:", error);
+      } else {
         Alert.alert("Error", "Failed to search users");
-      } finally {
-        setIsSearching(false);
       }
-    },
-    [user?.id]
-  );
+
+      setSearchResults([]); // Set empty results on error
+    } finally {
+      console.log(
+        "🏁 PerformSearch: Finally block - Setting search loading state to false"
+      );
+      console.log(
+        "🏁 PerformSearch: Current isSearching state before setting to false:",
+        isSearching
+      );
+      setIsSearching(false);
+      console.log("🏁 PerformSearch: isSearching set to false");
+    }
+  }, [searchQuery, user?.id]);
 
   // Add friend functionality
   const handleAddFriend = async (userToAdd: UserSearchResult) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log("❌ HandleAddFriend: No user ID available");
+      return;
+    }
+
+    console.log("👥 HandleAddFriend: Attempting to add friend");
+    console.log("  - Current user ID:", user.id);
+    console.log("  - Target user:", userToAdd.name, `(${userToAdd.id})`);
 
     try {
+      console.log(
+        "📡 HandleAddFriend: Making API call to UserAPI.sendFriendRequest"
+      );
+      const startTime = Date.now();
+
       const { success, error } = await UserAPI.sendFriendRequest(
         user.id,
         userToAdd.id
       );
 
+      const endTime = Date.now();
+      console.log(
+        `📥 HandleAddFriend: API Response received (${endTime - startTime}ms)`
+      );
+      console.log("  - Success:", success);
+      console.log("  - Error:", error);
+
       if (error) {
+        console.error("❌ HandleAddFriend: API returned error:", error);
         Alert.alert("Error", error);
         return;
       }
 
       if (success) {
+        console.log("✅ HandleAddFriend: Friend request sent successfully");
+        console.log("  - Removing user from search results");
+
         // Remove from search results
-        setSearchResults(searchResults.filter((u) => u.id !== userToAdd.id));
+        const updatedResults = searchResults.filter(
+          (u) => u.id !== userToAdd.id
+        );
+        setSearchResults(updatedResults);
+        console.log("  - Updated search results count:", updatedResults.length);
+
         Alert.alert("Success", `Friend request sent to ${userToAdd.name}!`);
       }
     } catch (error) {
-      console.error("Error adding friend:", error);
+      console.error("💥 HandleAddFriend: Exception caught:", error);
+      console.error("  - Error type:", typeof error);
+      console.error(
+        "  - Error message:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
       Alert.alert("Error", "Failed to send friend request");
+    }
+  };
+
+  // Test database connection
+  const testDatabaseConnection = async () => {
+    console.log("🧪 TestDatabaseConnection: Starting database test");
+    try {
+      const { success, error, data } = await UserAPI.testDatabaseConnection();
+
+      console.log("📥 TestDatabaseConnection: Test completed");
+      console.log("  - Success:", success);
+      console.log("  - Error:", error);
+      console.log("  - Data:", data);
+
+      if (success) {
+        Alert.alert(
+          "Database Test ✅",
+          `Connection successful!\nProfiles found: ${data?.count || 0}`,
+          [{ text: "OK" }]
+        );
+      } else {
+        Alert.alert("Database Test ❌", `Connection failed!\nError: ${error}`, [
+          { text: "OK" },
+        ]);
+      }
+    } catch (error) {
+      console.error("💥 TestDatabaseConnection: Exception:", error);
+      Alert.alert(
+        "Database Test ❌",
+        `Test failed!\nException: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        [{ text: "OK" }]
+      );
     }
   };
 
@@ -394,54 +597,70 @@ export default function CommunityScreen() {
     </View>
   );
 
-  const renderSearchResult = ({ item }: { item: UserSearchResult }) => (
-    <View
-      key={item.id}
-      style={[styles.searchResultItem, { backgroundColor: theme.surface }]}
-    >
-      <View style={styles.userInfo}>
-        <View style={styles.avatarContainer}>
-          <Image
-            source={{ uri: getAvatarUrl(item.profile_image_url) }}
-            style={styles.avatar}
-          />
-          {item.is_online && <View style={styles.onlineIndicator} />}
-        </View>
-        <View style={styles.userDetails}>
-          <Text style={[styles.userName, { color: theme.text }]}>
-            {item.name}
-          </Text>
-          <Text style={[styles.userAge, { color: theme.textSecondary }]}>
-            Age: {item.age}
-          </Text>
-          {item.description && (
-            <Text
-              style={[styles.userDescription, { color: theme.textSecondary }]}
-              numberOfLines={1}
-            >
-              {item.description}
+  const renderSearchResult = ({ item }: { item: UserSearchResult }) => {
+    console.log("🎨 RenderSearchResult: Rendering user:", item.name, item.id);
+    return (
+      <View
+        key={item.id}
+        style={[styles.searchResultItem, { backgroundColor: theme.surface }]}
+      >
+        <View style={styles.userInfo}>
+          <View style={styles.avatarContainer}>
+            <Image
+              source={{ uri: getAvatarUrl(item.profile_image_url) }}
+              style={styles.avatar}
+            />
+            {item.is_online && <View style={styles.onlineIndicator} />}
+          </View>
+          <View style={styles.userDetails}>
+            <Text style={[styles.userName, { color: theme.text }]}>
+              {item.name}
             </Text>
-          )}
+            <Text style={[styles.userAge, { color: theme.textSecondary }]}>
+              Age: {item.age}
+            </Text>
+            {item.description && (
+              <Text
+                style={[styles.userDescription, { color: theme.textSecondary }]}
+                numberOfLines={1}
+              >
+                {item.description}
+              </Text>
+            )}
+          </View>
         </View>
-      </View>
-      {!item.is_friend && (
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: theme.primary }]}
-          onPress={() => handleAddFriend(item)}
-        >
-          <Text style={styles.addButtonText}>Add Friend</Text>
-        </TouchableOpacity>
-      )}
-      {item.is_friend && (
-        <View style={[styles.friendBadge, { backgroundColor: theme.surface }]}>
-          <Text
-            style={[styles.friendBadgeText, { color: theme.textSecondary }]}
+        {!item.is_friend && (
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: theme.primary }]}
+            onPress={() => handleAddFriend(item)}
           >
-            Friends
-          </Text>
-        </View>
-      )}
-    </View>
+            <Text style={styles.addButtonText}>Add Friend</Text>
+          </TouchableOpacity>
+        )}
+        {item.is_friend && (
+          <View
+            style={[styles.friendBadge, { backgroundColor: theme.surface }]}
+          >
+            <Text
+              style={[styles.friendBadgeText, { color: theme.textSecondary }]}
+            >
+              Friends
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  console.log(
+    "🎨 RENDER: isSearching =",
+    isSearching,
+    "| results =",
+    searchResults.length,
+    "| query =",
+    `"${searchQuery}"`,
+    "| searchResults IDs =",
+    searchResults.map((r) => r.id).join(", ")
   );
 
   return (
@@ -584,19 +803,57 @@ export default function CommunityScreen() {
 
             {/* Search Section */}
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Find Friends
-              </Text>
-              <TextInput
-                style={[
-                  styles.searchInput,
-                  { backgroundColor: theme.surface, color: theme.text },
-                ]}
-                placeholder="Search for friends..."
-                placeholderTextColor={theme.textSecondary}
-                value={searchQuery}
-                onChangeText={handleSearch}
-              />
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
+              >
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Find Friends
+                </Text>
+                <TouchableOpacity
+                  onPress={testDatabaseConnection}
+                  style={[
+                    styles.testButton,
+                    { backgroundColor: theme.secondary || "#6B7280" },
+                  ]}
+                >
+                  <Text style={[styles.testButtonText, { color: "#FFFFFF" }]}>
+                    Test DB
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.searchContainer}>
+                <TextInput
+                  style={[
+                    styles.searchInput,
+                    { backgroundColor: theme.surface, color: theme.text },
+                  ]}
+                  placeholder="Search for friends..."
+                  placeholderTextColor={theme.textSecondary}
+                  value={searchQuery}
+                  onChangeText={handleSearchInput}
+                  onSubmitEditing={performSearch}
+                  returnKeyType="search"
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.searchButton,
+                    { backgroundColor: theme.primary },
+                  ]}
+                  onPress={performSearch}
+                  disabled={isSearching || searchQuery.trim().length < 2}
+                >
+                  {isSearching ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.searchButtonText}>🔍</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
               {isSearching && (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator color={theme.primary} size="small" />
@@ -607,11 +864,35 @@ export default function CommunityScreen() {
                   </Text>
                 </View>
               )}
+
+              {/* Search Results Section */}
               {!isSearching && searchResults.length > 0 && (
                 <View style={styles.searchResults}>
-                  {searchResults.map((item) => renderSearchResult({ item }))}
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      { color: theme.text, fontSize: 16, marginBottom: 8 },
+                    ]}
+                  >
+                    Search Results ({searchResults.length})
+                  </Text>
+                  {searchResults.map((item, index) => {
+                    console.log(
+                      `🎨 Mapping search result ${index + 1}:`,
+                      item.name,
+                      "ID:",
+                      item.id
+                    );
+                    return (
+                      <View key={`search-result-${item.id}-${index}`}>
+                        {renderSearchResult({ item })}
+                      </View>
+                    );
+                  })}
                 </View>
               )}
+
+              {/* No Results Message */}
               {!isSearching &&
                 searchQuery.trim().length >= 2 &&
                 searchResults.length === 0 && (
@@ -622,7 +903,7 @@ export default function CommunityScreen() {
                         { color: theme.textSecondary },
                       ]}
                     >
-                      No users found matching "{searchQuery}"
+                      No users found with the name "{searchQuery}"
                     </Text>
                   </View>
                 )}
@@ -791,14 +1072,34 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   searchInput: {
+    flex: 1,
     height: 40,
     paddingHorizontal: 12,
     borderRadius: 20,
     fontSize: 16,
+    marginRight: 8,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  searchButtonText: {
+    fontSize: 18,
+    color: "#FFFFFF",
   },
   searchResults: {
-    marginTop: 8,
-    maxHeight: 200,
+    marginTop: 12,
+    padding: 8,
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+    maxHeight: 300,
   },
   searchResultItem: {
     flexDirection: "row",
@@ -1006,5 +1307,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 24,
     paddingVertical: 60,
+  },
+  testButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  testButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
 });
