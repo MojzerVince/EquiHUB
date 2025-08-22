@@ -98,9 +98,8 @@ export class UserAPI {
       const searchTerm = query.trim();
       console.log("  - Search term processed:", `"${searchTerm}"`);
 
-      // Construct direct REST API URL with original fields only
-      const encodedQuery = encodeURIComponent(`name.ilike.*${searchTerm}*`);
-      const url = `${supabaseUrl}/rest/v1/profiles?select=id,name,profile_image_url,age,description,is_pro_member&id=neq.${currentUserId}&${encodedQuery}&limit=10`;
+      // Construct direct REST API URL with proper query parameter
+      const url = `${supabaseUrl}/rest/v1/profiles?select=id,name,profile_image_url,age,description,is_pro_member&id=neq.${currentUserId}&name=ilike.*${encodeURIComponent(searchTerm)}*&limit=10`;
       
       console.log("📡 UserAPI.searchUsersDirectAPI: Making direct REST API call");
       console.log("  - URL:", url);

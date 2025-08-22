@@ -876,19 +876,25 @@ export default function CommunityScreen() {
                   >
                     Search Results ({searchResults.length})
                   </Text>
-                  {searchResults.map((item, index) => {
-                    console.log(
-                      `🎨 Mapping search result ${index + 1}:`,
-                      item.name,
-                      "ID:",
-                      item.id
-                    );
-                    return (
-                      <View key={`search-result-${item.id}-${index}`}>
-                        {renderSearchResult({ item })}
-                      </View>
-                    );
-                  })}
+                  <ScrollView
+                    style={{ maxHeight: 180 }}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {searchResults.map((item, index) => {
+                      console.log(
+                        `🎨 Mapping search result ${index + 1}:`,
+                        item.name,
+                        "ID:",
+                        item.id
+                      );
+                      return (
+                        <View key={`search-result-${item.id}-${index}`}>
+                          {renderSearchResult({ item })}
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
                 </View>
               )}
 
@@ -1099,7 +1105,8 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: "#F8F9FA",
     borderRadius: 12,
-    maxHeight: 300,
+    maxHeight: 200,
+    overflow: "hidden",
   },
   searchResultItem: {
     flexDirection: "row",
