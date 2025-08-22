@@ -877,9 +877,10 @@ export default function CommunityScreen() {
                     Search Results ({searchResults.length})
                   </Text>
                   <ScrollView
-                    style={{ maxHeight: 180 }}
+                    style={{ maxHeight: 500, width: "100%" }}
                     showsVerticalScrollIndicator={true}
                     nestedScrollEnabled={true}
+                    contentContainerStyle={{ paddingRight: 4 }}
                   >
                     {searchResults.map((item, index) => {
                       console.log(
@@ -1105,8 +1106,9 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: "#F8F9FA",
     borderRadius: 12,
-    maxHeight: 200,
+    maxHeight: 500,
     overflow: "hidden",
+    width: "100%",
   },
   searchResultItem: {
     flexDirection: "row",
@@ -1115,11 +1117,15 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
+    width: "100%",
+    flex: 1,
   },
   addButton: {
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 16,
+    minWidth: 80,
+    flexShrink: 0,
   },
   addButtonText: {
     color: "white",
@@ -1142,6 +1148,8 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+    marginRight: 8,
   },
   avatarContainer: {
     position: "relative",
