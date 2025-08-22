@@ -10,7 +10,7 @@ const TabLayout = () => {
         headerShown: false,
       }}
     >
-      <Tabs.Screen name="club" options={{ title: "Club" }} />
+      <Tabs.Screen name="community" options={{ title: "Community" }} />
       <Tabs.Screen name="coach" options={{ title: "Coach" }} />
       <Tabs.Screen name="map" options={{ title: "Map" }} />
       <Tabs.Screen name="index" options={{ title: "My Horses" }} />

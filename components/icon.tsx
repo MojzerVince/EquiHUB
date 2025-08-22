@@ -1,7 +1,7 @@
 import { Image } from "react-native";
 
 export const icons = {
-  club: (props: any) => (
+  community: (props: any) => (
     <Image
       source={require("../assets/UI_resources/UI_white/club_white.png")}
       style={{ width: 48, height: 48 }}
