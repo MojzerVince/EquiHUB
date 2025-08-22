@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   ScrollView,
@@ -10,7 +11,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { UserAPI, UserSearchResult } from "../../lib/userAPI";
 
 // TypeScript interfaces
 interface User {
@@ -40,14 +43,25 @@ interface Post {
 
 export default function CommunityScreen() {
   const { currentTheme } = useTheme();
+  const { user } = useAuth();
   const theme = currentTheme.colors;
   const [posts, setPosts] = useState<Post[]>([]);
-  const [friends, setFriends] = useState<User[]>([]);
+  const [friends, setFriends] = useState<UserSearchResult[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(false);
   const [activeTab, setActiveTab] = useState<"Feed" | "Challenges" | "Groups">(
     "Feed"
   );
+
+  // Default avatar URL for users without profile images
+  const getAvatarUrl = (profileImageUrl?: string) => {
+    return (
+      profileImageUrl ||
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150"
+    );
+  };
 
   // Mock data
   const mockPosts: Post[] = [
@@ -166,11 +180,104 @@ export default function CommunityScreen() {
     },
   ];
 
+  // Load friends when component mounts and user is available
   useEffect(() => {
+    if (user?.id) {
+      loadFriends();
+    }
+    // Load mock posts (you can replace this with real post data later)
     setPosts(mockPosts);
-    setFriends(mockFriends);
-  }, []);
+  }, [user]);
 
+  // Load friends from database
+  const loadFriends = async () => {
+    if (!user?.id) return;
+
+    setIsLoadingFriends(true);
+    try {
+      const { friends: userFriends, error } = await UserAPI.getFriends(user.id);
+
+      if (error) {
+        console.error("Error loading friends:", error);
+        Alert.alert("Error", "Failed to load friends");
+        return;
+      }
+
+      setFriends(userFriends);
+    } catch (error) {
+      console.error("Error loading friends:", error);
+      Alert.alert("Error", "Failed to load friends");
+    } finally {
+      setIsLoadingFriends(false);
+    }
+  };
+
+  // Search for users with debouncing
+  const handleSearch = useCallback(
+    async (query: string) => {
+      setSearchQuery(query);
+
+      if (!query.trim() || !user?.id) {
+        setSearchResults([]);
+        return;
+      }
+
+      if (query.trim().length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const { users, error } = await UserAPI.searchUsers(
+          query.trim(),
+          user.id
+        );
+
+        if (error) {
+          console.error("Error searching users:", error);
+          Alert.alert("Error", "Failed to search users");
+          return;
+        }
+
+        setSearchResults(users);
+      } catch (error) {
+        console.error("Error searching users:", error);
+        Alert.alert("Error", "Failed to search users");
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [user?.id]
+  );
+
+  // Add friend functionality
+  const handleAddFriend = async (userToAdd: UserSearchResult) => {
+    if (!user?.id) return;
+
+    try {
+      const { success, error } = await UserAPI.sendFriendRequest(
+        user.id,
+        userToAdd.id
+      );
+
+      if (error) {
+        Alert.alert("Error", error);
+        return;
+      }
+
+      if (success) {
+        // Remove from search results
+        setSearchResults(searchResults.filter((u) => u.id !== userToAdd.id));
+        Alert.alert("Success", `Friend request sent to ${userToAdd.name}!`);
+      }
+    } catch (error) {
+      console.error("Error adding friend:", error);
+      Alert.alert("Error", "Failed to send friend request");
+    }
+  };
+
+  // Handle post likes (using mock data for now)
   const handleLike = (postId: string) => {
     setPosts(
       posts.map((post) =>
@@ -183,24 +290,6 @@ export default function CommunityScreen() {
           : post
       )
     );
-  };
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (query.trim()) {
-      const filtered = mockSearchUsers.filter((user) =>
-        user.name.toLowerCase().includes(query.toLowerCase())
-      );
-      setSearchResults(filtered);
-    } else {
-      setSearchResults([]);
-    }
-  };
-
-  const handleAddFriend = (user: User) => {
-    setFriends([...friends, { ...user, isFriend: true }]);
-    setSearchResults(searchResults.filter((u) => u.id !== user.id));
-    Alert.alert("Success", `Added ${user.name} as a friend!`);
   };
 
   const renderPost = ({ item }: { item: Post }) => (
@@ -290,11 +379,14 @@ export default function CommunityScreen() {
     </View>
   );
 
-  const renderFriend = ({ item }: { item: User }) => (
+  const renderFriend = ({ item }: { item: UserSearchResult }) => (
     <View key={item.id} style={styles.friendItem}>
       <View style={styles.avatarContainer}>
-        <Image source={{ uri: item.avatar }} style={styles.friendAvatar} />
-        {item.isOnline && <View style={styles.onlineIndicator} />}
+        <Image
+          source={{ uri: getAvatarUrl(item.profile_image_url) }}
+          style={styles.friendAvatar}
+        />
+        {item.is_online && <View style={styles.onlineIndicator} />}
       </View>
       <Text style={[styles.friendName, { color: theme.text }]}>
         {item.name}
@@ -302,26 +394,53 @@ export default function CommunityScreen() {
     </View>
   );
 
-  const renderSearchResult = ({ item }: { item: User }) => (
+  const renderSearchResult = ({ item }: { item: UserSearchResult }) => (
     <View
       key={item.id}
       style={[styles.searchResultItem, { backgroundColor: theme.surface }]}
     >
       <View style={styles.userInfo}>
         <View style={styles.avatarContainer}>
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
-          {item.isOnline && <View style={styles.onlineIndicator} />}
+          <Image
+            source={{ uri: getAvatarUrl(item.profile_image_url) }}
+            style={styles.avatar}
+          />
+          {item.is_online && <View style={styles.onlineIndicator} />}
         </View>
-        <Text style={[styles.userName, { color: theme.text }]}>
-          {item.name}
-        </Text>
+        <View style={styles.userDetails}>
+          <Text style={[styles.userName, { color: theme.text }]}>
+            {item.name}
+          </Text>
+          <Text style={[styles.userAge, { color: theme.textSecondary }]}>
+            Age: {item.age}
+          </Text>
+          {item.description && (
+            <Text
+              style={[styles.userDescription, { color: theme.textSecondary }]}
+              numberOfLines={1}
+            >
+              {item.description}
+            </Text>
+          )}
+        </View>
       </View>
-      <TouchableOpacity
-        style={[styles.addButton, { backgroundColor: theme.primary }]}
-        onPress={() => handleAddFriend(item)}
-      >
-        <Text style={styles.addButtonText}>Add Friend</Text>
-      </TouchableOpacity>
+      {!item.is_friend && (
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
+          onPress={() => handleAddFriend(item)}
+        >
+          <Text style={styles.addButtonText}>Add Friend</Text>
+        </TouchableOpacity>
+      )}
+      {item.is_friend && (
+        <View style={[styles.friendBadge, { backgroundColor: theme.surface }]}>
+          <Text
+            style={[styles.friendBadgeText, { color: theme.textSecondary }]}
+          >
+            Friends
+          </Text>
+        </View>
+      )}
     </View>
   );
 
@@ -411,20 +530,56 @@ export default function CommunityScreen() {
         </View>
 
         {/* Tab Content */}
-        {activeTab === "Feed" && (
+        {!user ? (
+          <View style={styles.notLoggedInContainer}>
+            <Text style={styles.placeholderEmoji}>🔐</Text>
+            <Text style={[styles.placeholderTitle, { color: theme.text }]}>
+              Login Required
+            </Text>
+            <Text
+              style={[styles.placeholderText, { color: theme.textSecondary }]}
+            >
+              Please log in to access the community features and connect with
+              other riders.
+            </Text>
+          </View>
+        ) : activeTab === "Feed" ? (
           <>
             {/* Friends Section */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Friends
               </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.friendsList}
-              >
-                {friends.map((item) => renderFriend({ item }))}
-              </ScrollView>
+              {isLoadingFriends ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color={theme.primary} size="small" />
+                  <Text
+                    style={[styles.loadingText, { color: theme.textSecondary }]}
+                  >
+                    Loading friends...
+                  </Text>
+                </View>
+              ) : friends.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.friendsList}
+                >
+                  {friends.map((item) => renderFriend({ item }))}
+                </ScrollView>
+              ) : (
+                <View style={styles.noResultsContainer}>
+                  <Text
+                    style={[
+                      styles.noResultsText,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    No friends yet. Start by searching for people to connect
+                    with!
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Search Section */}
@@ -442,11 +597,35 @@ export default function CommunityScreen() {
                 value={searchQuery}
                 onChangeText={handleSearch}
               />
-              {searchResults.length > 0 && (
+              {isSearching && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color={theme.primary} size="small" />
+                  <Text
+                    style={[styles.loadingText, { color: theme.textSecondary }]}
+                  >
+                    Searching...
+                  </Text>
+                </View>
+              )}
+              {!isSearching && searchResults.length > 0 && (
                 <View style={styles.searchResults}>
                   {searchResults.map((item) => renderSearchResult({ item }))}
                 </View>
               )}
+              {!isSearching &&
+                searchQuery.trim().length >= 2 &&
+                searchResults.length === 0 && (
+                  <View style={styles.noResultsContainer}>
+                    <Text
+                      style={[
+                        styles.noResultsText,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      No users found matching "{searchQuery}"
+                    </Text>
+                  </View>
+                )}
             </View>
 
             {/* Posts Section */}
@@ -457,9 +636,7 @@ export default function CommunityScreen() {
               <View>{posts.map((item) => renderPost({ item }))}</View>
             </View>
           </>
-        )}
-
-        {activeTab === "Challenges" && (
+        ) : activeTab === "Challenges" ? (
           <View style={styles.placeholderContainer}>
             <View
               style={[
@@ -490,9 +667,7 @@ export default function CommunityScreen() {
               </View>
             </View>
           </View>
-        )}
-
-        {activeTab === "Groups" && (
+        ) : (
           <View style={styles.placeholderContainer}>
             <View
               style={[
@@ -783,5 +958,53 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 14,
     fontWeight: "600",
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userAge: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  userDescription: {
+    fontSize: 12,
+    marginTop: 4,
+    fontStyle: "italic",
+  },
+  friendBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  friendBadgeText: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+  },
+  loadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  noResultsContainer: {
+    padding: 16,
+    alignItems: "center",
+  },
+  noResultsText: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+  notLoggedInContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 60,
   },
 });
