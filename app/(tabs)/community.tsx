@@ -46,6 +46,9 @@ export default function CommunityScreen() {
   const [friends, setFriends] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [activeTab, setActiveTab] = useState<"Feed" | "Challenges" | "Groups">(
+    "Feed"
+  );
 
   // Mock data
   const mockPosts: Post[] = [
@@ -340,6 +343,68 @@ export default function CommunityScreen() {
           { backgroundColor: currentTheme.colors.background },
         ]}
       >
+        {/* Tab Selector */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === "Feed" && { backgroundColor: theme.primary },
+            ]}
+            onPress={() => setActiveTab("Feed")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                {
+                  color: activeTab === "Feed" ? "#FFFFFF" : theme.textSecondary,
+                },
+              ]}
+            >
+              Feed
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === "Challenges" && { backgroundColor: theme.primary },
+            ]}
+            onPress={() => setActiveTab("Challenges")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                {
+                  color:
+                    activeTab === "Challenges"
+                      ? "#FFFFFF"
+                      : theme.textSecondary,
+                },
+              ]}
+            >
+              Challenges
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === "Groups" && { backgroundColor: theme.primary },
+            ]}
+            onPress={() => setActiveTab("Groups")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                {
+                  color:
+                    activeTab === "Groups" ? "#FFFFFF" : theme.textSecondary,
+                },
+              ]}
+            >
+              Groups
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Friends Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
@@ -428,6 +493,27 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 50,
     marginTop: 5,
     paddingTop: 30,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: "#F8F9FA",
+    marginHorizontal: 16,
+    marginBottom: 20,
+    borderRadius: 25,
+    padding: 4,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
   },
   scrollContainer: {
     flex: 1,
