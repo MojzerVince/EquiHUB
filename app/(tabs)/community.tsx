@@ -405,58 +405,106 @@ export default function CommunityScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Friends Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Friends
-          </Text>
-          <FlatList
-            data={friends}
-            renderItem={renderFriend}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.friendsList}
-          />
-        </View>
+        {/* Tab Content */}
+        {activeTab === 'Feed' && (
+          <>
+            {/* Friends Section */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Friends
+              </Text>
+              <FlatList
+                data={friends}
+                renderItem={renderFriend}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.friendsList}
+              />
+            </View>
 
-        {/* Search Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Find Friends
-          </Text>
-          <TextInput
-            style={[
-              styles.searchInput,
-              { backgroundColor: theme.surface, color: theme.text },
-            ]}
-            placeholder="Search for friends..."
-            placeholderTextColor={theme.textSecondary}
-            value={searchQuery}
-            onChangeText={handleSearch}
-          />
-          {searchResults.length > 0 && (
-            <FlatList
-              data={searchResults}
-              renderItem={renderSearchResult}
-              keyExtractor={(item) => item.id}
-              style={styles.searchResults}
-            />
-          )}
-        </View>
+            {/* Search Section */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Find Friends
+              </Text>
+              <TextInput
+                style={[
+                  styles.searchInput,
+                  { backgroundColor: theme.surface, color: theme.text },
+                ]}
+                placeholder="Search for friends..."
+                placeholderTextColor={theme.textSecondary}
+                value={searchQuery}
+                onChangeText={handleSearch}
+              />
+              {searchResults.length > 0 && (
+                <FlatList
+                  data={searchResults}
+                  renderItem={renderSearchResult}
+                  keyExtractor={(item) => item.id}
+                  style={styles.searchResults}
+                />
+              )}
+            </View>
 
-        {/* Posts Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Community Feed
-          </Text>
-          <FlatList
-            data={posts}
-            renderItem={renderPost}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-          />
-        </View>
+            {/* Posts Section */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Community Feed
+              </Text>
+              <FlatList
+                data={posts}
+                renderItem={renderPost}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+              />
+            </View>
+          </>
+        )}
+
+        {activeTab === 'Challenges' && (
+          <View style={styles.placeholderContainer}>
+            <View style={[styles.placeholderCard, { backgroundColor: theme.surface }]}>
+              <Text style={styles.placeholderEmoji}>🏆</Text>
+              <Text style={[styles.placeholderTitle, { color: theme.text }]}>
+                Challenges Coming Soon!
+              </Text>
+              <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
+                Compete with friends in exciting equestrian challenges.{'\n\n'}
+                • Weekly riding challenges{'\n'}
+                • Distance competitions{'\n'}
+                • Skill-based contests{'\n'}
+                • Leaderboards and rewards
+              </Text>
+              <View style={[styles.placeholderBadge, { backgroundColor: theme.primary }]}>
+                <Text style={styles.placeholderBadgeText}>Under Development</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {activeTab === 'Groups' && (
+          <View style={styles.placeholderContainer}>
+            <View style={[styles.placeholderCard, { backgroundColor: theme.surface }]}>
+              <Text style={styles.placeholderEmoji}>👥</Text>
+              <Text style={[styles.placeholderTitle, { color: theme.text }]}>
+                Groups Coming Soon!
+              </Text>
+              <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
+                Join riding groups and connect with local equestrian communities.{'\n\n'}
+                • Local riding clubs{'\n'}
+                • Training groups{'\n'}
+                • Event coordination{'\n'}
+                • Group chat and planning
+              </Text>
+              <View style={[styles.placeholderBadge, { backgroundColor: theme.primary }]}>
+                <Text style={styles.placeholderBadgeText}>Under Development</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
       </ScrollView>
     </View>
   );
@@ -671,5 +719,50 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 14,
     fontWeight: "500",
+  },
+  placeholderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  placeholderCard: {
+    padding: 32,
+    borderRadius: 20,
+    alignItems: "center",
+    maxWidth: 320,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  placeholderEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  placeholderTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 16,
+    fontFamily: "Inder",
+  },
+  placeholderText: {
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  placeholderBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  placeholderBadgeText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
