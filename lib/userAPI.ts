@@ -304,11 +304,10 @@ export class UserAPI {
         .eq('status', 'accepted');
 
       if (friendshipError) {
-        console.error('Get friends error:', friendshipError);
         return { friends: [], error: 'Failed to get friends' };
       }
 
-      if (!friendships) {
+      if (!friendships || friendships.length === 0) {
         return { friends: [], error: null };
       }
 
@@ -327,7 +326,6 @@ export class UserAPI {
       return { friends, error: null };
 
     } catch (error) {
-      console.error('Get friends error:', error);
       return { friends: [], error: 'An unexpected error occurred while getting friends' };
     }
   }

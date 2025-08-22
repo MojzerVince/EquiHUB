@@ -202,8 +202,20 @@ export default function CommunityScreen() {
     }
 
     setIsLoadingFriends(true);
+
+    // Create a timeout promise that rejects after 10 seconds
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Loading friends timed out after 10 seconds"));
+      }, 10000);
+    });
+
     try {
-      const { friends: userFriends, error } = await UserAPI.getFriends(user.id);
+      // Race between the API call and the timeout
+      const { friends: userFriends, error } = await Promise.race([
+        UserAPI.getFriends(user.id),
+        timeoutPromise,
+      ]) as { friends: UserSearchResult[]; error: string | null };
 
       if (error) {
         Alert.alert("Error", "Failed to load friends");
@@ -214,7 +226,15 @@ export default function CommunityScreen() {
       // Set friends regardless of whether the array is empty or not
       setFriends(userFriends || []);
     } catch (error) {
-      Alert.alert("Error", "Failed to load friends");
+      // Handle timeout specifically
+      if (error instanceof Error && error.message.includes("timed out")) {
+        Alert.alert(
+          "Loading Timeout",
+          "Loading friends took too long. Please check your connection and try again."
+        );
+      } else {
+        Alert.alert("Error", "Failed to load friends");
+      }
       setFriends([]); // Set empty array on error
     } finally {
       setIsLoadingFriends(false);
