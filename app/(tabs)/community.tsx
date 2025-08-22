@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  FlatList,
   Image,
   ScrollView,
   StyleSheet,
@@ -205,7 +204,10 @@ export default function CommunityScreen() {
   };
 
   const renderPost = ({ item }: { item: Post }) => (
-    <View style={[styles.postCard, { backgroundColor: theme.surface }]}>
+    <View
+      key={item.id}
+      style={[styles.postCard, { backgroundColor: theme.surface }]}
+    >
       <View style={styles.postHeader}>
         <View style={styles.userInfo}>
           <View style={styles.avatarContainer}>
@@ -289,7 +291,7 @@ export default function CommunityScreen() {
   );
 
   const renderFriend = ({ item }: { item: User }) => (
-    <View style={styles.friendItem}>
+    <View key={item.id} style={styles.friendItem}>
       <View style={styles.avatarContainer}>
         <Image source={{ uri: item.avatar }} style={styles.friendAvatar} />
         {item.isOnline && <View style={styles.onlineIndicator} />}
@@ -301,7 +303,10 @@ export default function CommunityScreen() {
   );
 
   const renderSearchResult = ({ item }: { item: User }) => (
-    <View style={[styles.searchResultItem, { backgroundColor: theme.surface }]}>
+    <View
+      key={item.id}
+      style={[styles.searchResultItem, { backgroundColor: theme.surface }]}
+    >
       <View style={styles.userInfo}>
         <View style={styles.avatarContainer}>
           <Image source={{ uri: item.avatar }} style={styles.avatar} />
@@ -413,14 +418,13 @@ export default function CommunityScreen() {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Friends
               </Text>
-              <FlatList
-                data={friends}
-                renderItem={renderFriend}
-                keyExtractor={(item) => item.id}
+              <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.friendsList}
-              />
+              >
+                {friends.map((item) => renderFriend({ item }))}
+              </ScrollView>
             </View>
 
             {/* Search Section */}
@@ -439,12 +443,9 @@ export default function CommunityScreen() {
                 onChangeText={handleSearch}
               />
               {searchResults.length > 0 && (
-                <FlatList
-                  data={searchResults}
-                  renderItem={renderSearchResult}
-                  keyExtractor={(item) => item.id}
-                  style={styles.searchResults}
-                />
+                <View style={styles.searchResults}>
+                  {searchResults.map((item) => renderSearchResult({ item }))}
+                </View>
               )}
             </View>
 
@@ -453,12 +454,7 @@ export default function CommunityScreen() {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Community Feed
               </Text>
-              <FlatList
-                data={posts}
-                renderItem={renderPost}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-              />
+              <View>{posts.map((item) => renderPost({ item }))}</View>
             </View>
           </>
         )}
