@@ -406,7 +406,7 @@ export default function CommunityScreen() {
         </View>
 
         {/* Tab Content */}
-        {activeTab === 'Feed' && (
+        {activeTab === "Feed" && (
           <>
             {/* Friends Section */}
             <View style={styles.section}>
@@ -463,48 +463,71 @@ export default function CommunityScreen() {
           </>
         )}
 
-        {activeTab === 'Challenges' && (
+        {activeTab === "Challenges" && (
           <View style={styles.placeholderContainer}>
-            <View style={[styles.placeholderCard, { backgroundColor: theme.surface }]}>
+            <View
+              style={[
+                styles.placeholderCard,
+                { backgroundColor: theme.surface },
+              ]}
+            >
               <Text style={styles.placeholderEmoji}>🏆</Text>
               <Text style={[styles.placeholderTitle, { color: theme.text }]}>
                 Challenges Coming Soon!
               </Text>
-              <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
-                Compete with friends in exciting equestrian challenges.{'\n\n'}
-                • Weekly riding challenges{'\n'}
-                • Distance competitions{'\n'}
-                • Skill-based contests{'\n'}
-                • Leaderboards and rewards
+              <Text
+                style={[styles.placeholderText, { color: theme.textSecondary }]}
+              >
+                Compete with friends in exciting equestrian challenges.{"\n\n"}•
+                Weekly riding challenges{"\n"}• Distance competitions{"\n"}•
+                Skill-based contests{"\n"}• Leaderboards and rewards
               </Text>
-              <View style={[styles.placeholderBadge, { backgroundColor: theme.primary }]}>
-                <Text style={styles.placeholderBadgeText}>Under Development</Text>
+              <View
+                style={[
+                  styles.placeholderBadge,
+                  { backgroundColor: theme.primary },
+                ]}
+              >
+                <Text style={styles.placeholderBadgeText}>
+                  Under Development
+                </Text>
               </View>
             </View>
           </View>
         )}
 
-        {activeTab === 'Groups' && (
+        {activeTab === "Groups" && (
           <View style={styles.placeholderContainer}>
-            <View style={[styles.placeholderCard, { backgroundColor: theme.surface }]}>
+            <View
+              style={[
+                styles.placeholderCard,
+                { backgroundColor: theme.surface },
+              ]}
+            >
               <Text style={styles.placeholderEmoji}>👥</Text>
               <Text style={[styles.placeholderTitle, { color: theme.text }]}>
                 Groups Coming Soon!
               </Text>
-              <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
-                Join riding groups and connect with local equestrian communities.{'\n\n'}
-                • Local riding clubs{'\n'}
-                • Training groups{'\n'}
-                • Event coordination{'\n'}
-                • Group chat and planning
+              <Text
+                style={[styles.placeholderText, { color: theme.textSecondary }]}
+              >
+                Join riding groups and connect with local equestrian
+                communities.{"\n\n"}• Local riding clubs{"\n"}• Training groups
+                {"\n"}• Event coordination{"\n"}• Group chat and planning
               </Text>
-              <View style={[styles.placeholderBadge, { backgroundColor: theme.primary }]}>
-                <Text style={styles.placeholderBadgeText}>Under Development</Text>
+              <View
+                style={[
+                  styles.placeholderBadge,
+                  { backgroundColor: theme.primary },
+                ]}
+              >
+                <Text style={styles.placeholderBadgeText}>
+                  Under Development
+                </Text>
               </View>
             </View>
           </View>
         )}
-
       </ScrollView>
     </View>
   );
