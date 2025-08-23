@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
-import * as Notifications from 'expo-notifications';
+import * as Notifications from "expo-notifications";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -19,7 +19,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { CommunityAPI, PostWithUser } from "../../lib/communityAPI";
-import { NotificationService, handleNotificationResponse } from "../../lib/notificationService";
+import {
+  NotificationService,
+  handleNotificationResponse,
+} from "../../lib/notificationService";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { supabase, supabaseUrl } from "../../lib/supabase";
 import { UserAPI, UserSearchResult } from "../../lib/userAPI";
@@ -148,38 +151,46 @@ export default function CommunityScreen() {
       if (user?.id) {
         try {
           // Register for push notifications and get token
-          const token = await NotificationService.registerForPushNotificationsAsync();
-          
+          const token =
+            await NotificationService.registerForPushNotificationsAsync();
+
           if (token) {
             // Save the token to the database
             await NotificationService.savePushToken(user.id, token);
-            console.log('Push notification token registered successfully');
+            console.log("Push notification token registered successfully");
           }
         } catch (error) {
-          console.error('Error setting up push notifications:', error);
+          console.error("Error setting up push notifications:", error);
         }
       }
 
       // Listen for notifications received while app is running
-      notificationListener = Notifications.addNotificationReceivedListener(notification => {
-        console.log('Notification received:', notification);
-        // Refresh friend requests when a friend request notification is received
-        if (notification.request.content.data?.type === 'friend_request') {
-          loadFriendRequests();
+      notificationListener = Notifications.addNotificationReceivedListener(
+        (notification) => {
+          console.log("Notification received:", notification);
+          // Refresh friend requests when a friend request notification is received
+          if (notification.request.content.data?.type === "friend_request") {
+            loadFriendRequests();
+          }
         }
-      });
+      );
 
       // Listen for notification responses (when user taps on notification)
-      responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-        console.log('Notification response:', response);
-        handleNotificationResponse(response);
-        
-        // If it's a friend request notification, open the notifications modal
-        if (response.notification.request.content.data?.type === 'friend_request') {
-          setShowNotifications(true);
-          loadFriendRequests();
+      responseListener = Notifications.addNotificationResponseReceivedListener(
+        (response) => {
+          console.log("Notification response:", response);
+          handleNotificationResponse(response);
+
+          // If it's a friend request notification, open the notifications modal
+          if (
+            response.notification.request.content.data?.type ===
+            "friend_request"
+          ) {
+            setShowNotifications(true);
+            loadFriendRequests();
+          }
         }
-      });
+      );
     };
 
     setupNotifications();
@@ -203,34 +214,40 @@ export default function CommunityScreen() {
 
       // Load posts from database if user is logged in
       if (user?.id) {
-        const { posts: dbPosts, error } = await CommunityAPI.getFeedPosts(user.id);
-        
+        const { posts: dbPosts, error } = await CommunityAPI.getFeedPosts(
+          user.id
+        );
+
         if (error) {
           console.error("Error loading posts from database:", error);
         } else {
           // Convert database posts to the format expected by the UI
-          const formattedPosts: Post[] = dbPosts.map((dbPost: PostWithUser) => ({
-            id: dbPost.id,
-            user: {
-              id: dbPost.profiles.id,
-              name: dbPost.profiles.name,
-              avatar: getAvatarUrl(dbPost.profiles.profile_image_url),
-              isOnline: true,
-              isFriend: true,
-            },
-            timestamp: new Date(dbPost.created_at).toLocaleString(),
-            content: dbPost.content,
-            image: dbPost.image_url,
-            likes: dbPost.likes_count,
-            comments: 0, // TODO: Add comments feature later
-            isLiked: dbPost.is_liked || false,
-            sessionData: dbPost.session_data ? {
-              horseName: dbPost.session_data.horse_name,
-              duration: dbPost.session_data.duration,
-              distance: dbPost.session_data.distance,
-              avgSpeed: dbPost.session_data.avg_speed,
-            } : undefined,
-          }));
+          const formattedPosts: Post[] = dbPosts.map(
+            (dbPost: PostWithUser) => ({
+              id: dbPost.id,
+              user: {
+                id: dbPost.profiles.id,
+                name: dbPost.profiles.name,
+                avatar: getAvatarUrl(dbPost.profiles.profile_image_url),
+                isOnline: true,
+                isFriend: true,
+              },
+              timestamp: new Date(dbPost.created_at).toLocaleString(),
+              content: dbPost.content,
+              image: dbPost.image_url,
+              likes: dbPost.likes_count,
+              comments: 0, // TODO: Add comments feature later
+              isLiked: dbPost.is_liked || false,
+              sessionData: dbPost.session_data
+                ? {
+                    horseName: dbPost.session_data.horse_name,
+                    duration: dbPost.session_data.duration,
+                    distance: dbPost.session_data.distance,
+                    avgSpeed: dbPost.session_data.avg_speed,
+                  }
+                : undefined,
+            })
+          );
 
           allPosts = formattedPosts;
         }
@@ -256,13 +273,15 @@ export default function CommunityScreen() {
     }
 
     setIsLoadingRequests(true);
-    
+
     try {
-      console.log('🔄 Loading friend requests for user:', user.id);
-      
+      console.log("🔄 Loading friend requests for user:", user.id);
+
       // Use CommunityAPI REST endpoint
-      const { requests, error } = await CommunityAPI.getPendingFriendRequests(user.id);
-      
+      const { requests, error } = await CommunityAPI.getPendingFriendRequests(
+        user.id
+      );
+
       if (error) {
         console.error("❌ Error loading friend requests:", error);
         setFriendRequests([]);
@@ -270,22 +289,23 @@ export default function CommunityScreen() {
         return;
       }
 
-      console.log('📨 Raw friend requests result:', requests);
+      console.log("📨 Raw friend requests result:", requests);
 
-      const friendRequestsList: FriendRequest[] = (requests || []).map(request => ({
-        id: request.id,
-        sender_id: request.user_id, // user_id is the sender
-        sender_name: request.sender_name || 'Unknown User',
-        sender_avatar: request.sender_avatar,
-        receiver_id: user.id,
-        status: request.status as "pending" | "accepted" | "declined",
-        created_at: request.created_at
-      }));
+      const friendRequestsList: FriendRequest[] = (requests || []).map(
+        (request) => ({
+          id: request.id,
+          sender_id: request.user_id, // user_id is the sender
+          sender_name: request.sender_name || "Unknown User",
+          sender_avatar: request.sender_avatar,
+          receiver_id: user.id,
+          status: request.status as "pending" | "accepted" | "declined",
+          created_at: request.created_at,
+        })
+      );
 
-      console.log('📋 Processed friend requests:', friendRequestsList);
+      console.log("📋 Processed friend requests:", friendRequestsList);
       setFriendRequests(friendRequestsList);
       setNotificationCount(friendRequestsList.length);
-      
     } catch (error) {
       console.error("💥 Exception loading friend requests:", error);
       setFriendRequests([]);
@@ -301,8 +321,11 @@ export default function CommunityScreen() {
 
     try {
       // Use CommunityAPI REST endpoint instead of UserAPI
-      const { success, error } = await CommunityAPI.acceptFriendRequest(user.id, request.sender_id);
-      
+      const { success, error } = await CommunityAPI.acceptFriendRequest(
+        user.id,
+        request.sender_id
+      );
+
       if (error) {
         Alert.alert("Error", error);
         return;
@@ -310,13 +333,18 @@ export default function CommunityScreen() {
 
       if (success) {
         // Remove from friend requests
-        setFriendRequests(prev => prev.filter(req => req.id !== request.id));
-        setNotificationCount(prev => Math.max(0, prev - 1));
-        
+        setFriendRequests((prev) =>
+          prev.filter((req) => req.id !== request.id)
+        );
+        setNotificationCount((prev) => Math.max(0, prev - 1));
+
         // Refresh friends list
         await loadFriends();
-        
-        Alert.alert("Success", `You are now friends with ${request.sender_name}!`);
+
+        Alert.alert(
+          "Success",
+          `You are now friends with ${request.sender_name}!`
+        );
       }
     } catch (error) {
       Alert.alert("Error", "Failed to accept friend request");
@@ -327,10 +355,13 @@ export default function CommunityScreen() {
   const handleDeclineFriendRequest = async (request: FriendRequest) => {
     try {
       // For now, just remove from local state since there's no decline API
-      setFriendRequests(prev => prev.filter(req => req.id !== request.id));
-      setNotificationCount(prev => Math.max(0, prev - 1));
-      
-      Alert.alert("Request Declined", `Friend request from ${request.sender_name} was declined.`);
+      setFriendRequests((prev) => prev.filter((req) => req.id !== request.id));
+      setNotificationCount((prev) => Math.max(0, prev - 1));
+
+      Alert.alert(
+        "Request Declined",
+        `Friend request from ${request.sender_name} was declined.`
+      );
     } catch (error) {
       Alert.alert("Error", "Failed to decline friend request");
     }
@@ -351,7 +382,6 @@ export default function CommunityScreen() {
 
     return () => clearInterval(interval);
   }, [user?.id]);
-
 
   // Load friends from database
   const loadFriends = useCallback(async () => {
@@ -402,20 +432,18 @@ export default function CommunityScreen() {
   // Refresh function to reload all data
   const onRefresh = useCallback(async () => {
     if (!user?.id) return;
-    
+
     setRefreshing(true);
-    
+
     try {
       // Run all loading functions in parallel for faster refresh
-      await Promise.all([
-        loadFriendRequests(),
-        loadFriends(),
-        loadPosts()
-      ]);
-      
+      await Promise.all([loadFriendRequests(), loadFriends(), loadPosts()]);
     } catch (error) {
-      console.error('Error refreshing community data:', error);
-      Alert.alert('Refresh Error', 'Failed to refresh community data. Please try again.');
+      console.error("Error refreshing community data:", error);
+      Alert.alert(
+        "Refresh Error",
+        "Failed to refresh community data. Please try again."
+      );
     } finally {
       setRefreshing(false);
     }
@@ -499,47 +527,61 @@ export default function CommunityScreen() {
 
   // Add friend functionality
   const handleAddFriend = async (userToAdd: UserSearchResult) => {
-    console.log('🎯 handleAddFriend called for user:', userToAdd.name, userToAdd.id);
-    
+    console.log(
+      "🎯 handleAddFriend called for user:",
+      userToAdd.name,
+      userToAdd.id
+    );
+
     if (!user?.id) {
-      console.log('❌ No user logged in');
+      console.log("❌ No user logged in");
       Alert.alert("Error", "You must be logged in to send friend requests");
       return;
     }
 
-    console.log('👤 Current user:', user.id);
-    console.log('📤 Sending friend request using REST API...');
+    console.log("👤 Current user:", user.id);
+    console.log("📤 Sending friend request using REST API...");
 
     try {
       // Get the current auth token using REST API instead of supabase.auth.getSession()
-      console.log('🔑 Getting auth token via REST API...');
-      
+      console.log("🔑 Getting auth token via REST API...");
+
       // Try to get stored session from AsyncStorage first (more reliable)
       let authToken: string | null = null;
-      
+
       try {
         // Supabase stores session data under this key format
-        const supabaseSessionKey = `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`;
-        console.log('🔍 Looking for session in AsyncStorage with key:', supabaseSessionKey);
-        
+        const supabaseSessionKey = `sb-${
+          supabaseUrl.split("//")[1].split(".")[0]
+        }-auth-token`;
+        console.log(
+          "🔍 Looking for session in AsyncStorage with key:",
+          supabaseSessionKey
+        );
+
         const sessionData = await AsyncStorage.getItem(supabaseSessionKey);
         if (sessionData) {
-          console.log('📱 Found session data in AsyncStorage');
+          console.log("📱 Found session data in AsyncStorage");
           const parsedSession = JSON.parse(sessionData);
           authToken = parsedSession.access_token;
-          console.log('📱 Got auth token from AsyncStorage:', !!authToken);
+          console.log("📱 Got auth token from AsyncStorage:", !!authToken);
         } else {
-          console.log('📱 No session data found in AsyncStorage');
-          
+          console.log("📱 No session data found in AsyncStorage");
+
           // Try alternative keys that Supabase might use
           const allKeys = await AsyncStorage.getAllKeys();
-          console.log('� All AsyncStorage keys:', allKeys.filter(key => key.includes('supabase') || key.includes('auth')));
-          
-          // Try to find any Supabase auth keys
-          const authKeys = allKeys.filter(key => 
-            key.includes('supabase') && key.includes('auth')
+          console.log(
+            "� All AsyncStorage keys:",
+            allKeys.filter(
+              (key) => key.includes("supabase") || key.includes("auth")
+            )
           );
-          
+
+          // Try to find any Supabase auth keys
+          const authKeys = allKeys.filter(
+            (key) => key.includes("supabase") && key.includes("auth")
+          );
+
           for (const key of authKeys) {
             try {
               const data = await AsyncStorage.getItem(key);
@@ -547,39 +589,45 @@ export default function CommunityScreen() {
                 const parsed = JSON.parse(data);
                 if (parsed.access_token) {
                   authToken = parsed.access_token;
-                  console.log('📱 Found auth token in key:', key);
+                  console.log("📱 Found auth token in key:", key);
                   break;
                 }
               }
             } catch (e) {
-              console.log('🔍 Key', key, 'not valid JSON');
+              console.log("🔍 Key", key, "not valid JSON");
             }
           }
         }
       } catch (storageError) {
-        console.log('📱 AsyncStorage lookup failed:', storageError);
+        console.log("📱 AsyncStorage lookup failed:", storageError);
       }
-      
-      // Fallback: Try direct session call with short timeout  
+
+      // Fallback: Try direct session call with short timeout
       if (!authToken) {
-        console.log('🔄 Trying direct session call...');
+        console.log("🔄 Trying direct session call...");
         try {
           // Try multiple approaches to get the session
           const approaches = [
             // Approach 1: Quick session call
             async () => {
-              const { data: { session } } = await supabase.auth.getSession();
+              const {
+                data: { session },
+              } = await supabase.auth.getSession();
               return session?.access_token || null;
             },
             // Approach 2: Get user and then session
             async () => {
-              const { data: { user } } = await supabase.auth.getUser();
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
               if (user) {
-                const { data: { session } } = await supabase.auth.getSession();
+                const {
+                  data: { session },
+                } = await supabase.auth.getSession();
                 return session?.access_token || null;
               }
               return null;
-            }
+            },
           ];
 
           for (let i = 0; i < approaches.length; i++) {
@@ -588,26 +636,29 @@ export default function CommunityScreen() {
               const token = await Promise.race([
                 approaches[i](),
                 new Promise<null>((_, reject) => {
-                  setTimeout(() => reject(new Error('Timeout')), 2000);
-                })
+                  setTimeout(() => reject(new Error("Timeout")), 2000);
+                }),
               ]);
-              
+
               if (token) {
                 authToken = token;
                 console.log(`✅ Got auth token from approach ${i + 1}`);
                 break;
               }
             } catch (error) {
-              console.log(`❌ Approach ${i + 1} failed:`, error instanceof Error ? error.message : 'Unknown');
+              console.log(
+                `❌ Approach ${i + 1} failed:`,
+                error instanceof Error ? error.message : "Unknown"
+              );
             }
           }
         } catch (sessionError) {
-          console.log('⏱️ All session approaches failed');
+          console.log("⏱️ All session approaches failed");
         }
       }
-      
+
       if (!authToken) {
-        console.error('❌ No auth token available via any method');
+        console.error("❌ No auth token available via any method");
         Alert.alert("Error", "Authentication required. Please log in again.");
         return;
       }
@@ -619,55 +670,70 @@ export default function CommunityScreen() {
         authToken
       );
 
-      console.log('📨 Friend request result:', { success, error });
+      console.log("📨 Friend request result:", { success, error });
 
       if (error) {
-        console.error('❌ Friend request error:', error);
+        console.error("❌ Friend request error:", error);
         Alert.alert("Error", error);
         return;
       }
 
       if (success) {
-        console.log('✅ Friend request sent successfully');
-        
+        console.log("✅ Friend request sent successfully");
+
         // Remove from search results
         const updatedResults = searchResults.filter(
           (u) => u.id !== userToAdd.id
         );
         setSearchResults(updatedResults);
-        console.log('🔄 Updated search results, removed user');
+        console.log("🔄 Updated search results, removed user");
 
         // Send push notification to the recipient
         try {
-          console.log('📢 Attempting to send push notification...');
+          console.log("📢 Attempting to send push notification...");
           // Get the current user's profile to get their name
           const currentUserProfile = await ProfileAPIBase64.getProfile(user.id);
           const senderName = currentUserProfile?.name || "Someone";
-          console.log('👤 Sender name:', senderName);
-          
+          console.log("👤 Sender name:", senderName);
+
           await NotificationService.sendFriendRequestNotification(
             userToAdd.id,
             senderName,
             user.id
           );
-          console.log(`✅ Push notification sent to ${userToAdd.name} for friend request`);
+          console.log(
+            `✅ Push notification sent to ${userToAdd.name} for friend request`
+          );
         } catch (notificationError) {
-          console.error('❌ Failed to send push notification:', notificationError);
+          console.error(
+            "❌ Failed to send push notification:",
+            notificationError
+          );
           // Don't show error to user as the friend request was still sent successfully
         }
 
         Alert.alert("Success", `Friend request sent to ${userToAdd.name}!`);
-        console.log('🎉 Success alert shown');
-        
+        console.log("🎉 Success alert shown");
+
         // Note: The receiving user will see the notification when they load the app
         // since we call loadFriendRequests() on component mount
       } else {
-        console.log('⚠️ Friend request was not successful but no error was returned');
-        Alert.alert("Warning", "Friend request may not have been sent. Please try again.");
+        console.log(
+          "⚠️ Friend request was not successful but no error was returned"
+        );
+        Alert.alert(
+          "Warning",
+          "Friend request may not have been sent. Please try again."
+        );
       }
     } catch (error) {
-      console.error('💥 Exception in handleAddFriend:', error);
-      Alert.alert("Error", `Failed to send friend request: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("💥 Exception in handleAddFriend:", error);
+      Alert.alert(
+        "Error",
+        `Failed to send friend request: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   };
 
@@ -679,13 +745,16 @@ export default function CommunityScreen() {
     }
 
     // Find the post
-    const post = posts.find(p => p.id === postId);
+    const post = posts.find((p) => p.id === postId);
     if (!post) return;
 
     // Handle database posts
     try {
-      const { success, error } = await CommunityAPI.togglePostLike(postId, user.id);
-      
+      const { success, error } = await CommunityAPI.togglePostLike(
+        postId,
+        user.id
+      );
+
       if (error) {
         Alert.alert("Error", error);
         return;
@@ -870,7 +939,7 @@ export default function CommunityScreen() {
   // Custom notification badge component
   const NotificationBadge = ({ count }: { count: number }) => {
     if (count === 0) return null;
-    
+
     return (
       <View style={styles.notificationBadge}>
         <Text style={styles.notificationBadgeText}>
@@ -882,7 +951,10 @@ export default function CommunityScreen() {
 
   // Render friend request item
   const renderFriendRequest = ({ item }: { item: FriendRequest }) => (
-    <View key={item.id} style={[styles.friendRequestItem, { backgroundColor: theme.surface }]}>
+    <View
+      key={item.id}
+      style={[styles.friendRequestItem, { backgroundColor: theme.surface }]}
+    >
       <View style={styles.userInfo}>
         <View style={styles.avatarContainer}>
           <Image
@@ -939,7 +1011,7 @@ export default function CommunityScreen() {
               style={styles.notificationIcon}
               onPress={() => setShowNotifications(true)}
             >
-              <Text style={{ fontSize: 24, color: "#FFFFFF" }}>🔔</Text>
+              <Text style={{ fontSize: 18, color: "#FFFFFF" }}>🔔</Text>
               <NotificationBadge count={notificationCount} />
             </TouchableOpacity>
           )}
@@ -975,7 +1047,8 @@ export default function CommunityScreen() {
                 style={[
                   styles.tabText,
                   {
-                    color: activeTab === "Feed" ? "#FFFFFF" : theme.textSecondary,
+                    color:
+                      activeTab === "Feed" ? "#FFFFFF" : theme.textSecondary,
                   },
                 ]}
               >
@@ -1055,7 +1128,10 @@ export default function CommunityScreen() {
                     loadFriends();
                     loadFriendRequests();
                   }}
-                  style={[styles.refreshButton, { backgroundColor: theme.primary }]}
+                  style={[
+                    styles.refreshButton,
+                    { backgroundColor: theme.primary },
+                  ]}
                 >
                   <Text style={styles.refreshButtonText}>🔄</Text>
                 </TouchableOpacity>
@@ -1182,7 +1258,7 @@ export default function CommunityScreen() {
             </View>
 
             {/* Posts Section */}
-            <View style={styles.section}>
+            <View style={[styles.section, { marginBottom: 130 }]}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Community Feed
               </Text>
@@ -1200,13 +1276,19 @@ export default function CommunityScreen() {
               ) : (
                 <View style={styles.noResultsContainer}>
                   <Text style={styles.placeholderEmoji}>📝</Text>
-                  <Text style={[styles.placeholderTitle, { color: theme.text }]}>
+                  <Text
+                    style={[styles.placeholderTitle, { color: theme.text }]}
+                  >
                     No Posts Yet
                   </Text>
                   <Text
-                    style={[styles.noResultsText, { color: theme.textSecondary }]}
+                    style={[
+                      styles.noResultsText,
+                      { color: theme.textSecondary },
+                    ]}
                   >
-                    Be the first to share your riding experience! Share a session from your training sessions to get started.
+                    Be the first to share your riding experience! Share a
+                    session from your training sessions to get started.
                   </Text>
                 </View>
               )}
@@ -1285,7 +1367,12 @@ export default function CommunityScreen() {
         onRequestClose={() => setShowNotifications(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { backgroundColor: theme.background }]}>
+          <View
+            style={[
+              styles.modalContainer,
+              { backgroundColor: theme.background },
+            ]}
+          >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>
                 Friend Requests
@@ -1294,25 +1381,39 @@ export default function CommunityScreen() {
                 style={styles.modalCloseButton}
                 onPress={() => setShowNotifications(false)}
               >
-                <Text style={[styles.modalCloseText, { color: theme.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.modalCloseText,
+                    { color: theme.textSecondary },
+                  ]}
+                >
                   ✕
                 </Text>
               </TouchableOpacity>
             </View>
-            
+
             <ScrollView style={styles.modalContent}>
               {isLoadingRequests ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator color={theme.primary} size="small" />
-                  <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+                  <Text
+                    style={[styles.loadingText, { color: theme.textSecondary }]}
+                  >
                     Loading requests...
                   </Text>
                 </View>
               ) : friendRequests.length > 0 ? (
-                friendRequests.map((request) => renderFriendRequest({ item: request }))
+                friendRequests.map((request) =>
+                  renderFriendRequest({ item: request })
+                )
               ) : (
                 <View style={styles.noResultsContainer}>
-                  <Text style={[styles.noResultsText, { color: theme.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.noResultsText,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
                     You have no notifications yet.
                   </Text>
                 </View>
@@ -1340,7 +1441,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     position: "relative",
     marginBottom: -45,
-    paddingHorizontal: 20,
   },
   header: {
     fontSize: 30,
@@ -1757,8 +1857,16 @@ const styles = StyleSheet.create({
   },
   notificationIcon: {
     position: "absolute",
-    right: 0,
+    right: 20,
     padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    zIndex: 10,
   },
   // Modal Styles
   modalOverlay: {
