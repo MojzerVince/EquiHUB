@@ -336,33 +336,6 @@ export default function CommunityScreen() {
     }
   };
 
-  // Test database connection
-  const testDatabaseConnection = async () => {
-    try {
-      const { success, error, data } = await UserAPI.testDatabaseConnection();
-
-      if (success) {
-        Alert.alert(
-          "Database Test ✅",
-          `Connection successful!\nProfiles found: ${data?.count || 0}`,
-          [{ text: "OK" }]
-        );
-      } else {
-        Alert.alert("Database Test ❌", `Connection failed!\nError: ${error}`, [
-          { text: "OK" },
-        ]);
-      }
-    } catch (error) {
-      Alert.alert(
-        "Database Test ❌",
-        `Test failed!\nException: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-        [{ text: "OK" }]
-      );
-    }
-  };
-
   // Handle post likes (using mock data for now)
   const handleLike = (postId: string) => {
     setPosts(
@@ -674,29 +647,9 @@ export default function CommunityScreen() {
 
             {/* Search Section */}
             <View style={styles.section}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 12,
-                }}
-              >
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  Find Friends
-                </Text>
-                <TouchableOpacity
-                  onPress={testDatabaseConnection}
-                  style={[
-                    styles.testButton,
-                    { backgroundColor: theme.secondary || "#6B7280" },
-                  ]}
-                >
-                  <Text style={[styles.testButtonText, { color: "#FFFFFF" }]}>
-                    Test DB
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Find Friends
+              </Text>
               <View style={styles.searchContainer}>
                 <TextInput
                   style={[
@@ -1187,16 +1140,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 24,
     paddingVertical: 60,
-  },
-  testButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  testButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
   },
 });
