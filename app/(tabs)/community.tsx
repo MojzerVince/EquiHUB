@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { CommunityAPI, PostWithUser } from "../../lib/communityAPI";
+import { HiddenPostsManager } from "../../lib/hiddenPostsManager";
 import {
   NotificationService,
   handleNotificationResponse,
@@ -81,6 +82,10 @@ export default function CommunityScreen() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [hiddenPostIds, setHiddenPostIds] = useState<string[]>([]);
+  const [showPostMenu, setShowPostMenu] = useState<string | null>(null);
+  const [reportingPost, setReportingPost] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState("");
 
   // Default avatar URL for users without profile images
   const getAvatarUrl = (profileImageUrl?: string) => {
@@ -136,11 +141,11 @@ export default function CommunityScreen() {
     if (user?.id) {
       loadFriends();
       loadFriendRequests();
+      loadHiddenPosts();
+      // Load posts once when component mounts
+      loadPosts();
     }
-
-    // Load posts from database
-    loadPosts();
-  }, [user]);
+  }, [user?.id]);
 
   // Setup push notifications
   useEffect(() => {
@@ -367,18 +372,97 @@ export default function CommunityScreen() {
     }
   };
 
+  // Load hidden posts from storage
+  const loadHiddenPosts = useCallback(async () => {
+    if (!user?.id) {
+      setHiddenPostIds([]);
+      return;
+    }
+
+    try {
+      const hiddenIds = await HiddenPostsManager.getHiddenPostIds(user.id);
+      setHiddenPostIds(hiddenIds);
+    } catch (error) {
+      console.error("Error loading hidden posts:", error);
+      setHiddenPostIds([]);
+    }
+  }, [user?.id]);
+
+  // Handle hiding a post
+  const handleHidePost = async (post: Post) => {
+    if (!user?.id) return;
+
+    try {
+      const success = await HiddenPostsManager.hidePost(
+        user.id,
+        post.id,
+        post.user.name,
+        post.content
+      );
+
+      if (success) {
+        // Update local state to hide the post immediately
+        setHiddenPostIds((prev) => [...prev, post.id]);
+        setShowPostMenu(null);
+        Alert.alert(
+          "Success",
+          "Post has been hidden. You can view hidden posts in the Options tab."
+        );
+      } else {
+        Alert.alert("Error", "Failed to hide post. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error hiding post:", error);
+      Alert.alert("Error", "Failed to hide post. Please try again.");
+    }
+  };
+
+  // Handle reporting a post
+  const handleReportPost = async (post: Post) => {
+    if (!user?.id || !reportReason.trim()) {
+      Alert.alert("Error", "Please provide a reason for reporting this post.");
+      return;
+    }
+
+    try {
+      const { success, error } = await CommunityAPI.reportPost(
+        post.id,
+        user.id,
+        reportReason.trim()
+      );
+
+      if (success) {
+        setReportingPost(null);
+        setReportReason("");
+        setShowPostMenu(null);
+        Alert.alert(
+          "Success",
+          "Post has been reported. Thank you for helping keep our community safe."
+        );
+      } else {
+        Alert.alert(
+          "Error",
+          error || "Failed to report post. Please try again."
+        );
+      }
+    } catch (error) {
+      console.error("Error reporting post:", error);
+      Alert.alert("Error", "Failed to report post. Please try again.");
+    }
+  };
+
   // Debug effect to track isSearching state changes
   useEffect(() => {
     // Removed console logs for cleaner code
   }, [isSearching, searchResults.length, searchQuery]);
 
-  // Periodic refresh of friend requests when user is active
+  // Periodic refresh of friend requests when user is active (reduced frequency)
   useEffect(() => {
     if (!user?.id) return;
 
     const interval = setInterval(() => {
       loadFriendRequests();
-    }, 30000); // Check every 30 seconds
+    }, 300000); // Check every 5 minutes instead of 30 seconds
 
     return () => clearInterval(interval);
   }, [user?.id]);
@@ -437,7 +521,12 @@ export default function CommunityScreen() {
 
     try {
       // Run all loading functions in parallel for faster refresh
-      await Promise.all([loadFriendRequests(), loadFriends(), loadPosts()]);
+      await Promise.all([
+        loadFriendRequests(),
+        loadFriends(),
+        loadHiddenPosts(),
+        loadPosts(), // Always refresh posts on manual pull-to-refresh
+      ]);
     } catch (error) {
       console.error("Error refreshing community data:", error);
       Alert.alert(
@@ -447,18 +536,24 @@ export default function CommunityScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [user?.id, loadFriendRequests, loadFriends, loadPosts]);
+  }, [user?.id, loadFriendRequests, loadFriends, loadHiddenPosts, loadPosts]);
 
-  // Refresh all data when screen is focused
+  // Refresh all data when screen is focused (less frequent)
   useFocusEffect(
     useCallback(() => {
       if (user?.id) {
         loadFriends();
         loadFriendRequests();
+        // Only load hidden posts if we don't have them yet
+        if (hiddenPostIds.length === 0) {
+          loadHiddenPosts();
+        }
       }
-      // Always reload posts to show new shared content
-      loadPosts();
-    }, [user?.id, loadFriends, loadFriendRequests, loadPosts])
+      // Only reload posts if we don't have any posts yet
+      if (posts.length === 0) {
+        loadPosts();
+      }
+    }, [user?.id, loadFriends, loadFriendRequests])
   );
 
   // Search for users with manual trigger
@@ -800,6 +895,48 @@ export default function CommunityScreen() {
             </Text>
           </View>
         </View>
+        {/* Post menu button - only show for other users' posts */}
+        {user?.id !== item.user.id && (
+          <View style={styles.postMenuContainer}>
+            <TouchableOpacity
+              style={styles.postMenuButton}
+              onPress={() =>
+                setShowPostMenu(showPostMenu === item.id ? null : item.id)
+              }
+            >
+              <Text
+                style={[styles.postMenuDots, { color: theme.textSecondary }]}
+              >
+                ⋯
+              </Text>
+            </TouchableOpacity>
+            {showPostMenu === item.id && (
+              <View
+                style={[styles.postMenu, { backgroundColor: theme.surface }]}
+              >
+                <TouchableOpacity
+                  style={styles.postMenuItem}
+                  onPress={() => handleHidePost(item)}
+                >
+                  <Text style={[styles.postMenuText, { color: theme.text }]}>
+                    🙈 Hide Post
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.postMenuItem}
+                  onPress={() => {
+                    setReportingPost(item.id);
+                    setShowPostMenu(null);
+                  }}
+                >
+                  <Text style={[styles.postMenuText, { color: "#FF6B6B" }]}>
+                    🚨 Report Post
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
       </View>
 
       <Text style={[styles.postContent, { color: theme.text }]}>
@@ -1032,6 +1169,7 @@ export default function CommunityScreen() {
             titleColor={currentTheme.colors.text}
           />
         }
+        onTouchStart={() => setShowPostMenu(null)} // Close menu when scrolling
       >
         {/* Tab Selector */}
         <View style={styles.tabContainer}>
@@ -1272,7 +1410,11 @@ export default function CommunityScreen() {
                   </Text>
                 </View>
               ) : posts.length > 0 ? (
-                <View>{posts.map((item) => renderPost({ item }))}</View>
+                <View>
+                  {posts
+                    .filter((post) => !hiddenPostIds.includes(post.id))
+                    .map((item) => renderPost({ item }))}
+                </View>
               ) : (
                 <View style={styles.noResultsContainer}>
                   <Text style={styles.placeholderEmoji}>📝</Text>
@@ -1419,6 +1561,105 @@ export default function CommunityScreen() {
                 </View>
               )}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Report Post Modal */}
+      <Modal
+        visible={reportingPost !== null}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setReportingPost(null);
+          setReportReason("");
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContainer,
+              { backgroundColor: theme.background },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>
+                Report Post
+              </Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => {
+                  setReportingPost(null);
+                  setReportReason("");
+                }}
+              >
+                <Text
+                  style={[
+                    styles.modalCloseText,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalContent}>
+              <Text style={[styles.reportLabel, { color: theme.text }]}>
+                Please tell us why you're reporting this post:
+              </Text>
+              <TextInput
+                style={[
+                  styles.reportInput,
+                  {
+                    backgroundColor: theme.surface,
+                    color: theme.text,
+                    borderColor: theme.textSecondary,
+                  },
+                ]}
+                placeholder="Enter reason for reporting..."
+                placeholderTextColor={theme.textSecondary}
+                value={reportReason}
+                onChangeText={setReportReason}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+              <View style={styles.reportButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.reportCancelButton,
+                    { backgroundColor: theme.textSecondary },
+                  ]}
+                  onPress={() => {
+                    setReportingPost(null);
+                    setReportReason("");
+                  }}
+                >
+                  <Text style={styles.reportCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.reportSubmitButton,
+                    { backgroundColor: "#FF6B6B" },
+                  ]}
+                  onPress={() => {
+                    const post = posts.find((p) => p.id === reportingPost);
+                    if (post) handleReportPost(post);
+                  }}
+                  disabled={!reportReason.trim()}
+                >
+                  <Text
+                    style={[
+                      styles.reportSubmitText,
+                      { opacity: reportReason.trim() ? 1 : 0.5 },
+                    ]}
+                  >
+                    Report
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1609,6 +1850,48 @@ const styles = StyleSheet.create({
   },
   postHeader: {
     marginBottom: 12,
+  },
+  postMenuContainer: {
+    position: "absolute",
+    right: 6,
+    zIndex: 10,
+    width: 50,
+  },
+  postMenuButton: {
+    padding: 8,
+    borderRadius: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+  },
+  postMenuDots: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  postMenu: {
+    position: "absolute",
+    top: 40,
+    right: 0,
+    minWidth: 140,
+    borderRadius: 8,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    zIndex: 20,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  postMenuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  postMenuText: {
+    fontSize: 14,
+    fontWeight: "500",
   },
   userInfo: {
     flexDirection: "row",
@@ -1903,5 +2186,45 @@ const styles = StyleSheet.create({
   modalContent: {
     padding: 20,
     maxHeight: 400,
+  },
+  reportLabel: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginBottom: 12,
+  },
+  reportInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 100,
+    marginBottom: 20,
+  },
+  reportButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  reportCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  reportCancelText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  reportSubmitButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  reportSubmitText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

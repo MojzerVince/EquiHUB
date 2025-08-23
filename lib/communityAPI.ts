@@ -404,4 +404,39 @@ export class CommunityAPI {
       return { requests: [], error: 'An unexpected error occurred while loading friend requests' };
     }
   }
+
+  // Report a post
+  static async reportPost(postId: string, userId: string, reason: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      console.log('🚨 CommunityAPI.reportPost - Reporting post:', postId);
+      
+      // Check if user already reported this post
+      const existingReport = await this.makeRequest(
+        `post_reports?post_id=eq.${postId}&reporter_id=eq.${userId}&select=id`
+      );
+
+      if (existingReport && Array.isArray(existingReport) && existingReport.length > 0) {
+        return { success: false, error: 'You have already reported this post' };
+      }
+
+      // Create new report
+      await this.makeRequest(
+        'post_reports',
+        'POST',
+        {
+          post_id: postId,
+          reporter_id: userId,
+          reason: reason,
+          status: 'pending'
+        }
+      );
+
+      console.log('✅ Post reported successfully');
+      return { success: true, error: null };
+
+    } catch (error) {
+      console.error('💥 Report post error:', error);
+      return { success: false, error: 'An unexpected error occurred while reporting the post' };
+    }
+  }
 }
