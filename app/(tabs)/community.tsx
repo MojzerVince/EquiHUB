@@ -89,8 +89,7 @@ export default function CommunityScreen() {
       user: {
         id: "user1",
         name: "Sarah Johnson",
-        avatar:
-          "https://images.unsplash.com/photo-1494790108755-2616b612b1-woman-smiling?w=150",
+        avatar: getAvatarUrl(undefined), // Use default avatar
         isOnline: true,
         isFriend: true,
       },
@@ -112,8 +111,7 @@ export default function CommunityScreen() {
       user: {
         id: "user2",
         name: "Mike Chen",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+        avatar: getAvatarUrl(undefined), // Use default avatar
         isOnline: false,
         isFriend: true,
       },
@@ -134,8 +132,7 @@ export default function CommunityScreen() {
       user: {
         id: "user3",
         name: "Emma Rodriguez",
-        avatar:
-          "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
+        avatar: getAvatarUrl(undefined), // Use default avatar
         isOnline: true,
         isFriend: true,
       },
@@ -158,23 +155,21 @@ export default function CommunityScreen() {
     {
       id: "friend1",
       name: "Alex Thompson",
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
+      avatar: getAvatarUrl(undefined), // Use default avatar
       isOnline: true,
       isFriend: true,
     },
     {
       id: "friend2",
       name: "Jessica Lee",
-      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150",
+      avatar: getAvatarUrl(undefined), // Use default avatar
       isOnline: false,
       isFriend: true,
     },
     {
       id: "friend3",
       name: "David Kim",
-      avatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
+      avatar: getAvatarUrl(undefined), // Use default avatar
       isOnline: true,
       isFriend: true,
     },
@@ -184,16 +179,14 @@ export default function CommunityScreen() {
     {
       id: "search1",
       name: "Sophie Miller",
-      avatar:
-        "https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=150",
+      avatar: getAvatarUrl(undefined), // Use default avatar
       isOnline: false,
       isFriend: false,
     },
     {
       id: "search2",
       name: "Ryan Taylor",
-      avatar:
-        "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150",
+      avatar: getAvatarUrl(undefined), // Use default avatar
       isOnline: true,
       isFriend: false,
     },
@@ -230,7 +223,7 @@ export default function CommunityScreen() {
             user: {
               id: dbPost.profiles.id,
               name: dbPost.profiles.name,
-              avatar: dbPost.profiles.profile_image_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
+              avatar: getAvatarUrl(dbPost.profiles.profile_image_url),
               isOnline: true,
               isFriend: true,
             },
