@@ -1,4 +1,5 @@
 import { useFocusEffect } from "@react-navigation/native";
+import * as Notifications from 'expo-notifications';
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -17,6 +18,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { CommunityAPI, PostWithUser } from "../../lib/communityAPI";
+import { NotificationService, handleNotificationResponse } from "../../lib/notificationService";
+import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { UserAPI, UserSearchResult } from "../../lib/userAPI";
 
 // TypeScript interfaces
@@ -132,6 +135,62 @@ export default function CommunityScreen() {
 
     // Load posts from database
     loadPosts();
+  }, [user]);
+
+  // Setup push notifications
+  useEffect(() => {
+    let notificationListener: Notifications.Subscription;
+    let responseListener: Notifications.Subscription;
+
+    const setupNotifications = async () => {
+      if (user?.id) {
+        try {
+          // Register for push notifications and get token
+          const token = await NotificationService.registerForPushNotificationsAsync();
+          
+          if (token) {
+            // Save the token to the database
+            await NotificationService.savePushToken(user.id, token);
+            console.log('Push notification token registered successfully');
+          }
+        } catch (error) {
+          console.error('Error setting up push notifications:', error);
+        }
+      }
+
+      // Listen for notifications received while app is running
+      notificationListener = Notifications.addNotificationReceivedListener(notification => {
+        console.log('Notification received:', notification);
+        // Refresh friend requests when a friend request notification is received
+        if (notification.request.content.data?.type === 'friend_request') {
+          loadFriendRequests();
+        }
+      });
+
+      // Listen for notification responses (when user taps on notification)
+      responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+        console.log('Notification response:', response);
+        handleNotificationResponse(response);
+        
+        // If it's a friend request notification, open the notifications modal
+        if (response.notification.request.content.data?.type === 'friend_request') {
+          setShowNotifications(true);
+          loadFriendRequests();
+        }
+      });
+    };
+
+    setupNotifications();
+
+    // Cleanup listeners
+    return () => {
+      if (notificationListener) {
+        Notifications.removeNotificationSubscription(notificationListener);
+      }
+      if (responseListener) {
+        Notifications.removeNotificationSubscription(responseListener);
+      }
+    };
   }, [user]);
 
   // Load posts from database
@@ -474,6 +533,23 @@ export default function CommunityScreen() {
           (u) => u.id !== userToAdd.id
         );
         setSearchResults(updatedResults);
+
+        // Send push notification to the recipient
+        try {
+          // Get the current user's profile to get their name
+          const currentUserProfile = await ProfileAPIBase64.getProfile(user.id);
+          const senderName = currentUserProfile?.name || "Someone";
+          
+          await NotificationService.sendFriendRequestNotification(
+            userToAdd.id,
+            senderName,
+            user.id
+          );
+          console.log(`Push notification sent to ${userToAdd.name} for friend request`);
+        } catch (notificationError) {
+          console.error('Failed to send push notification:', notificationError);
+          // Don't show error to user as the friend request was still sent successfully
+        }
 
         Alert.alert("Success", `Friend request sent to ${userToAdd.name}!`);
         

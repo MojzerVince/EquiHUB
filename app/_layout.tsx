@@ -4,6 +4,7 @@ import {
     ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
+import * as Notifications from 'expo-notifications';
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
@@ -17,6 +18,7 @@ import { SplashProvider, useSplash } from "@/contexts/SplashContext";
 import { ThemeProvider as CustomThemeProvider } from "@/contexts/ThemeContext";
 import { TrackingProvider } from "@/contexts/TrackingContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { handleNotificationResponse } from "@/lib/notificationService";
 import { useRouter } from "expo-router";
 
 // Hide Expo's default splash screen immediately
@@ -53,6 +55,7 @@ const SplashWithAuth = ({ onFinish }: { onFinish: () => void }) => {
 
 const AppContent = () => {
   const colorScheme = useColorScheme();
+  const router = useRouter();
   const [loaded] = useFonts({
     Inder: require("../assets/fonts/Inder-Regular.ttf"),
   });
@@ -63,6 +66,48 @@ const AppContent = () => {
   useEffect(() => {
     setSplashActive(true);
   }, [setSplashActive]);
+
+  // Set up global notification handlers when app starts
+  useEffect(() => {
+    let notificationListener: Notifications.Subscription;
+    let responseListener: Notifications.Subscription;
+
+    const setupGlobalNotifications = () => {
+      // Listen for notifications received while app is running
+      notificationListener = Notifications.addNotificationReceivedListener(notification => {
+        console.log('Global notification received:', notification);
+        // Additional global handling can be added here
+      });
+
+      // Listen for notification responses (when user taps on notification)
+      responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+        console.log('Global notification response:', response);
+        
+        // Handle navigation based on notification type
+        const data = response.notification.request.content.data as any;
+        
+        if (data?.type === 'friend_request') {
+          // Navigate to community screen when friend request notification is tapped
+          router.push('/(tabs)/community');
+        }
+        
+        // Call the main handler
+        handleNotificationResponse(response);
+      });
+    };
+
+    setupGlobalNotifications();
+
+    // Cleanup listeners
+    return () => {
+      if (notificationListener) {
+        Notifications.removeNotificationSubscription(notificationListener);
+      }
+      if (responseListener) {
+        Notifications.removeNotificationSubscription(responseListener);
+      }
+    };
+  }, [router]);
 
   // Show splash screen while fonts are loading or splash is active
   if (!loaded || showSplash) {
