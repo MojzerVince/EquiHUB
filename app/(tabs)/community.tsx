@@ -82,75 +82,6 @@ export default function CommunityScreen() {
     );
   };
 
-  // Mock data
-  const mockPosts: Post[] = [
-    {
-      id: "1",
-      user: {
-        id: "user1",
-        name: "Sarah Johnson",
-        avatar: getAvatarUrl(undefined), // Use default avatar
-        isOnline: true,
-        isFriend: true,
-      },
-      timestamp: "2 hours ago",
-      content: "Amazing training session with Thunder today! 🐴",
-      image: "https://images.unsplash.com/photo-1553284966-19b8815c7817?w=400",
-      likes: 12,
-      comments: 3,
-      isLiked: false,
-      sessionData: {
-        horseName: "Thunder",
-        duration: "45 min",
-        distance: "3.2 km",
-        avgSpeed: "4.3 km/h",
-      },
-    },
-    {
-      id: "2",
-      user: {
-        id: "user2",
-        name: "Mike Chen",
-        avatar: getAvatarUrl(undefined), // Use default avatar
-        isOnline: false,
-        isFriend: true,
-      },
-      timestamp: "4 hours ago",
-      content: "Perfect weather for trail riding! Luna was in great spirits.",
-      likes: 8,
-      comments: 1,
-      isLiked: true,
-      sessionData: {
-        horseName: "Luna",
-        duration: "60 min",
-        distance: "5.1 km",
-        avgSpeed: "5.1 km/h",
-      },
-    },
-    {
-      id: "3",
-      user: {
-        id: "user3",
-        name: "Emma Rodriguez",
-        avatar: getAvatarUrl(undefined), // Use default avatar
-        isOnline: true,
-        isFriend: true,
-      },
-      timestamp: "1 day ago",
-      content:
-        "Working on dressage techniques with Storm. Progress is slow but steady!",
-      likes: 15,
-      comments: 5,
-      isLiked: false,
-      sessionData: {
-        horseName: "Storm",
-        duration: "30 min",
-        distance: "1.8 km",
-        avgSpeed: "3.6 km/h",
-      },
-    },
-  ];
-
   const mockFriends: User[] = [
     {
       id: "friend1",
@@ -199,16 +130,15 @@ export default function CommunityScreen() {
       loadFriendRequests();
     }
 
-    // Load both mock posts and shared posts
+    // Load posts from database
     loadPosts();
   }, [user]);
 
-  // Load posts from database and merge with mock data
+  // Load posts from database
   const loadPosts = useCallback(async () => {
     setIsLoadingPosts(true);
     try {
-      // Start with mock posts (these are always visible)
-      let allPosts = [...mockPosts];
+      let allPosts: Post[] = [];
 
       // Load posts from database if user is logged in
       if (user?.id) {
@@ -241,16 +171,15 @@ export default function CommunityScreen() {
             } : undefined,
           }));
 
-          // Add database posts to the beginning (most recent first)
-          allPosts = [...formattedPosts, ...allPosts];
+          allPosts = formattedPosts;
         }
       }
 
       setPosts(allPosts);
     } catch (error) {
       console.error("Error loading posts:", error);
-      // Fallback to mock posts only
-      setPosts(mockPosts);
+      // Set empty posts on error
+      setPosts([]);
     } finally {
       setIsLoadingPosts(false);
     }
@@ -563,54 +492,36 @@ export default function CommunityScreen() {
       return;
     }
 
-    // Find the post to check if it's a database post or mock post
+    // Find the post
     const post = posts.find(p => p.id === postId);
     if (!post) return;
 
-    // Check if this is a mock post (starts with number) or database post (UUID)
-    const isMockPost = /^\d+$/.test(postId);
-
-    if (isMockPost) {
-      // Handle mock posts with local state only
-      setPosts(
-        posts.map((post) =>
-          post.id === postId
-            ? {
-                ...post,
-                isLiked: !post.isLiked,
-                likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-              }
-            : post
-        )
-      );
-    } else {
-      // Handle database posts
-      try {
-        const { success, error } = await CommunityAPI.togglePostLike(postId, user.id);
-        
-        if (error) {
-          Alert.alert("Error", error);
-          return;
-        }
-
-        if (success) {
-          // Update local state optimistically
-          setPosts(
-            posts.map((post) =>
-              post.id === postId
-                ? {
-                    ...post,
-                    isLiked: !post.isLiked,
-                    likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-                  }
-                : post
-            )
-          );
-        }
-      } catch (error) {
-        console.error("Error toggling like:", error);
-        Alert.alert("Error", "Failed to update like. Please try again.");
+    // Handle database posts
+    try {
+      const { success, error } = await CommunityAPI.togglePostLike(postId, user.id);
+      
+      if (error) {
+        Alert.alert("Error", error);
+        return;
       }
+
+      if (success) {
+        // Update local state optimistically
+        setPosts(
+          posts.map((post) =>
+            post.id === postId
+              ? {
+                  ...post,
+                  isLiked: !post.isLiked,
+                  likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+                }
+              : post
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+      Alert.alert("Error", "Failed to update like. Please try again.");
     }
   };
 
@@ -1098,8 +1009,20 @@ export default function CommunityScreen() {
                     Loading posts...
                   </Text>
                 </View>
-              ) : (
+              ) : posts.length > 0 ? (
                 <View>{posts.map((item) => renderPost({ item }))}</View>
+              ) : (
+                <View style={styles.noResultsContainer}>
+                  <Text style={styles.placeholderEmoji}>📝</Text>
+                  <Text style={[styles.placeholderTitle, { color: theme.text }]}>
+                    No Posts Yet
+                  </Text>
+                  <Text
+                    style={[styles.noResultsText, { color: theme.textSecondary }]}
+                  >
+                    Be the first to share your riding experience! Share a session from your training sessions to get started.
+                  </Text>
+                </View>
               )}
             </View>
           </>
