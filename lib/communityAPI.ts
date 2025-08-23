@@ -333,10 +333,12 @@ export class CommunityAPI {
   static async acceptFriendRequest(userId: string, friendId: string): Promise<{ success: boolean; error: string | null }> {
     try {
       console.log('🔗 CommunityAPI.acceptFriendRequest - Using REST API');
+      console.log('👤 User ID (receiver):', userId);
+      console.log('👥 Friend ID (sender):', friendId);
       
-      // Update friendship status to accepted
+      // Update friendship status to accepted with proper WHERE clause
       await this.makeRequest(
-        `friendships?and(user_id.eq.${friendId},friend_id.eq.${userId})`,
+        `friendships?user_id=eq.${friendId}&friend_id=eq.${userId}&status=eq.pending`,
         'PATCH',
         { status: 'accepted' }
       );
