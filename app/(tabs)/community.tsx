@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { CommunityAPI, PostWithUser } from "../../lib/communityAPI";
 import { UserAPI, UserSearchResult } from "../../lib/userAPI";
 
 // TypeScript interfaces
@@ -202,9 +203,59 @@ export default function CommunityScreen() {
       loadFriendRequests();
     }
 
-    // Load mock posts (you can replace this with real post data later)
-    setPosts(mockPosts);
+    // Load both mock posts and shared posts
+    loadPosts();
   }, [user]);
+
+  // Load posts from database and merge with mock data
+  const loadPosts = useCallback(async () => {
+    try {
+      // Start with mock posts (these are always visible)
+      let allPosts = [...mockPosts];
+
+      // Load posts from database if user is logged in
+      if (user?.id) {
+        const { posts: dbPosts, error } = await CommunityAPI.getFeedPosts(user.id);
+        
+        if (error) {
+          console.error("Error loading posts from database:", error);
+        } else {
+          // Convert database posts to the format expected by the UI
+          const formattedPosts: Post[] = dbPosts.map((dbPost: PostWithUser) => ({
+            id: dbPost.id,
+            user: {
+              id: dbPost.profiles.id,
+              name: dbPost.profiles.name,
+              avatar: dbPost.profiles.profile_image_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
+              isOnline: true,
+              isFriend: true,
+            },
+            timestamp: new Date(dbPost.created_at).toLocaleString(),
+            content: dbPost.content,
+            image: dbPost.image_url,
+            likes: dbPost.likes_count,
+            comments: 0, // TODO: Add comments feature later
+            isLiked: dbPost.is_liked || false,
+            sessionData: dbPost.session_data ? {
+              horseName: dbPost.session_data.horse_name,
+              duration: dbPost.session_data.duration,
+              distance: dbPost.session_data.distance,
+              avgSpeed: dbPost.session_data.avg_speed,
+            } : undefined,
+          }));
+
+          // Add database posts to the beginning (most recent first)
+          allPosts = [...formattedPosts, ...allPosts];
+        }
+      }
+
+      setPosts(allPosts);
+    } catch (error) {
+      console.error("Error loading posts:", error);
+      // Fallback to mock posts only
+      setPosts(mockPosts);
+    }
+  }, [user?.id]);
 
   // Load incoming friend requests
   const loadFriendRequests = useCallback(async () => {
@@ -329,13 +380,15 @@ export default function CommunityScreen() {
     return () => clearInterval(interval);
   }, [user?.id]);
 
-  // Refresh friend requests when screen is focused
+  // Refresh friend requests and posts when screen is focused
   useFocusEffect(
     useCallback(() => {
       if (user?.id) {
         loadFriendRequests();
       }
-    }, [user?.id, loadFriendRequests])
+      // Always reload posts to show new shared content
+      loadPosts();
+    }, [user?.id, loadFriendRequests, loadPosts])
   );
 
   // Load friends from database
@@ -484,19 +537,62 @@ export default function CommunityScreen() {
     }
   };
 
-  // Handle post likes (using mock data for now)
-  const handleLike = (postId: string) => {
-    setPosts(
-      posts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              isLiked: !post.isLiked,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-            }
-          : post
-      )
-    );
+  // Handle post likes
+  const handleLike = async (postId: string) => {
+    if (!user?.id) {
+      Alert.alert("Error", "You must be logged in to like posts");
+      return;
+    }
+
+    // Find the post to check if it's a database post or mock post
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    // Check if this is a mock post (starts with number) or database post (UUID)
+    const isMockPost = /^\d+$/.test(postId);
+
+    if (isMockPost) {
+      // Handle mock posts with local state only
+      setPosts(
+        posts.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                isLiked: !post.isLiked,
+                likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+              }
+            : post
+        )
+      );
+    } else {
+      // Handle database posts
+      try {
+        const { success, error } = await CommunityAPI.togglePostLike(postId, user.id);
+        
+        if (error) {
+          Alert.alert("Error", error);
+          return;
+        }
+
+        if (success) {
+          // Update local state optimistically
+          setPosts(
+            posts.map((post) =>
+              post.id === postId
+                ? {
+                    ...post,
+                    isLiked: !post.isLiked,
+                    likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+                  }
+                : post
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Error toggling like:", error);
+        Alert.alert("Error", "Failed to update like. Please try again.");
+      }
+    }
   };
 
   const renderPost = ({ item }: { item: Post }) => (
