@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from "@react-navigation/native";
 import * as Notifications from 'expo-notifications';
 import React, { useCallback, useEffect, useState } from "react";
@@ -20,6 +21,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { CommunityAPI, PostWithUser } from "../../lib/communityAPI";
 import { NotificationService, handleNotificationResponse } from "../../lib/notificationService";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
+import { supabase, supabaseUrl } from "../../lib/supabase";
 import { UserAPI, UserSearchResult } from "../../lib/userAPI";
 
 // TypeScript interfaces
@@ -314,7 +316,8 @@ export default function CommunityScreen() {
     if (!user?.id) return;
 
     try {
-      const { success, error } = await UserAPI.acceptFriendRequest(user.id, request.sender_id);
+      // Use CommunityAPI REST endpoint instead of UserAPI
+      const { success, error } = await CommunityAPI.acceptFriendRequest(user.id, request.sender_id);
       
       if (error) {
         Alert.alert("Error", error);
@@ -512,52 +515,175 @@ export default function CommunityScreen() {
 
   // Add friend functionality
   const handleAddFriend = async (userToAdd: UserSearchResult) => {
+    console.log('🎯 handleAddFriend called for user:', userToAdd.name, userToAdd.id);
+    
     if (!user?.id) {
+      console.log('❌ No user logged in');
+      Alert.alert("Error", "You must be logged in to send friend requests");
       return;
     }
 
+    console.log('👤 Current user:', user.id);
+    console.log('📤 Sending friend request using REST API...');
+
     try {
-      const { success, error } = await UserAPI.sendFriendRequest(
+      // Get the current auth token using REST API instead of supabase.auth.getSession()
+      console.log('🔑 Getting auth token via REST API...');
+      
+      // Try to get stored session from AsyncStorage first (more reliable)
+      let authToken: string | null = null;
+      
+      try {
+        // Supabase stores session data under this key format
+        const supabaseSessionKey = `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`;
+        console.log('🔍 Looking for session in AsyncStorage with key:', supabaseSessionKey);
+        
+        const sessionData = await AsyncStorage.getItem(supabaseSessionKey);
+        if (sessionData) {
+          console.log('📱 Found session data in AsyncStorage');
+          const parsedSession = JSON.parse(sessionData);
+          authToken = parsedSession.access_token;
+          console.log('📱 Got auth token from AsyncStorage:', !!authToken);
+        } else {
+          console.log('📱 No session data found in AsyncStorage');
+          
+          // Try alternative keys that Supabase might use
+          const allKeys = await AsyncStorage.getAllKeys();
+          console.log('� All AsyncStorage keys:', allKeys.filter(key => key.includes('supabase') || key.includes('auth')));
+          
+          // Try to find any Supabase auth keys
+          const authKeys = allKeys.filter(key => 
+            key.includes('supabase') && key.includes('auth')
+          );
+          
+          for (const key of authKeys) {
+            try {
+              const data = await AsyncStorage.getItem(key);
+              if (data) {
+                const parsed = JSON.parse(data);
+                if (parsed.access_token) {
+                  authToken = parsed.access_token;
+                  console.log('📱 Found auth token in key:', key);
+                  break;
+                }
+              }
+            } catch (e) {
+              console.log('🔍 Key', key, 'not valid JSON');
+            }
+          }
+        }
+      } catch (storageError) {
+        console.log('📱 AsyncStorage lookup failed:', storageError);
+      }
+      
+      // Fallback: Try direct session call with short timeout  
+      if (!authToken) {
+        console.log('🔄 Trying direct session call...');
+        try {
+          // Try multiple approaches to get the session
+          const approaches = [
+            // Approach 1: Quick session call
+            async () => {
+              const { data: { session } } = await supabase.auth.getSession();
+              return session?.access_token || null;
+            },
+            // Approach 2: Get user and then session
+            async () => {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user) {
+                const { data: { session } } = await supabase.auth.getSession();
+                return session?.access_token || null;
+              }
+              return null;
+            }
+          ];
+
+          for (let i = 0; i < approaches.length; i++) {
+            try {
+              console.log(`🔄 Trying approach ${i + 1}...`);
+              const token = await Promise.race([
+                approaches[i](),
+                new Promise<null>((_, reject) => {
+                  setTimeout(() => reject(new Error('Timeout')), 2000);
+                })
+              ]);
+              
+              if (token) {
+                authToken = token;
+                console.log(`✅ Got auth token from approach ${i + 1}`);
+                break;
+              }
+            } catch (error) {
+              console.log(`❌ Approach ${i + 1} failed:`, error instanceof Error ? error.message : 'Unknown');
+            }
+          }
+        } catch (sessionError) {
+          console.log('⏱️ All session approaches failed');
+        }
+      }
+      
+      if (!authToken) {
+        console.error('❌ No auth token available via any method');
+        Alert.alert("Error", "Authentication required. Please log in again.");
+        return;
+      }
+
+      // Use CommunityAPI REST endpoint with auth token
+      const { success, error } = await CommunityAPI.sendFriendRequest(
         user.id,
-        userToAdd.id
+        userToAdd.id,
+        authToken
       );
 
+      console.log('📨 Friend request result:', { success, error });
+
       if (error) {
+        console.error('❌ Friend request error:', error);
         Alert.alert("Error", error);
         return;
       }
 
       if (success) {
+        console.log('✅ Friend request sent successfully');
+        
         // Remove from search results
         const updatedResults = searchResults.filter(
           (u) => u.id !== userToAdd.id
         );
         setSearchResults(updatedResults);
+        console.log('🔄 Updated search results, removed user');
 
         // Send push notification to the recipient
         try {
+          console.log('📢 Attempting to send push notification...');
           // Get the current user's profile to get their name
           const currentUserProfile = await ProfileAPIBase64.getProfile(user.id);
           const senderName = currentUserProfile?.name || "Someone";
+          console.log('👤 Sender name:', senderName);
           
           await NotificationService.sendFriendRequestNotification(
             userToAdd.id,
             senderName,
             user.id
           );
-          console.log(`Push notification sent to ${userToAdd.name} for friend request`);
+          console.log(`✅ Push notification sent to ${userToAdd.name} for friend request`);
         } catch (notificationError) {
-          console.error('Failed to send push notification:', notificationError);
+          console.error('❌ Failed to send push notification:', notificationError);
           // Don't show error to user as the friend request was still sent successfully
         }
 
         Alert.alert("Success", `Friend request sent to ${userToAdd.name}!`);
+        console.log('🎉 Success alert shown');
         
         // Note: The receiving user will see the notification when they load the app
         // since we call loadFriendRequests() on component mount
+      } else {
+        console.log('⚠️ Friend request was not successful but no error was returned');
+        Alert.alert("Warning", "Friend request may not have been sent. Please try again.");
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to send friend request");
+      console.error('💥 Exception in handleAddFriend:', error);
+      Alert.alert("Error", `Failed to send friend request: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -1070,6 +1196,35 @@ export default function CommunityScreen() {
                   </View>
                 )}
             </View>
+
+            {/* Debug Section - Remove this after testing */}
+            {user && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Debug Info
+                </Text>
+                <View style={[styles.searchResultItem, { backgroundColor: theme.surface }]}>
+                  <View style={styles.userDetails}>
+                    <Text style={[styles.userName, { color: theme.text }]}>
+                      Current User ID: {user.id}
+                    </Text>
+                    <Text style={[styles.userAge, { color: theme.textSecondary }]}>
+                      Email: {user.email}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.addButton, { backgroundColor: theme.primary }]}
+                    onPress={() => {
+                      console.log('🧪 Debug button pressed');
+                      console.log('🧪 Current user:', user);
+                      Alert.alert("Debug", `User ID: ${user.id}\nEmail: ${user.email}`);
+                    }}
+                  >
+                    <Text style={styles.addButtonText}>Test Button</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
 
             {/* Posts Section */}
             <View style={styles.section}>

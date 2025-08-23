@@ -1,4 +1,4 @@
-import { CommunityPost, PostLike, supabase, supabaseAnonKey, supabaseUrl } from './supabase';
+import { CommunityPost, PostLike, supabaseAnonKey, supabaseUrl } from './supabase';
 
 export interface CreatePostData {
   content: string;
@@ -27,7 +27,7 @@ export class CommunityAPI {
   private static authTokenCache: { token: string | null; timestamp: number } | null = null;
   private static readonly TOKEN_CACHE_DURATION = 30000; // 30 seconds
 
-  // Helper method to get auth token with caching
+  // Helper method to get auth token with caching using REST API
   private static async getAuthToken(): Promise<string | null> {
     // Check cache first
     if (this.authTokenCache && Date.now() - this.authTokenCache.timestamp < this.TOKEN_CACHE_DURATION) {
@@ -35,40 +35,60 @@ export class CommunityAPI {
     }
 
     try {
-      // Use a timeout to prevent hanging on auth.getSession()
-      const sessionPromise = supabase.auth.getSession();
-      const timeoutPromise = new Promise<null>((_, reject) => {
-        setTimeout(() => reject(new Error('Auth timeout')), 3000);
-      });
+      // Use REST API to get current session instead of supabase.auth.getSession()
+      console.log('🔗 Getting auth token via REST API...');
       
-      const result = await Promise.race([sessionPromise, timeoutPromise]);
-      
-      let token: string | null = null;
-      
-      if (result === null) {
-        // Reduce log verbosity - only log occasionally
-        if (Math.random() < 0.1) { // Log 10% of the time
-          console.log('Auth session timed out, using anonymous access');
+      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Content-Type': 'application/json'
         }
-        token = null;
-      } else {
-        const { data: { session } } = result as any;
-        token = session?.access_token || null;
+      });
+
+      let token: string | null = null;
+
+      if (response.ok) {
+        // If we got a successful response, try to extract token from Authorization header
+        // This approach might work if we have a stored session
+        try {
+          // Alternative: Try to get session via REST API
+          const sessionResponse = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+            method: 'POST',
+            headers: {
+              'apikey': supabaseAnonKey,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (sessionResponse.ok) {
+            const sessionData = await sessionResponse.json();
+            token = sessionData.access_token || null;
+          }
+        } catch (sessionError) {
+          console.log('🔄 Session refresh via REST API failed, trying stored session...');
+          
+          // Fallback: Try to get stored session from AsyncStorage
+          try {
+            const AsyncStorage = await import('@react-native-async-storage/async-storage');
+            const sessionData = await AsyncStorage.default.getItem('supabase.auth.token');
+            if (sessionData) {
+              const parsedSession = JSON.parse(sessionData);
+              token = parsedSession.access_token || null;
+            }
+          } catch (storageError) {
+            console.log('📱 AsyncStorage session lookup failed');
+          }
+        }
       }
 
       // Cache the result
       this.authTokenCache = { token, timestamp: Date.now() };
+      console.log('🔐 REST API auth token result:', !!token);
       return token;
+
     } catch (error) {
-      // Reduce log verbosity for timeout errors
-      if (error instanceof Error && error.message.includes('Auth timeout')) {
-        // Only log occasionally to reduce spam
-        if (Math.random() < 0.1) {
-          console.log('Auth timeout, using anonymous access');
-        }
-      } else {
-        console.log('Auth error, falling back to anonymous:', error instanceof Error ? error.message : 'Unknown error');
-      }
+      console.log('❌ REST API auth error:', error instanceof Error ? error.message : 'Unknown error');
       
       // Cache null result to avoid repeated failures
       this.authTokenCache = { token: null, timestamp: Date.now() };
@@ -80,10 +100,11 @@ export class CommunityAPI {
   private static async makeRequest(
     endpoint: string, 
     method: 'GET' | 'POST' | 'PATCH' | 'DELETE' = 'GET',
-    body?: any
+    body?: any,
+    authToken?: string
   ): Promise<any> {
     try {
-      const token = await this.getAuthToken();
+      const token = authToken || await this.getAuthToken();
       
       const headers: Record<string, string> = {
         'apikey': supabaseAnonKey,
@@ -91,11 +112,12 @@ export class CommunityAPI {
         'Prefer': 'return=representation'
       };
 
-      // Use the user's JWT token if available, otherwise fall back to anon key
+      // Add Authorization header only if we have a valid user token
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔐 Using authenticated request');
       } else {
-        headers['Authorization'] = `Bearer ${supabaseAnonKey}`;
+        console.warn('⚠️ No auth token available - request will be anonymous');
       }
 
       const response = await fetch(`${supabaseUrl}/rest/v1/${endpoint}`, {
@@ -264,6 +286,103 @@ export class CommunityAPI {
     } catch (error) {
       console.error('Delete post error:', error);
       return { success: false, error: 'An unexpected error occurred while deleting the post' };
+    }
+  }
+
+  // Send friend request using REST API
+  static async sendFriendRequest(userId: string, friendId: string, authToken?: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      console.log('🔗 CommunityAPI.sendFriendRequest - Using REST API');
+      console.log('👤 Sender ID:', userId);
+      console.log('👥 Recipient ID:', friendId);
+
+      // Check authentication first
+      const token = authToken || await this.getAuthToken();
+      console.log('🔑 Auth token available:', !!token);
+      if (!token) {
+        console.error('❌ No authentication token - friend requests require authentication');
+        return { success: false, error: 'Authentication required. Please log in again.' };
+      }
+
+      // Check if friendship already exists
+      const existingFriendship = await this.makeRequest(
+        `friendships?or=(and(user_id.eq.${userId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${userId}))&select=id,status`,
+        'GET',
+        undefined,
+        token
+      );
+
+      console.log('🔍 Existing friendship check result:', existingFriendship);
+
+      if (existingFriendship && Array.isArray(existingFriendship) && existingFriendship.length > 0) {
+        const existing = existingFriendship[0];
+        if (existing.status === 'accepted') {
+          console.log('❌ Already friends');
+          return { success: false, error: 'You are already friends with this user' };
+        } else if (existing.status === 'pending') {
+          console.log('❌ Friend request already pending');
+          return { success: false, error: 'Friend request already sent' };
+        }
+      }
+
+      // Create new friendship
+      console.log('📤 Creating new friendship...');
+      const newFriendship = await this.makeRequest(
+        'friendships',
+        'POST',
+        {
+          user_id: userId,
+          friend_id: friendId,
+          status: 'pending'
+        },
+        token
+      );
+
+      console.log('✅ Friendship created:', newFriendship);
+      return { success: true, error: null };
+
+    } catch (error) {
+      console.error('💥 Send friend request error:', error);
+      return { success: false, error: 'An unexpected error occurred while sending friend request' };
+    }
+  }
+
+  // Accept friend request using REST API
+  static async acceptFriendRequest(userId: string, friendId: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      console.log('🔗 CommunityAPI.acceptFriendRequest - Using REST API');
+      
+      // Update friendship status to accepted
+      await this.makeRequest(
+        `friendships?and(user_id.eq.${friendId},friend_id.eq.${userId})`,
+        'PATCH',
+        { status: 'accepted' }
+      );
+
+      console.log('✅ Friend request accepted');
+      return { success: true, error: null };
+
+    } catch (error) {
+      console.error('💥 Accept friend request error:', error);
+      return { success: false, error: 'An unexpected error occurred while accepting friend request' };
+    }
+  }
+
+  // Get pending friend requests using REST API
+  static async getPendingFriendRequests(userId: string): Promise<{ requests: any[]; error: string | null }> {
+    try {
+      console.log('🔗 CommunityAPI.getPendingFriendRequests - Using REST API');
+      
+      const requests = await this.makeRequest(
+        `friendships?friend_id=eq.${userId}&status=eq.pending&select=*,profiles!friendships_user_id_fkey(id,name,profile_image_url)`
+      );
+
+      console.log('📨 Friend requests result:', requests);
+      return { requests: requests || [], error: null };
+
+    } catch (error) {
+      console.error('💥 Get friend requests error:', error);
+      return { requests: [], error: 'An unexpected error occurred while loading friend requests' };
     }
   }
 }
