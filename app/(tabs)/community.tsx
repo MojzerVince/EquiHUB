@@ -187,10 +187,10 @@ export default function CommunityScreen() {
     // Cleanup listeners
     return () => {
       if (notificationListener) {
-        Notifications.removeNotificationSubscription(notificationListener);
+        notificationListener.remove();
       }
       if (responseListener) {
-        Notifications.removeNotificationSubscription(responseListener);
+        responseListener.remove();
       }
     };
   }, [user]);
@@ -258,55 +258,39 @@ export default function CommunityScreen() {
     setIsLoadingRequests(true);
     
     try {
-      // Temporary fix: Just set empty state immediately
-      // TODO: Re-enable API call once connection issues are resolved
-      setTimeout(() => {
-        setFriendRequests([]);
-        setNotificationCount(0);
-        setIsLoadingRequests(false);
-      }, 500); // Small delay to show it's working
+      console.log('🔄 Loading friend requests for user:', user.id);
       
-      /* 
-      // Original API call - commented out temporarily
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error("Loading friend requests timed out after 5 seconds"));
-        }, 5000);
-      });
-
-      const result = await Promise.race([
-        UserAPI.getPendingFriendRequests(user.id),
-        timeoutPromise,
-      ]) as { requests: any[]; error: string | null };
-
-      console.log('Friend requests result:', result);
-      const { requests, error } = result;
+      // Use CommunityAPI REST endpoint
+      const { requests, error } = await CommunityAPI.getPendingFriendRequests(user.id);
       
       if (error) {
-        console.error("Error loading friend requests:", error);
+        console.error("❌ Error loading friend requests:", error);
         setFriendRequests([]);
         setNotificationCount(0);
         return;
       }
 
+      console.log('📨 Raw friend requests result:', requests);
+
       const friendRequestsList: FriendRequest[] = (requests || []).map(request => ({
         id: request.id,
-        sender_id: request.id,
-        sender_name: request.name,
-        sender_avatar: request.profile_image_url,
+        sender_id: request.user_id, // user_id is the sender
+        sender_name: request.sender_name || 'Unknown User',
+        sender_avatar: request.sender_avatar,
         receiver_id: user.id,
-        status: "pending" as const,
-        created_at: new Date().toISOString()
+        status: request.status as "pending" | "accepted" | "declined",
+        created_at: request.created_at
       }));
 
-      console.log('Processed friend requests:', friendRequestsList);
+      console.log('📋 Processed friend requests:', friendRequestsList);
       setFriendRequests(friendRequestsList);
       setNotificationCount(friendRequestsList.length);
-      */
+      
     } catch (error) {
-      console.error("Error loading friend requests:", error);
+      console.error("💥 Exception loading friend requests:", error);
       setFriendRequests([]);
       setNotificationCount(0);
+    } finally {
       setIsLoadingRequests(false);
     }
   }, [user?.id]);
@@ -1196,35 +1180,6 @@ export default function CommunityScreen() {
                   </View>
                 )}
             </View>
-
-            {/* Debug Section - Remove this after testing */}
-            {user && (
-              <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  Debug Info
-                </Text>
-                <View style={[styles.searchResultItem, { backgroundColor: theme.surface }]}>
-                  <View style={styles.userDetails}>
-                    <Text style={[styles.userName, { color: theme.text }]}>
-                      Current User ID: {user.id}
-                    </Text>
-                    <Text style={[styles.userAge, { color: theme.textSecondary }]}>
-                      Email: {user.email}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: theme.primary }]}
-                    onPress={() => {
-                      console.log('🧪 Debug button pressed');
-                      console.log('🧪 Current user:', user);
-                      Alert.alert("Debug", `User ID: ${user.id}\nEmail: ${user.email}`);
-                    }}
-                  >
-                    <Text style={styles.addButtonText}>Test Button</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
 
             {/* Posts Section */}
             <View style={styles.section}>

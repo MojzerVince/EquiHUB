@@ -1,4 +1,4 @@
-import { CommunityPost, PostLike, supabaseAnonKey, supabaseUrl } from './supabase';
+import { CommunityPost, PostLike, supabase, supabaseAnonKey, supabaseUrl } from './supabase';
 
 export interface CreatePostData {
   content: string;
@@ -27,7 +27,7 @@ export class CommunityAPI {
   private static authTokenCache: { token: string | null; timestamp: number } | null = null;
   private static readonly TOKEN_CACHE_DURATION = 30000; // 30 seconds
 
-  // Helper method to get auth token with caching using REST API
+  // Helper method to get auth token with caching
   private static async getAuthToken(): Promise<string | null> {
     // Check cache first
     if (this.authTokenCache && Date.now() - this.authTokenCache.timestamp < this.TOKEN_CACHE_DURATION) {
@@ -35,51 +35,25 @@ export class CommunityAPI {
     }
 
     try {
-      // Use REST API to get current session instead of supabase.auth.getSession()
-      console.log('🔗 Getting auth token via REST API...');
+      console.log('🔗 Getting auth token via direct session with extended timeout...');
       
-      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-        method: 'GET',
-        headers: {
-          'apikey': supabaseAnonKey,
-          'Content-Type': 'application/json'
-        }
+      // Try to get session with a much longer timeout (10 seconds)
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise<null>((_, reject) => {
+        setTimeout(() => reject(new Error('Auth timeout after 10 seconds')), 10000);
       });
-
+      
+      const result = await Promise.race([sessionPromise, timeoutPromise]);
+      
       let token: string | null = null;
-
-      if (response.ok) {
-        // If we got a successful response, try to extract token from Authorization header
-        // This approach might work if we have a stored session
-        try {
-          // Alternative: Try to get session via REST API
-          const sessionResponse = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
-            method: 'POST',
-            headers: {
-              'apikey': supabaseAnonKey,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (sessionResponse.ok) {
-            const sessionData = await sessionResponse.json();
-            token = sessionData.access_token || null;
-          }
-        } catch (sessionError) {
-          console.log('🔄 Session refresh via REST API failed, trying stored session...');
-          
-          // Fallback: Try to get stored session from AsyncStorage
-          try {
-            const AsyncStorage = await import('@react-native-async-storage/async-storage');
-            const sessionData = await AsyncStorage.default.getItem('supabase.auth.token');
-            if (sessionData) {
-              const parsedSession = JSON.parse(sessionData);
-              token = parsedSession.access_token || null;
-            }
-          } catch (storageError) {
-            console.log('📱 AsyncStorage session lookup failed');
-          }
-        }
+      
+      if (result === null) {
+        console.log('⏱️ Auth session timed out');
+        token = null;
+      } else {
+        const { data: { session } } = result as any;
+        token = session?.access_token || null;
+        console.log('� Got auth token from session:', !!token);
       }
 
       // Cache the result
@@ -88,10 +62,11 @@ export class CommunityAPI {
       return token;
 
     } catch (error) {
-      console.log('❌ REST API auth error:', error instanceof Error ? error.message : 'Unknown error');
+      console.log('❌ Auth error:', error instanceof Error ? error.message : 'Unknown error');
       
       // Cache null result to avoid repeated failures
       this.authTokenCache = { token: null, timestamp: Date.now() };
+      console.log('🔐 REST API auth token result:', false);
       return null;
     }
   }
@@ -296,9 +271,16 @@ export class CommunityAPI {
       console.log('👤 Sender ID:', userId);
       console.log('👥 Recipient ID:', friendId);
 
-      // Check authentication first
-      const token = authToken || await this.getAuthToken();
-      console.log('🔑 Auth token available:', !!token);
+      // Use provided auth token or try to get one (but don't fail if we can't)
+      let token = authToken;
+      if (!token) {
+        const retrievedToken = await this.getAuthToken();
+        token = retrievedToken || undefined;
+        console.log('🔑 Auth token available:', !!token);
+      } else {
+        console.log('🔑 Using provided auth token');
+      }
+
       if (!token) {
         console.error('❌ No authentication token - friend requests require authentication');
         return { success: false, error: 'Authentication required. Please log in again.' };
@@ -371,14 +353,49 @@ export class CommunityAPI {
   // Get pending friend requests using REST API
   static async getPendingFriendRequests(userId: string): Promise<{ requests: any[]; error: string | null }> {
     try {
-      console.log('🔗 CommunityAPI.getPendingFriendRequests - Using REST API');
+      console.log('🔗 CommunityAPI.getPendingFriendRequests - Using REST API for user:', userId);
       
+      // First, get the basic friend requests
       const requests = await this.makeRequest(
-        `friendships?friend_id=eq.${userId}&status=eq.pending&select=*,profiles!friendships_user_id_fkey(id,name,profile_image_url)`
+        `friendships?friend_id=eq.${userId}&status=eq.pending&select=id,user_id,friend_id,status,created_at`
       );
 
-      console.log('📨 Friend requests result:', requests);
-      return { requests: requests || [], error: null };
+      console.log('📨 Raw friend requests result:', requests);
+
+      if (!requests || requests.length === 0) {
+        console.log('📭 No pending friend requests found');
+        return { requests: [], error: null };
+      }
+
+      // Now get the sender profiles separately
+      const processedRequests = [];
+      for (const request of requests) {
+        try {
+          // Get the sender's profile information
+          const senderProfile = await this.makeRequest(
+            `profiles?id=eq.${request.user_id}&select=id,name,profile_image_url`
+          );
+          
+          const sender = senderProfile && senderProfile.length > 0 ? senderProfile[0] : null;
+          
+          processedRequests.push({
+            ...request,
+            sender_name: sender?.name || 'Unknown User',
+            sender_avatar: sender?.profile_image_url || null
+          });
+        } catch (profileError) {
+          console.error('❌ Error fetching sender profile for request:', request.id, profileError);
+          // Still include the request but with unknown sender
+          processedRequests.push({
+            ...request,
+            sender_name: 'Unknown User',
+            sender_avatar: null
+          });
+        }
+      }
+
+      console.log('📋 Processed friend requests:', processedRequests);
+      return { requests: processedRequests, error: null };
 
     } catch (error) {
       console.error('💥 Get friend requests error:', error);

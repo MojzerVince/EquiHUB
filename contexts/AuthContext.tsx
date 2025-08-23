@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { AuthUser } from "../lib/authAPI";
+import { AuthAPI, AuthUser } from "../lib/authAPI";
 import { SessionManager } from "../lib/sessionManager";
 import { supabase } from "../lib/supabase";
 
@@ -34,55 +34,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [hasUserData, setHasUserData] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Get initial session
-    getInitialSession();
+    // Initialize auth using REST API - much faster and more reliable
+    const initializeAuth = async () => {
+      await getInitialSession();
+    };
+    
+    initializeAuth();
     
     // Check stored user data
     checkStoredUserData();
 
-    // Add timeout fallback for auth loading - reduced to 5 seconds
-    const authLoadingTimeout = setTimeout(() => {
-      if (loading) {
-        console.log(
-          "⚠️ Auth loading timeout after 5 seconds - forcing loading to false"
-        );
-        setLoading(false);
-      }
-    }, 5000); // 5 second timeout for auth
-
-    // Listen for auth changes
+    // Listen for auth changes (sign in/out events)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session?.user?.id);
 
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          created_at: session.user.created_at!,
-        });
-
-        // Mark user as having used the app whenever they successfully authenticate
-        await SessionManager.markUserAsUsedApp();
-        setHasUserData(true);
-
-        // Refresh session if needed
-        await SessionManager.refreshSessionIfNeeded();
-      } else {
+      // Only handle explicit sign in/out events, not initial session
+      if (event === "SIGNED_IN" && session?.user) {
+        // Verify the session with our REST API
+        const { user: verifiedUser } = await AuthAPI.getCurrentUser();
+        
+        if (verifiedUser) {
+          setUser(verifiedUser);
+          // Mark user as having used the app whenever they successfully authenticate
+          await SessionManager.markUserAsUsedApp();
+          setHasUserData(true);
+          // Refresh session if needed
+          await SessionManager.refreshSessionIfNeeded();
+        } else {
+          setUser(null);
+        }
+      } else if (event === "SIGNED_OUT") {
         setUser(null);
         // Clear session data on logout
-        if (event === "SIGNED_OUT") {
-          await SessionManager.clearSessionData();
-          setHasUserData(false);
-        }
+        await SessionManager.clearSessionData();
+        setHasUserData(false);
       }
+      // For INITIAL_SESSION, we rely on our REST API getInitialSession call
+      
       setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
-      clearTimeout(authLoadingTimeout);
     };
   }, []);
 
@@ -98,129 +93,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const getInitialSession = async () => {
     try {
-      console.log("Getting initial session...");
+      console.log("Getting initial session via REST API...");
 
-      // First, try a quick session check without timeout
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        if (!error && session?.user) {
-          console.log(
-            "Quick session check successful for user:",
-            session.user.email
-          );
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            created_at: session.user.created_at!,
-          });
-          // Mark user as having used the app
-          await SessionManager.markUserAsUsedApp();
-          setHasUserData(true);
-          setLoading(false);
-          return;
-        }
-
-        if (!error && !session) {
-          console.log("Quick session check - no existing session found");
-          setLoading(false);
-          return;
-        }
-
-        // If there was an error, fall through to the timeout-protected version
-        if (error) {
-          console.log(
-            "Quick session check failed, trying with timeout protection:",
-            error.message
-          );
-        }
-      } catch (quickError) {
-        console.log(
-          "Quick session check threw error, trying with timeout protection:",
-          quickError
-        );
-      }
-
-      // Fallback: Use timeout-protected session check
-      const sessionPromise = supabase.auth.getSession();
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Session check timeout")), 15000);
-      });
-
-      const {
-        data: { session },
-        error,
-      } = await Promise.race([sessionPromise, timeoutPromise]);
+      // Use REST API to get current user - this avoids the problematic supabase.auth.getSession() timeouts
+      const { user, error } = await AuthAPI.getCurrentUser();
 
       if (error) {
-        console.error("Error getting initial session:", error);
+        console.error("Error getting initial session via REST API:", error);
         setUser(null);
-        setLoading(false);
         return;
       }
 
-      if (session?.user) {
-        console.log(
-          "Timeout-protected session check successful for user:",
-          session.user.email
-        );
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          created_at: session.user.created_at!,
-        });
+      if (user) {
+        console.log("REST API session check successful for user:", user.email);
+        setUser(user);
         // Mark user as having used the app
         await SessionManager.markUserAsUsedApp();
         setHasUserData(true);
       } else {
-        console.log(
-          "Timeout-protected session check - no existing session found"
-        );
+        console.log("No valid session found via REST API");
         setUser(null);
       }
     } catch (error) {
       console.error("Error in getInitialSession:", error);
-      if (error instanceof Error && error.message.includes("timeout")) {
-        console.log(
-          "⚠️ Session check timed out after 15 seconds, proceeding without authentication"
-        );
-        // Only clear user state on timeout - don't force logout of valid sessions
-        setUser(null);
-
-        // Attempt a background retry without blocking the UI
-        console.log("Scheduling background session retry...");
-        setTimeout(async () => {
-          try {
-            console.log("Attempting background session retry...");
-            const {
-              data: { session },
-            } = await supabase.auth.getSession();
-            if (session?.user && !user) {
-              // Only set user if we don't already have one
-              console.log(
-                "Background retry successful - found session for user:",
-                session.user.email
-              );
-              setUser({
-                id: session.user.id,
-                email: session.user.email!,
-                created_at: session.user.created_at!,
-              });
-              // Mark user as having used the app
-              await SessionManager.markUserAsUsedApp();
-              setHasUserData(true);
-            }
-          } catch (retryError) {
-            console.log("Background session retry failed:", retryError);
-          }
-        }, 3000);
-      } else {
-        // For non-timeout errors, clear user state
-        setUser(null);
-      }
+      setUser(null);
     } finally {
       console.log("✅ Setting auth loading to false");
       setLoading(false);
@@ -264,7 +160,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isSessionValid = async (): Promise<boolean> => {
     try {
-      return await SessionManager.hasValidSession();
+      // Use REST API to check session validity - avoids timeout issues
+      const { user, error } = await AuthAPI.getCurrentUser();
+      return !error && !!user;
     } catch (error) {
       console.error("Error in isSessionValid:", error);
       return false;
@@ -306,22 +204,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
+      // Use REST API to refresh user - avoids timeout issues
+      const { user, error } = await AuthAPI.getCurrentUser();
 
       if (error) {
-        console.error("Error refreshing user:", error);
+        console.error("Error refreshing user via REST API:", error);
         return;
       }
 
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          created_at: session.user.created_at!,
-        });
+      if (user) {
+        setUser(user);
       } else {
         setUser(null);
       }
