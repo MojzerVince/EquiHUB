@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useDialog } from "@/contexts/DialogContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -36,6 +36,15 @@ const OptionsScreen = () => {
   useEffect(() => {
     loadHiddenPosts();
   }, [user?.id]);
+
+  // Reload hidden posts when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        loadHiddenPosts();
+      }
+    }, [user?.id])
+  );
 
   // Load hidden posts from storage
   const loadHiddenPosts = useCallback(async () => {
@@ -880,11 +889,11 @@ const styles = StyleSheet.create({
   // Hidden Posts Modal Styles
   hiddenPostsModal: {
     maxHeight: "80%",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    minHeight: "50%",
+    borderRadius: 20,
     padding: 0,
     margin: 0,
-    width: "100%",
+    width: "95%",
   },
   hiddenPostsHeader: {
     flexDirection: "row",

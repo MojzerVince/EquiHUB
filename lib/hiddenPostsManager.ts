@@ -62,7 +62,6 @@ export class HiddenPostsManager {
       const key = `${this.STORAGE_KEY}_${userId}`;
       await AsyncStorage.setItem(key, JSON.stringify(hiddenPosts));
       
-      console.log('✅ Post hidden successfully:', postId);
       return true;
     } catch (error) {
       console.error('Error hiding post:', error);

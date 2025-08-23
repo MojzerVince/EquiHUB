@@ -86,6 +86,7 @@ export default function CommunityScreen() {
   const [showPostMenu, setShowPostMenu] = useState<string | null>(null);
   const [reportingPost, setReportingPost] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
+  const [forceRender, setForceRender] = useState(0); // Add this to force re-renders
 
   // Default avatar URL for users without profile images
   const getAvatarUrl = (profileImageUrl?: string) => {
@@ -141,6 +142,7 @@ export default function CommunityScreen() {
     if (user?.id) {
       loadFriends();
       loadFriendRequests();
+      // Always load hidden posts when user changes
       loadHiddenPosts();
       // Load posts once when component mounts
       loadPosts();
@@ -404,6 +406,8 @@ export default function CommunityScreen() {
         // Update local state to hide the post immediately
         setHiddenPostIds((prev) => [...prev, post.id]);
         setShowPostMenu(null);
+        // Force a re-render to ensure the post is hidden immediately
+        setForceRender((prev) => prev + 1);
         Alert.alert(
           "Success",
           "Post has been hidden. You can view hidden posts in the Options tab."
@@ -544,16 +548,14 @@ export default function CommunityScreen() {
       if (user?.id) {
         loadFriends();
         loadFriendRequests();
-        // Only load hidden posts if we don't have them yet
-        if (hiddenPostIds.length === 0) {
-          loadHiddenPosts();
-        }
+        // Always load hidden posts when screen is focused
+        loadHiddenPosts();
       }
       // Only reload posts if we don't have any posts yet
       if (posts.length === 0) {
         loadPosts();
       }
-    }, [user?.id, loadFriends, loadFriendRequests])
+    }, [user?.id, posts.length])
   );
 
   // Search for users with manual trigger
@@ -900,9 +902,9 @@ export default function CommunityScreen() {
           <View style={styles.postMenuContainer}>
             <TouchableOpacity
               style={styles.postMenuButton}
-              onPress={() =>
-                setShowPostMenu(showPostMenu === item.id ? null : item.id)
-              }
+              onPress={() => {
+                setShowPostMenu(showPostMenu === item.id ? null : item.id);
+              }}
             >
               <Text
                 style={[styles.postMenuDots, { color: theme.textSecondary }]}
@@ -911,8 +913,13 @@ export default function CommunityScreen() {
               </Text>
             </TouchableOpacity>
             {showPostMenu === item.id && (
-              <View
+              <TouchableOpacity
+                activeOpacity={1}
                 style={[styles.postMenu, { backgroundColor: theme.surface }]}
+                onPress={(e) => {
+                  // Prevent the menu from closing when touched
+                  e.stopPropagation();
+                }}
               >
                 <TouchableOpacity
                   style={styles.postMenuItem}
@@ -933,7 +940,7 @@ export default function CommunityScreen() {
                     🚨 Report Post
                   </Text>
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             )}
           </View>
         )}
@@ -1169,7 +1176,11 @@ export default function CommunityScreen() {
             titleColor={currentTheme.colors.text}
           />
         }
-        onTouchStart={() => setShowPostMenu(null)} // Close menu when scrolling
+        onScroll={() => {
+          // Close menu when actually scrolling
+          setShowPostMenu(null);
+        }}
+        scrollEventThrottle={16}
       >
         {/* Tab Selector */}
         <View style={styles.tabContainer}>
@@ -1410,9 +1421,13 @@ export default function CommunityScreen() {
                   </Text>
                 </View>
               ) : posts.length > 0 ? (
-                <View>
+                <View key={forceRender}>
                   {posts
-                    .filter((post) => !hiddenPostIds.includes(post.id))
+                    .filter((post) => {
+                      const isHidden = hiddenPostIds.includes(post.id);
+                      console.log(`� Post ${post.id} - Hidden: ${isHidden}`);
+                      return !isHidden;
+                    })
                     .map((item) => renderPost({ item }))}
                 </View>
               ) : (
@@ -1500,6 +1515,15 @@ export default function CommunityScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Overlay to close menu when tapping outside */}
+      {showPostMenu !== null && (
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setShowPostMenu(null)}
+        />
+      )}
 
       {/* Friend Requests Modal */}
       <Modal
@@ -2226,5 +2250,14 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  menuOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "transparent",
+    zIndex: 5,
   },
 });
