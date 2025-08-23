@@ -5,6 +5,7 @@ import {
   Alert,
   Image,
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -70,6 +71,7 @@ export default function CommunityScreen() {
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Default avatar URL for users without profile images
   const getAvatarUrl = (profileImageUrl?: string) => {
@@ -438,6 +440,30 @@ export default function CommunityScreen() {
       setIsLoadingFriends(false);
     }
   };
+
+  // Refresh function to reload all data
+  const onRefresh = useCallback(async () => {
+    if (!user?.id) return;
+    
+    setRefreshing(true);
+    console.log('Refreshing community data...');
+    
+    try {
+      // Run all loading functions in parallel for faster refresh
+      await Promise.all([
+        loadFriendRequests(),
+        loadFriends(),
+        loadPosts()
+      ]);
+      
+      console.log('Community data refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing community data:', error);
+      Alert.alert('Refresh Error', 'Failed to refresh community data. Please try again.');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [user?.id, loadFriendRequests, loadPosts]);
 
   // Search for users with manual trigger
   const handleSearchInput = (query: string) => {
@@ -834,6 +860,16 @@ export default function CommunityScreen() {
           styles.viewPort,
           { backgroundColor: currentTheme.colors.background },
         ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[currentTheme.colors.primary]} // Android
+            tintColor={currentTheme.colors.primary} // iOS
+            title="Pull to refresh"
+            titleColor={currentTheme.colors.text}
+          />
+        }
       >
         {/* Tab Selector */}
         <View style={styles.tabContainer}>
