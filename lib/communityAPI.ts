@@ -23,8 +23,17 @@ export interface PostWithUser extends CommunityPost {
 }
 
 export class CommunityAPI {
-  // Helper method to get auth token
+  // Cache for auth token to avoid multiple simultaneous calls
+  private static authTokenCache: { token: string | null; timestamp: number } | null = null;
+  private static readonly TOKEN_CACHE_DURATION = 30000; // 30 seconds
+
+  // Helper method to get auth token with caching
   private static async getAuthToken(): Promise<string | null> {
+    // Check cache first
+    if (this.authTokenCache && Date.now() - this.authTokenCache.timestamp < this.TOKEN_CACHE_DURATION) {
+      return this.authTokenCache.token;
+    }
+
     try {
       // Use a timeout to prevent hanging on auth.getSession()
       const sessionPromise = supabase.auth.getSession();
@@ -34,15 +43,35 @@ export class CommunityAPI {
       
       const result = await Promise.race([sessionPromise, timeoutPromise]);
       
+      let token: string | null = null;
+      
       if (result === null) {
-        console.log('Auth session timed out, using anonymous access');
-        return null;
+        // Reduce log verbosity - only log occasionally
+        if (Math.random() < 0.1) { // Log 10% of the time
+          console.log('Auth session timed out, using anonymous access');
+        }
+        token = null;
+      } else {
+        const { data: { session } } = result as any;
+        token = session?.access_token || null;
+      }
+
+      // Cache the result
+      this.authTokenCache = { token, timestamp: Date.now() };
+      return token;
+    } catch (error) {
+      // Reduce log verbosity for timeout errors
+      if (error instanceof Error && error.message.includes('Auth timeout')) {
+        // Only log occasionally to reduce spam
+        if (Math.random() < 0.1) {
+          console.log('Auth timeout, using anonymous access');
+        }
+      } else {
+        console.log('Auth error, falling back to anonymous:', error instanceof Error ? error.message : 'Unknown error');
       }
       
-      const { data: { session } } = result as any;
-      return session?.access_token || null;
-    } catch (error) {
-      console.log('Auth error, falling back to anonymous:', error instanceof Error ? error.message : 'Unknown error');
+      // Cache null result to avoid repeated failures
+      this.authTokenCache = { token: null, timestamp: Date.now() };
       return null;
     }
   }

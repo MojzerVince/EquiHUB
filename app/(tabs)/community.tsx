@@ -64,6 +64,7 @@ export default function CommunityScreen() {
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [activeTab, setActiveTab] = useState<"Feed" | "Challenges" | "Groups">(
     "Feed"
   );
@@ -211,6 +212,7 @@ export default function CommunityScreen() {
 
   // Load posts from database and merge with mock data
   const loadPosts = useCallback(async () => {
+    setIsLoadingPosts(true);
     try {
       // Start with mock posts (these are always visible)
       let allPosts = [...mockPosts];
@@ -256,6 +258,8 @@ export default function CommunityScreen() {
       console.error("Error loading posts:", error);
       // Fallback to mock posts only
       setPosts(mockPosts);
+    } finally {
+      setIsLoadingPosts(false);
     }
   }, [user?.id]);
 
@@ -269,13 +273,11 @@ export default function CommunityScreen() {
     }
 
     setIsLoadingRequests(true);
-    console.log('Loading friend requests for user:', user.id);
     
     try {
       // Temporary fix: Just set empty state immediately
       // TODO: Re-enable API call once connection issues are resolved
       setTimeout(() => {
-        console.log('Setting empty friend requests state');
         setFriendRequests([]);
         setNotificationCount(0);
         setIsLoadingRequests(false);
@@ -382,19 +384,9 @@ export default function CommunityScreen() {
     return () => clearInterval(interval);
   }, [user?.id]);
 
-  // Refresh friend requests and posts when screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      if (user?.id) {
-        loadFriendRequests();
-      }
-      // Always reload posts to show new shared content
-      loadPosts();
-    }, [user?.id, loadFriendRequests, loadPosts])
-  );
 
   // Load friends from database
-  const loadFriends = async () => {
+  const loadFriends = useCallback(async () => {
     if (!user?.id) {
       setIsLoadingFriends(false);
       setFriends([]);
@@ -402,13 +394,11 @@ export default function CommunityScreen() {
     }
 
     setIsLoadingFriends(true);
-    console.log('Loading friends for user:', user.id);
 
     try {
       // Temporary fix: Just set empty state immediately
       // TODO: Re-enable API call once connection issues are resolved
       setTimeout(() => {
-        console.log('Setting empty friends state');
         setFriends([]);
         setIsLoadingFriends(false);
       }, 500); // Small delay to show it's working
@@ -439,14 +429,13 @@ export default function CommunityScreen() {
       setFriends([]);
       setIsLoadingFriends(false);
     }
-  };
+  }, [user?.id]);
 
   // Refresh function to reload all data
   const onRefresh = useCallback(async () => {
     if (!user?.id) return;
     
     setRefreshing(true);
-    console.log('Refreshing community data...');
     
     try {
       // Run all loading functions in parallel for faster refresh
@@ -456,14 +445,25 @@ export default function CommunityScreen() {
         loadPosts()
       ]);
       
-      console.log('Community data refreshed successfully');
     } catch (error) {
       console.error('Error refreshing community data:', error);
       Alert.alert('Refresh Error', 'Failed to refresh community data. Please try again.');
     } finally {
       setRefreshing(false);
     }
-  }, [user?.id, loadFriendRequests, loadPosts]);
+  }, [user?.id, loadFriendRequests, loadFriends, loadPosts]);
+
+  // Refresh all data when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        loadFriends();
+        loadFriendRequests();
+      }
+      // Always reload posts to show new shared content
+      loadPosts();
+    }, [user?.id, loadFriends, loadFriendRequests, loadPosts])
+  );
 
   // Search for users with manual trigger
   const handleSearchInput = (query: string) => {
@@ -1096,7 +1096,18 @@ export default function CommunityScreen() {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Community Feed
               </Text>
-              <View>{posts.map((item) => renderPost({ item }))}</View>
+              {isLoadingPosts ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color={theme.primary} size="large" />
+                  <Text
+                    style={[styles.loadingText, { color: theme.textSecondary }]}
+                  >
+                    Loading posts...
+                  </Text>
+                </View>
+              ) : (
+                <View>{posts.map((item) => renderPost({ item }))}</View>
+              )}
             </View>
           </>
         ) : activeTab === "Challenges" ? (
