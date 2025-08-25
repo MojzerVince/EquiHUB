@@ -478,6 +478,54 @@ export default function CommunityScreen() {
     }
   };
 
+  // Handle deleting a post (for user's own posts)
+  const handleDeletePost = async (post: Post) => {
+    if (!user?.id || user.id !== post.user.id) {
+      Alert.alert("Error", "You can only delete your own posts.");
+      return;
+    }
+
+    Alert.alert(
+      "Delete Post",
+      "Are you sure you want to delete this post? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { success, error } = await CommunityAPI.deletePost(
+                post.id,
+                user.id
+              );
+
+              if (success) {
+                // Remove the post from local state immediately
+                setPosts((prevPosts) =>
+                  prevPosts.filter((p) => p.id !== post.id)
+                );
+                setShowPostMenu(null);
+                Alert.alert("Success", "Post has been deleted.");
+              } else {
+                Alert.alert(
+                  "Error",
+                  error || "Failed to delete post. Please try again."
+                );
+              }
+            } catch (error) {
+              console.error("Error deleting post:", error);
+              Alert.alert("Error", "Failed to delete post. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Debug effect to track isSearching state changes
   useEffect(() => {
     // Removed console logs for cleaner code
@@ -936,53 +984,66 @@ export default function CommunityScreen() {
             </Text>
           </View>
         </View>
-        {/* Post menu button - only show for other users' posts */}
-        {user?.id !== item.user.id && (
-          <View style={styles.postMenuContainer}>
+        {/* Post menu button - show for all posts */}
+        <View style={styles.postMenuContainer}>
+          <TouchableOpacity
+            style={styles.postMenuButton}
+            onPress={() => {
+              setShowPostMenu(showPostMenu === item.id ? null : item.id);
+            }}
+          >
+            <Text
+              style={[styles.postMenuDots, { color: theme.textSecondary }]}
+            >
+              ⋯
+            </Text>
+          </TouchableOpacity>
+          {showPostMenu === item.id && (
             <TouchableOpacity
-              style={styles.postMenuButton}
-              onPress={() => {
-                setShowPostMenu(showPostMenu === item.id ? null : item.id);
+              activeOpacity={1}
+              style={[styles.postMenu, { backgroundColor: theme.surface }]}
+              onPress={(e) => {
+                // Prevent the menu from closing when touched
+                e.stopPropagation();
               }}
             >
-              <Text
-                style={[styles.postMenuDots, { color: theme.textSecondary }]}
-              >
-                ⋯
-              </Text>
-            </TouchableOpacity>
-            {showPostMenu === item.id && (
-              <TouchableOpacity
-                activeOpacity={1}
-                style={[styles.postMenu, { backgroundColor: theme.surface }]}
-                onPress={(e) => {
-                  // Prevent the menu from closing when touched
-                  e.stopPropagation();
-                }}
-              >
+              {user?.id === item.user.id ? (
+                // Show delete option for user's own posts
                 <TouchableOpacity
                   style={styles.postMenuItem}
-                  onPress={() => handleHidePost(item)}
-                >
-                  <Text style={[styles.postMenuText, { color: theme.text }]}>
-                    🙈 Hide Post
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.postMenuItem}
-                  onPress={() => {
-                    setReportingPost(item.id);
-                    setShowPostMenu(null);
-                  }}
+                  onPress={() => handleDeletePost(item)}
                 >
                   <Text style={[styles.postMenuText, { color: "#FF6B6B" }]}>
-                    🚨 Report Post
+                    🗑️ Delete Post
                   </Text>
                 </TouchableOpacity>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+              ) : (
+                // Show hide and report options for other users' posts
+                <>
+                  <TouchableOpacity
+                    style={styles.postMenuItem}
+                    onPress={() => handleHidePost(item)}
+                  >
+                    <Text style={[styles.postMenuText, { color: theme.text }]}>
+                      🙈 Hide Post
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.postMenuItem}
+                    onPress={() => {
+                      setReportingPost(item.id);
+                      setShowPostMenu(null);
+                    }}
+                  >
+                    <Text style={[styles.postMenuText, { color: "#FF6B6B" }]}>
+                      🚨 Report Post
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <Text style={[styles.postContent, { color: theme.text }]}>
