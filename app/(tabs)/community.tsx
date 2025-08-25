@@ -1181,73 +1181,76 @@ export default function CommunityScreen() {
           setShowPostMenu(null);
         }}
         scrollEventThrottle={16}
+        stickyHeaderIndices={[0]} // Make the first element (tab container) sticky
       >
-        {/* Tab Selector */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === "Feed" && { backgroundColor: theme.primary },
-            ]}
-            onPress={() => setActiveTab("Feed")}
-          >
-            <View style={styles.tabContent}>
+        {/* Tab Selector - Will become sticky when scrolling */}
+        <View style={styles.stickyTabWrapper}>
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === "Feed" && { backgroundColor: theme.primary },
+              ]}
+              onPress={() => setActiveTab("Feed")}
+            >
+              <View style={styles.tabContent}>
+                <Text
+                  style={[
+                    styles.tabText,
+                    {
+                      color:
+                        activeTab === "Feed" ? "#FFFFFF" : theme.textSecondary,
+                    },
+                  ]}
+                >
+                  Feed
+                </Text>
+                {notificationCount > 0 && activeTab !== "Feed" && (
+                  <View style={styles.tabNotificationDot} />
+                )}
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === "Challenges" && { backgroundColor: theme.primary },
+              ]}
+              onPress={() => setActiveTab("Challenges")}
+            >
               <Text
                 style={[
                   styles.tabText,
                   {
                     color:
-                      activeTab === "Feed" ? "#FFFFFF" : theme.textSecondary,
+                      activeTab === "Challenges"
+                        ? "#FFFFFF"
+                        : theme.textSecondary,
                   },
                 ]}
               >
-                Feed
+                Challenges
               </Text>
-              {notificationCount > 0 && activeTab !== "Feed" && (
-                <View style={styles.tabNotificationDot} />
-              )}
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === "Challenges" && { backgroundColor: theme.primary },
-            ]}
-            onPress={() => setActiveTab("Challenges")}
-          >
-            <Text
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[
-                styles.tabText,
-                {
-                  color:
-                    activeTab === "Challenges"
-                      ? "#FFFFFF"
-                      : theme.textSecondary,
-                },
+                styles.tabButton,
+                activeTab === "Groups" && { backgroundColor: theme.primary },
               ]}
+              onPress={() => setActiveTab("Groups")}
             >
-              Challenges
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === "Groups" && { backgroundColor: theme.primary },
-            ]}
-            onPress={() => setActiveTab("Groups")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                {
-                  color:
-                    activeTab === "Groups" ? "#FFFFFF" : theme.textSecondary,
-                },
-              ]}
-            >
-              Groups
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.tabText,
+                  {
+                    color:
+                      activeTab === "Groups" ? "#FFFFFF" : theme.textSecondary,
+                  },
+                ]}
+              >
+                Groups
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Tab Content */}
@@ -1721,15 +1724,19 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: 5,
-    paddingTop: 30,
+    paddingTop: 20,
+  },
+  stickyTabWrapper: {
+    paddingTop: 0,
+    zIndex: 10,
   },
   tabContainer: {
     flexDirection: "row",
     backgroundColor: "#F8F9FA",
-    marginHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 15,
     borderRadius: 25,
-    padding: 4,
+    width: "90%",
+    alignSelf: "center",
   },
   tabButton: {
     flex: 1,
