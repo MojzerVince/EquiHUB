@@ -886,7 +886,13 @@ export default function CommunityScreen() {
         <View style={styles.userInfo}>
           <View style={styles.avatarContainer}>
             <Image source={{ uri: item.user.avatar }} style={styles.avatar} />
-            {item.user.isOnline && <View style={styles.onlineIndicator} />}
+            {/* Horse image overlay for session posts */}
+            {item.sessionData && item.image && (
+              <Image 
+                source={{ uri: item.image }} 
+                style={styles.horseAvatarOverlay} 
+              />
+            )}
           </View>
           <View>
             <Text style={[styles.userName, { color: theme.text }]}>
@@ -950,7 +956,7 @@ export default function CommunityScreen() {
         {item.content}
       </Text>
 
-      {item.image && (
+      {item.image && !item.sessionData && (
         <Image source={{ uri: item.image }} style={styles.postImage} />
       )}
 
@@ -1938,6 +1944,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+  },
+  horseAvatarOverlay: {
+    position: "absolute",
+    bottom: -8,
+    right: -8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "white",
   },
   onlineIndicator: {
     position: "absolute",
