@@ -108,11 +108,9 @@ export default function CommunityScreen() {
   const getBestImageUrl = (imageUrl?: string, imageBase64?: string): string | undefined => {
     if (imageBase64) {
       // Convert base64 to data URL
-      console.log('🖼️ [Community] Using base64 image for post');
       return getImageDataUrl(imageBase64, 'image/jpeg');
     }
     if (imageUrl) {
-      console.log('🖼️ [Community] Using image URL for post:', imageUrl);
     }
     return imageUrl;
   };
@@ -120,7 +118,6 @@ export default function CommunityScreen() {
   // Helper function to get session uploaded image (only base64)
   const getSessionUploadedImage = (imageBase64?: string): string | undefined => {
     if (imageBase64) {
-      console.log('📸 [Community] Using base64 for session uploaded image');
       return getImageDataUrl(imageBase64, 'image/jpeg');
     }
     return undefined;
@@ -129,7 +126,6 @@ export default function CommunityScreen() {
   // Helper function to get horse profile image (only image_url)
   const getHorseProfileImage = (imageUrl?: string): string | undefined => {
     if (imageUrl) {
-      console.log('🐎 [Community] Using image_url for horse profile image:', imageUrl);
       return imageUrl;
     }
     return undefined;
@@ -296,21 +292,6 @@ export default function CommunityScreen() {
               // 2. image_url (if it's a session post, this should be the horse image)
               const horseProfileImage = dbPost.session_data?.horse_image_url || 
                                         (dbPost.session_data ? getHorseProfileImage(dbPost.image_url) : undefined);
-              
-              console.log('📄 [Community] Processing post:', {
-                id: dbPost.id,
-                hasImageUrl: !!dbPost.image_url,
-                hasImageBase64: !!dbPost.image_base64,
-                sessionUploadedImage: !!sessionUploadedImage,
-                horseProfileImage: !!horseProfileImage,
-                isSessionPost: !!dbPost.session_data,
-                horseName: dbPost.session_data?.horse_name,
-                sessionDataHorseImageUrl: dbPost.session_data?.horse_image_url,
-                imageUrl: dbPost.image_url,
-                reasoning: dbPost.session_data ? 
-                  `Session post for ${dbPost.session_data.horse_name} - horse image sources: session_data(${!!dbPost.session_data?.horse_image_url}) or image_url(${!!dbPost.image_url})` : 
-                  'Regular post - not using any horse images'
-              });
 
               return {
                 id: dbPost.id,
@@ -828,7 +809,7 @@ export default function CommunityScreen() {
                 const parsed = JSON.parse(data);
                 if (parsed.access_token) {
                   authToken = parsed.access_token;
-                  console.log("📱 Found auth token in key:", key);
+                  //console.log("📱 Found auth token in key:", key);
                   break;
                 }
               }
@@ -1031,13 +1012,6 @@ export default function CommunityScreen() {
             {/* Horse image overlay for session posts */}
             {item.sessionData && (
               <>
-                {console.log('🐎 [Community] Session post detected:', {
-                  postId: item.id,
-                  horseName: item.sessionData.horseName,
-                  hasHorseImageUrl: !!item.sessionData.horseImageUrl,
-                  horseImageUrl: item.sessionData.horseImageUrl,
-                  fullSessionData: item.sessionData
-                })}
                 {item.sessionData.horseImageUrl ? (
                   <TouchableOpacity
                     onPress={() => setExpandedImage(item.sessionData!.horseImageUrl!)}
@@ -1050,11 +1024,6 @@ export default function CommunityScreen() {
                   </TouchableOpacity>
                 ) : (
                   <>
-                    {console.log('⚠️ [Community] Session post missing horse image:', {
-                      postId: item.id,
-                      horseName: item.sessionData.horseName,
-                      message: 'Horse image URL is missing - check if horse has profile picture'
-                    })}
                     {/* Placeholder for missing horse image */}
                     <View style={[styles.horseAvatarOverlay, { 
                       backgroundColor: '#E0E0E0', 
@@ -1160,12 +1129,6 @@ export default function CommunityScreen() {
       {/* Show main image for all posts (uploaded session images from base64 only) */}
       {item.image && (
         <>
-          {console.log('� [Community] Rendering uploaded session image:', {
-            postId: item.id,
-            hasSessionData: !!item.sessionData,
-            hasHorseImageUrl: !!item.sessionData?.horseImageUrl,
-            uploadedImageUrl: item.image
-          })}
           <TouchableOpacity
             onPress={() => setExpandedImage(item.image!)}
             activeOpacity={0.9}
@@ -2565,3 +2528,4 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 });
+

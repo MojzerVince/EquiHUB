@@ -58,16 +58,12 @@ interface Horse {
 const { width } = Dimensions.get('window');
 
 export default function SessionShareScreen() {
-  console.log("🚀 [SessionShare] Component initialization started");
-  
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user } = useAuth();
   
   // Add initialization guard to prevent multiple renders
   const [isInitialized, setIsInitialized] = useState(false);
-  
-  console.log("🔄 [SessionShare] Initial params:", { sessionId: params.sessionId, userExists: !!user });
   
   // Get sessionId from params - this is the key piece of data we need
   const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId as string;
@@ -82,16 +78,11 @@ export default function SessionShareScreen() {
 
   // Load session data on component mount
   useEffect(() => {
-    console.log("🔄 [SessionShare] useEffect triggered, sessionId:", sessionId, "loading:", loading, "isInitialized:", isInitialized);
     if (sessionId && !session && !isInitialized) {
-      console.log("🔄 [SessionShare] Starting loadSessionData...");
       setIsInitialized(true);
       loadSessionData();
     } else if (!sessionId) {
-      console.log("❌ [SessionShare] No sessionId provided");
       setLoading(false);
-    } else {
-      console.log("⚠️ [SessionShare] Skipping loadSessionData - sessionId:", !!sessionId, "hasSession:", !!session, "isInitialized:", isInitialized);
     }
   }, [sessionId]);
 
@@ -124,19 +115,10 @@ export default function SessionShareScreen() {
         return;
       }
       
-      console.log("✅ [SessionShare] Found session:", {
-        id: found.id,
-        horseName: found.horseName,
-        horseId: found.horseId,
-        duration: found.duration,
-        distance: found.distance
-      });
-      
+      // Found session - setting state
       setSession(found);
-      console.log("✅ [SessionShare] Session state set successfully");
 
       if (found) {
-        console.log("🔄 [SessionShare] Setting default post text for horse:", found.horseName);
         // Set default post text with horse name
         setPostText(`Amazing training session with ${found.horseName}! 🐴`);
         console.log("✅ [SessionShare] Post text set successfully");
@@ -156,16 +138,10 @@ export default function SessionShareScreen() {
               const sessionHorse = horses.find((h) => h.id === found.horseId);
               
               if (sessionHorse) {
-                console.log("✅ [SessionShare] Found matching horse:", {
-                  id: sessionHorse.id,
-                  name: sessionHorse.name,
-                  hasImageUrl: !!sessionHorse.image_url
-                });
+                // Found matching horse - setting state
                 setHorse(sessionHorse);
-                console.log("✅ [SessionShare] Horse state set successfully");
               } else {
                 console.log("❌ [SessionShare] No matching horse found for ID:", found.horseId);
-                console.log("🔄 [SessionShare] Available horse IDs:", horses.map(h => h.id));
                 setHorse(null);
               }
             } else {
@@ -317,9 +293,9 @@ export default function SessionShareScreen() {
       // Convert selected image to base64 if available (uploaded session photo)
       if (selectedMediaItem?.uri) {
         try {
-          console.log("🔄 [SessionShare] Converting selected image to base64...");
+          // Converting selected image to base64
           imageBase64 = await convertImageToBase64(selectedMediaItem.uri);
-          console.log("✅ [SessionShare] Image converted to base64 successfully");
+          // Image converted to base64 successfully
         } catch (error) {
           console.error("❌ [SessionShare] Failed to convert image to base64:", error);
           // Continue without base64 if conversion fails
@@ -337,9 +313,9 @@ export default function SessionShareScreen() {
         sessionData, 
         hasSelectedMedia: !!selectedMediaItem,
         hasBase64: !!imageBase64,
-        horseImageUrl: horse?.image_url,
+        horseImageUrl: !!horse?.image_url, // Log boolean instead of full URL
         mediaInfo,
-        content: postText.trim() 
+        contentLength: postText.trim().length // Log length instead of full content
       });
 
       // Create post in database with separated image logic:
@@ -356,7 +332,7 @@ export default function SessionShareScreen() {
         },
       });
 
-      console.log("Post creation result:", result);
+      // Post creation completed - check for errors
 
       const { post, error } = result;
 
@@ -610,34 +586,20 @@ export default function SessionShareScreen() {
         )}
 
         {/* Horse Image Preview */}
-        {(() => {
-          console.log("🔄 [SessionShare] Rendering horse image section, horse?.image_url:", !!horse?.image_url);
-          return (
-            <View style={styles.horseImageSection}>
-              <Text style={styles.sectionTitle}>Horse Image</Text>
-              {horse?.image_url ? (
-                <Image 
-                  source={{ uri: horse.image_url }} 
-                  style={styles.horseImage} 
-                  onError={(e) => {
-                    console.log("❌ [SessionShare] Horse image failed to load:", e.nativeEvent.error);
-                  }}
-                  onLoad={() => {
-                    console.log("✅ [SessionShare] Horse image loaded successfully");
-                  }}
-                />
-              ) : (
-                <Image 
-                  source={require('../assets/images/horses/pony.jpg')} 
-                  style={styles.horseImage}
-                  onLoad={() => {
-                    console.log("✅ [SessionShare] Fallback horse image loaded successfully");
-                  }}
-                />
-              )}
-            </View>
-          );
-        })()}
+        <View style={styles.horseImageSection}>
+          <Text style={styles.sectionTitle}>Horse Image</Text>
+          {horse?.image_url ? (
+            <Image 
+              source={{ uri: horse.image_url }} 
+              style={styles.horseImage} 
+            />
+          ) : (
+            <Image 
+              source={require('../assets/images/horses/pony.jpg')} 
+              style={styles.horseImage}
+            />
+          )}
+        </View>
       </ScrollView>
 
       {/* Full Screen Loading Overlay */}

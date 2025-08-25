@@ -7,8 +7,6 @@ import * as FileSystem from 'expo-file-system';
  */
 export const convertImageToBase64 = async (uri: string): Promise<string> => {
   try {
-    console.log('🔄 [ImageUtils] Converting image to base64:', uri);
-    
     // Use Expo FileSystem to read the file as base64
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,

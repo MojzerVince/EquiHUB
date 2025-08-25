@@ -55,7 +55,7 @@ export class UserAPI {
 
       console.log("📥 UserAPI.testDatabaseConnection: Response received");
       console.log("  - Error:", error);
-      console.log("  - Data:", data);
+      //console.log("  - Data:", data);
 
       if (error) {
         console.error('❌ UserAPI.testDatabaseConnection: Database error:', error);
@@ -87,7 +87,7 @@ export class UserAPI {
   static async searchUsersDirectAPI(query: string, currentUserId: string): Promise<{ users: UserSearchResult[]; error: string | null }> {
     try {
       console.log("🌐 UserAPI.searchUsersDirectAPI: Starting direct REST API search");
-      console.log("  - Query:", `"${query}"`);
+      //console.log("  - Query:", `"${query}"`);
       console.log("  - Current user ID:", currentUserId);
       
       if (!query || query.trim().length < 2) {
@@ -140,7 +140,7 @@ export class UserAPI {
           console.log(`     Age: ${user.age}`);
           console.log(`     Description: ${user.description || 'No description'}`);
           console.log(`     Pro member: ${user.is_pro_member ? 'Yes' : 'No'}`);
-          console.log(`     Has profile_image_url: ${user.profile_image_url ? 'Yes' : 'No'}`);
+          //console.log(`     Has profile_image_url: ${user.profile_image_url ? 'Yes' : 'No'}`);
           console.log("     ---");
         });
       }
