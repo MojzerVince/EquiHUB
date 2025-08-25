@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -90,6 +90,11 @@ export default function CommunityScreen() {
   const [reportReason, setReportReason] = useState("");
   const [forceRender, setForceRender] = useState(0); // Add this to force re-renders
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+
+  // Refs to track loading operations and prevent duplicates
+  const isLoadingPostsRef = useRef(false);
+  const isLoadingFriendRequestsRef = useRef(false);
+  const isLoadingFriendsRef = useRef(false);
 
   // Memoize filtered posts to prevent excessive filtering on every render
   const visiblePosts = useMemo(() => {
@@ -271,13 +276,15 @@ export default function CommunityScreen() {
 
   // Load posts from database
   const loadPosts = useCallback(async () => {
-    console.log("🔄 loadPosts called, isLoadingPosts:", isLoadingPosts, "user:", !!user, "user.id:", user?.id);
+    console.log("🔄 loadPosts called, ref:", isLoadingPostsRef.current, "state:", isLoadingPosts, "user.id:", user?.id);
     
-    // Prevent concurrent calls (but allow first call)
-    if (isLoadingPosts) {
-      console.log("⚠️ Posts already loading, skipping...");
+    // Prevent concurrent calls using ref (more reliable than state)
+    if (isLoadingPostsRef.current) {
+      console.log("⚠️ Posts already loading (ref check), skipping...");
       return;
     }
+
+    isLoadingPostsRef.current = true;
 
     console.log("🚀 Setting isLoadingPosts to true...");
     setIsLoadingPosts(true);
@@ -352,8 +359,9 @@ export default function CommunityScreen() {
       // Set empty posts on error
       setPosts([]);
     } finally {
-      console.log("🏁 loadPosts complete, setting isLoadingPosts to false");
+      console.log("🏁 loadPosts complete, resetting loading flags");
       setIsLoadingPosts(false);
+      isLoadingPostsRef.current = false;
     }
   }, [user?.id]);
 
@@ -366,11 +374,13 @@ export default function CommunityScreen() {
       return;
     }
 
-    // Prevent concurrent calls
-    if (isLoadingRequests) {
-      console.log("⚠️ Friend requests already loading, skipping...");
+    // Prevent concurrent calls using ref
+    if (isLoadingFriendRequestsRef.current) {
+      console.log("⚠️ Friend requests already loading (ref check), skipping...");
       return;
     }
+
+    isLoadingFriendRequestsRef.current = true;
 
     setIsLoadingRequests(true);
 
@@ -410,6 +420,7 @@ export default function CommunityScreen() {
       setNotificationCount(0);
     } finally {
       setIsLoadingRequests(false);
+      isLoadingFriendRequestsRef.current = false;
     }
   }, [user?.id]);
 
@@ -621,11 +632,13 @@ export default function CommunityScreen() {
       return;
     }
 
-    // Prevent concurrent calls
-    if (isLoadingFriends) {
-      console.log("⚠️ Friends already loading, skipping...");
+    // Prevent concurrent calls using ref
+    if (isLoadingFriendsRef.current) {
+      console.log("⚠️ Friends already loading (ref check), skipping...");
       return;
     }
+
+    isLoadingFriendsRef.current = true;
 
     setIsLoadingFriends(true);
 
@@ -635,6 +648,7 @@ export default function CommunityScreen() {
       setTimeout(() => {
         setFriends([]);
         setIsLoadingFriends(false);
+        isLoadingFriendsRef.current = false;
       }, 500); // Small delay to show it's working
 
       /*
@@ -662,6 +676,7 @@ export default function CommunityScreen() {
       console.error("Error loading friends:", error);
       setFriends([]);
       setIsLoadingFriends(false);
+      isLoadingFriendsRef.current = false;
     }
   }, [user?.id]);
 

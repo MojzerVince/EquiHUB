@@ -60,7 +60,6 @@ export class CommunityAPI {
 
       // Cache the result
       this.authTokenCache = { token, timestamp: Date.now() };
-      console.log('🔐 REST API auth token result:', !!token);
       return token;
 
     } catch (error) {
@@ -68,7 +67,6 @@ export class CommunityAPI {
       
       // Cache null result to avoid repeated failures
       this.authTokenCache = { token: null, timestamp: Date.now() };
-      console.log('🔐 REST API auth token result:', false);
       return null;
     }
   }
@@ -92,7 +90,6 @@ export class CommunityAPI {
       // Add Authorization header only if we have a valid user token
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
-        console.log('🔐 Using authenticated request');
       } else {
         console.warn('⚠️ No auth token available - request will be anonymous');
       }
