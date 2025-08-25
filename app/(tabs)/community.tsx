@@ -999,19 +999,22 @@ export default function CommunityScreen() {
             </Text>
           </TouchableOpacity>
           {showPostMenu === item.id && (
-            <TouchableOpacity
-              activeOpacity={1}
+            <View
               style={[styles.postMenu, { backgroundColor: theme.surface }]}
-              onPress={(e) => {
-                // Prevent the menu from closing when touched
-                e.stopPropagation();
-              }}
             >
               {user?.id === item.user.id ? (
                 // Show delete option for user's own posts
                 <TouchableOpacity
-                  style={styles.postMenuItem}
-                  onPress={() => handleDeletePost(item)}
+                  style={[styles.postMenuItem, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    console.log('Delete button pressed for post:', item.id);
+                    // Add a small delay to ensure the touch is registered
+                    setTimeout(() => {
+                      Alert.alert('Debug', 'Delete button was pressed!');
+                      handleDeletePost(item);
+                    }, 100);
+                  }}
                 >
                   <Text style={[styles.postMenuText, { color: "#FF6B6B" }]}>
                     🗑️ Delete Post
@@ -1021,18 +1024,30 @@ export default function CommunityScreen() {
                 // Show hide and report options for other users' posts
                 <>
                   <TouchableOpacity
-                    style={styles.postMenuItem}
-                    onPress={() => handleHidePost(item)}
+                    style={[styles.postMenuItem, { backgroundColor: 'rgba(128, 128, 128, 0.1)' }]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      console.log('Hide button pressed for post:', item.id);
+                      setTimeout(() => {
+                        Alert.alert('Debug', 'Hide button was pressed!');
+                        handleHidePost(item);
+                      }, 100);
+                    }}
                   >
                     <Text style={[styles.postMenuText, { color: theme.text }]}>
                       🙈 Hide Post
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.postMenuItem}
+                    style={[styles.postMenuItem, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}
+                    activeOpacity={0.7}
                     onPress={() => {
-                      setReportingPost(item.id);
-                      setShowPostMenu(null);
+                      console.log('Report button pressed for post:', item.id);
+                      setTimeout(() => {
+                        Alert.alert('Debug', 'Report button was pressed!');
+                        setReportingPost(item.id);
+                        setShowPostMenu(null);
+                      }, 100);
                     }}
                   >
                     <Text style={[styles.postMenuText, { color: "#FF6B6B" }]}>
@@ -1041,7 +1056,7 @@ export default function CommunityScreen() {
                   </TouchableOpacity>
                 </>
               )}
-            </TouchableOpacity>
+            </View>
           )}
         </View>
       </View>
@@ -1276,10 +1291,7 @@ export default function CommunityScreen() {
             titleColor={currentTheme.colors.text}
           />
         }
-        onScroll={() => {
-          // Close menu when actually scrolling
-          setShowPostMenu(null);
-        }}
+        onScroll={undefined}
         scrollEventThrottle={16}
         stickyHeaderIndices={[0]} // Make the first element (tab container) sticky
       >
@@ -1613,12 +1625,11 @@ export default function CommunityScreen() {
         )}
       </ScrollView>
 
-      {/* Overlay to close menu when tapping outside */}
+      {/* Overlay disabled - menu only closes via 3-dots toggle */}
       {showPostMenu !== null && (
-        <TouchableOpacity
+        <View
           style={styles.menuOverlay}
-          activeOpacity={1}
-          onPress={() => setShowPostMenu(null)}
+          pointerEvents="none"
         />
       )}
 
@@ -1997,22 +2008,24 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 40,
     right: 0,
-    minWidth: 140,
+    minWidth: 160,
     borderRadius: 8,
-    elevation: 5,
+    elevation: 10,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    zIndex: 20,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    zIndex: 1000,
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
   postMenuItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
+    minHeight: 50,
+    justifyContent: 'center',
   },
   postMenuText: {
     fontSize: 14,
