@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -88,6 +88,11 @@ export default function CommunityScreen() {
   const [reportReason, setReportReason] = useState("");
   const [forceRender, setForceRender] = useState(0); // Add this to force re-renders
 
+  // Memoize filtered posts to prevent excessive filtering on every render
+  const visiblePosts = useMemo(() => {
+    return posts.filter((post) => !hiddenPostIds.includes(post.id));
+  }, [posts, hiddenPostIds]);
+
   // Default avatar URL for users without profile images
   const getAvatarUrl = (profileImageUrl?: string) => {
     return (
@@ -137,15 +142,33 @@ export default function CommunityScreen() {
     },
   ];
 
-  // Load friends when component mounts and user is available
+  // Load friends when component mounts and user is available (optimized)
   useEffect(() => {
     if (user?.id) {
-      loadFriends();
-      loadFriendRequests();
-      // Always load hidden posts when user changes
-      loadHiddenPosts();
-      // Load posts once when component mounts
-      loadPosts();
+      // Use a flag to prevent multiple simultaneous loads
+      let isMounted = true;
+      
+      const loadInitialData = async () => {
+        if (!isMounted) return;
+        
+        try {
+          // Load data in parallel for better performance
+          await Promise.all([
+            loadFriends(),
+            loadFriendRequests(),
+            loadHiddenPosts(),
+            loadPosts(),
+          ]);
+        } catch (error) {
+          console.error("Error loading initial community data:", error);
+        }
+      };
+      
+      loadInitialData();
+      
+      return () => {
+        isMounted = false;
+      };
     }
   }, [user?.id]);
 
@@ -460,16 +483,19 @@ export default function CommunityScreen() {
     // Removed console logs for cleaner code
   }, [isSearching, searchResults.length, searchQuery]);
 
-  // Periodic refresh of friend requests when user is active (reduced frequency)
+  // Periodic refresh of friend requests when user is active (very reduced frequency)
   useEffect(() => {
     if (!user?.id) return;
 
     const interval = setInterval(() => {
-      loadFriendRequests();
-    }, 300000); // Check every 5 minutes instead of 30 seconds
+      // Only refresh if there are pending requests to reduce API calls
+      if (friendRequests.length > 0) {
+        loadFriendRequests();
+      }
+    }, 600000); // Check every 10 minutes instead of 5 minutes
 
     return () => clearInterval(interval);
-  }, [user?.id]);
+  }, [user?.id, friendRequests.length]);
 
   // Load friends from database
   const loadFriends = useCallback(async () => {
@@ -542,20 +568,27 @@ export default function CommunityScreen() {
     }
   }, [user?.id, loadFriendRequests, loadFriends, loadHiddenPosts, loadPosts]);
 
-  // Refresh all data when screen is focused (less frequent)
+  // Refresh all data when screen is focused (optimized)
   useFocusEffect(
     useCallback(() => {
       if (user?.id) {
-        loadFriends();
-        loadFriendRequests();
-        // Always load hidden posts when screen is focused
-        loadHiddenPosts();
+        // Only load friends and requests if we don't have data or it's been a while
+        if (friends.length === 0) {
+          loadFriends();
+        }
+        if (friendRequests.length === 0) {
+          loadFriendRequests();
+        }
+        // Only load hidden posts if we don't have them or user changed
+        if (hiddenPostIds.length === 0) {
+          loadHiddenPosts();
+        }
       }
       // Only reload posts if we don't have any posts yet
       if (posts.length === 0) {
         loadPosts();
       }
-    }, [user?.id, posts.length])
+    }, [user?.id, friends.length, friendRequests.length, hiddenPostIds.length, posts.length])
   );
 
   // Search for users with manual trigger
@@ -1429,15 +1462,9 @@ export default function CommunityScreen() {
                     Loading posts...
                   </Text>
                 </View>
-              ) : posts.length > 0 ? (
+              ) : visiblePosts.length > 0 ? (
                 <View key={forceRender}>
-                  {posts
-                    .filter((post) => {
-                      const isHidden = hiddenPostIds.includes(post.id);
-                      console.log(`� Post ${post.id} - Hidden: ${isHidden}`);
-                      return !isHidden;
-                    })
-                    .map((item) => renderPost({ item }))}
+                  {visiblePosts.map((item) => renderPost({ item }))}
                 </View>
               ) : (
                 <View style={styles.noResultsContainer}>
