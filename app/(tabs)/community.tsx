@@ -291,10 +291,11 @@ export default function CommunityScreen() {
               // Separate session uploaded image (base64) from horse profile image (image_url)
               const sessionUploadedImage = getSessionUploadedImage(dbPost.image_base64);
               
-              // For horse profile image, prioritize session_data.horse_image_url over image_url
-              // This prevents uploaded session images from appearing as horse profile pictures
+              // For horse profile image, try multiple sources in order of preference:
+              // 1. session_data.horse_image_url (new format)
+              // 2. image_url (if it's a session post, this should be the horse image)
               const horseProfileImage = dbPost.session_data?.horse_image_url || 
-                                        (dbPost.session_data ? undefined : getHorseProfileImage(dbPost.image_url));
+                                        (dbPost.session_data ? getHorseProfileImage(dbPost.image_url) : undefined);
               
               console.log('📄 [Community] Processing post:', {
                 id: dbPost.id,
@@ -303,10 +304,12 @@ export default function CommunityScreen() {
                 sessionUploadedImage: !!sessionUploadedImage,
                 horseProfileImage: !!horseProfileImage,
                 isSessionPost: !!dbPost.session_data,
+                horseName: dbPost.session_data?.horse_name,
                 sessionDataHorseImageUrl: dbPost.session_data?.horse_image_url,
+                imageUrl: dbPost.image_url,
                 reasoning: dbPost.session_data ? 
-                  'Session post - using session_data.horse_image_url for horse profile' : 
-                  'Regular post - using image_url if available'
+                  `Session post for ${dbPost.session_data.horse_name} - horse image sources: session_data(${!!dbPost.session_data?.horse_image_url}) or image_url(${!!dbPost.image_url})` : 
+                  'Regular post - not using any horse images'
               });
 
               return {
@@ -1026,22 +1029,42 @@ export default function CommunityScreen() {
           <View style={styles.avatarContainer}>
             <Image source={{ uri: item.user.avatar }} style={styles.avatar} />
             {/* Horse image overlay for session posts */}
-            {item.sessionData && item.sessionData.horseImageUrl && (
+            {item.sessionData && (
               <>
-                {console.log('🐎 [Community] Rendering horse avatar overlay:', {
+                {console.log('🐎 [Community] Session post detected:', {
                   postId: item.id,
                   horseName: item.sessionData.horseName,
-                  horseImageUrl: item.sessionData.horseImageUrl
+                  hasHorseImageUrl: !!item.sessionData.horseImageUrl,
+                  horseImageUrl: item.sessionData.horseImageUrl,
+                  fullSessionData: item.sessionData
                 })}
-                <TouchableOpacity
-                  onPress={() => setExpandedImage(item.sessionData!.horseImageUrl!)}
-                  activeOpacity={0.9}
-                >
-                  <Image 
-                    source={{ uri: item.sessionData.horseImageUrl }} 
-                    style={styles.horseAvatarOverlay} 
-                  />
-                </TouchableOpacity>
+                {item.sessionData.horseImageUrl ? (
+                  <TouchableOpacity
+                    onPress={() => setExpandedImage(item.sessionData!.horseImageUrl!)}
+                    activeOpacity={0.9}
+                  >
+                    <Image 
+                      source={{ uri: item.sessionData.horseImageUrl }} 
+                      style={styles.horseAvatarOverlay} 
+                    />
+                  </TouchableOpacity>
+                ) : (
+                  <>
+                    {console.log('⚠️ [Community] Session post missing horse image:', {
+                      postId: item.id,
+                      horseName: item.sessionData.horseName,
+                      message: 'Horse image URL is missing - check if horse has profile picture'
+                    })}
+                    {/* Placeholder for missing horse image */}
+                    <View style={[styles.horseAvatarOverlay, { 
+                      backgroundColor: '#E0E0E0', 
+                      justifyContent: 'center', 
+                      alignItems: 'center' 
+                    }]}>
+                      <Text style={{ fontSize: 12, color: '#666' }}>🐎</Text>
+                    </View>
+                  </>
+                )}
               </>
             )}
           </View>
