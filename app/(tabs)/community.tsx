@@ -1011,7 +1011,6 @@ export default function CommunityScreen() {
                     console.log('Delete button pressed for post:', item.id);
                     // Add a small delay to ensure the touch is registered
                     setTimeout(() => {
-                      Alert.alert('Debug', 'Delete button was pressed!');
                       handleDeletePost(item);
                     }, 100);
                   }}
