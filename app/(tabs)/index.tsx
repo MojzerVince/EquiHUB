@@ -657,6 +657,7 @@ const MyHorsesScreen = () => {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -682,6 +683,7 @@ const MyHorsesScreen = () => {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {

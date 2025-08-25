@@ -2,16 +2,16 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -606,6 +606,7 @@ const ProfileScreen = () => {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -620,6 +621,7 @@ const ProfileScreen = () => {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {

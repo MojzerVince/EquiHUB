@@ -91,6 +91,7 @@ const THEME_STORAGE_KEY = '@equihub_theme';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentTheme, setCurrentTheme] = useState<Theme>(themes.Greenish);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadSavedTheme();
@@ -104,6 +105,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     } catch (error) {
       console.error('Error loading saved theme:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -117,6 +120,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const availableThemes: ThemeName[] = Object.keys(themes) as ThemeName[];
+
+  // Don't render children until theme is loaded to prevent flashing
+  if (isLoading) {
+    return null;
+  }
 
   return (
     <ThemeContext.Provider value={{ currentTheme, setTheme, availableThemes }}>

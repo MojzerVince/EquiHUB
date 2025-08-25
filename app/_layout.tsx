@@ -14,7 +14,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import CustomSplashScreen from "@/components/SplashScreen";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DialogProvider } from "@/contexts/DialogContext";
-import { SplashProvider, useSplash } from "@/contexts/SplashContext";
 import { ThemeProvider as CustomThemeProvider } from "@/contexts/ThemeContext";
 import { TrackingProvider } from "@/contexts/TrackingContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -27,7 +26,6 @@ SplashScreen.hideAsync();
 const SplashWithAuth = ({ onFinish }: { onFinish: () => void }) => {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const { setSplashActive } = useSplash();
 
   const handleForceContinue = () => {
     try {
@@ -38,8 +36,7 @@ const SplashWithAuth = ({ onFinish }: { onFinish: () => void }) => {
   };
 
   const handleSplashFinish = () => {
-    // Remove the extra delay - splash will handle timing internally
-    setSplashActive(false);
+    // Call onFinish to hide splash screen
     onFinish();
   };
 
@@ -60,12 +57,6 @@ const AppContent = () => {
     Inder: require("../assets/fonts/Inder-Regular.ttf"),
   });
   const [showSplash, setShowSplash] = useState(true);
-  const { setSplashActive } = useSplash();
-
-  // Initialize splash as active
-  useEffect(() => {
-    setSplashActive(true);
-  }, [setSplashActive]);
 
   // Set up global notification handlers when app starts
   useEffect(() => {
@@ -75,14 +66,11 @@ const AppContent = () => {
     const setupGlobalNotifications = () => {
       // Listen for notifications received while app is running
       notificationListener = Notifications.addNotificationReceivedListener(notification => {
-        console.log('Global notification received:', notification);
-        // Additional global handling can be added here
+        // Additional global handling can be added here (silent handling)
       });
 
       // Listen for notification responses (when user taps on notification)
-      responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-        console.log('Global notification response:', response);
-        
+      responseListener = Notifications.addNotificationResponseReceivedListener(response => {        
         // Handle navigation based on notification type
         const data = response.notification.request.content.data as any;
         
@@ -101,10 +89,10 @@ const AppContent = () => {
     // Cleanup listeners
     return () => {
       if (notificationListener) {
-        Notifications.removeNotificationSubscription(notificationListener);
+        notificationListener.remove();
       }
       if (responseListener) {
-        Notifications.removeNotificationSubscription(responseListener);
+        responseListener.remove();
       }
     };
   }, [router]);
@@ -133,7 +121,7 @@ const AppContent = () => {
             <ThemeProvider
               value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
             >
-              <ProtectedRoute>
+              <ProtectedRoute splashActive={false}>
                 <Stack>
                   <Stack.Screen name="index" options={{ headerShown: false }} />
                   <Stack.Screen
@@ -177,8 +165,6 @@ const AppContent = () => {
 
 export default function RootLayout() {
   return (
-    <SplashProvider>
-      <AppContent />
-    </SplashProvider>
+    <AppContent />
   );
 }

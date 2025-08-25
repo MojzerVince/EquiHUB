@@ -1,15 +1,14 @@
 import { useRouter, useSegments } from "expo-router";
 import React, { useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { useSplash } from "../contexts/SplashContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  splashActive?: boolean;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, splashActive = false }) => {
   const { user, loading, hasUserData } = useAuth();
-  const { splashActive } = useSplash();
   const router = useRouter();
   const segments = useSegments();
 
