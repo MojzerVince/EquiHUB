@@ -105,66 +105,62 @@ const AppContent = () => {
     }
     
     // Fonts are loaded, show splash screen immediately with auth integration
-    return (
-      <AuthProvider>
-        <SplashWithAuth onFinish={() => setShowSplash(false)} />
-      </AuthProvider>
-    );
+    return <SplashWithAuth onFinish={() => setShowSplash(false)} />;
   }
 
   // Main app with auth loading
   return (
-    <AuthProvider>
-      <CustomThemeProvider>
-        <DialogProvider>
-          <TrackingProvider>
-            <ThemeProvider
-              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-            >
-              <ProtectedRoute splashActive={false}>
-                <Stack>
-                  <Stack.Screen name="index" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen name="login" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="register"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="sessions"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="session-details"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="session-summary"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="subscription"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="pro-features"
-                    options={{ headerShown: false }}
-                  />
-                </Stack>
-              </ProtectedRoute>
-            </ThemeProvider>
-          </TrackingProvider>
-        </DialogProvider>
-      </CustomThemeProvider>
-    </AuthProvider>
+    <CustomThemeProvider>
+      <DialogProvider>
+        <TrackingProvider>
+          <ThemeProvider
+            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+          >
+            <ProtectedRoute splashActive={false}>
+              <Stack>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="(tabs)"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="register"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="sessions"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="session-details"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="session-summary"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="subscription"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="pro-features"
+                  options={{ headerShown: false }}
+                />
+              </Stack>
+            </ProtectedRoute>
+          </ThemeProvider>
+        </TrackingProvider>
+      </DialogProvider>
+    </CustomThemeProvider>
   );
 };
 
 export default function RootLayout() {
   return (
-    <AppContent />
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
