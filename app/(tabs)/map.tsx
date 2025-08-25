@@ -1064,7 +1064,7 @@ const MapScreen = () => {
 
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing: false,
         quality: 0.8,
       });
@@ -1110,7 +1110,7 @@ const MapScreen = () => {
 
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: 'videos',
         allowsEditing: false,
         quality: ImagePicker.UIImagePickerControllerQualityType.Medium,
         videoMaxDuration: 60, // 60 seconds max
