@@ -2,20 +2,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
-import { CommunityAPI } from "../lib/communityAPI";
 import { HorseAPI } from "../lib/horseAPI";
 import { Horse } from "../lib/supabase";
 
@@ -134,64 +133,13 @@ const SessionDetailsScreen = () => {
       return;
     }
 
-    try {
-      setIsSharing(true);
-
-      console.log("User ID for sharing:", user.id);
-
-      // Create post content
-      const postContent = `Amazing training session with ${session.horseName}! 🐴`;
-      
-      // Prepare session data
-      const sessionData = {
-        horse_name: session.horseName,
-        duration: session.duration ? formatDuration(session.duration) : "Unknown",
-        distance: session.distance ? `${(session.distance / 1000).toFixed(1)} km` : "Unknown",
-        avg_speed: session.averageSpeed ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h` : "Unknown",
-        session_id: session.id,
-      };
-
-      // Prepare image URL (without logging base64 data)
-      const imageUrl = horse?.image_url || session.media?.[0]?.uri;
-
-      // Create post in database
-      const result = await CommunityAPI.createPost(user.id, {
-        content: postContent,
-        image_url: imageUrl, // Re-enable image now that posting works
-        session_data: sessionData,
-      });
-
-      const { post, error } = result;
-
-      if (error) {
-        console.error("Post creation failed:", error);
-        Alert.alert("Error", error);
-        return;
+    // Navigate to the sharing screen with only the sessionId
+    router.push({
+      pathname: "/session-share",
+      params: {
+        sessionId: session.id,
       }
-
-      console.log("Post created successfully!");
-
-      Alert.alert(
-        "Success! 🎉", 
-        "Your training session has been shared to the community feed! Your friends will now be able to see it.",
-        [
-          {
-            text: "View in Community",
-            onPress: () => router.push("/(tabs)/community"),
-          },
-          {
-            text: "OK",
-            style: "default",
-          },
-        ]
-      );
-
-    } catch (error) {
-      console.error("Error sharing session:", error);
-      Alert.alert("Error", "Failed to share your session. Please try again.");
-    } finally {
-      setIsSharing(false);
-    }
+    });
   };
 
   const formatDuration = (seconds: number): string => {
