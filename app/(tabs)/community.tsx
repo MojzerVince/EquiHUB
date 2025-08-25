@@ -20,6 +20,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { CommunityAPI, PostWithUser } from "../../lib/communityAPI";
 import { HiddenPostsManager } from "../../lib/hiddenPostsManager";
+import { getImageDataUrl } from "../../lib/imageUtils";
 import {
   NotificationService,
   handleNotificationResponse,
@@ -60,6 +61,7 @@ interface Post {
     duration: string;
     distance: string;
     avgSpeed: string;
+    horseImageUrl?: string;
   };
 }
 
@@ -87,6 +89,7 @@ export default function CommunityScreen() {
   const [reportingPost, setReportingPost] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [forceRender, setForceRender] = useState(0); // Add this to force re-renders
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   // Memoize filtered posts to prevent excessive filtering on every render
   const visiblePosts = useMemo(() => {
@@ -99,6 +102,37 @@ export default function CommunityScreen() {
       profileImageUrl ||
       "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150"
     );
+  };
+
+  // Helper function to get the best available image URL (base64 > image_url)
+  const getBestImageUrl = (imageUrl?: string, imageBase64?: string): string | undefined => {
+    if (imageBase64) {
+      // Convert base64 to data URL
+      console.log('🖼️ [Community] Using base64 image for post');
+      return getImageDataUrl(imageBase64, 'image/jpeg');
+    }
+    if (imageUrl) {
+      console.log('🖼️ [Community] Using image URL for post:', imageUrl);
+    }
+    return imageUrl;
+  };
+
+  // Helper function to get session uploaded image (only base64)
+  const getSessionUploadedImage = (imageBase64?: string): string | undefined => {
+    if (imageBase64) {
+      console.log('📸 [Community] Using base64 for session uploaded image');
+      return getImageDataUrl(imageBase64, 'image/jpeg');
+    }
+    return undefined;
+  };
+
+  // Helper function to get horse profile image (only image_url)
+  const getHorseProfileImage = (imageUrl?: string): string | undefined => {
+    if (imageUrl) {
+      console.log('🐎 [Community] Using image_url for horse profile image:', imageUrl);
+      return imageUrl;
+    }
+    return undefined;
   };
 
   const mockFriends: User[] = [
@@ -253,30 +287,54 @@ export default function CommunityScreen() {
         } else {
           // Convert database posts to the format expected by the UI
           const formattedPosts: Post[] = dbPosts.map(
-            (dbPost: PostWithUser) => ({
-              id: dbPost.id,
-              user: {
-                id: dbPost.profiles.id,
-                name: dbPost.profiles.name,
-                avatar: getAvatarUrl(dbPost.profiles.profile_image_url),
-                isOnline: true,
-                isFriend: true,
-              },
-              timestamp: new Date(dbPost.created_at).toLocaleString(),
-              content: dbPost.content,
-              image: dbPost.image_url,
-              likes: dbPost.likes_count,
-              comments: 0, // TODO: Add comments feature later
-              isLiked: dbPost.is_liked || false,
-              sessionData: dbPost.session_data
-                ? {
-                    horseName: dbPost.session_data.horse_name,
-                    duration: dbPost.session_data.duration,
-                    distance: dbPost.session_data.distance,
-                    avgSpeed: dbPost.session_data.avg_speed,
-                  }
-                : undefined,
-            })
+            (dbPost: PostWithUser) => {
+              // Separate session uploaded image (base64) from horse profile image (image_url)
+              const sessionUploadedImage = getSessionUploadedImage(dbPost.image_base64);
+              
+              // For horse profile image, prioritize session_data.horse_image_url over image_url
+              // This prevents uploaded session images from appearing as horse profile pictures
+              const horseProfileImage = dbPost.session_data?.horse_image_url || 
+                                        (dbPost.session_data ? undefined : getHorseProfileImage(dbPost.image_url));
+              
+              console.log('📄 [Community] Processing post:', {
+                id: dbPost.id,
+                hasImageUrl: !!dbPost.image_url,
+                hasImageBase64: !!dbPost.image_base64,
+                sessionUploadedImage: !!sessionUploadedImage,
+                horseProfileImage: !!horseProfileImage,
+                isSessionPost: !!dbPost.session_data,
+                sessionDataHorseImageUrl: dbPost.session_data?.horse_image_url,
+                reasoning: dbPost.session_data ? 
+                  'Session post - using session_data.horse_image_url for horse profile' : 
+                  'Regular post - using image_url if available'
+              });
+
+              return {
+                id: dbPost.id,
+                user: {
+                  id: dbPost.profiles.id,
+                  name: dbPost.profiles.name,
+                  avatar: getAvatarUrl(dbPost.profiles.profile_image_url),
+                  isOnline: true,
+                  isFriend: true,
+                },
+                timestamp: new Date(dbPost.created_at).toLocaleString(),
+                content: dbPost.content,
+                image: sessionUploadedImage, // Only use base64 for main post image
+                likes: dbPost.likes_count,
+                comments: 0, // TODO: Add comments feature later
+                isLiked: dbPost.is_liked || false,
+                sessionData: dbPost.session_data
+                  ? {
+                      horseName: dbPost.session_data.horse_name,
+                      duration: dbPost.session_data.duration,
+                      distance: dbPost.session_data.distance,
+                      avgSpeed: dbPost.session_data.avg_speed,
+                      horseImageUrl: horseProfileImage, // Use the properly determined horse profile image
+                    }
+                  : undefined,
+              };
+            }
           );
 
           allPosts = formattedPosts;
@@ -968,11 +1026,23 @@ export default function CommunityScreen() {
           <View style={styles.avatarContainer}>
             <Image source={{ uri: item.user.avatar }} style={styles.avatar} />
             {/* Horse image overlay for session posts */}
-            {item.sessionData && item.image && (
-              <Image 
-                source={{ uri: item.image }} 
-                style={styles.horseAvatarOverlay} 
-              />
+            {item.sessionData && item.sessionData.horseImageUrl && (
+              <>
+                {console.log('🐎 [Community] Rendering horse avatar overlay:', {
+                  postId: item.id,
+                  horseName: item.sessionData.horseName,
+                  horseImageUrl: item.sessionData.horseImageUrl
+                })}
+                <TouchableOpacity
+                  onPress={() => setExpandedImage(item.sessionData!.horseImageUrl!)}
+                  activeOpacity={0.9}
+                >
+                  <Image 
+                    source={{ uri: item.sessionData.horseImageUrl }} 
+                    style={styles.horseAvatarOverlay} 
+                  />
+                </TouchableOpacity>
+              </>
             )}
           </View>
           <View>
@@ -1064,8 +1134,22 @@ export default function CommunityScreen() {
         {item.content}
       </Text>
 
-      {item.image && !item.sessionData && (
-        <Image source={{ uri: item.image }} style={styles.postImage} />
+      {/* Show main image for all posts (uploaded session images from base64 only) */}
+      {item.image && (
+        <>
+          {console.log('� [Community] Rendering uploaded session image:', {
+            postId: item.id,
+            hasSessionData: !!item.sessionData,
+            hasHorseImageUrl: !!item.sessionData?.horseImageUrl,
+            uploadedImageUrl: item.image
+          })}
+          <TouchableOpacity
+            onPress={() => setExpandedImage(item.image!)}
+            activeOpacity={0.9}
+          >
+            <Image source={{ uri: item.image }} style={styles.postImage} />
+          </TouchableOpacity>
+        </>
       )}
 
       {item.sessionData && (
@@ -1794,6 +1878,43 @@ export default function CommunityScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Expanded Image Modal */}
+      <Modal
+        visible={expandedImage !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setExpandedImage(null)}
+      >
+        <View style={styles.expandedImageOverlay}>
+          <TouchableOpacity
+            style={styles.expandedImageContainer}
+            onPress={() => setExpandedImage(null)}
+            activeOpacity={1}
+          >
+            <View style={styles.expandedImageHeader}>
+              <TouchableOpacity
+                style={styles.expandedImageCloseButton}
+                onPress={() => setExpandedImage(null)}
+              >
+                <Text style={styles.expandedImageCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            {expandedImage && (
+              <TouchableOpacity
+                onPress={(e) => e.stopPropagation()}
+                activeOpacity={1}
+              >
+                <Image
+                  source={{ uri: expandedImage }}
+                  style={styles.expandedImage}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            )}
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -2081,7 +2202,7 @@ const styles = StyleSheet.create({
   },
   postImage: {
     width: "100%",
-    height: 200,
+    height:                                                                                                                                                                                                                                                                                                                                                                                                                                                                       300,
     borderRadius: 8,
     marginBottom: 12,
   },
@@ -2382,5 +2503,42 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: "transparent",
     zIndex: 5,
+  },
+  // Expanded Image Modal Styles
+  expandedImageOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  expandedImageContainer: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  expandedImageHeader: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 10,
+  },
+  expandedImageCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  expandedImageCloseText: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  expandedImage: {
+    width: "90%",
+    height: "80%",
+    borderRadius: 8,
   },
 });

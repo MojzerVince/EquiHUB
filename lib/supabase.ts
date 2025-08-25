@@ -85,12 +85,14 @@ export interface CommunityPost {
   user_id: string
   content: string
   image_url?: string
+  image_base64?: string
   session_data?: {
     horse_name: string
     duration: string
     distance: string
     avg_speed: string
     session_id?: string
+    horse_image_url?: string
   }
   likes_count: number
   created_at: string

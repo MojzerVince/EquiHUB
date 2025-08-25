@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { CommunityAPI } from '../lib/communityAPI';
 import { HorseAPI } from '../lib/horseAPI';
+import { convertImageToBase64 } from '../lib/imageUtils';
 
 // Media item interface - same as session-details.tsx
 interface MediaItem {
@@ -76,7 +77,7 @@ export default function SessionShareScreen() {
   const [horse, setHorse] = useState<Horse | null>(null);
   const [loading, setLoading] = useState(true);
   const [postText, setPostText] = useState('');
-  const [selectedMedia, setSelectedMedia] = useState<string[]>([]);
+  const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
 
   // Load session data on component mount
@@ -217,8 +218,8 @@ export default function SessionShareScreen() {
     }
   };
 
-  // Get media items from session - same approach as session-details.tsx
-  const mediaItems = session?.media || [];
+  // Get media items from session - filter to only photos
+  const mediaItems = session?.media?.filter(item => item.type === "photo") || [];
 
   console.log("🔄 [SessionShare] Render - Current state:", {
     loading,
@@ -228,16 +229,18 @@ export default function SessionShareScreen() {
     hasHorse: !!horse,
     horseObjectName: horse?.name,
     mediaCount: mediaItems.length,
-    selectedMediaCount: selectedMedia.length,
+    selectedMedia: selectedMedia,
     isSharing
   });
 
   const toggleMediaSelection = (mediaId: string) => {
     setSelectedMedia(prev => {
-      const newSelection = prev.includes(mediaId) 
-        ? prev.filter(id => id !== mediaId)
-        : [...prev, mediaId];
-      return newSelection;
+      // If the same media is selected, deselect it
+      if (prev === mediaId) {
+        return null;
+      }
+      // Otherwise, select this media (replacing any previous selection)
+      return mediaId;
     });
   };
 
@@ -249,6 +252,35 @@ export default function SessionShareScreen() {
 
     if (!postText.trim()) {
       Alert.alert("Error", "Please add some text to your post.");
+      return;
+    }
+
+    // Validate that we have something meaningful to share
+    const hasSelectedMedia = selectedMedia !== null;
+    const hasHorseImage = !!horse?.image_url;
+    
+    if (!hasSelectedMedia && !hasHorseImage) {
+      Alert.alert(
+        "No Images Selected", 
+        "Your post will be shared without any images. Would you like to continue?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Continue", onPress: () => {
+            // Continue with the sharing process
+            performSharing();
+          }}
+        ]
+      );
+      return;
+    }
+
+    // If we have media or horse image, proceed directly
+    await performSharing();
+  };
+
+  const performSharing = async () => {
+    if (!user) {
+      Alert.alert("Error", "Please log in to share your session.");
       return;
     }
 
@@ -273,21 +305,55 @@ export default function SessionShareScreen() {
         session_id: sessionId,
       };
 
-      // Get selected media URLs - same approach as session-details
-      const selectedMediaItems = mediaItems.filter(item => 
-        selectedMedia.includes(item.id)
-      );
+      // Get selected media item (single selection)
+      const selectedMediaItem = selectedMedia ? mediaItems.find(item => item.id === selectedMedia) : null;
 
-      // Use horse image or first selected media
-      let imageUrl = horse?.image_url || selectedMediaItems[0]?.uri;
+      // Use the best available image for the post
+      // NOTE: We should NOT mix uploaded session images with horse profile images
+      // - image_base64: Only for uploaded session photos  
+      // - image_url: Only for horse profile pictures
+      let imageBase64: string | undefined;
+
+      // Convert selected image to base64 if available (uploaded session photo)
+      if (selectedMediaItem?.uri) {
+        try {
+          console.log("🔄 [SessionShare] Converting selected image to base64...");
+          imageBase64 = await convertImageToBase64(selectedMediaItem.uri);
+          console.log("✅ [SessionShare] Image converted to base64 successfully");
+        } catch (error) {
+          console.error("❌ [SessionShare] Failed to convert image to base64:", error);
+          // Continue without base64 if conversion fails
+        }
+      }
       
-      console.log("Creating post with data:", { sessionData, imageUrl, content: postText.trim() });
+      // Store selected media info in session_data for future use
+      const mediaInfo = selectedMediaItem ? {
+        selected_media_id: selectedMediaItem.id,
+        selected_media_type: selectedMediaItem.type,
+        has_base64: !!imageBase64
+      } : {};
+      
+      console.log("Creating post with data:", { 
+        sessionData, 
+        hasSelectedMedia: !!selectedMediaItem,
+        hasBase64: !!imageBase64,
+        horseImageUrl: horse?.image_url,
+        mediaInfo,
+        content: postText.trim() 
+      });
 
-      // Create post in database
+      // Create post in database with separated image logic:
+      // - image_url: ONLY horse profile picture (never uploaded session images)
+      // - image_base64: ONLY uploaded session photos
       const result = await CommunityAPI.createPost(user.id, {
         content: postText.trim(),
-        image_url: imageUrl || undefined, // Explicitly set to undefined if empty
-        session_data: sessionData,
+        image_url: horse?.image_url || undefined, // ONLY horse profile picture
+        image_base64: imageBase64, // ONLY uploaded session photo
+        session_data: {
+          ...sessionData,
+          ...mediaInfo, // Include media info in session data
+          horse_image_url: horse?.image_url || undefined, // Add horse image URL
+        },
       });
 
       console.log("Post creation result:", result);
@@ -450,11 +516,11 @@ export default function SessionShareScreen() {
             <Text style={styles.sectionTitle}>
               Session Media ({mediaItems.length})
             </Text>
-            {selectedMedia.length > 0 && (
+            {selectedMedia && (
               <View style={styles.selectedCountContainer}>
                 <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
                 <Text style={styles.selectedCountText}>
-                  {selectedMedia.length} selected for sharing
+                  1 photo selected
                 </Text>
               </View>
             )}
@@ -469,7 +535,7 @@ export default function SessionShareScreen() {
                   key={item.id}
                   style={[
                     styles.mediaItemContainer,
-                    selectedMedia.includes(item.id) && styles.selectedMediaContainer
+                    selectedMedia === item.id && styles.selectedMediaContainer
                   ]}
                   onPress={() => toggleMediaSelection(item.id)}
                   disabled={isSharing}
@@ -497,9 +563,9 @@ export default function SessionShareScreen() {
                     {/* Selection Indicator */}
                     <View style={[
                       styles.selectionIndicator,
-                      selectedMedia.includes(item.id) && styles.selectedIndicator
+                      selectedMedia === item.id && styles.selectedIndicator
                     ]}>
-                      {selectedMedia.includes(item.id) ? (
+                      {selectedMedia === item.id ? (
                         <Ionicons name="checkmark" size={16} color="#000000" />
                       ) : (
                         <View style={styles.unselectedCircle} />
@@ -507,7 +573,7 @@ export default function SessionShareScreen() {
                     </View>
                     
                     {/* Selected Overlay */}
-                    {selectedMedia.includes(item.id) && (
+                    {selectedMedia === item.id && (
                       <View style={styles.selectedOverlayNew} />
                     )}
                   </View>
@@ -524,11 +590,19 @@ export default function SessionShareScreen() {
             </ScrollView>
             
             {/* Selection Hint */}
-            {selectedMedia.length === 0 && (
+            {!selectedMedia && (
               <View style={styles.selectionHint}>
                 <Ionicons name="information-circle" size={16} color="#6C757D" />
                 <Text style={styles.hintText}>
-                  Tap photos/videos to include them in your post
+                  Tap a photo to include it in your post (photos only)
+                </Text>
+              </View>
+            )}
+            {selectedMedia && (
+              <View style={styles.selectionHint}>
+                <Ionicons name="image" size={16} color="#28A745" />
+                <Text style={styles.hintText}>
+                  This photo will be shown as the main image in your post
                 </Text>
               </View>
             )}

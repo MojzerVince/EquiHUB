@@ -3,12 +3,14 @@ import { CommunityPost, PostLike, supabase, supabaseAnonKey, supabaseUrl } from 
 export interface CreatePostData {
   content: string;
   image_url?: string;
+  image_base64?: string;
   session_data?: {
     horse_name: string;
     duration: string;
     distance: string;
     avg_speed: string;
     session_id?: string;
+    horse_image_url?: string;
   };
 }
 
@@ -124,6 +126,7 @@ export class CommunityAPI {
         user_id: userId,
         content: postData.content,
         image_url: postData.image_url,
+        image_base64: postData.image_base64,
         session_data: postData.session_data,
         likes_count: 0,
       };
