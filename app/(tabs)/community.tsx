@@ -75,7 +75,7 @@ export default function CommunityScreen() {
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
-  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false); // Start as false, set to true when loading begins
   const [activeTab, setActiveTab] = useState<"Feed" | "Challenges" | "Groups">(
     "Feed"
   );
@@ -174,6 +174,7 @@ export default function CommunityScreen() {
 
   // Load friends when component mounts and user is available (optimized)
   useEffect(() => {
+    console.log("🎯 Initial data useEffect triggered, user?.id:", !!user?.id);
     if (user?.id) {
       // Use a flag to prevent multiple simultaneous loads
       let isMounted = true;
@@ -181,6 +182,7 @@ export default function CommunityScreen() {
       const loadInitialData = async () => {
         if (!isMounted) return;
         
+        console.log("🚀 Starting initial data load...");
         try {
           // Load data in parallel for better performance
           await Promise.all([
@@ -189,6 +191,7 @@ export default function CommunityScreen() {
             loadHiddenPosts(),
             loadPosts(),
           ]);
+          console.log("✅ Initial data load complete");
         } catch (error) {
           console.error("Error loading initial community data:", error);
         }
@@ -200,7 +203,7 @@ export default function CommunityScreen() {
         isMounted = false;
       };
     }
-  }, [user?.id]);
+  }, [user?.id]); // Remove other dependencies to prevent multiple calls
 
   // Setup push notifications
   useEffect(() => {
@@ -268,12 +271,25 @@ export default function CommunityScreen() {
 
   // Load posts from database
   const loadPosts = useCallback(async () => {
+    console.log("🔄 loadPosts called, isLoadingPosts:", isLoadingPosts, "user:", !!user, "user.id:", user?.id);
+    
+    // Prevent concurrent calls (but allow first call)
+    if (isLoadingPosts) {
+      console.log("⚠️ Posts already loading, skipping...");
+      return;
+    }
+
+    console.log("🚀 Setting isLoadingPosts to true...");
     setIsLoadingPosts(true);
+    
     try {
       let allPosts: Post[] = [];
 
       // Load posts from database if user is logged in
       if (user?.id) {
+        console.log("👤 Loading posts for user:", user.id);
+        
+        // Make the real API call
         const { posts: dbPosts, error } = await CommunityAPI.getFeedPosts(
           user.id
         );
@@ -281,6 +297,7 @@ export default function CommunityScreen() {
         if (error) {
           console.error("Error loading posts from database:", error);
         } else {
+          console.log("📦 Raw posts from API:", dbPosts?.length || 0);
           // Convert database posts to the format expected by the UI
           const formattedPosts: Post[] = dbPosts.map(
             (dbPost: PostWithUser) => {
@@ -323,14 +340,19 @@ export default function CommunityScreen() {
 
           allPosts = formattedPosts;
         }
+      } else {
+        console.log("❌ No user ID available, cannot load posts");
       }
 
+      console.log("📝 Setting posts, count:", allPosts.length);
       setPosts(allPosts);
+      console.log("✅ Posts set successfully");
     } catch (error) {
       console.error("Error loading posts:", error);
       // Set empty posts on error
       setPosts([]);
     } finally {
+      console.log("🏁 loadPosts complete, setting isLoadingPosts to false");
       setIsLoadingPosts(false);
     }
   }, [user?.id]);
@@ -344,11 +366,15 @@ export default function CommunityScreen() {
       return;
     }
 
+    // Prevent concurrent calls
+    if (isLoadingRequests) {
+      console.log("⚠️ Friend requests already loading, skipping...");
+      return;
+    }
+
     setIsLoadingRequests(true);
 
     try {
-      console.log("🔄 Loading friend requests for user:", user.id);
-
       // Use CommunityAPI REST endpoint
       const { requests, error } = await CommunityAPI.getPendingFriendRequests(
         user.id
@@ -360,8 +386,6 @@ export default function CommunityScreen() {
         setNotificationCount(0);
         return;
       }
-
-      console.log("📨 Raw friend requests result:", requests);
 
       const friendRequestsList: FriendRequest[] = (requests || []).map(
         (request) => ({
@@ -375,7 +399,9 @@ export default function CommunityScreen() {
         })
       );
 
-      console.log("📋 Processed friend requests:", friendRequestsList);
+      if (friendRequestsList.length === 0) {
+        console.log("� No pending friend requests found");
+      }
       setFriendRequests(friendRequestsList);
       setNotificationCount(friendRequestsList.length);
     } catch (error) {
@@ -585,13 +611,19 @@ export default function CommunityScreen() {
     }, 600000); // Check every 10 minutes instead of 5 minutes
 
     return () => clearInterval(interval);
-  }, [user?.id, friendRequests.length]);
+  }, [user?.id, friendRequests.length, loadFriendRequests]); // Add loadFriendRequests to dependencies
 
   // Load friends from database
   const loadFriends = useCallback(async () => {
     if (!user?.id) {
       setIsLoadingFriends(false);
       setFriends([]);
+      return;
+    }
+
+    // Prevent concurrent calls
+    if (isLoadingFriends) {
+      console.log("⚠️ Friends already loading, skipping...");
       return;
     }
 
@@ -656,29 +688,35 @@ export default function CommunityScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [user?.id, loadFriendRequests, loadFriends, loadHiddenPosts, loadPosts]);
+  }, [user?.id]); // Remove function dependencies to prevent excessive re-creation
 
-  // Refresh all data when screen is focused (optimized)
+  // Refresh all data when screen is focused (optimized to prevent duplicate calls)
   useFocusEffect(
     useCallback(() => {
-      if (user?.id) {
-        // Only load friends and requests if we don't have data or it's been a while
-        if (friends.length === 0) {
+      // Only run on focus if we don't have data and we're not currently loading
+      if (!user?.id) return;
+      
+      // Add a small delay to prevent conflict with initial data loading
+      const timeoutId = setTimeout(() => {
+        // Only reload if we actually need data and nothing is loading
+        if (friends.length === 0 && !isLoadingFriends) {
           loadFriends();
         }
-        if (friendRequests.length === 0) {
+        // Only reload friend requests if we have none and aren't already loading
+        if (friendRequests.length === 0 && !isLoadingRequests) {
           loadFriendRequests();
         }
-        // Only load hidden posts if we don't have them or user changed
         if (hiddenPostIds.length === 0) {
           loadHiddenPosts();
         }
-      }
-      // Only reload posts if we don't have any posts yet
-      if (posts.length === 0) {
-        loadPosts();
-      }
-    }, [user?.id, friends.length, friendRequests.length, hiddenPostIds.length, posts.length])
+        // Only reload posts if we have none and aren't already loading
+        if (posts.length === 0 && !isLoadingPosts) {
+          loadPosts();
+        }
+      }, 200); // Slightly longer delay to ensure initial load completes
+
+      return () => clearTimeout(timeoutId);
+    }, [user?.id]) // Remove other dependencies to prevent excessive re-runs
   );
 
   // Search for users with manual trigger
