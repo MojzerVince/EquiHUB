@@ -3,20 +3,32 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { CommunityAPI } from '../lib/communityAPI';
 import { HorseAPI } from '../lib/horseAPI';
+
+// Media item interface - same as session-details.tsx
+interface MediaItem {
+  id: string;
+  uri: string;
+  type: "photo" | "video";
+  timestamp: number;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+}
 
 interface TrainingSession {
   id: string;
@@ -30,6 +42,7 @@ interface TrainingSession {
   endTime?: number;
   averageSpeed?: number;
   maxSpeed?: number;
+  media?: MediaItem[]; // Photos and videos taken during session
 }
 
 interface Horse {
@@ -63,6 +76,7 @@ export default function SessionShareScreen() {
   const [horse, setHorse] = useState<Horse | null>(null);
   const [loading, setLoading] = useState(true);
   const [postText, setPostText] = useState('');
+  const [selectedMedia, setSelectedMedia] = useState<string[]>([]);
   const [isSharing, setIsSharing] = useState(false);
 
   // Load session data on component mount
@@ -203,7 +217,9 @@ export default function SessionShareScreen() {
     }
   };
 
-  // Get media items from session instead of parsing params
+  // Get media items from session - same approach as session-details.tsx
+  const mediaItems = session?.media || [];
+
   console.log("🔄 [SessionShare] Render - Current state:", {
     loading,
     hasSession: !!session,
@@ -211,8 +227,19 @@ export default function SessionShareScreen() {
     sessionHorseName: session?.horseName,
     hasHorse: !!horse,
     horseObjectName: horse?.name,
+    mediaCount: mediaItems.length,
+    selectedMediaCount: selectedMedia.length,
     isSharing
   });
+
+  const toggleMediaSelection = (mediaId: string) => {
+    setSelectedMedia(prev => {
+      const newSelection = prev.includes(mediaId) 
+        ? prev.filter(id => id !== mediaId)
+        : [...prev, mediaId];
+      return newSelection;
+    });
+  };
 
   const sharePost = async () => {
     if (!user) {
@@ -246,8 +273,13 @@ export default function SessionShareScreen() {
         session_id: sessionId,
       };
 
-      // Use horse image only
-      let imageUrl = horse?.image_url;
+      // Get selected media URLs - same approach as session-details
+      const selectedMediaItems = mediaItems.filter(item => 
+        selectedMedia.includes(item.id)
+      );
+
+      // Use horse image or first selected media
+      let imageUrl = horse?.image_url || selectedMediaItems[0]?.uri;
       
       console.log("Creating post with data:", { sessionData, imageUrl, content: postText.trim() });
 
@@ -411,6 +443,97 @@ export default function SessionShareScreen() {
           />
           <Text style={styles.characterCount}>{postText.length}/500</Text>
         </View>
+
+        {/* Media Gallery - Enhanced styling */}
+        {mediaItems.length > 0 && (
+          <View style={styles.mediaCard}>
+            <Text style={styles.sectionTitle}>
+              Session Media ({mediaItems.length})
+            </Text>
+            {selectedMedia.length > 0 && (
+              <View style={styles.selectedCountContainer}>
+                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
+                <Text style={styles.selectedCountText}>
+                  {selectedMedia.length} selected for sharing
+                </Text>
+              </View>
+            )}
+            <ScrollView
+              horizontal
+              style={styles.mediaScrollView}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.mediaScrollContent}
+            >
+              {mediaItems.map((item, index) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.mediaItemContainer,
+                    selectedMedia.includes(item.id) && styles.selectedMediaContainer
+                  ]}
+                  onPress={() => toggleMediaSelection(item.id)}
+                  disabled={isSharing}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.mediaThumbnailWrapper}>
+                    <Image
+                      source={{ uri: item.uri }}
+                      style={styles.mediaThumbnail}
+                      resizeMode="cover"
+                    />
+                    
+                    {/* Media Type Badge */}
+                    <View style={[
+                      styles.mediaTypeBadge,
+                      item.type === "video" ? styles.videoBadge : styles.photoBadge
+                    ]}>
+                      <Ionicons 
+                        name={item.type === "photo" ? "camera" : "videocam"} 
+                        size={12} 
+                        color="#FFFFFF" 
+                      />
+                    </View>
+                    
+                    {/* Selection Indicator */}
+                    <View style={[
+                      styles.selectionIndicator,
+                      selectedMedia.includes(item.id) && styles.selectedIndicator
+                    ]}>
+                      {selectedMedia.includes(item.id) ? (
+                        <Ionicons name="checkmark" size={16} color="#000000" />
+                      ) : (
+                        <View style={styles.unselectedCircle} />
+                      )}
+                    </View>
+                    
+                    {/* Selected Overlay */}
+                    {selectedMedia.includes(item.id) && (
+                      <View style={styles.selectedOverlayNew} />
+                    )}
+                  </View>
+                  
+                  {/* Timestamp */}
+                  <Text style={styles.mediaTimeNew}>
+                    {new Date(item.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            
+            {/* Selection Hint */}
+            {selectedMedia.length === 0 && (
+              <View style={styles.selectionHint}>
+                <Ionicons name="information-circle" size={16} color="#6C757D" />
+                <Text style={styles.hintText}>
+                  Tap photos/videos to include them in your post
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Horse Image Preview */}
         {(() => {
@@ -597,11 +720,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
-  selectedOverlay: {
-    backgroundColor: 'rgba(255,215,0,0.3)',
-    borderWidth: 2,
-    borderColor: '#FFD700',
-  },
   horseImageSection: {
     marginBottom: 20,
   },
@@ -669,5 +787,172 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontWeight: '600',
     fontSize: 16,
+  },
+
+  // Enhanced Media Gallery Styles
+  mediaCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  selectedCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF9E6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 15,
+    alignSelf: 'flex-start',
+  },
+  selectedCountText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#B8860B',
+  },
+  mediaScrollView: {
+    paddingVertical: 5,
+  },
+  mediaScrollContent: {
+    paddingHorizontal: 5,
+  },
+  mediaItemContainer: {
+    marginHorizontal: 8,
+    alignItems: 'center',
+  },
+  selectedMediaContainer: {
+    transform: [{ scale: 0.95 }],
+  },
+  mediaThumbnailWrapper: {
+    position: 'relative',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  mediaThumbnail: {
+    width: 120,
+    height: 120,
+    borderRadius: 16,
+  },
+  mediaTypeBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  videoBadge: {
+    backgroundColor: 'rgba(220, 53, 69, 0.9)',
+  },
+  photoBadge: {
+    backgroundColor: 'rgba(40, 167, 69, 0.9)',
+  },
+  selectionIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  },
+  selectedIndicator: {
+    backgroundColor: '#FFD700',
+    borderColor: '#FFD700',
+  },
+  unselectedCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#6C757D',
+    backgroundColor: 'transparent',
+  },
+  selectedOverlayNew: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+  },
+  mediaTimeNew: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6C757D',
+    textAlign: 'center',
+    backgroundColor: '#F8F9FA',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  selectionHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+  },
+  hintText: {
+    marginLeft: 6,
+    fontSize: 13,
+    color: '#6C757D',
+    fontStyle: 'italic',
+  },
+  
+  // Keep existing media styles for compatibility
+  selectedMediaItem: {
+    transform: [{ scale: 0.95 }],
+    opacity: 0.8,
+  },
+  mediaOverlay: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  selectedOverlay: {
+    backgroundColor: 'rgba(255,215,0,0.3)',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+  },
+  mediaTypeIcon: {
+    fontSize: 16,
+  },
+  mediaTime: {
+    fontSize: 12,
+    fontFamily: 'Inder',
+    textAlign: 'center',
+    color: '#6C757D',
   },
 });
