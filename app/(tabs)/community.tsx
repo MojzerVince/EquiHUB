@@ -2047,7 +2047,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: 5,
-    paddingTop: 20,
+    paddingTop: 10,
   },
   stickyTabWrapper: {
     paddingTop: 0,
