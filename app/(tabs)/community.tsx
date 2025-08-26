@@ -96,7 +96,6 @@ export default function CommunityScreen() {
   const [reportingPost, setReportingPost] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [forceRender, setForceRender] = useState(0); // Add this to force re-renders
-  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   // Refs to track loading operations and prevent duplicates
   const isLoadingPostsRef = useRef(false);
@@ -1139,17 +1138,10 @@ export default function CommunityScreen() {
             {item.sessionData && (
               <>
                 {item.sessionData.horseImageUrl ? (
-                  <TouchableOpacity
-                    onPress={() =>
-                      setExpandedImage(item.sessionData!.horseImageUrl!)
-                    }
-                    activeOpacity={0.9}
-                  >
-                    <Image
-                      source={{ uri: item.sessionData.horseImageUrl }}
-                      style={styles.horseAvatarOverlay}
-                    />
-                  </TouchableOpacity>
+                  <Image
+                    source={{ uri: item.sessionData.horseImageUrl }}
+                    style={styles.horseAvatarOverlay}
+                  />
                 ) : (
                   <>
                     {/* Placeholder for missing horse image */}
@@ -1266,14 +1258,7 @@ export default function CommunityScreen() {
 
       {/* Show main image for all posts (uploaded session images from base64 only) */}
       {item.image && (
-        <>
-          <TouchableOpacity
-            onPress={() => setExpandedImage(item.image!)}
-            activeOpacity={0.9}
-          >
-            <Image source={{ uri: item.image }} style={styles.postImage} />
-          </TouchableOpacity>
-        </>
+        <Image source={{ uri: item.image }} style={styles.postImage} />
       )}
 
       {item.sessionData && (
@@ -2028,43 +2013,6 @@ export default function CommunityScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Expanded Image Modal */}
-      <Modal
-        visible={expandedImage !== null}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setExpandedImage(null)}
-      >
-        <View style={styles.expandedImageOverlay}>
-          <TouchableOpacity
-            style={styles.expandedImageContainer}
-            onPress={() => setExpandedImage(null)}
-            activeOpacity={1}
-          >
-            <View style={styles.expandedImageHeader}>
-              <TouchableOpacity
-                style={styles.expandedImageCloseButton}
-                onPress={() => setExpandedImage(null)}
-              >
-                <Text style={styles.expandedImageCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            {expandedImage && (
-              <TouchableOpacity
-                onPress={(e) => e.stopPropagation()}
-                activeOpacity={1}
-              >
-                <Image
-                  source={{ uri: expandedImage }}
-                  style={styles.expandedImage}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-            )}
-          </TouchableOpacity>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -2666,42 +2614,5 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: "transparent",
     zIndex: 5,
-  },
-  // Expanded Image Modal Styles
-  expandedImageOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  expandedImageContainer: {
-    flex: 1,
-    width: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  expandedImageHeader: {
-    position: "absolute",
-    top: 50,
-    right: 20,
-    zIndex: 10,
-  },
-  expandedImageCloseButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  expandedImageCloseText: {
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  expandedImage: {
-    width: "90%",
-    height: "80%",
-    borderRadius: 8,
   },
 });
