@@ -78,3 +78,30 @@ export interface UserBadge {
 export interface UserBadgeWithDetails extends UserBadge {
   badge: Badge
 }
+
+// Community Posts Types
+export interface CommunityPost {
+  id: string
+  user_id: string
+  content: string
+  image_url?: string
+  image_base64?: string
+  session_data?: {
+    horse_name: string
+    duration: string
+    distance: string
+    avg_speed: string
+    session_id?: string
+    horse_image_url?: string
+  }
+  likes_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface PostLike {
+  id: string
+  post_id: string
+  user_id: string
+  created_at: string
+}

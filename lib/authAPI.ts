@@ -1,5 +1,5 @@
 import { SessionManager } from './sessionManager';
-import { supabase } from './supabase';
+import { supabase, supabaseAnonKey, supabaseUrl } from './supabase';
 
 export interface AuthUser {
   id: string;
@@ -159,32 +159,126 @@ export class AuthAPI {
     }
   }
 
-  // Get current user session
+  // Get current user session via REST API (avoiding supabase.auth.getSession() timeouts)
   static async getCurrentUser(): Promise<{ user: AuthUser | null; error: string | null }> {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const AsyncStorage = await import('@react-native-async-storage/async-storage').then(
+        module => module.default
+      );
 
-      if (error) {
-        console.error('Get session error:', error);
-        return { user: null, error: error.message };
+      // Try to get session from AsyncStorage - check multiple possible keys
+      let sessionData: string | null = null;
+      let accessToken: string | null = null;
+
+      // Common Supabase session storage keys
+      const possibleKeys = [
+        'supabase.auth.token',
+        `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`,
+        'sb-grdsqxwghajehneksxik-auth-token', // Specific to this project
+        '@supabase/auth-js:session',
+      ];
+
+      console.log('🔍 Checking for stored session tokens...');
+      
+      // Try each possible key
+      for (const key of possibleKeys) {
+        try {
+          sessionData = await AsyncStorage.getItem(key);
+          if (sessionData) {
+            console.log(`📱 Found session data with key: ${key}`);
+            const session = JSON.parse(sessionData);
+            accessToken = session?.access_token;
+            if (accessToken) {
+              console.log('✅ Found valid access token');
+              break;
+            }
+          }
+        } catch (e) {
+          console.log(`🔍 Key ${key} not valid JSON or accessible`);
+        }
       }
 
-      if (!session || !session.user) {
+      // If no session found in known keys, search all keys
+      if (!accessToken) {
+        console.log('🔍 Searching all AsyncStorage keys for Supabase session...');
+        try {
+          const allKeys = await AsyncStorage.getAllKeys();
+          const authKeys = allKeys.filter(key => 
+            key.includes('supabase') || key.includes('auth') || key.includes('sb-')
+          );
+          
+          console.log('📋 Found auth-related keys:', authKeys);
+          
+          for (const key of authKeys) {
+            try {
+              const data = await AsyncStorage.getItem(key);
+              if (data) {
+                const parsed = JSON.parse(data);
+                if (parsed.access_token) {
+                  accessToken = parsed.access_token;
+                  console.log(`✅ Found access token in key: ${key}`);
+                  break;
+                }
+              }
+            } catch (e) {
+              // Skip invalid JSON
+            }
+          }
+        } catch (e) {
+          console.log('❌ Failed to scan AsyncStorage keys:', e);
+        }
+      }
+      
+      if (!accessToken) {
+        console.log('❌ No stored session data available');
         return { user: null, error: null };
       }
 
+      // Verify token by making a simple REST API call to auth.users endpoint
+      console.log('🔐 Verifying access token with Supabase...');
+      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.log('🔑 Token expired or invalid');
+          // Clear invalid session from all possible keys
+          for (const key of possibleKeys) {
+            await AsyncStorage.removeItem(key);
+          }
+          return { user: null, error: null };
+        }
+        const errorText = await response.text();
+        console.error(`🚨 Auth API Error (${response.status}):`, errorText);
+        return { user: null, error: `Authentication failed: ${response.status}` };
+      }
+
+      const userData = await response.json();
+      
+      if (!userData || !userData.id) {
+        console.log('❌ No user data in response');
+        return { user: null, error: null };
+      }
+
+      console.log('✅ Successfully verified user via REST API:', userData.email);
       return {
         user: {
-          id: session.user.id,
-          email: session.user.email!,
-          created_at: session.user.created_at!
+          id: userData.id,
+          email: userData.email,
+          created_at: userData.created_at
         },
         error: null
       };
 
     } catch (error) {
-      console.error('Get current user error:', error);
-      return { user: null, error: 'Failed to get current user.' };
+      console.error('Get current user via REST API error:', error);
+      return { user: null, error: 'Failed to get current user via REST API.' };
     }
   }
 

@@ -606,6 +606,7 @@ const ProfileScreen = () => {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -620,6 +621,7 @@ const ProfileScreen = () => {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -1111,9 +1113,9 @@ const ProfileScreen = () => {
                     ]}
                     onPress={() => {
                       if (isProMember) {
-                        router.push('/pro-features');
+                        router.push("/pro-features");
                       } else {
-                        router.push('/subscription');
+                        router.push("/subscription");
                       }
                     }}
                     activeOpacity={0.7}
@@ -1184,10 +1186,11 @@ const ProfileScreen = () => {
                 <Text
                   style={[
                     styles.characterCounter,
-                    { 
-                      color: userDescription.length > 140 
-                        ? '#FF6B6B' 
-                        : currentTheme.colors.textSecondary 
+                    {
+                      color:
+                        userDescription.length > 140
+                          ? "#FF6B6B"
+                          : currentTheme.colors.textSecondary,
                     },
                   ]}
                 >
@@ -1373,7 +1376,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     backgroundColor: "#335C67",
-    paddingBottom: 5,
   },
   headerContainer: {
     flexDirection: "row",
@@ -1381,6 +1383,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     position: "relative",
     marginBottom: -45,
+    marginTop: -5,
   },
   header: {
     fontSize: 30,
@@ -1475,7 +1478,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: 5,
-    paddingTop: 30,
+    paddingTop: 20,
   },
   profileContainer: {
     paddingHorizontal: 20,

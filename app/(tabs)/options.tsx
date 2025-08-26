@@ -1,9 +1,12 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useDialog } from "@/contexts/DialogContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   Linking,
   Modal,
@@ -29,8 +32,106 @@ const OptionsScreen = () => {
   const [autoSync, setAutoSync] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
 
+  // Load hidden posts when component mounts
+  useEffect(() => {
+    loadHiddenPosts();
+  }, [user?.id]);
+
+  // Reload hidden posts when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        loadHiddenPosts();
+      }
+    }, [user?.id])
+  );
+
+  // Load hidden posts from storage
+  const loadHiddenPosts = useCallback(async () => {
+    if (!user?.id) {
+      setHiddenPosts([]);
+      return;
+    }
+
+    setLoadingHiddenPosts(true);
+    try {
+      const hidden = await HiddenPostsManager.getHiddenPosts(user.id);
+      setHiddenPosts(hidden);
+    } catch (error) {
+      console.error("Error loading hidden posts:", error);
+      setHiddenPosts([]);
+    } finally {
+      setLoadingHiddenPosts(false);
+    }
+  }, [user?.id]);
+
+  // Unhide a specific post
+  const handleUnhidePost = async (postId: string) => {
+    if (!user?.id) return;
+
+    try {
+      const success = await HiddenPostsManager.unhidePost(user.id, postId);
+      if (success) {
+        setHiddenPosts((prev) => prev.filter((post) => post.id !== postId));
+        Alert.alert("Success", "Post has been restored to your feed.");
+      } else {
+        Alert.alert("Error", "Failed to restore post. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error unhiding post:", error);
+      Alert.alert("Error", "Failed to restore post. Please try again.");
+    }
+  };
+
+  // Clear all hidden posts
+  const handleClearAllHiddenPosts = async () => {
+    if (!user?.id) return;
+
+    Alert.alert(
+      "Clear All Hidden Posts",
+      "Are you sure you want to restore all hidden posts to your feed?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Restore All",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const success = await HiddenPostsManager.clearAllHiddenPosts(
+                user.id
+              );
+              if (success) {
+                setHiddenPosts([]);
+                Alert.alert(
+                  "Success",
+                  "All hidden posts have been restored to your feed."
+                );
+              } else {
+                Alert.alert(
+                  "Error",
+                  "Failed to restore posts. Please try again."
+                );
+              }
+            } catch (error) {
+              console.error("Error clearing hidden posts:", error);
+              Alert.alert(
+                "Error",
+                "Failed to restore posts. Please try again."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Theme dropdown state
   const [themeDropdownVisible, setThemeDropdownVisible] = useState(false);
+
+  // Hidden posts state
+  const [hiddenPosts, setHiddenPosts] = useState<HiddenPost[]>([]);
+  const [showHiddenPosts, setShowHiddenPosts] = useState(false);
+  const [loadingHiddenPosts, setLoadingHiddenPosts] = useState(false);
 
   const handleLogout = () => {
     showLogout(async () => {
@@ -339,6 +440,33 @@ const OptionsScreen = () => {
             </View>
           </View>
 
+          {/* Hidden Posts Section */}
+          <View style={styles.section}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              Hidden Content
+            </Text>
+            <View
+              style={[
+                styles.sectionContent,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
+              <ActionButton
+                title={`Hidden Posts (${hiddenPosts.length})`}
+                onPress={() => setShowHiddenPosts(true)}
+              />
+              {hiddenPosts.length > 0 && (
+                <ActionButton
+                  title="Clear All Hidden Posts"
+                  onPress={handleClearAllHiddenPosts}
+                  textStyle={{ color: currentTheme.colors.warning }}
+                />
+              )}
+            </View>
+          </View>
+
           {/* App Settings Section */}
           <View style={styles.section}>
             <Text
@@ -441,6 +569,137 @@ const OptionsScreen = () => {
 
       {/* Theme Dropdown Modal */}
       <ThemeDropdownModal />
+
+      {/* Hidden Posts Modal */}
+      <Modal
+        visible={showHiddenPosts}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowHiddenPosts(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.hiddenPostsModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View
+              style={[
+                styles.hiddenPostsHeader,
+                { borderBottomColor: currentTheme.colors.accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.hiddenPostsTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Hidden Posts
+              </Text>
+              <TouchableOpacity
+                style={styles.hiddenPostsCloseButton}
+                onPress={() => setShowHiddenPosts(false)}
+              >
+                <Text
+                  style={[
+                    styles.hiddenPostsCloseText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.hiddenPostsContent}>
+              {loadingHiddenPosts ? (
+                <View style={styles.hiddenPostsLoading}>
+                  <ActivityIndicator
+                    color={currentTheme.colors.primary}
+                    size="small"
+                  />
+                  <Text
+                    style={[
+                      styles.hiddenPostsLoadingText,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Loading hidden posts...
+                  </Text>
+                </View>
+              ) : hiddenPosts.length > 0 ? (
+                hiddenPosts.map((post) => (
+                  <View
+                    key={post.id}
+                    style={[
+                      styles.hiddenPostItem,
+                      { backgroundColor: currentTheme.colors.surface },
+                    ]}
+                  >
+                    <View style={styles.hiddenPostInfo}>
+                      <Text
+                        style={[
+                          styles.hiddenPostAuthor,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        {post.authorName}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.hiddenPostContent,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        {post.content}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.hiddenPostDate,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Hidden on {new Date(post.hiddenAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.unhideButton,
+                        { backgroundColor: currentTheme.colors.primary },
+                      ]}
+                      onPress={() => handleUnhidePost(post.id)}
+                    >
+                      <Text style={styles.unhideButtonText}>Restore</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.hiddenPostsEmpty}>
+                  <Text
+                    style={[
+                      styles.hiddenPostsEmptyTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    No Hidden Posts
+                  </Text>
+                  <Text
+                    style={[
+                      styles.hiddenPostsEmptyText,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    You haven't hidden any posts yet. When you hide posts from
+                    your feed, they'll appear here.
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -452,7 +711,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     backgroundColor: "#335C67",
-    paddingBottom: 5,
   },
   headerContainer: {
     flexDirection: "row",
@@ -460,6 +718,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     position: "relative",
     marginBottom: -45,
+    marginTop: -5,
   },
   header: {
     fontSize: 30,
@@ -626,6 +885,112 @@ const styles = StyleSheet.create({
     color: "#fff",
     textAlign: "center",
     fontWeight: "bold",
+  },
+  // Hidden Posts Modal Styles
+  hiddenPostsModal: {
+    maxHeight: "80%",
+    minHeight: "50%",
+    borderRadius: 20,
+    padding: 0,
+    margin: 0,
+    width: "95%",
+  },
+  hiddenPostsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+  },
+  hiddenPostsTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  hiddenPostsCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  hiddenPostsCloseText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  hiddenPostsContent: {
+    padding: 20,
+    maxHeight: 400,
+  },
+  hiddenPostsLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  hiddenPostsLoadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontFamily: "Inder",
+  },
+  hiddenPostItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  hiddenPostInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  hiddenPostAuthor: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  hiddenPostContent: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    marginBottom: 4,
+    lineHeight: 18,
+  },
+  hiddenPostDate: {
+    fontSize: 12,
+    fontFamily: "Inder",
+  },
+  unhideButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    minWidth: 80,
+  },
+  unhideButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  hiddenPostsEmpty: {
+    alignItems: "center",
+    padding: 40,
+  },
+  hiddenPostsEmptyTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8,
+    fontFamily: "Inder",
+  },
+  hiddenPostsEmptyText: {
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    fontFamily: "Inder",
   },
 });
 

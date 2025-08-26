@@ -2,17 +2,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { HorseAPI } from "../lib/horseAPI";
 import { Horse } from "../lib/supabase";
@@ -88,9 +89,11 @@ const SessionDetailsScreen = () => {
   const { sessionId } = useLocalSearchParams();
   const router = useRouter();
   const { currentTheme } = useTheme();
+  const { user } = useAuth();
   const [session, setSession] = useState<TrainingSession | null>(null);
   const [horse, setHorse] = useState<Horse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     loadSession();
@@ -122,6 +125,21 @@ const SessionDetailsScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const shareToCompanyFeed = async () => {
+    if (!session || !user) {
+      Alert.alert("Error", "Unable to share session. Please try again.");
+      return;
+    }
+
+    // Navigate to the sharing screen with only the sessionId
+    router.push({
+      pathname: "/session-share",
+      params: {
+        sessionId: session.id,
+      }
+    });
   };
 
   const formatDuration = (seconds: number): string => {
@@ -861,6 +879,20 @@ const SessionDetailsScreen = () => {
           <View style={styles.actionContainer}>
             <TouchableOpacity
               style={[
+                styles.shareButton,
+                { backgroundColor: "#4CAF50" },
+                isSharing && styles.disabledButton,
+              ]}
+              onPress={shareToCompanyFeed}
+              disabled={isSharing}
+            >
+              <Text style={styles.shareButtonText}>
+                {isSharing ? "Sharing..." : "🌟 Share to Community"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
                 styles.primaryButton,
                 { backgroundColor: currentTheme.colors.primary },
               ]}
@@ -1122,6 +1154,28 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     color: "#FFFFFF",
     fontWeight: "600",
+  },
+  shareButton: {
+    backgroundColor: "#4CAF50",
+    borderRadius: 25,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: "center",
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  shareButtonText: {
+    fontSize: 18,
+    fontFamily: "Inder",
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   secondaryButton: {
     borderRadius: 25,
