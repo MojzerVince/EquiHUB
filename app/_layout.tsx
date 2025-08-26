@@ -1,10 +1,10 @@
 import {
-    DarkTheme,
-    DefaultTheme,
-    ThemeProvider,
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import * as Notifications from 'expo-notifications';
+import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
@@ -41,7 +41,7 @@ const SplashWithAuth = ({ onFinish }: { onFinish: () => void }) => {
   };
 
   return (
-    <CustomSplashScreen 
+    <CustomSplashScreen
       onFinish={handleSplashFinish}
       loading={loading}
       user={user}
@@ -65,23 +65,27 @@ const AppContent = () => {
 
     const setupGlobalNotifications = () => {
       // Listen for notifications received while app is running
-      notificationListener = Notifications.addNotificationReceivedListener(notification => {
-        // Additional global handling can be added here (silent handling)
-      });
+      notificationListener = Notifications.addNotificationReceivedListener(
+        (notification) => {
+          // Additional global handling can be added here (silent handling)
+        }
+      );
 
       // Listen for notification responses (when user taps on notification)
-      responseListener = Notifications.addNotificationResponseReceivedListener(response => {        
-        // Handle navigation based on notification type
-        const data = response.notification.request.content.data as any;
-        
-        if (data?.type === 'friend_request') {
-          // Navigate to community screen when friend request notification is tapped
-          router.push('/(tabs)/community');
+      responseListener = Notifications.addNotificationResponseReceivedListener(
+        (response) => {
+          // Handle navigation based on notification type
+          const data = response.notification.request.content.data as any;
+
+          if (data?.type === "friend_request") {
+            // Navigate to community screen when friend request notification is tapped
+            router.push("/(tabs)/community");
+          }
+
+          // Call the main handler
+          handleNotificationResponse(response);
         }
-        
-        // Call the main handler
-        handleNotificationResponse(response);
-      });
+      );
     };
 
     setupGlobalNotifications();
@@ -103,7 +107,7 @@ const AppContent = () => {
       // Still loading fonts, don't show splash yet
       return null;
     }
-    
+
     // Fonts are loaded, show splash screen immediately with auth integration
     return <SplashWithAuth onFinish={() => setShowSplash(false)} />;
   }
@@ -119,10 +123,7 @@ const AppContent = () => {
             <ProtectedRoute splashActive={false}>
               <Stack>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="(tabs)"
-                  options={{ headerShown: false }}
-                />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="login" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="register"
@@ -146,6 +147,10 @@ const AppContent = () => {
                 />
                 <Stack.Screen
                   name="pro-features"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="session-share"
                   options={{ headerShown: false }}
                 />
               </Stack>
