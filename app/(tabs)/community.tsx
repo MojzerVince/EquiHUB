@@ -1605,7 +1605,7 @@ export default function CommunityScreen() {
                 <TouchableOpacity
                   style={[
                     styles.searchButton,
-                    { backgroundColor: theme.primary },
+                    { backgroundColor: theme.surface },
                   ]}
                   onPress={performSearch}
                   disabled={isSearching || searchQuery.trim().length < 2}
