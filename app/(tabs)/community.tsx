@@ -1217,7 +1217,6 @@ export default function CommunityScreen() {
                     onPress={() => {
                       console.log("Hide button pressed for post:", item.id);
                       setTimeout(() => {
-                        Alert.alert("Debug", "Hide button was pressed!");
                         handleHidePost(item);
                       }, 100);
                     }}
@@ -1235,7 +1234,6 @@ export default function CommunityScreen() {
                     onPress={() => {
                       console.log("Report button pressed for post:", item.id);
                       setTimeout(() => {
-                        Alert.alert("Debug", "Report button was pressed!");
                         setReportingPost(item.id);
                         setShowPostMenu(null);
                       }, 100);
