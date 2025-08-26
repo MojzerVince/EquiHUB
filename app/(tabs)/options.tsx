@@ -2,6 +2,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useDialog } from "@/contexts/DialogContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
+import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
+import * as Notifications from "expo-notifications";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -27,10 +30,7 @@ const OptionsScreen = () => {
 
   // Settings state
   const [notifications, setNotifications] = useState(true);
-  const [locationSharing, setLocationSharing] = useState(false);
-  const [privateProfile, setPrivateProfile] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
 
   // Load hidden posts when component mounts
   useEffect(() => {
@@ -170,6 +170,88 @@ const OptionsScreen = () => {
     } catch (error) {
       console.error("Error opening privacy policy:", error);
       showError("Failed to open the privacy policy page.");
+    }
+  };
+
+  const handleRequestAllPermissions = async () => {
+    try {
+      let permissionsGranted = 0;
+      let totalPermissions = 3;
+      let permissionResults = [];
+
+      // Request Camera permission
+      try {
+        const cameraResult = await ImagePicker.requestCameraPermissionsAsync();
+        if (cameraResult.granted) {
+          permissionsGranted++;
+          permissionResults.push("✅ Camera access granted");
+        } else {
+          permissionResults.push("❌ Camera access denied");
+        }
+      } catch (error) {
+        permissionResults.push("❌ Camera permission failed");
+      }
+
+      // Request Media Library permission
+      try {
+        const mediaResult =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (mediaResult.granted) {
+          permissionsGranted++;
+          permissionResults.push("✅ Photo library access granted");
+        } else {
+          permissionResults.push("❌ Photo library access denied");
+        }
+      } catch (error) {
+        permissionResults.push("❌ Photo library permission failed");
+      }
+
+      // Request Location permission
+      try {
+        const locationResult =
+          await Location.requestForegroundPermissionsAsync();
+        if (locationResult.granted) {
+          permissionsGranted++;
+          permissionResults.push("✅ Location access granted");
+        } else {
+          permissionResults.push("❌ Location access denied");
+        }
+      } catch (error) {
+        permissionResults.push("❌ Location permission failed");
+      }
+
+      // Request Notification permission
+      try {
+        const notificationResult =
+          await Notifications.requestPermissionsAsync();
+        if (notificationResult.granted) {
+          permissionsGranted++;
+          permissionResults.push("✅ Notification access granted");
+        } else {
+          permissionResults.push("❌ Notification access denied");
+        }
+        totalPermissions = 4; // Update total since notifications were requested
+      } catch (error) {
+        permissionResults.push("❌ Notification permission failed");
+        totalPermissions = 4;
+      }
+
+      // Show results
+      const resultMessage = permissionResults.join("\n\n");
+      const title =
+        permissionsGranted === totalPermissions
+          ? "All Permissions Granted!"
+          : `${permissionsGranted}/${totalPermissions} Permissions Granted`;
+
+      showConfirm(
+        title,
+        resultMessage +
+          "\n\nNote: Some permissions may require you to go to your device settings if they were previously denied.",
+        () => {}
+      );
+    } catch (error) {
+      console.error("Error requesting permissions:", error);
+      showError("Failed to request permissions. Please try again.");
     }
   };
 
@@ -398,12 +480,6 @@ const OptionsScreen = () => {
               ]}
             >
               <SettingItem
-                title="Private Profile"
-                subtitle="Only friends can see your profile"
-                value={privateProfile}
-                onValueChange={setPrivateProfile}
-              />
-              <SettingItem
                 title="Auto Sync"
                 subtitle="Automatically sync your data"
                 value={autoSync}
@@ -425,12 +501,6 @@ const OptionsScreen = () => {
                 { backgroundColor: currentTheme.colors.surface },
               ]}
             >
-              <SettingItem
-                title="Location Sharing"
-                subtitle="Share your location with friends"
-                value={locationSharing}
-                onValueChange={setLocationSharing}
-              />
               <SettingItem
                 title="Push Notifications"
                 subtitle="Receive notifications about activities"
@@ -490,11 +560,9 @@ const OptionsScreen = () => {
                 dropdownVisible={themeDropdownVisible}
                 setDropdownVisible={setThemeDropdownVisible}
               />
-              <SettingItem
-                title="Dark Mode"
-                subtitle="Use dark theme"
-                value={darkMode}
-                onValueChange={setDarkMode}
+              <ActionButton
+                title="Request All Permissions"
+                onPress={handleRequestAllPermissions}
               />
             </View>
           </View>
