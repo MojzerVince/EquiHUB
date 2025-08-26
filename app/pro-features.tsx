@@ -339,19 +339,12 @@ const ProFeaturesPage = () => {
             <TouchableOpacity
               style={[
                 styles.actionButton,
-                styles.manageButton,
-                { borderColor: currentTheme.colors.primary },
+                styles.supportButton,
+                { backgroundColor: currentTheme.colors.primary },
               ]}
               onPress={handleManageSubscription}
             >
-              <Text
-                style={[
-                  styles.manageButtonText,
-                  { color: currentTheme.colors.primary },
-                ]}
-              >
-                Manage Subscription
-              </Text>
+              <Text style={styles.actionButtonText}>Manage Subscription</Text>
             </TouchableOpacity>
           </View>
 
@@ -620,17 +613,8 @@ const styles = StyleSheet.create({
   supportButton: {
     backgroundColor: "#335C67",
   },
-  manageButton: {
-    backgroundColor: "transparent",
-    borderWidth: 2,
-  },
   actionButtonText: {
     color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "bold",
-    fontFamily: "Inder",
-  },
-  manageButtonText: {
     fontSize: 18,
     fontWeight: "bold",
     fontFamily: "Inder",
