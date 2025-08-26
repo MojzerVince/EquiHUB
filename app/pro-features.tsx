@@ -3,6 +3,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -121,257 +122,253 @@ const ProFeaturesPage = () => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
+            activeOpacity={0.7}
           >
-            <Text style={styles.backIcon}>←</Text>
+            <Image
+              source={require("../assets/UI_resources/UI_white/arrow_white.png")}
+              style={styles.backIcon}
+            />
           </TouchableOpacity>
           <Text style={styles.header}>Pro Membership</Text>
         </View>
       </SafeAreaView>
 
-      <View
+      <ScrollView
         style={[
           styles.viewPort,
           { backgroundColor: currentTheme.colors.surface },
         ]}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.profileContainer}>
-            {/* Status Section */}
-            <View
-              style={[
-                styles.statusSection,
-                { backgroundColor: currentTheme.colors.background },
-              ]}
-            >
-              <View style={styles.statusHeader}>
-                <Text style={styles.statusEmoji}>✨</Text>
-                <View style={styles.statusInfo}>
-                  <Text
-                    style={[
-                      styles.statusTitle,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    {subscriptionInfo.plan}
-                  </Text>
-                  <View style={styles.statusBadge}>
-                    <Text style={styles.statusBadgeText}>
-                      {subscriptionInfo.status}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.subscriptionDetails}>
-                <View style={styles.detailRow}>
-                  <Text
-                    style={[
-                      styles.detailLabel,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    Plan
-                  </Text>
-                  <Text
-                    style={[
-                      styles.detailValue,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    {subscriptionInfo.price}
-                  </Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text
-                    style={[
-                      styles.detailLabel,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    Next Renewal
-                  </Text>
-                  <Text
-                    style={[
-                      styles.detailValue,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    {subscriptionInfo.renewalDate}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Features Section */}
-            <View style={styles.featuresSection}>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                Your Pro Features
-              </Text>
-              <Text
-                style={[
-                  styles.sectionSubtitle,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
-                Enjoy these premium features as a Pro member
-              </Text>
-
-              {proFeatures.map((feature, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.featureItem,
-                    { backgroundColor: currentTheme.colors.background },
-                  ]}
-                >
-                  <Text style={styles.featureIcon}>{feature.icon}</Text>
-                  <View style={styles.featureContent}>
-                    <View style={styles.featureHeader}>
-                      <Text
-                        style={[
-                          styles.featureTitle,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        {feature.title}
-                      </Text>
-                      <View style={styles.featureStatusBadge}>
-                        <Text style={styles.featureStatusText}>
-                          {feature.status}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text
-                      style={[
-                        styles.featureDescription,
-                        { color: currentTheme.colors.textSecondary },
-                      ]}
-                    >
-                      {feature.description}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-
-            {/* Benefits Summary */}
-            <View
-              style={[
-                styles.benefitsSection,
-                { backgroundColor: currentTheme.colors.background },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.benefitsTitle,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                Pro Member Benefits
-              </Text>
-              <View style={styles.benefitsList}>
-                <View style={styles.benefitItem}>
-                  <Text style={styles.benefitIcon}>✅</Text>
-                  <Text
-                    style={[
-                      styles.benefitText,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    Unlimited training session history
-                  </Text>
-                </View>
-                <View style={styles.benefitItem}>
-                  <Text style={styles.benefitIcon}>✅</Text>
-                  <Text
-                    style={[
-                      styles.benefitText,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    Advanced performance analytics
-                  </Text>
-                </View>
-                <View style={styles.benefitItem}>
-                  <Text style={styles.benefitIcon}>✅</Text>
-                  <Text
-                    style={[
-                      styles.benefitText,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    Priority customer support
-                  </Text>
-                </View>
-                <View style={styles.benefitItem}>
-                  <Text style={styles.benefitIcon}>✅</Text>
-                  <Text
-                    style={[
-                      styles.benefitText,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    Exclusive features and early access
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Action Buttons */}
-            <View style={styles.actionsSection}>
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  styles.supportButton,
-                  { backgroundColor: currentTheme.colors.primary },
-                ]}
-                onPress={handleContactSupport}
-              >
-                <Text style={styles.actionButtonText}>Priority Support</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  styles.manageButton,
-                  { borderColor: currentTheme.colors.primary },
-                ]}
-                onPress={handleManageSubscription}
-              >
+        <View style={styles.profileContainer}>
+          {/* Status Section */}
+          <View
+            style={[
+              styles.statusSection,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View style={styles.statusHeader}>
+              <Text style={styles.statusEmoji}>✨</Text>
+              <View style={styles.statusInfo}>
                 <Text
                   style={[
-                    styles.manageButtonText,
-                    { color: currentTheme.colors.primary },
+                    styles.statusTitle,
+                    { color: currentTheme.colors.text },
                   ]}
                 >
-                  Manage Subscription
+                  {subscriptionInfo.plan}
                 </Text>
-              </TouchableOpacity>
+                <View style={styles.statusBadge}>
+                  <Text style={styles.statusBadgeText}>
+                    {subscriptionInfo.status}
+                  </Text>
+                </View>
+              </View>
             </View>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-              <Text
-                style={[
-                  styles.footerText,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
-                Thank you for being a Pro member! Your support helps us continue
-                improving EquiHUB.
-              </Text>
+            <View style={styles.subscriptionDetails}>
+              <View style={styles.detailRow}>
+                <Text
+                  style={[
+                    styles.detailLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Plan
+                </Text>
+                <Text
+                  style={[
+                    styles.detailValue,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  {subscriptionInfo.price}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text
+                  style={[
+                    styles.detailLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Next Renewal
+                </Text>
+                <Text
+                  style={[
+                    styles.detailValue,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  {subscriptionInfo.renewalDate}
+                </Text>
+              </View>
             </View>
           </View>
-        </ScrollView>
-      </View>
+
+          {/* Features Section */}
+          <View style={styles.featuresSection}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              Your Pro Features
+            </Text>
+            <Text
+              style={[
+                styles.sectionSubtitle,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              Enjoy these premium features as a Pro member
+            </Text>
+
+            {proFeatures.map((feature, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.featureItem,
+                  { backgroundColor: currentTheme.colors.background },
+                ]}
+              >
+                <Text style={styles.featureIcon}>{feature.icon}</Text>
+                <View style={styles.featureContent}>
+                  <View style={styles.featureHeader}>
+                    <Text
+                      style={[
+                        styles.featureTitle,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      {feature.title}
+                    </Text>
+                    <View style={styles.featureStatusBadge}>
+                      <Text style={styles.featureStatusText}>
+                        {feature.status}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text
+                    style={[
+                      styles.featureDescription,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    {feature.description}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* Benefits Summary */}
+          <View
+            style={[
+              styles.benefitsSection,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <Text
+              style={[
+                styles.benefitsTitle,
+                { color: currentTheme.colors.text },
+              ]}
+            >
+              Pro Member Benefits
+            </Text>
+            <View style={styles.benefitsList}>
+              <View style={styles.benefitItem}>
+                <Text style={styles.benefitIcon}>✅</Text>
+                <Text
+                  style={[
+                    styles.benefitText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Unlimited training session history
+                </Text>
+              </View>
+              <View style={styles.benefitItem}>
+                <Text style={styles.benefitIcon}>✅</Text>
+                <Text
+                  style={[
+                    styles.benefitText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Advanced performance analytics
+                </Text>
+              </View>
+              <View style={styles.benefitItem}>
+                <Text style={styles.benefitIcon}>✅</Text>
+                <Text
+                  style={[
+                    styles.benefitText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Priority customer support
+                </Text>
+              </View>
+              <View style={styles.benefitItem}>
+                <Text style={styles.benefitIcon}>✅</Text>
+                <Text
+                  style={[
+                    styles.benefitText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Exclusive features and early access
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionsSection}>
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                styles.supportButton,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
+              onPress={handleContactSupport}
+            >
+              <Text style={styles.actionButtonText}>Priority Support</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                styles.manageButton,
+                { borderColor: currentTheme.colors.primary },
+              ]}
+              onPress={handleManageSubscription}
+            >
+              <Text
+                style={[
+                  styles.manageButtonText,
+                  { color: currentTheme.colors.primary },
+                ]}
+              >
+                Manage Subscription
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text
+              style={[
+                styles.footerText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              Thank you for being a Pro member! Your support helps us continue
+              improving EquiHUB.
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 };
@@ -392,13 +389,22 @@ const styles = StyleSheet.create({
     marginTop: -5,
   },
   backButton: {
+    position: "absolute",
+    left: 20,
     padding: 10,
-    marginRight: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    zIndex: 10,
   },
   backIcon: {
-    fontSize: 24,
-    color: "#FFFFFF",
-    fontWeight: "bold",
+    width: 24,
+    height: 24,
+    tintColor: "#fff",
   },
   header: {
     fontSize: 30,
@@ -414,15 +420,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: 5,
-    paddingTop: 20,
-  },
-  scrollContainer: {
-    flex: 1,
-    marginBottom: 80,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 30,
+    paddingTop: 15,
   },
   profileContainer: {
     paddingHorizontal: 20,
