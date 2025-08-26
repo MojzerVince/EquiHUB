@@ -2024,7 +2024,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     backgroundColor: "#335C67",
-    paddingBottom: 5,
   },
   headerContainer: {
     flexDirection: "row",
@@ -2032,6 +2031,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     position: "relative",
     marginBottom: -45,
+    marginTop: -5,
   },
   header: {
     fontSize: 30,

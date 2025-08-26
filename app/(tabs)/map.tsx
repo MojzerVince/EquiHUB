@@ -1064,7 +1064,7 @@ const MapScreen = () => {
 
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: 'images',
+        mediaTypes: "images",
         allowsEditing: false,
         quality: 0.8,
       });
@@ -1110,7 +1110,7 @@ const MapScreen = () => {
 
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: 'videos',
+        mediaTypes: "videos",
         allowsEditing: false,
         quality: ImagePicker.UIImagePickerControllerQualityType.Medium,
         videoMaxDuration: 60, // 60 seconds max
@@ -1919,7 +1919,7 @@ const MapScreen = () => {
             </TouchableOpacity>
           </View>
         </SafeAreaView>
-        <View
+        <ScrollView
           style={[
             styles.viewPort,
             { backgroundColor: currentTheme.colors.background },
@@ -1936,7 +1936,7 @@ const MapScreen = () => {
               Getting your location...
             </Text>
           </View>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -1965,806 +1965,767 @@ const MapScreen = () => {
         </View>
       </SafeAreaView>
 
-      <View
+      <ScrollView
         style={[
           styles.viewPort,
           { backgroundColor: currentTheme.colors.surface },
         ]}
       >
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-        >
-          <View style={styles.mapContainer}>
-            {locationPermission === false && (
-              <View style={styles.permissionContainer}>
-                <Text style={styles.permissionEmoji}>🔒</Text>
-                <Text
-                  style={[
-                    styles.permissionText,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Location Permission Required
-                </Text>
-                <Text
-                  style={[
-                    styles.permissionSubtext,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  Allow location access to see your position and nearby
-                  equestrian facilities.
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.permissionButton,
-                    {
-                      backgroundColor: currentTheme.colors.primary,
-                      borderColor: currentTheme.colors.border,
-                    },
-                  ]}
-                  onPress={requestLocationPermission}
-                >
-                  <Text
-                    style={[styles.permissionButtonText, { color: "#FFFFFF" }]}
-                  >
-                    Grant Permission
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <View style={styles.mapViewContainer}>
-              {renderGpsStrengthBar()}
-
-              {/* Map control buttons */}
-              <View style={styles.mapControlsContainer}>
-                <TouchableOpacity
-                  style={styles.mapControlButton}
-                  onPress={toggleMapType}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.mapControlButtonText}>
-                    {mapType === "standard" ? "🛰️" : "🗺️"}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.mapControlButton, { marginTop: 10 }]}
-                  onPress={centerToCurrentLocation}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.mapControlButtonText}>📍</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.mapControlButton,
-                    {
-                      marginTop: 10,
-                      backgroundColor: showPublishedTrails
-                        ? currentTheme.colors.primary
-                        : "rgba(255, 255, 255, 0.9)",
-                    },
-                  ]}
-                  onPress={togglePublishedTrails}
-                  activeOpacity={0.7}
-                  disabled={trailsLoading}
-                >
-                  {trailsLoading ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={currentTheme.colors.primary}
-                    />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.mapControlButtonText,
-                        {
-                          color: showPublishedTrails ? "#FFFFFF" : "#333333",
-                        },
-                      ]}
-                    >
-                      🥾
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              {/* Coordinates display box */}
-              {userLocation && (
-                <View style={styles.coordinatesBox}>
-                  <Text style={styles.coordinatesBoxText}>
-                    {userLocation.latitude.toFixed(4)}°
-                  </Text>
-                  <Text style={styles.coordinatesBoxText}>
-                    {userLocation.longitude.toFixed(4)}°
-                  </Text>
-                </View>
-              )}
-
-              <MapView
-                style={styles.map}
-                provider={PROVIDER_GOOGLE}
-                region={region}
-                onRegionChangeComplete={onRegionChange}
-                showsUserLocation={true}
-                showsMyLocationButton={false}
-                followsUserLocation={false}
-                showsCompass={true}
-                showsScale={true}
-                zoomEnabled={true}
-                scrollEnabled={true}
-                pitchEnabled={true}
-                rotateEnabled={true}
-                mapType={mapType}
+        <View style={styles.mapContainer}>
+          {locationPermission === false && (
+            <View style={styles.permissionContainer}>
+              <Text style={styles.permissionEmoji}>🔒</Text>
+              <Text
+                style={[
+                  styles.permissionText,
+                  { color: currentTheme.colors.text },
+                ]}
               >
-                {/* Show tracking path */}
-                {trackingPoints.length > 1 && (
-                  <Polyline
-                    coordinates={trackingPoints.map((point) => ({
-                      latitude: point.latitude,
-                      longitude: point.longitude,
-                    }))}
-                    strokeColor={currentTheme.colors.primary}
-                    strokeWidth={4}
-                  />
-                )}
-
-                {/* Show published trails */}
-                {showPublishedTrails &&
-                  publishedTrails.map((trail) => (
-                    <React.Fragment key={trail.id}>
-                      {/* Trail path */}
-                      <Polyline
-                        coordinates={trail.path.map((point) => ({
-                          latitude: point.latitude,
-                          longitude: point.longitude,
-                        }))}
-                        strokeColor={getDifficultyColor(trail.difficulty)}
-                        strokeWidth={3}
-                      />
-
-                      {/* Trail start marker */}
-                      {trail.path.length > 0 && (
-                        <Marker
-                          coordinate={{
-                            latitude: trail.path[0].latitude,
-                            longitude: trail.path[0].longitude,
-                          }}
-                          title={trail.name}
-                          description={`${
-                            trail.difficulty.charAt(0).toUpperCase() +
-                            trail.difficulty.slice(1)
-                          } • ${(trail.distance / 1000).toFixed(
-                            1
-                          )} km • ⭐ ${trail.rating.toFixed(1)}`}
-                          pinColor={getDifficultyColor(trail.difficulty)}
-                        />
-                      )}
-                    </React.Fragment>
-                  ))}
-              </MapView>
-            </View>
-
-            <View style={styles.trackingControls}>
-              {/* Horse Selection - Hidden during tracking */}
-              {!isTracking && (
-                <View style={styles.selectionContainer}>
-                  <Text
-                    style={[
-                      styles.selectionTitle,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    Select Horse
-                  </Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.horizontalScroll}
-                  >
-                    {horsesLoading ? (
-                      <View
-                        style={[
-                          styles.selectionCard,
-                          {
-                            backgroundColor: currentTheme.colors.background,
-                            borderColor: currentTheme.colors.border,
-                          },
-                        ]}
-                      >
-                        <ActivityIndicator
-                          size="small"
-                          color={currentTheme.colors.primary}
-                        />
-                        <Text
-                          style={[
-                            styles.selectionCardSubtitle,
-                            { color: currentTheme.colors.textSecondary },
-                          ]}
-                        >
-                          Loading horses...
-                        </Text>
-                      </View>
-                    ) : userHorses.length === 0 ? (
-                      <View
-                        style={[
-                          styles.selectionCard,
-                          {
-                            backgroundColor: currentTheme.colors.background,
-                            borderColor: currentTheme.colors.border,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.selectionCardTitle,
-                            { color: currentTheme.colors.text },
-                          ]}
-                        >
-                          No horses found
-                        </Text>
-                        <Text
-                          style={[
-                            styles.selectionCardSubtitle,
-                            { color: currentTheme.colors.textSecondary },
-                          ]}
-                        >
-                          Add horses in your profile
-                        </Text>
-                      </View>
-                    ) : (
-                      userHorses.map((horse) => (
-                        <TouchableOpacity
-                          key={horse.id}
-                          style={[
-                            styles.selectionCard,
-                            {
-                              backgroundColor:
-                                selectedHorse === horse.id
-                                  ? currentTheme.colors.primary
-                                  : currentTheme.colors.background,
-                              borderColor:
-                                selectedHorse === horse.id
-                                  ? currentTheme.colors.primary
-                                  : currentTheme.colors.border,
-                            },
-                          ]}
-                          onPress={() => setSelectedHorse(horse.id)}
-                          activeOpacity={0.7}
-                        >
-                          {horse.image_url || horse.image_base64 ? (
-                            <Image
-                              source={{
-                                uri: horse.image_base64
-                                  ? `data:image/jpeg;base64,${horse.image_base64}`
-                                  : horse.image_url,
-                              }}
-                              style={styles.horseImage}
-                              resizeMode="cover"
-                            />
-                          ) : (
-                            <View
-                              style={[
-                                styles.horseImage,
-                                {
-                                  backgroundColor: currentTheme.colors.surface,
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                },
-                              ]}
-                            >
-                              <Text style={{ fontSize: 24 }}>🐴</Text>
-                            </View>
-                          )}
-                          <Text
-                            style={[
-                              styles.selectionCardTitle,
-                              {
-                                color:
-                                  selectedHorse === horse.id
-                                    ? "#FFFFFF"
-                                    : currentTheme.colors.text,
-                                textAlign: "center",
-                              },
-                            ]}
-                          >
-                            {horse.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))
-                    )}
-                  </ScrollView>
-                </View>
-              )}
-
-              {/* Training Type Selection - Hidden during tracking */}
-              {!isTracking && (
-                <View style={styles.selectionContainer}>
-                  <Text
-                    style={[
-                      styles.selectionTitle,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    Training Type
-                  </Text>
-
-                  {/* Training Dropdown */}
-                  <TouchableOpacity
-                    style={[
-                      styles.trainingDropdown,
-                      {
-                        backgroundColor: currentTheme.colors.background,
-                        borderColor: currentTheme.colors.border,
-                      },
-                    ]}
-                    onPress={() =>
-                      setTrainingDropdownVisible(!trainingDropdownVisible)
-                    }
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.trainingDropdownContent}>
-                      {selectedTrainingType ? (
-                        <View style={styles.selectedTrainingContent}>
-                          <Text
-                            style={[
-                              styles.selectedTrainingText,
-                              { color: currentTheme.colors.text },
-                            ]}
-                          >
-                            {
-                              trainingTypes.find(
-                                (t) => t.id === selectedTrainingType
-                              )?.name
-                            }
-                          </Text>
-                        </View>
-                      ) : (
-                        <Text
-                          style={[
-                            styles.placeholderText,
-                            { color: currentTheme.colors.textSecondary },
-                          ]}
-                        >
-                          Select training type
-                        </Text>
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.dropdownArrow,
-                        { color: currentTheme.colors.text },
-                      ]}
-                    >
-                      {trainingDropdownVisible ? "▲" : "▼"}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Training Dropdown List */}
-                  {trainingDropdownVisible && (
-                    <Modal
-                      transparent={true}
-                      visible={trainingDropdownVisible}
-                      animationType="fade"
-                      onRequestClose={() => setTrainingDropdownVisible(false)}
-                    >
-                      <TouchableOpacity
-                        style={{
-                          flex: 1,
-                          backgroundColor: "rgba(0, 0, 0, 0.3)",
-                        }}
-                        onPress={() => setTrainingDropdownVisible(false)}
-                        activeOpacity={1}
-                      >
-                        <View
-                          style={{
-                            position: "absolute",
-                            top: 400, // Adjust this value based on dropdown position
-                            left: 20,
-                            right: 20,
-                          }}
-                        >
-                          <View
-                            style={[
-                              styles.trainingDropdownList,
-                              {
-                                backgroundColor: currentTheme.colors.background,
-                                borderColor: currentTheme.colors.border,
-                              },
-                            ]}
-                          >
-                            <ScrollView showsVerticalScrollIndicator={false}>
-                              {getSortedTrainingTypes().map(
-                                (training, index) => {
-                                  const isFirstNonFavorite =
-                                    favoriteTrainingTypes.length > 0 &&
-                                    index === favoriteTrainingTypes.length &&
-                                    !favoriteTrainingTypes.includes(
-                                      training.id
-                                    );
-
-                                  return (
-                                    <View key={training.id}>
-                                      {isFirstNonFavorite && (
-                                        <View style={styles.favoritesSeparator}>
-                                          <Text
-                                            style={[
-                                              styles.separatorText,
-                                              {
-                                                color:
-                                                  currentTheme.colors
-                                                    .textSecondary,
-                                              },
-                                            ]}
-                                          >
-                                            Other Training Types
-                                          </Text>
-                                        </View>
-                                      )}
-                                      <TouchableOpacity
-                                        style={[
-                                          styles.trainingDropdownItem,
-                                          {
-                                            backgroundColor:
-                                              selectedTrainingType ===
-                                              training.id
-                                                ? currentTheme.colors.primary +
-                                                  "20"
-                                                : "transparent",
-                                          },
-                                        ]}
-                                        onPress={() => {
-                                          setSelectedTrainingType(training.id);
-                                          setTrainingDropdownVisible(false);
-                                        }}
-                                        activeOpacity={0.7}
-                                      >
-                                        <View
-                                          style={styles.trainingItemContent}
-                                        >
-                                          <Text
-                                            style={[
-                                              styles.trainingItemText,
-                                              {
-                                                color:
-                                                  selectedTrainingType ===
-                                                  training.id
-                                                    ? currentTheme.colors
-                                                        .primary
-                                                    : currentTheme.colors.text,
-                                                fontWeight:
-                                                  selectedTrainingType ===
-                                                  training.id
-                                                    ? "600"
-                                                    : "normal",
-                                              },
-                                            ]}
-                                          >
-                                            {training.name}
-                                          </Text>
-                                        </View>
-                                        <TouchableOpacity
-                                          style={styles.favoriteButton}
-                                          onPress={(e) => {
-                                            e.stopPropagation();
-                                            toggleFavoriteTraining(training.id);
-                                          }}
-                                          hitSlop={{
-                                            top: 10,
-                                            bottom: 10,
-                                            left: 10,
-                                            right: 10,
-                                          }}
-                                        >
-                                          <Text style={styles.favoriteIcon}>
-                                            {favoriteTrainingTypes.includes(
-                                              training.id
-                                            )
-                                              ? "★"
-                                              : "☆"}
-                                          </Text>
-                                        </TouchableOpacity>
-                                      </TouchableOpacity>
-                                    </View>
-                                  );
-                                }
-                              )}
-                            </ScrollView>
-                          </View>
-                        </View>
-                      </TouchableOpacity>
-                    </Modal>
-                  )}
-
-                  {/* Battery Info Modal */}
-                  <Modal
-                    visible={showBatteryInfoModal}
-                    animationType="fade"
-                    transparent={true}
-                    onRequestClose={() => setShowBatteryInfoModal(false)}
-                  >
-                    <TouchableOpacity
-                      style={styles.modalOverlay}
-                      activeOpacity={1}
-                      onPress={() => setShowBatteryInfoModal(false)}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.batteryInfoModal,
-                          { backgroundColor: currentTheme.colors.surface },
-                        ]}
-                        activeOpacity={1}
-                        onPress={(e) => e.stopPropagation()}
-                      >
-                        <View style={styles.batteryInfoHeader}>
-                          <Text
-                            style={[
-                              styles.batteryInfoTitle,
-                              { color: currentTheme.colors.text },
-                            ]}
-                          >
-                            Ultra-Fast GPS Tracking
-                          </Text>
-                          <TouchableOpacity
-                            onPress={() => setShowBatteryInfoModal(false)}
-                            style={styles.closeModalButton}
-                            activeOpacity={0.7}
-                          >
-                            <Text
-                              style={[
-                                styles.closeModalText,
-                                { color: currentTheme.colors.textSecondary },
-                              ]}
-                            >
-                              ✕
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                        <View style={styles.batteryInfoContent}>
-                          <Text
-                            style={[
-                              styles.batteryInfoText,
-                              { color: currentTheme.colors.text },
-                            ]}
-                          >
-                            Ultra-fast GPS tracking provides maximum precision
-                            location updates by checking your position every
-                            250ms and capturing movement down to 0.5 meters.
-                            Normal mode updates every 500ms with 1-meter
-                            precision.
-                          </Text>
-                          <Text
-                            style={[
-                              styles.batteryWarningText,
-                              { color: "#FF6B35" },
-                            ]}
-                          >
-                            ⚠️ Warning: Ultra-fast mode will significantly
-                            increase battery usage due to extremely frequent GPS
-                            polling.
-                          </Text>
-                          <Text
-                            style={[
-                              styles.batteryRecommendationText,
-                              { color: currentTheme.colors.textSecondary },
-                            ]}
-                          >
-                            Recommended for precision training sessions or when
-                            using external power source.
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          style={[
-                            styles.batteryInfoButton,
-                            { backgroundColor: currentTheme.colors.primary },
-                          ]}
-                          onPress={() => setShowBatteryInfoModal(false)}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.batteryInfoButtonText}>
-                            Got it
-                          </Text>
-                        </TouchableOpacity>
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  </Modal>
-                </View>
-              )}
-
-              {/* High Accuracy Toggle - Hidden during tracking */}
-              {!isTracking && (
-                <View
-                  style={[
-                    styles.highAccuracyContainer,
-                    { backgroundColor: currentTheme.colors.surface },
-                  ]}
-                >
-                  <View style={styles.highAccuracyRow}>
-                    <Text
-                      style={[
-                        styles.highAccuracyLabel,
-                        { color: currentTheme.colors.text },
-                      ]}
-                    >
-                      Ultra-Fast GPS Tracking
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setShowBatteryInfoModal(true)}
-                      style={styles.infoButton}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.infoButtonText,
-                          { color: currentTheme.colors.primary },
-                        ]}
-                      >
-                        ⓘ
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.toggleSwitch,
-                        {
-                          backgroundColor: highAccuracyMode
-                            ? currentTheme.colors.primary
-                            : currentTheme.colors.border,
-                        },
-                      ]}
-                      onPress={() => updateHighAccuracyMode(!highAccuracyMode)}
-                      activeOpacity={0.8}
-                    >
-                      <View
-                        style={[
-                          styles.toggleKnob,
-                          {
-                            backgroundColor: "#FFFFFF",
-                            transform: [
-                              { translateX: highAccuracyMode ? 20 : 0 },
-                            ],
-                          },
-                        ]}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-
-              {/* Start/Stop Tracking Button */}
+                Location Permission Required
+              </Text>
+              <Text
+                style={[
+                  styles.permissionSubtext,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                Allow location access to see your position and nearby equestrian
+                facilities.
+              </Text>
               <TouchableOpacity
                 style={[
-                  styles.startTrackingButton,
+                  styles.permissionButton,
                   {
-                    backgroundColor: isTracking
-                      ? "#DC3545" // Red color for stop
-                      : selectedHorse &&
-                        selectedTrainingType &&
-                        userLocation &&
-                        !horsesLoading &&
-                        userHorses.length > 0
-                      ? currentTheme.colors.primary
-                      : currentTheme.colors.border,
+                    backgroundColor: currentTheme.colors.primary,
+                    borderColor: currentTheme.colors.border,
                   },
                 ]}
-                onPress={isTracking ? stopTracking : startTracking}
-                disabled={
-                  !isTracking &&
-                  (!selectedHorse ||
-                    !selectedTrainingType ||
-                    !userLocation ||
-                    horsesLoading ||
-                    userHorses.length === 0)
-                }
-                activeOpacity={0.8}
+                onPress={requestLocationPermission}
               >
                 <Text
-                  style={[
-                    styles.startTrackingButtonText,
-                    {
-                      color: isTracking
-                        ? "#FFFFFF"
-                        : selectedHorse && selectedTrainingType && userLocation
-                        ? "#FFFFFF"
-                        : currentTheme.colors.textSecondary,
-                    },
-                  ]}
+                  style={[styles.permissionButtonText, { color: "#FFFFFF" }]}
                 >
-                  {isTracking ? "Stop Tracking" : "Start Tracking"}
+                  Grant Permission
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={styles.mapViewContainer}>
+            {renderGpsStrengthBar()}
+
+            {/* Map control buttons */}
+            <View style={styles.mapControlsContainer}>
+              <TouchableOpacity
+                style={styles.mapControlButton}
+                onPress={toggleMapType}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.mapControlButtonText}>
+                  {mapType === "standard" ? "🛰️" : "🗺️"}
                 </Text>
               </TouchableOpacity>
 
-              {/* Tracking Status Display */}
-              {isTracking && sessionStartTime && (
-                <View
+              <TouchableOpacity
+                style={[styles.mapControlButton, { marginTop: 10 }]}
+                onPress={centerToCurrentLocation}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.mapControlButtonText}>📍</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.mapControlButton,
+                  {
+                    marginTop: 10,
+                    backgroundColor: showPublishedTrails
+                      ? currentTheme.colors.primary
+                      : "rgba(255, 255, 255, 0.9)",
+                  },
+                ]}
+                onPress={togglePublishedTrails}
+                activeOpacity={0.7}
+                disabled={trailsLoading}
+              >
+                {trailsLoading ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={currentTheme.colors.primary}
+                  />
+                ) : (
+                  <Text
+                    style={[
+                      styles.mapControlButtonText,
+                      {
+                        color: showPublishedTrails ? "#FFFFFF" : "#333333",
+                      },
+                    ]}
+                  >
+                    🥾
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Coordinates display box */}
+            {userLocation && (
+              <View style={styles.coordinatesBox}>
+                <Text style={styles.coordinatesBoxText}>
+                  {userLocation.latitude.toFixed(4)}°
+                </Text>
+                <Text style={styles.coordinatesBoxText}>
+                  {userLocation.longitude.toFixed(4)}°
+                </Text>
+              </View>
+            )}
+
+            <MapView
+              style={styles.map}
+              provider={PROVIDER_GOOGLE}
+              region={region}
+              onRegionChangeComplete={onRegionChange}
+              showsUserLocation={true}
+              showsMyLocationButton={false}
+              followsUserLocation={false}
+              showsCompass={true}
+              showsScale={true}
+              zoomEnabled={true}
+              scrollEnabled={true}
+              pitchEnabled={true}
+              rotateEnabled={true}
+              mapType={mapType}
+            >
+              {/* Show tracking path */}
+              {trackingPoints.length > 1 && (
+                <Polyline
+                  coordinates={trackingPoints.map((point) => ({
+                    latitude: point.latitude,
+                    longitude: point.longitude,
+                  }))}
+                  strokeColor={currentTheme.colors.primary}
+                  strokeWidth={4}
+                />
+              )}
+
+              {/* Show published trails */}
+              {showPublishedTrails &&
+                publishedTrails.map((trail) => (
+                  <React.Fragment key={trail.id}>
+                    {/* Trail path */}
+                    <Polyline
+                      coordinates={trail.path.map((point) => ({
+                        latitude: point.latitude,
+                        longitude: point.longitude,
+                      }))}
+                      strokeColor={getDifficultyColor(trail.difficulty)}
+                      strokeWidth={3}
+                    />
+
+                    {/* Trail start marker */}
+                    {trail.path.length > 0 && (
+                      <Marker
+                        coordinate={{
+                          latitude: trail.path[0].latitude,
+                          longitude: trail.path[0].longitude,
+                        }}
+                        title={trail.name}
+                        description={`${
+                          trail.difficulty.charAt(0).toUpperCase() +
+                          trail.difficulty.slice(1)
+                        } • ${(trail.distance / 1000).toFixed(
+                          1
+                        )} km • ⭐ ${trail.rating.toFixed(1)}`}
+                        pinColor={getDifficultyColor(trail.difficulty)}
+                      />
+                    )}
+                  </React.Fragment>
+                ))}
+            </MapView>
+          </View>
+
+          <View style={styles.trackingControls}>
+            {/* Horse Selection - Hidden during tracking */}
+            {!isTracking && (
+              <View style={styles.selectionContainer}>
+                <Text
                   style={[
-                    styles.trackingStatusContainer,
-                    { backgroundColor: currentTheme.colors.surface },
+                    styles.selectionTitle,
+                    { color: currentTheme.colors.text },
                   ]}
                 >
-                  <View style={styles.trackingStatusHeader}>
-                    <View style={styles.recordingIndicator}>
-                      <View style={styles.recordingDot} />
-                      <Text
-                        style={[styles.recordingText, { color: "#DC3545" }]}
-                      >
-                        RECORDING
-                      </Text>
-                    </View>
-                    <Text
+                  Select Horse
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.horizontalScroll}
+                >
+                  {horsesLoading ? (
+                    <View
                       style={[
-                        styles.trackingTimer,
-                        { color: currentTheme.colors.primary },
+                        styles.selectionCard,
+                        {
+                          backgroundColor: currentTheme.colors.background,
+                          borderColor: currentTheme.colors.border,
+                        },
                       ]}
                     >
-                      {(() => {
-                        const elapsed = Math.max(
-                          0,
-                          currentTime - sessionStartTime
-                        );
-                        const minutes = Math.floor(elapsed / 60000);
-                        const seconds = Math.floor((elapsed % 60000) / 1000);
-                        return `${minutes}:${String(seconds).padStart(2, "0")}`;
-                      })()}
-                    </Text>
-                  </View>
-
-                  <View style={styles.trackingStats}>
-                    <View style={styles.trackingStatItem}>
+                      <ActivityIndicator
+                        size="small"
+                        color={currentTheme.colors.primary}
+                      />
                       <Text
                         style={[
-                          styles.trackingStatLabel,
+                          styles.selectionCardSubtitle,
                           { color: currentTheme.colors.textSecondary },
                         ]}
                       >
-                        Distance
+                        Loading horses...
                       </Text>
+                    </View>
+                  ) : userHorses.length === 0 ? (
+                    <View
+                      style={[
+                        styles.selectionCard,
+                        {
+                          backgroundColor: currentTheme.colors.background,
+                          borderColor: currentTheme.colors.border,
+                        },
+                      ]}
+                    >
                       <Text
                         style={[
-                          styles.trackingStatValue,
+                          styles.selectionCardTitle,
                           { color: currentTheme.colors.text },
                         ]}
                       >
-                        {(
-                          calculateTotalDistance(trackingPoints) / 1000
-                        ).toFixed(2)}{" "}
-                        km
+                        No horses found
                       </Text>
-                    </View>
-                    <View style={styles.trackingStatItem}>
                       <Text
                         style={[
-                          styles.trackingStatLabel,
+                          styles.selectionCardSubtitle,
                           { color: currentTheme.colors.textSecondary },
                         ]}
                       >
-                        Gait
+                        Add horses in your profile
                       </Text>
-                      <View style={styles.gaitDisplayContainer}>
-                        <Text style={styles.gaitDisplayEmoji}>
-                          {getGaitEmoji(currentGait)}
-                        </Text>
+                    </View>
+                  ) : (
+                    userHorses.map((horse) => (
+                      <TouchableOpacity
+                        key={horse.id}
+                        style={[
+                          styles.selectionCard,
+                          {
+                            backgroundColor:
+                              selectedHorse === horse.id
+                                ? currentTheme.colors.primary
+                                : currentTheme.colors.background,
+                            borderColor:
+                              selectedHorse === horse.id
+                                ? currentTheme.colors.primary
+                                : currentTheme.colors.border,
+                          },
+                        ]}
+                        onPress={() => setSelectedHorse(horse.id)}
+                        activeOpacity={0.7}
+                      >
+                        {horse.image_url || horse.image_base64 ? (
+                          <Image
+                            source={{
+                              uri: horse.image_base64
+                                ? `data:image/jpeg;base64,${horse.image_base64}`
+                                : horse.image_url,
+                            }}
+                            style={styles.horseImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View
+                            style={[
+                              styles.horseImage,
+                              {
+                                backgroundColor: currentTheme.colors.surface,
+                                justifyContent: "center",
+                                alignItems: "center",
+                              },
+                            ]}
+                          >
+                            <Text style={{ fontSize: 24 }}>🐴</Text>
+                          </View>
+                        )}
                         <Text
                           style={[
-                            styles.trackingStatValue,
+                            styles.selectionCardTitle,
+                            {
+                              color:
+                                selectedHorse === horse.id
+                                  ? "#FFFFFF"
+                                  : currentTheme.colors.text,
+                              textAlign: "center",
+                            },
+                          ]}
+                        >
+                          {horse.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Training Type Selection - Hidden during tracking */}
+            {!isTracking && (
+              <View style={styles.selectionContainer}>
+                <Text
+                  style={[
+                    styles.selectionTitle,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Training Type
+                </Text>
+
+                {/* Training Dropdown */}
+                <TouchableOpacity
+                  style={[
+                    styles.trainingDropdown,
+                    {
+                      backgroundColor: currentTheme.colors.background,
+                      borderColor: currentTheme.colors.border,
+                    },
+                  ]}
+                  onPress={() =>
+                    setTrainingDropdownVisible(!trainingDropdownVisible)
+                  }
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.trainingDropdownContent}>
+                    {selectedTrainingType ? (
+                      <View style={styles.selectedTrainingContent}>
+                        <Text
+                          style={[
+                            styles.selectedTrainingText,
                             { color: currentTheme.colors.text },
                           ]}
                         >
-                          {currentGait.charAt(0).toUpperCase() +
-                            currentGait.slice(1)}
+                          {
+                            trainingTypes.find(
+                              (t) => t.id === selectedTrainingType
+                            )?.name
+                          }
                         </Text>
                       </View>
-                    </View>
-                    <View style={styles.trackingStatItem}>
+                    ) : (
                       <Text
                         style={[
-                          styles.trackingStatLabel,
+                          styles.placeholderText,
                           { color: currentTheme.colors.textSecondary },
                         ]}
                       >
-                        Points
+                        Select training type
+                      </Text>
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.dropdownArrow,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    {trainingDropdownVisible ? "▲" : "▼"}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Training Dropdown List */}
+                {trainingDropdownVisible && (
+                  <Modal
+                    transparent={true}
+                    visible={trainingDropdownVisible}
+                    animationType="fade"
+                    onRequestClose={() => setTrainingDropdownVisible(false)}
+                  >
+                    <TouchableOpacity
+                      style={{
+                        flex: 1,
+                        backgroundColor: "rgba(0, 0, 0, 0.3)",
+                      }}
+                      onPress={() => setTrainingDropdownVisible(false)}
+                      activeOpacity={1}
+                    >
+                      <View
+                        style={{
+                          position: "absolute",
+                          top: 400, // Adjust this value based on dropdown position
+                          left: 20,
+                          right: 20,
+                        }}
+                      >
+                        <View
+                          style={[
+                            styles.trainingDropdownList,
+                            {
+                              backgroundColor: currentTheme.colors.background,
+                              borderColor: currentTheme.colors.border,
+                            },
+                          ]}
+                        >
+                          <ScrollView showsVerticalScrollIndicator={false}>
+                            {getSortedTrainingTypes().map((training, index) => {
+                              const isFirstNonFavorite =
+                                favoriteTrainingTypes.length > 0 &&
+                                index === favoriteTrainingTypes.length &&
+                                !favoriteTrainingTypes.includes(training.id);
+
+                              return (
+                                <View key={training.id}>
+                                  {isFirstNonFavorite && (
+                                    <View style={styles.favoritesSeparator}>
+                                      <Text
+                                        style={[
+                                          styles.separatorText,
+                                          {
+                                            color:
+                                              currentTheme.colors.textSecondary,
+                                          },
+                                        ]}
+                                      >
+                                        Other Training Types
+                                      </Text>
+                                    </View>
+                                  )}
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.trainingDropdownItem,
+                                      {
+                                        backgroundColor:
+                                          selectedTrainingType === training.id
+                                            ? currentTheme.colors.primary + "20"
+                                            : "transparent",
+                                      },
+                                    ]}
+                                    onPress={() => {
+                                      setSelectedTrainingType(training.id);
+                                      setTrainingDropdownVisible(false);
+                                    }}
+                                    activeOpacity={0.7}
+                                  >
+                                    <View style={styles.trainingItemContent}>
+                                      <Text
+                                        style={[
+                                          styles.trainingItemText,
+                                          {
+                                            color:
+                                              selectedTrainingType ===
+                                              training.id
+                                                ? currentTheme.colors.primary
+                                                : currentTheme.colors.text,
+                                            fontWeight:
+                                              selectedTrainingType ===
+                                              training.id
+                                                ? "600"
+                                                : "normal",
+                                          },
+                                        ]}
+                                      >
+                                        {training.name}
+                                      </Text>
+                                    </View>
+                                    <TouchableOpacity
+                                      style={styles.favoriteButton}
+                                      onPress={(e) => {
+                                        e.stopPropagation();
+                                        toggleFavoriteTraining(training.id);
+                                      }}
+                                      hitSlop={{
+                                        top: 10,
+                                        bottom: 10,
+                                        left: 10,
+                                        right: 10,
+                                      }}
+                                    >
+                                      <Text style={styles.favoriteIcon}>
+                                        {favoriteTrainingTypes.includes(
+                                          training.id
+                                        )
+                                          ? "★"
+                                          : "☆"}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  </TouchableOpacity>
+                                </View>
+                              );
+                            })}
+                          </ScrollView>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  </Modal>
+                )}
+
+                {/* Battery Info Modal */}
+                <Modal
+                  visible={showBatteryInfoModal}
+                  animationType="fade"
+                  transparent={true}
+                  onRequestClose={() => setShowBatteryInfoModal(false)}
+                >
+                  <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowBatteryInfoModal(false)}
+                  >
+                    <TouchableOpacity
+                      style={[
+                        styles.batteryInfoModal,
+                        { backgroundColor: currentTheme.colors.surface },
+                      ]}
+                      activeOpacity={1}
+                      onPress={(e) => e.stopPropagation()}
+                    >
+                      <View style={styles.batteryInfoHeader}>
+                        <Text
+                          style={[
+                            styles.batteryInfoTitle,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          Ultra-Fast GPS Tracking
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setShowBatteryInfoModal(false)}
+                          style={styles.closeModalButton}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.closeModalText,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            ✕
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.batteryInfoContent}>
+                        <Text
+                          style={[
+                            styles.batteryInfoText,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          Ultra-fast GPS tracking provides maximum precision
+                          location updates by checking your position every 250ms
+                          and capturing movement down to 0.5 meters. Normal mode
+                          updates every 500ms with 1-meter precision.
+                        </Text>
+                        <Text
+                          style={[
+                            styles.batteryWarningText,
+                            { color: "#FF6B35" },
+                          ]}
+                        >
+                          ⚠️ Warning: Ultra-fast mode will significantly
+                          increase battery usage due to extremely frequent GPS
+                          polling.
+                        </Text>
+                        <Text
+                          style={[
+                            styles.batteryRecommendationText,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          Recommended for precision training sessions or when
+                          using external power source.
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.batteryInfoButton,
+                          { backgroundColor: currentTheme.colors.primary },
+                        ]}
+                        onPress={() => setShowBatteryInfoModal(false)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.batteryInfoButtonText}>Got it</Text>
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                </Modal>
+              </View>
+            )}
+
+            {/* High Accuracy Toggle - Hidden during tracking */}
+            {!isTracking && (
+              <View
+                style={[
+                  styles.highAccuracyContainer,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <View style={styles.highAccuracyRow}>
+                  <Text
+                    style={[
+                      styles.highAccuracyLabel,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Ultra-Fast GPS Tracking
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowBatteryInfoModal(true)}
+                    style={styles.infoButton}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.infoButtonText,
+                        { color: currentTheme.colors.primary },
+                      ]}
+                    >
+                      ⓘ
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleSwitch,
+                      {
+                        backgroundColor: highAccuracyMode
+                          ? currentTheme.colors.primary
+                          : currentTheme.colors.border,
+                      },
+                    ]}
+                    onPress={() => updateHighAccuracyMode(!highAccuracyMode)}
+                    activeOpacity={0.8}
+                  >
+                    <View
+                      style={[
+                        styles.toggleKnob,
+                        {
+                          backgroundColor: "#FFFFFF",
+                          transform: [
+                            { translateX: highAccuracyMode ? 20 : 0 },
+                          ],
+                        },
+                      ]}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Start/Stop Tracking Button */}
+            <TouchableOpacity
+              style={[
+                styles.startTrackingButton,
+                {
+                  backgroundColor: isTracking
+                    ? "#DC3545" // Red color for stop
+                    : selectedHorse &&
+                      selectedTrainingType &&
+                      userLocation &&
+                      !horsesLoading &&
+                      userHorses.length > 0
+                    ? currentTheme.colors.primary
+                    : currentTheme.colors.border,
+                },
+              ]}
+              onPress={isTracking ? stopTracking : startTracking}
+              disabled={
+                !isTracking &&
+                (!selectedHorse ||
+                  !selectedTrainingType ||
+                  !userLocation ||
+                  horsesLoading ||
+                  userHorses.length === 0)
+              }
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.startTrackingButtonText,
+                  {
+                    color: isTracking
+                      ? "#FFFFFF"
+                      : selectedHorse && selectedTrainingType && userLocation
+                      ? "#FFFFFF"
+                      : currentTheme.colors.textSecondary,
+                  },
+                ]}
+              >
+                {isTracking ? "Stop Tracking" : "Start Tracking"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Tracking Status Display */}
+            {isTracking && sessionStartTime && (
+              <View
+                style={[
+                  styles.trackingStatusContainer,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <View style={styles.trackingStatusHeader}>
+                  <View style={styles.recordingIndicator}>
+                    <View style={styles.recordingDot} />
+                    <Text style={[styles.recordingText, { color: "#DC3545" }]}>
+                      RECORDING
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.trackingTimer,
+                      { color: currentTheme.colors.primary },
+                    ]}
+                  >
+                    {(() => {
+                      const elapsed = Math.max(
+                        0,
+                        currentTime - sessionStartTime
+                      );
+                      const minutes = Math.floor(elapsed / 60000);
+                      const seconds = Math.floor((elapsed % 60000) / 1000);
+                      return `${minutes}:${String(seconds).padStart(2, "0")}`;
+                    })()}
+                  </Text>
+                </View>
+
+                <View style={styles.trackingStats}>
+                  <View style={styles.trackingStatItem}>
+                    <Text
+                      style={[
+                        styles.trackingStatLabel,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      Distance
+                    </Text>
+                    <Text
+                      style={[
+                        styles.trackingStatValue,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      {(calculateTotalDistance(trackingPoints) / 1000).toFixed(
+                        2
+                      )}{" "}
+                      km
+                    </Text>
+                  </View>
+                  <View style={styles.trackingStatItem}>
+                    <Text
+                      style={[
+                        styles.trackingStatLabel,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      Gait
+                    </Text>
+                    <View style={styles.gaitDisplayContainer}>
+                      <Text style={styles.gaitDisplayEmoji}>
+                        {getGaitEmoji(currentGait)}
                       </Text>
                       <Text
                         style={[
@@ -2772,67 +2733,86 @@ const MapScreen = () => {
                           { color: currentTheme.colors.text },
                         ]}
                       >
-                        {trackingPoints.length}
+                        {currentGait.charAt(0).toUpperCase() +
+                          currentGait.slice(1)}
                       </Text>
                     </View>
                   </View>
-
-                  {/* Camera Controls */}
-                  <View style={styles.cameraControlsContainer}>
+                  <View style={styles.trackingStatItem}>
                     <Text
                       style={[
-                        styles.cameraControlsTitle,
+                        styles.trackingStatLabel,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      Points
+                    </Text>
+                    <Text
+                      style={[
+                        styles.trackingStatValue,
                         { color: currentTheme.colors.text },
                       ]}
                     >
-                      Capture Memories
+                      {trackingPoints.length}
                     </Text>
-                    <View style={styles.cameraButtonsRow}>
-                      <TouchableOpacity
-                        style={[
-                          styles.cameraButton,
-                          { backgroundColor: currentTheme.colors.primary },
-                        ]}
-                        onPress={takePhoto}
-                        activeOpacity={0.8}
-                        disabled={!cameraPermission}
-                      >
-                        <Text style={styles.cameraButtonIcon}>📸</Text>
-                        <Text style={styles.cameraButtonText}>Photo</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[
-                          styles.cameraButton,
-                          { backgroundColor: currentTheme.colors.primary },
-                        ]}
-                        onPress={takeVideo}
-                        activeOpacity={0.8}
-                        disabled={!cameraPermission}
-                      >
-                        <Text style={styles.cameraButtonIcon}>🎥</Text>
-                        <Text style={styles.cameraButtonText}>Video</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {sessionMedia.length > 0 && (
-                      <Text
-                        style={[
-                          styles.mediaCountText,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        {sessionMedia.length} item
-                        {sessionMedia.length !== 1 ? "s" : ""} captured
-                      </Text>
-                    )}
                   </View>
                 </View>
-              )}
-            </View>
+
+                {/* Camera Controls */}
+                <View style={styles.cameraControlsContainer}>
+                  <Text
+                    style={[
+                      styles.cameraControlsTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Capture Memories
+                  </Text>
+                  <View style={styles.cameraButtonsRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.cameraButton,
+                        { backgroundColor: currentTheme.colors.primary },
+                      ]}
+                      onPress={takePhoto}
+                      activeOpacity={0.8}
+                      disabled={!cameraPermission}
+                    >
+                      <Text style={styles.cameraButtonIcon}>📸</Text>
+                      <Text style={styles.cameraButtonText}>Photo</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.cameraButton,
+                        { backgroundColor: currentTheme.colors.primary },
+                      ]}
+                      onPress={takeVideo}
+                      activeOpacity={0.8}
+                      disabled={!cameraPermission}
+                    >
+                      <Text style={styles.cameraButtonIcon}>🎥</Text>
+                      <Text style={styles.cameraButtonText}>Video</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {sessionMedia.length > 0 && (
+                    <Text
+                      style={[
+                        styles.mediaCountText,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      {sessionMedia.length} item
+                      {sessionMedia.length !== 1 ? "s" : ""} captured
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
           </View>
-        </ScrollView>
-      </View>
+        </View>
+      </ScrollView>
 
       {/* Loading overlay */}
       {loading && userLocation && (
@@ -2878,7 +2858,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -33,
+    marginBottom: -45,
+    marginTop: -5,
   },
   header: {
     fontSize: 30,
@@ -2894,20 +2875,13 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: 5,
-    paddingTop: 20,
-  },
-  scrollContainer: {
-    flex: 1,
-    marginBottom: 80,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 30,
+    paddingTop: 5,
   },
   mapContainer: {
     flex: 1,
     paddingHorizontal: 20,
     marginTop: 5,
+    paddingBottom: 110,
   },
   mapViewContainer: {
     height: 400,
@@ -3162,7 +3136,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   horizontalScroll: {
-    paddingVertical: 5,
+    paddingVertical: 10,
+    borderRadius: 18,
   },
   selectionCard: {
     backgroundColor: "#FFFFFF",

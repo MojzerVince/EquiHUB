@@ -2,16 +2,16 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -1113,9 +1113,9 @@ const ProfileScreen = () => {
                     ]}
                     onPress={() => {
                       if (isProMember) {
-                        router.push('/pro-features');
+                        router.push("/pro-features");
                       } else {
-                        router.push('/subscription');
+                        router.push("/subscription");
                       }
                     }}
                     activeOpacity={0.7}
@@ -1186,10 +1186,11 @@ const ProfileScreen = () => {
                 <Text
                   style={[
                     styles.characterCounter,
-                    { 
-                      color: userDescription.length > 140 
-                        ? '#FF6B6B' 
-                        : currentTheme.colors.textSecondary 
+                    {
+                      color:
+                        userDescription.length > 140
+                          ? "#FF6B6B"
+                          : currentTheme.colors.textSecondary,
                     },
                   ]}
                 >
@@ -1375,7 +1376,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     backgroundColor: "#335C67",
-    paddingBottom: 5,
   },
   headerContainer: {
     flexDirection: "row",
@@ -1383,6 +1383,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     position: "relative",
     marginBottom: -45,
+    marginTop: -5,
   },
   header: {
     fontSize: 30,
