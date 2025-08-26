@@ -11,6 +11,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Image,
   Modal,
   RefreshControl,
@@ -187,6 +188,54 @@ export default function CommunityScreen() {
       isFriend: false,
     },
   ];
+
+  // Friend suggestions data
+  const suggestedFriends: User[] = [
+    {
+      id: "suggestion1",
+      name: "Emma Johnson",
+      avatar:
+        "https://images.unsplash.com/photo-1494790108755-2616b612b188?w=150",
+      isOnline: true,
+      isFriend: false,
+    },
+    {
+      id: "suggestion2",
+      name: "Michael Chen",
+      avatar:
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+      isOnline: false,
+      isFriend: false,
+    },
+    {
+      id: "suggestion3",
+      name: "Sarah Williams",
+      avatar:
+        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
+      isOnline: true,
+      isFriend: false,
+    },
+    {
+      id: "suggestion4",
+      name: "James Rodriguez",
+      avatar:
+        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
+      isOnline: false,
+      isFriend: false,
+    },
+  ];
+
+  // State for tracking added suggestions
+  const [addedSuggestions, setAddedSuggestions] = useState<string[]>([]);
+
+  // Handle adding suggested friends
+  const handleAddSuggestedFriend = (friend: User) => {
+    setAddedSuggestions((prev) => [...prev, friend.id]);
+    Alert.alert(
+      "Friend Request Sent",
+      `Friend request sent to ${friend.name}!`
+    );
+  };
 
   // Load friends when component mounts and user is available (optimized)
   useEffect(() => {
@@ -1294,6 +1343,52 @@ export default function CommunityScreen() {
     </View>
   );
 
+  const renderSuggestedFriend = ({ item }: { item: User }) => {
+    const isAdded = addedSuggestions.includes(item.id);
+
+    return (
+      <View
+        style={[styles.searchResultItem, { backgroundColor: theme.surface }]}
+      >
+        <View style={styles.userInfo}>
+          <View style={styles.avatarContainer}>
+            <Image source={{ uri: item.avatar }} style={styles.avatar} />
+            {item.isOnline && <View style={styles.onlineIndicator} />}
+          </View>
+          <View style={styles.userDetails}>
+            <Text style={[styles.userName, { color: theme.text }]}>
+              {item.name}
+            </Text>
+            <Text style={[styles.userAge, { color: theme.textSecondary }]}>
+              {item.isOnline ? "Online" : "Offline"}
+            </Text>
+          </View>
+        </View>
+        {!isAdded ? (
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: "#E91E63" }]}
+            onPress={() => handleAddSuggestedFriend(item)}
+          >
+            <Text style={styles.addButtonText}>Add Friend</Text>
+          </TouchableOpacity>
+        ) : (
+          <View
+            style={[
+              styles.friendBadge,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+          >
+            <Text
+              style={[styles.friendBadgeText, { color: theme.textSecondary }]}
+            >
+              Request Sent
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   const renderSearchResult = ({ item }: { item: UserSearchResult }) => {
     return (
       <View
@@ -1536,55 +1631,18 @@ export default function CommunityScreen() {
           </View>
         ) : activeTab === "Feed" ? (
           <>
-            {/* Friends Section */}
+            {/* Friend Suggestions Section */}
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  Friends
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    loadFriends();
-                    loadFriendRequests();
-                  }}
-                  style={[
-                    styles.refreshButton,
-                    { backgroundColor: theme.primary },
-                  ]}
-                >
-                  <Text style={styles.refreshButtonText}>🔄</Text>
-                </TouchableOpacity>
-              </View>
-              {isLoadingFriends ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator color={theme.primary} size="small" />
-                  <Text
-                    style={[styles.loadingText, { color: theme.textSecondary }]}
-                  >
-                    Loading friends...
-                  </Text>
-                </View>
-              ) : friends.length > 0 ? (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.friendsList}
-                >
-                  {friends.map((item) => renderFriend({ item }))}
-                </ScrollView>
-              ) : (
-                <View style={styles.noResultsContainer}>
-                  <Text
-                    style={[
-                      styles.noResultsText,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    No friends yet. Start by searching for people to connect
-                    with!
-                  </Text>
-                </View>
-              )}
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Friend Suggestions
+              </Text>
+              <FlatList
+                data={suggestedFriends}
+                renderItem={renderSuggestedFriend}
+                keyExtractor={(item: User) => item.id}
+                scrollEnabled={false}
+                showsVerticalScrollIndicator={false}
+              />
             </View>
 
             {/* Search Section */}
