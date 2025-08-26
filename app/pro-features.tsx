@@ -1,15 +1,15 @@
-import { useDialog } from '@/contexts/DialogContext';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useRouter } from 'expo-router';
-import React from 'react';
+import { useDialog } from "@/contexts/DialogContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useRouter } from "expo-router";
+import React from "react";
 import {
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const ProFeaturesPage = () => {
   const router = useRouter();
@@ -18,71 +18,73 @@ const ProFeaturesPage = () => {
 
   const proFeatures = [
     {
-      icon: '📊',
-      title: 'Advanced Session History',
-      description: 'View unlimited weeks of training history with detailed analytics',
-      status: 'Active',
+      icon: "📊",
+      title: "Advanced Session History",
+      description:
+        "View unlimited weeks of training history with detailed analytics",
+      status: "Active",
     },
     {
-      icon: '📱',
-      title: 'Premium Tracking Features',
-      description: 'Enhanced GPS tracking with route analysis and performance metrics',
-      status: 'Active',
+      icon: "📱",
+      title: "Premium Tracking Features",
+      description:
+        "Enhanced GPS tracking with route analysis and performance metrics",
+      status: "Active",
     },
     {
-      icon: '🏆',
-      title: 'Exclusive Badges & Achievements',
-      description: 'Unlock premium badges and track advanced achievements',
-      status: 'Active',
+      icon: "🏆",
+      title: "Exclusive Badges & Achievements",
+      description: "Unlock premium badges and track advanced achievements",
+      status: "Active",
     },
     {
-      icon: '☁️',
-      title: 'Cloud Backup',
-      description: 'Automatic backup of all your training data and sessions',
-      status: 'Active',
+      icon: "☁️",
+      title: "Cloud Backup",
+      description: "Automatic backup of all your training data and sessions",
+      status: "Active",
     },
     {
-      icon: '📈',
-      title: 'Detailed Analytics',
-      description: 'Advanced performance analytics and training insights',
-      status: 'Active',
+      icon: "📈",
+      title: "Detailed Analytics",
+      description: "Advanced performance analytics and training insights",
+      status: "Active",
     },
     {
-      icon: '👥',
-      title: 'Priority Support',
-      description: 'Get premium support and faster response times',
-      status: 'Active',
+      icon: "👥",
+      title: "Priority Support",
+      description: "Get premium support and faster response times",
+      status: "Active",
     },
     {
-      icon: '🎯',
-      title: 'Training Goals',
-      description: 'Set and track personalized training goals and milestones',
-      status: 'Active',
+      icon: "🎯",
+      title: "Training Goals",
+      description: "Set and track personalized training goals and milestones",
+      status: "Active",
     },
     {
-      icon: '📋',
-      title: 'Custom Training Plans',
-      description: 'Access to customizable training plans and schedules',
-      status: 'Active',
+      icon: "📋",
+      title: "Custom Training Plans",
+      description: "Access to customizable training plans and schedules",
+      status: "Active",
     },
   ];
 
   const subscriptionInfo = {
-    plan: 'EquiHUB Pro',
-    status: 'Active',
-    renewalDate: 'September 17, 2025',
-    price: '$9.99/month',
+    plan: "EquiHUB Pro",
+    status: "Active",
+    renewalDate: "September 17, 2025",
+    price: "$9.99/month",
   };
 
   const handleManageSubscription = () => {
     showConfirm(
-      'Manage Subscription',
-      'This will open your subscription settings. You can change plans, update payment methods, or cancel your subscription.',
+      "Manage Subscription",
+      "This will open your subscription settings. You can change plans, update payment methods, or cancel your subscription.",
       () => {
         // In a real app, this would open platform-specific subscription management
         showConfirm(
-          'Subscription Management',
-          'This would typically open your App Store or Google Play subscription settings.',
+          "Subscription Management",
+          "This would typically open your App Store or Google Play subscription settings."
         );
       }
     );
@@ -90,21 +92,31 @@ const ProFeaturesPage = () => {
 
   const handleContactSupport = () => {
     showConfirm(
-      'Priority Support',
-      'As a Pro member, you have access to priority support. Would you like to contact our support team?',
+      "Priority Support",
+      "As a Pro member, you have access to priority support. Would you like to contact our support team?",
       () => {
         // In a real app, this would open support chat or email
         showConfirm(
-          'Support Contact',
-          'Support contact functionality will be available soon. For now, you can reach us at support@equihub.com',
+          "Support Contact",
+          "Support contact functionality will be available soon. For now, you can reach us at support@equihub.com"
         );
       }
     );
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.colors.primary }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.colors.primary },
+      ]}
+    >
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
         <View style={styles.headerContainer}>
           <TouchableOpacity
             style={styles.backButton}
@@ -116,139 +128,247 @@ const ProFeaturesPage = () => {
         </View>
       </SafeAreaView>
 
-      <View style={[styles.viewPort, { backgroundColor: currentTheme.colors.surface }]}>
+      <View
+        style={[
+          styles.viewPort,
+          { backgroundColor: currentTheme.colors.surface },
+        ]}
+      >
         <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.profileContainer}>
-          {/* Status Section */}
-          <View style={[styles.statusSection, { backgroundColor: currentTheme.colors.background }]}>
-            <View style={styles.statusHeader}>
-              <Text style={styles.statusEmoji}>✨</Text>
-              <View style={styles.statusInfo}>
-                <Text style={[styles.statusTitle, { color: currentTheme.colors.text }]}>
-                  {subscriptionInfo.plan}
-                </Text>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusBadgeText}>{subscriptionInfo.status}</Text>
+            {/* Status Section */}
+            <View
+              style={[
+                styles.statusSection,
+                { backgroundColor: currentTheme.colors.background },
+              ]}
+            >
+              <View style={styles.statusHeader}>
+                <Text style={styles.statusEmoji}>✨</Text>
+                <View style={styles.statusInfo}>
+                  <Text
+                    style={[
+                      styles.statusTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    {subscriptionInfo.plan}
+                  </Text>
+                  <View style={styles.statusBadge}>
+                    <Text style={styles.statusBadgeText}>
+                      {subscriptionInfo.status}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-            <View style={styles.subscriptionDetails}>
-              <View style={styles.detailRow}>
-                <Text style={[styles.detailLabel, { color: currentTheme.colors.textSecondary }]}>
-                  Plan
-                </Text>
-                <Text style={[styles.detailValue, { color: currentTheme.colors.text }]}>
-                  {subscriptionInfo.price}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={[styles.detailLabel, { color: currentTheme.colors.textSecondary }]}>
-                  Next Renewal
-                </Text>
-                <Text style={[styles.detailValue, { color: currentTheme.colors.text }]}>
-                  {subscriptionInfo.renewalDate}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Features Section */}
-          <View style={styles.featuresSection}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
-              Your Pro Features
-            </Text>
-            <Text style={[styles.sectionSubtitle, { color: currentTheme.colors.textSecondary }]}>
-              Enjoy these premium features as a Pro member
-            </Text>
-            
-            {proFeatures.map((feature, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.featureItem,
-                  { backgroundColor: currentTheme.colors.background }
-                ]}
-              >
-                <Text style={styles.featureIcon}>{feature.icon}</Text>
-                <View style={styles.featureContent}>
-                  <View style={styles.featureHeader}>
-                    <Text style={[styles.featureTitle, { color: currentTheme.colors.text }]}>
-                      {feature.title}
-                    </Text>
-                    <View style={styles.featureStatusBadge}>
-                      <Text style={styles.featureStatusText}>{feature.status}</Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.featureDescription, { color: currentTheme.colors.textSecondary }]}>
-                    {feature.description}
+              <View style={styles.subscriptionDetails}>
+                <View style={styles.detailRow}>
+                  <Text
+                    style={[
+                      styles.detailLabel,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Plan
+                  </Text>
+                  <Text
+                    style={[
+                      styles.detailValue,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    {subscriptionInfo.price}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text
+                    style={[
+                      styles.detailLabel,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Next Renewal
+                  </Text>
+                  <Text
+                    style={[
+                      styles.detailValue,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    {subscriptionInfo.renewalDate}
                   </Text>
                 </View>
               </View>
-            ))}
-          </View>
+            </View>
 
-          {/* Benefits Summary */}
-          <View style={[styles.benefitsSection, { backgroundColor: currentTheme.colors.background }]}>
-            <Text style={[styles.benefitsTitle, { color: currentTheme.colors.text }]}>
-              Pro Member Benefits
-            </Text>
-            <View style={styles.benefitsList}>
-              <View style={styles.benefitItem}>
-                <Text style={styles.benefitIcon}>✅</Text>
-                <Text style={[styles.benefitText, { color: currentTheme.colors.text }]}>
-                  Unlimited training session history
-                </Text>
-              </View>
-              <View style={styles.benefitItem}>
-                <Text style={styles.benefitIcon}>✅</Text>
-                <Text style={[styles.benefitText, { color: currentTheme.colors.text }]}>
-                  Advanced performance analytics
-                </Text>
-              </View>
-              <View style={styles.benefitItem}>
-                <Text style={styles.benefitIcon}>✅</Text>
-                <Text style={[styles.benefitText, { color: currentTheme.colors.text }]}>
-                  Priority customer support
-                </Text>
-              </View>
-              <View style={styles.benefitItem}>
-                <Text style={styles.benefitIcon}>✅</Text>
-                <Text style={[styles.benefitText, { color: currentTheme.colors.text }]}>
-                  Exclusive features and early access
-                </Text>
+            {/* Features Section */}
+            <View style={styles.featuresSection}>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Your Pro Features
+              </Text>
+              <Text
+                style={[
+                  styles.sectionSubtitle,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                Enjoy these premium features as a Pro member
+              </Text>
+
+              {proFeatures.map((feature, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.featureItem,
+                    { backgroundColor: currentTheme.colors.background },
+                  ]}
+                >
+                  <Text style={styles.featureIcon}>{feature.icon}</Text>
+                  <View style={styles.featureContent}>
+                    <View style={styles.featureHeader}>
+                      <Text
+                        style={[
+                          styles.featureTitle,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        {feature.title}
+                      </Text>
+                      <View style={styles.featureStatusBadge}>
+                        <Text style={styles.featureStatusText}>
+                          {feature.status}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text
+                      style={[
+                        styles.featureDescription,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      {feature.description}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {/* Benefits Summary */}
+            <View
+              style={[
+                styles.benefitsSection,
+                { backgroundColor: currentTheme.colors.background },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.benefitsTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Pro Member Benefits
+              </Text>
+              <View style={styles.benefitsList}>
+                <View style={styles.benefitItem}>
+                  <Text style={styles.benefitIcon}>✅</Text>
+                  <Text
+                    style={[
+                      styles.benefitText,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Unlimited training session history
+                  </Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Text style={styles.benefitIcon}>✅</Text>
+                  <Text
+                    style={[
+                      styles.benefitText,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Advanced performance analytics
+                  </Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Text style={styles.benefitIcon}>✅</Text>
+                  <Text
+                    style={[
+                      styles.benefitText,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Priority customer support
+                  </Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Text style={styles.benefitIcon}>✅</Text>
+                  <Text
+                    style={[
+                      styles.benefitText,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Exclusive features and early access
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
 
-          {/* Action Buttons */}
-          <View style={styles.actionsSection}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.supportButton, { backgroundColor: currentTheme.colors.primary }]}
-              onPress={handleContactSupport}
-            >
-              <Text style={styles.actionButtonText}>Priority Support</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.actionButton, styles.manageButton, { borderColor: currentTheme.colors.primary }]}
-              onPress={handleManageSubscription}
-            >
-              <Text style={[styles.manageButtonText, { color: currentTheme.colors.primary }]}>
-                Manage Subscription
+            {/* Action Buttons */}
+            <View style={styles.actionsSection}>
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  styles.supportButton,
+                  { backgroundColor: currentTheme.colors.primary },
+                ]}
+                onPress={handleContactSupport}
+              >
+                <Text style={styles.actionButtonText}>Priority Support</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  styles.manageButton,
+                  { borderColor: currentTheme.colors.primary },
+                ]}
+                onPress={handleManageSubscription}
+              >
+                <Text
+                  style={[
+                    styles.manageButtonText,
+                    { color: currentTheme.colors.primary },
+                  ]}
+                >
+                  Manage Subscription
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text
+                style={[
+                  styles.footerText,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                Thank you for being a Pro member! Your support helps us continue
+                improving EquiHUB.
               </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: currentTheme.colors.textSecondary }]}>
-              Thank you for being a Pro member! Your support helps us continue improving EquiHUB.
-            </Text>
-          </View>
+            </View>
           </View>
         </ScrollView>
       </View>
@@ -263,15 +383,13 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     backgroundColor: "#335C67",
-    paddingBottom: 5,
   },
   headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    position: 'relative',
-    marginBottom: -35,
+    flexDirection: "row",
+    alignItems: "center",
+    position: "relative",
+    marginBottom: -45,
+    marginTop: -5,
   },
   backButton: {
     padding: 10,
@@ -279,16 +397,16 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 24,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    color: "#FFFFFF",
+    fontWeight: "bold",
   },
   header: {
     fontSize: 30,
-    fontFamily: 'Inder',
-    color: '#FFFFFF',
-    fontWeight: '600',
-    textAlign: 'center',
+    fontFamily: "Inder",
+    color: "#fff",
+    textAlign: "center",
     flex: 1,
+    fontWeight: "600",
   },
   viewPort: {
     backgroundColor: "#FFFFFF",
@@ -325,8 +443,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   statusHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 20,
   },
   statusEmoji: {
@@ -338,62 +456,62 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
     marginBottom: 5,
   },
   statusBadge: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   statusBadgeText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 12,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
   },
   subscriptionDetails: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
+    borderTopColor: "rgba(0,0,0,0.1)",
     paddingTop: 15,
   },
   detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 10,
   },
   detailLabel: {
     fontSize: 14,
-    fontFamily: 'Inder',
+    fontFamily: "Inder",
   },
   detailValue: {
     fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
   },
   featuresSection: {
     marginBottom: 30,
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
-    textAlign: 'center',
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    textAlign: "center",
     marginBottom: 8,
   },
   sectionSubtitle: {
     fontSize: 14,
-    fontFamily: 'Inder',
-    textAlign: 'center',
+    fontFamily: "Inder",
+    textAlign: "center",
     marginBottom: 20,
   },
   featureItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     padding: 20,
     borderRadius: 20,
     marginBottom: 15,
@@ -410,40 +528,40 @@ const styles = StyleSheet.create({
     fontSize: 24,
     marginRight: 15,
     width: 30,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 2,
   },
   featureContent: {
     flex: 1,
   },
   featureHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 4,
   },
   featureTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
     flex: 1,
     marginRight: 10,
   },
   featureStatusBadge: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
   },
   featureStatusText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 10,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
   },
   featureDescription: {
     fontSize: 14,
-    fontFamily: 'Inder',
+    fontFamily: "Inder",
     lineHeight: 20,
   },
   benefitsSection: {
@@ -462,17 +580,17 @@ const styles = StyleSheet.create({
   },
   benefitsTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
-    textAlign: 'center',
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    textAlign: "center",
     marginBottom: 15,
   },
   benefitsList: {
     gap: 10,
   },
   benefitItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   benefitIcon: {
     fontSize: 16,
@@ -481,7 +599,7 @@ const styles = StyleSheet.create({
   },
   benefitText: {
     fontSize: 14,
-    fontFamily: 'Inder',
+    fontFamily: "Inder",
     flex: 1,
   },
   actionsSection: {
@@ -491,7 +609,7 @@ const styles = StyleSheet.create({
   actionButton: {
     paddingVertical: 16,
     borderRadius: 20,
-    alignItems: 'center',
+    alignItems: "center",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -502,31 +620,31 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   supportButton: {
-    backgroundColor: '#335C67',
+    backgroundColor: "#335C67",
   },
   manageButton: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderWidth: 2,
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
   },
   manageButtonText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
   },
   footer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingBottom: 30,
   },
   footerText: {
     fontSize: 14,
-    fontFamily: 'Inder',
-    textAlign: 'center',
+    fontFamily: "Inder",
+    textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 20,
   },
