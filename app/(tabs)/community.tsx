@@ -1,7 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -54,7 +60,6 @@ interface Post {
   content: string;
   image?: string;
   likes: number;
-  comments: number;
   isLiked: boolean;
   sessionData?: {
     horseName: string;
@@ -110,10 +115,13 @@ export default function CommunityScreen() {
   };
 
   // Helper function to get the best available image URL (base64 > image_url)
-  const getBestImageUrl = (imageUrl?: string, imageBase64?: string): string | undefined => {
+  const getBestImageUrl = (
+    imageUrl?: string,
+    imageBase64?: string
+  ): string | undefined => {
     if (imageBase64) {
       // Convert base64 to data URL
-      return getImageDataUrl(imageBase64, 'image/jpeg');
+      return getImageDataUrl(imageBase64, "image/jpeg");
     }
     if (imageUrl) {
     }
@@ -121,9 +129,11 @@ export default function CommunityScreen() {
   };
 
   // Helper function to get session uploaded image (only base64)
-  const getSessionUploadedImage = (imageBase64?: string): string | undefined => {
+  const getSessionUploadedImage = (
+    imageBase64?: string
+  ): string | undefined => {
     if (imageBase64) {
-      return getImageDataUrl(imageBase64, 'image/jpeg');
+      return getImageDataUrl(imageBase64, "image/jpeg");
     }
     return undefined;
   };
@@ -183,10 +193,10 @@ export default function CommunityScreen() {
     if (user?.id) {
       // Use a flag to prevent multiple simultaneous loads
       let isMounted = true;
-      
+
       const loadInitialData = async () => {
         if (!isMounted) return;
-        
+
         console.log("🚀 Starting initial data load...");
         try {
           // Load data in parallel for better performance
@@ -201,9 +211,9 @@ export default function CommunityScreen() {
           console.error("Error loading initial community data:", error);
         }
       };
-      
+
       loadInitialData();
-      
+
       return () => {
         isMounted = false;
       };
@@ -276,8 +286,15 @@ export default function CommunityScreen() {
 
   // Load posts from database
   const loadPosts = useCallback(async () => {
-    console.log("🔄 loadPosts called, ref:", isLoadingPostsRef.current, "state:", isLoadingPosts, "user.id:", user?.id);
-    
+    console.log(
+      "🔄 loadPosts called, ref:",
+      isLoadingPostsRef.current,
+      "state:",
+      isLoadingPosts,
+      "user.id:",
+      user?.id
+    );
+
     // Prevent concurrent calls using ref (more reliable than state)
     if (isLoadingPostsRef.current) {
       console.log("⚠️ Posts already loading (ref check), skipping...");
@@ -288,14 +305,14 @@ export default function CommunityScreen() {
 
     console.log("🚀 Setting isLoadingPosts to true...");
     setIsLoadingPosts(true);
-    
+
     try {
       let allPosts: Post[] = [];
 
       // Load posts from database if user is logged in
       if (user?.id) {
         console.log("👤 Loading posts for user:", user.id);
-        
+
         // Make the real API call
         const { posts: dbPosts, error } = await CommunityAPI.getFeedPosts(
           user.id
@@ -306,44 +323,46 @@ export default function CommunityScreen() {
         } else {
           console.log("📦 Raw posts from API:", dbPosts?.length || 0);
           // Convert database posts to the format expected by the UI
-          const formattedPosts: Post[] = dbPosts.map(
-            (dbPost: PostWithUser) => {
-              // Separate session uploaded image (base64) from horse profile image (image_url)
-              const sessionUploadedImage = getSessionUploadedImage(dbPost.image_base64);
-              
-              // For horse profile image, try multiple sources in order of preference:
-              // 1. session_data.horse_image_url (new format)
-              // 2. image_url (if it's a session post, this should be the horse image)
-              const horseProfileImage = dbPost.session_data?.horse_image_url || 
-                                        (dbPost.session_data ? getHorseProfileImage(dbPost.image_url) : undefined);
+          const formattedPosts: Post[] = dbPosts.map((dbPost: PostWithUser) => {
+            // Separate session uploaded image (base64) from horse profile image (image_url)
+            const sessionUploadedImage = getSessionUploadedImage(
+              dbPost.image_base64
+            );
 
-              return {
-                id: dbPost.id,
-                user: {
-                  id: dbPost.profiles.id,
-                  name: dbPost.profiles.name,
-                  avatar: getAvatarUrl(dbPost.profiles.profile_image_url),
-                  isOnline: true,
-                  isFriend: true,
-                },
-                timestamp: new Date(dbPost.created_at).toLocaleString(),
-                content: dbPost.content,
-                image: sessionUploadedImage, // Only use base64 for main post image
-                likes: dbPost.likes_count,
-                comments: 0, // TODO: Add comments feature later
-                isLiked: dbPost.is_liked || false,
-                sessionData: dbPost.session_data
-                  ? {
-                      horseName: dbPost.session_data.horse_name,
-                      duration: dbPost.session_data.duration,
-                      distance: dbPost.session_data.distance,
-                      avgSpeed: dbPost.session_data.avg_speed,
-                      horseImageUrl: horseProfileImage, // Use the properly determined horse profile image
-                    }
-                  : undefined,
-              };
-            }
-          );
+            // For horse profile image, try multiple sources in order of preference:
+            // 1. session_data.horse_image_url (new format)
+            // 2. image_url (if it's a session post, this should be the horse image)
+            const horseProfileImage =
+              dbPost.session_data?.horse_image_url ||
+              (dbPost.session_data
+                ? getHorseProfileImage(dbPost.image_url)
+                : undefined);
+
+            return {
+              id: dbPost.id,
+              user: {
+                id: dbPost.profiles.id,
+                name: dbPost.profiles.name,
+                avatar: getAvatarUrl(dbPost.profiles.profile_image_url),
+                isOnline: true,
+                isFriend: true,
+              },
+              timestamp: new Date(dbPost.created_at).toLocaleString(),
+              content: dbPost.content,
+              image: sessionUploadedImage, // Only use base64 for main post image
+              likes: dbPost.likes_count,
+              isLiked: dbPost.is_liked || false,
+              sessionData: dbPost.session_data
+                ? {
+                    horseName: dbPost.session_data.horse_name,
+                    duration: dbPost.session_data.duration,
+                    distance: dbPost.session_data.distance,
+                    avgSpeed: dbPost.session_data.avg_speed,
+                    horseImageUrl: horseProfileImage, // Use the properly determined horse profile image
+                  }
+                : undefined,
+            };
+          });
 
           allPosts = formattedPosts;
         }
@@ -376,7 +395,9 @@ export default function CommunityScreen() {
 
     // Prevent concurrent calls using ref
     if (isLoadingFriendRequestsRef.current) {
-      console.log("⚠️ Friend requests already loading (ref check), skipping...");
+      console.log(
+        "⚠️ Friend requests already loading (ref check), skipping..."
+      );
       return;
     }
 
@@ -710,7 +731,7 @@ export default function CommunityScreen() {
     useCallback(() => {
       // Only run on focus if we don't have data and we're not currently loading
       if (!user?.id) return;
-      
+
       // Add a small delay to prevent conflict with initial data loading
       const timeoutId = setTimeout(() => {
         // Only reload if we actually need data and nothing is loading
@@ -1067,23 +1088,30 @@ export default function CommunityScreen() {
               <>
                 {item.sessionData.horseImageUrl ? (
                   <TouchableOpacity
-                    onPress={() => setExpandedImage(item.sessionData!.horseImageUrl!)}
+                    onPress={() =>
+                      setExpandedImage(item.sessionData!.horseImageUrl!)
+                    }
                     activeOpacity={0.9}
                   >
-                    <Image 
-                      source={{ uri: item.sessionData.horseImageUrl }} 
-                      style={styles.horseAvatarOverlay} 
+                    <Image
+                      source={{ uri: item.sessionData.horseImageUrl }}
+                      style={styles.horseAvatarOverlay}
                     />
                   </TouchableOpacity>
                 ) : (
                   <>
                     {/* Placeholder for missing horse image */}
-                    <View style={[styles.horseAvatarOverlay, { 
-                      backgroundColor: '#E0E0E0', 
-                      justifyContent: 'center', 
-                      alignItems: 'center' 
-                    }]}>
-                      <Text style={{ fontSize: 12, color: '#666' }}>🐎</Text>
+                    <View
+                      style={[
+                        styles.horseAvatarOverlay,
+                        {
+                          backgroundColor: "#E0E0E0",
+                          justifyContent: "center",
+                          alignItems: "center",
+                        },
+                      ]}
+                    >
+                      <Text style={{ fontSize: 12, color: "#666" }}>🐎</Text>
                     </View>
                   </>
                 )}
@@ -1107,23 +1135,22 @@ export default function CommunityScreen() {
               setShowPostMenu(showPostMenu === item.id ? null : item.id);
             }}
           >
-            <Text
-              style={[styles.postMenuDots, { color: theme.textSecondary }]}
-            >
+            <Text style={[styles.postMenuDots, { color: theme.textSecondary }]}>
               ⋯
             </Text>
           </TouchableOpacity>
           {showPostMenu === item.id && (
-            <View
-              style={[styles.postMenu, { backgroundColor: theme.surface }]}
-            >
+            <View style={[styles.postMenu, { backgroundColor: theme.surface }]}>
               {user?.id === item.user.id ? (
                 // Show delete option for user's own posts
                 <TouchableOpacity
-                  style={[styles.postMenuItem, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}
+                  style={[
+                    styles.postMenuItem,
+                    { backgroundColor: "rgba(255, 107, 107, 0.1)" },
+                  ]}
                   activeOpacity={0.7}
                   onPress={() => {
-                    console.log('Delete button pressed for post:', item.id);
+                    console.log("Delete button pressed for post:", item.id);
                     // Add a small delay to ensure the touch is registered
                     setTimeout(() => {
                       handleDeletePost(item);
@@ -1138,12 +1165,15 @@ export default function CommunityScreen() {
                 // Show hide and report options for other users' posts
                 <>
                   <TouchableOpacity
-                    style={[styles.postMenuItem, { backgroundColor: 'rgba(128, 128, 128, 0.1)' }]}
+                    style={[
+                      styles.postMenuItem,
+                      { backgroundColor: "rgba(128, 128, 128, 0.1)" },
+                    ]}
                     activeOpacity={0.7}
                     onPress={() => {
-                      console.log('Hide button pressed for post:', item.id);
+                      console.log("Hide button pressed for post:", item.id);
                       setTimeout(() => {
-                        Alert.alert('Debug', 'Hide button was pressed!');
+                        Alert.alert("Debug", "Hide button was pressed!");
                         handleHidePost(item);
                       }, 100);
                     }}
@@ -1153,12 +1183,15 @@ export default function CommunityScreen() {
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.postMenuItem, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}
+                    style={[
+                      styles.postMenuItem,
+                      { backgroundColor: "rgba(255, 107, 107, 0.1)" },
+                    ]}
                     activeOpacity={0.7}
                     onPress={() => {
-                      console.log('Report button pressed for post:', item.id);
+                      console.log("Report button pressed for post:", item.id);
                       setTimeout(() => {
-                        Alert.alert('Debug', 'Report button was pressed!');
+                        Alert.alert("Debug", "Report button was pressed!");
                         setReportingPost(item.id);
                         setShowPostMenu(null);
                       }, 100);
@@ -1237,11 +1270,6 @@ export default function CommunityScreen() {
             ]}
           >
             ❤️ {item.likes}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={[styles.actionText, { color: theme.textSecondary }]}>
-            💬 {item.comments}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1447,7 +1475,9 @@ export default function CommunityScreen() {
             <TouchableOpacity
               style={[
                 styles.tabButton,
-                activeTab === "Challenges" && { backgroundColor: theme.primary },
+                activeTab === "Challenges" && {
+                  backgroundColor: theme.primary,
+                },
               ]}
               onPress={() => setActiveTab("Challenges")}
             >
@@ -1749,10 +1779,7 @@ export default function CommunityScreen() {
 
       {/* Overlay disabled - menu only closes via 3-dots toggle */}
       {showPostMenu !== null && (
-        <View
-          style={styles.menuOverlay}
-          pointerEvents="none"
-        />
+        <View style={styles.menuOverlay} pointerEvents="none" />
       )}
 
       {/* Friend Requests Modal */}
@@ -2184,7 +2211,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
     minHeight: 50,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   postMenuText: {
     fontSize: 14,
@@ -2241,7 +2268,7 @@ const styles = StyleSheet.create({
   },
   postImage: {
     width: "100%",
-    height:                                                                                                                                                                                                                                                                                                                                                                                                                                                                       300,
+    height: 300,
     borderRadius: 8,
     marginBottom: 12,
   },
@@ -2581,4 +2608,3 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 });
-
