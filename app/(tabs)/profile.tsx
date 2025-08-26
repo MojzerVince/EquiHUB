@@ -1478,7 +1478,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: 5,
-    paddingTop: 30,
+    paddingTop: 20,
   },
   profileContainer: {
     paddingHorizontal: 20,
