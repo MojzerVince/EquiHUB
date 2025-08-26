@@ -79,6 +79,7 @@ export default function CommunityScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
   const [isLoadingPosts, setIsLoadingPosts] = useState(false); // Start as false, set to true when loading begins
   const [activeTab, setActiveTab] = useState<"Feed" | "Challenges" | "Groups">(
@@ -758,6 +759,7 @@ export default function CommunityScreen() {
   // Search for users with manual trigger
   const handleSearchInput = (query: string) => {
     setSearchQuery(query);
+    setHasSearched(false); // Reset search state when query changes
     // Clear results when query changes but don't search automatically
     if (!query.trim()) {
       setSearchResults([]);
@@ -778,6 +780,7 @@ export default function CommunityScreen() {
     }
 
     setIsSearching(true);
+    setHasSearched(true); // Mark that a search has been performed
 
     // Create a timeout promise that rejects after 20 seconds (increased from 10)
     const timeoutPromise = new Promise((_, reject) => {
@@ -1602,6 +1605,28 @@ export default function CommunityScreen() {
                   onSubmitEditing={performSearch}
                   returnKeyType="search"
                 />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    style={[
+                      styles.clearButton,
+                      { backgroundColor: theme.surface },
+                    ]}
+                    onPress={() => {
+                      setSearchQuery("");
+                      setSearchResults([]);
+                      setHasSearched(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.clearButtonText,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      ✕
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={[
                     styles.searchButton,
@@ -1658,6 +1683,7 @@ export default function CommunityScreen() {
 
               {/* No Results Message */}
               {!isSearching &&
+                hasSearched &&
                 searchQuery.trim().length >= 2 &&
                 searchResults.length === 0 && (
                   <View style={styles.noResultsContainer}>
@@ -2129,6 +2155,18 @@ const styles = StyleSheet.create({
   searchButtonText: {
     fontSize: 18,
     color: "#FFFFFF",
+  },
+  clearButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  clearButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
   },
   searchResults: {
     marginTop: 12,
