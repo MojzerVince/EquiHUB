@@ -1349,7 +1349,7 @@ export default function CommunityScreen() {
         </View>
         {!isAdded ? (
           <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: "#E91E63" }]}
+            style={[styles.addButton, { backgroundColor: theme.primary }]}
             onPress={() => handleAddSuggestedFriend(item)}
           >
             <Text style={styles.addButtonText}>Add Friend</Text>
