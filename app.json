@@ -25,7 +25,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
-      "versionCode": 20,
+      "versionCode": 21,
       "permissions": [
         "INTERNET",
         "FOREGROUND_SERVICE",
@@ -67,7 +67,9 @@
           "locationWhenInUsePermission": "This app needs location access to track your riding routes and show your position on the map."
         }
       ],
-      ["expo-task-manager"],
+      [
+        "expo-task-manager"
+      ],
       "expo-font",
       [
         "expo-notifications",
