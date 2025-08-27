@@ -1,13 +1,5 @@
-{
-  "name": "equihub-api",
-  "build": {
-    "command": "cd server && npm install && npm run build"
-  },
-  "start": {
-    "command": "cd server && npm start"
-  },
-  "healthcheck": {
-    "path": "/",
-    "timeout": 30
-  }
-}
+[build]
+command = "cd server && npm install && npm run build"
+
+[deploy]
+startCommand = "cd server && npm start"
