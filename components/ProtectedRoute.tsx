@@ -56,6 +56,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       return;
     }
 
+    // If user is NOT authenticated but still in tabs group, redirect to appropriate auth page
+    if (!user && inTabsGroup) {
+      if (shouldShowWelcome) {
+        console.log(
+          "ProtectedRoute: Not authenticated in tabs - redirecting to welcome"
+        );
+        router.replace("/");
+      } else {
+        console.log(
+          "ProtectedRoute: Not authenticated in tabs - redirecting to login"
+        );
+        router.replace("/login");
+      }
+      return;
+    }
+
     if (!user && !inAuthGroup && !onWelcome && !inTabsGroup) {
       // User is not authenticated and not in auth group or welcome
       if (shouldShowWelcome) {
