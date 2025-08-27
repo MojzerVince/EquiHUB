@@ -1,6 +1,8 @@
 {
   "build": {
-    "commands": ["cd server && npm install && npm run build"]
+    "commands": [
+      "cd server && npm install"
+    ]
   },
   "start": {
     "command": "cd server && npm start"
