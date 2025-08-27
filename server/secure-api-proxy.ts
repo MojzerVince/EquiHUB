@@ -12,7 +12,10 @@ import express, { NextFunction, Request, Response } from 'express';
 config();
 
 const app = express();
-const PORT = parseInt(process.env.PORT || '3000', 10);
+const PORT = parseInt(process.env.PORT || '8080', 10);
+
+console.log('🔍 DEBUG: Railway PORT env var:', process.env.PORT);
+console.log('🔍 DEBUG: Using PORT:', PORT);
 
 // Middleware
 app.use(express.json());
@@ -76,6 +79,18 @@ const rateLimit = (req: Request, res: Response, next: NextFunction) => {
 };
 
 app.use(rateLimit);
+
+/**
+ * Health check endpoint
+ */
+app.get('/', (req: Request, res: Response) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'EquiHUB Secure API Server',
+    version: process.env.API_VERSION || '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
 
 /**
  * Secure configuration endpoint
