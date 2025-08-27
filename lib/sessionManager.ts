@@ -1,10 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from './supabase';
+import { getSupabase } from './supabase';
 
 export class SessionManager {
   // Check if user has a valid session
   static async hasValidSession(): Promise<boolean> {
     try {
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
         console.error('Session check error:', error);
@@ -24,6 +27,9 @@ export class SessionManager {
     timeUntilExpiry: number | null;
   }> {
     try {
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error || !session) {
@@ -168,6 +174,9 @@ export class SessionManager {
   static async refreshSessionIfNeeded(): Promise<boolean> {
     try {
       if (await this.willExpireSoon()) {
+        // Get the initialized Supabase client
+        const supabase = getSupabase();
+        
         const { data, error } = await supabase.auth.refreshSession();
         if (error) {
           console.error('Session refresh error:', error);

@@ -10,6 +10,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import "react-native-reanimated";
 
+import AppInitializer from "@/components/AppInitializer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import CustomSplashScreen from "@/components/SplashScreen";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -164,8 +165,10 @@ const AppContent = () => {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <AppInitializer>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </AppInitializer>
   );
 }

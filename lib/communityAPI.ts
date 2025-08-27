@@ -1,4 +1,4 @@
-import { CommunityPost, PostLike, supabase, supabaseAnonKey, supabaseUrl } from './supabase';
+import { CommunityPost, PostLike, getSupabase, getSupabaseConfig } from './supabase';
 
 export interface CreatePostData {
   content: string;
@@ -38,6 +38,9 @@ export class CommunityAPI {
 
     try {
       console.log('🔗 Getting auth token via direct session with extended timeout...');
+      
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
       
       // Try to get session with a much longer timeout (10 seconds)
       const sessionPromise = supabase.auth.getSession();
@@ -81,8 +84,11 @@ export class CommunityAPI {
     try {
       const token = authToken || await this.getAuthToken();
       
+      // Get secure configuration
+      const config = getSupabaseConfig();
+      
       const headers: Record<string, string> = {
-        'apikey': supabaseAnonKey,
+        'apikey': config.anonKey,
         'Content-Type': 'application/json',
         'Prefer': 'return=representation'
       };
@@ -94,7 +100,7 @@ export class CommunityAPI {
         console.warn('⚠️ No auth token available - request will be anonymous');
       }
 
-      const response = await fetch(`${supabaseUrl}/rest/v1/${endpoint}`, {
+      const response = await fetch(`${config.url}/rest/v1/${endpoint}`, {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,

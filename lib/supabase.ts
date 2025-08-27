@@ -1,21 +1,54 @@
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import { createClient } from '@supabase/supabase-js'
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createClient } from '@supabase/supabase-js';
+import { secureConfig } from './secureConfig';
 
-// Replace with your Supabase project URL and anon key
-const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms'
+// Initialize secure configuration
+let supabaseClient: any = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-  },
-})
+export const initializeSupabase = async () => {
+  try {
+    await secureConfig.initialize();
+    const config = secureConfig.getSupabaseConfig();
+    
+    supabaseClient = createClient(config.url, config.anonKey, {
+      auth: {
+        storage: AsyncStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    });
+    
+    return supabaseClient;
+  } catch (error) {
+    console.error('Failed to initialize Supabase:', error);
+    throw error;
+  }
+};
 
-// Export URL and key for direct API calls
-export { supabaseAnonKey, supabaseUrl }
+export const getSupabase = () => {
+  if (!supabaseClient) {
+    throw new Error('Supabase not initialized. Call initializeSupabase() first.');
+  }
+  return supabaseClient;
+};
+
+// Get secure configuration for direct API calls
+export const getSupabaseConfig = () => {
+  return secureConfig.getSupabaseConfig();
+};
+
+// Legacy export for backward compatibility - will be removed in future versions
+export const supabase = new Proxy({}, {
+  get(target, prop) {
+    console.warn('Direct supabase access is deprecated. Use getSupabase() instead.');
+    return getSupabase()[prop];
+  }
+});
+
+// Deprecated exports - use getSupabaseConfig() instead
+export const supabaseAnonKey = '';
+export const supabaseUrl = '';
 
 // Database Types
 export interface Profile {

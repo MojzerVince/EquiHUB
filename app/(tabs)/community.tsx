@@ -33,7 +33,7 @@ import {
   handleNotificationResponse,
 } from "../../lib/notificationService";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
-import { supabase, supabaseUrl } from "../../lib/supabase";
+import { getSupabase, getSupabaseConfig } from "../../lib/supabase";
 import { UserAPI, UserSearchResult } from "../../lib/userAPI";
 
 // TypeScript interfaces
@@ -895,9 +895,12 @@ export default function CommunityScreen() {
       let authToken: string | null = null;
 
       try {
+        // Get secure configuration for URL
+        const config = getSupabaseConfig();
+        
         // Supabase stores session data under this key format
         const supabaseSessionKey = `sb-${
-          supabaseUrl.split("//")[1].split(".")[0]
+          config.url.split("//")[1].split(".")[0]
         }-auth-token`;
         console.log(
           "🔍 Looking for session in AsyncStorage with key:",
@@ -951,6 +954,9 @@ export default function CommunityScreen() {
       if (!authToken) {
         console.log("🔄 Trying direct session call...");
         try {
+          // Get the initialized Supabase client
+          const supabase = getSupabase();
+          
           // Try multiple approaches to get the session
           const approaches = [
             // Approach 1: Quick session call

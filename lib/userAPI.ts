@@ -1,4 +1,4 @@
-import { supabase, supabaseAnonKey, supabaseUrl } from './supabase';
+import { getSupabase, getSupabaseConfig } from './supabase';
 
 export interface UserProfile {
   id: string;
@@ -46,6 +46,9 @@ export class UserAPI {
   static async testDatabaseConnection(): Promise<{ success: boolean; error: string | null; data?: any }> {
     try {
       console.log("🧪 UserAPI.testDatabaseConnection: Testing database connection");
+      
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
       
       // Test basic connection with a simple query
       const { data, error } = await supabase
@@ -98,8 +101,11 @@ export class UserAPI {
       const searchTerm = query.trim();
       console.log("  - Search term processed:", `"${searchTerm}"`);
 
+      // Get secure configuration
+      const config = getSupabaseConfig();
+      
       // Construct direct REST API URL with proper query parameter
-      const url = `${supabaseUrl}/rest/v1/profiles?select=id,name,profile_image_url,age,description,is_pro_member&id=neq.${currentUserId}&name=ilike.*${encodeURIComponent(searchTerm)}*&limit=10`;
+      const url = `${config.url}/rest/v1/profiles?select=id,name,profile_image_url,age,description,is_pro_member&id=neq.${currentUserId}&name=ilike.*${encodeURIComponent(searchTerm)}*&limit=10`;
       
       console.log("📡 UserAPI.searchUsersDirectAPI: Making direct REST API call");
       console.log("  - URL:", url);
@@ -108,8 +114,8 @@ export class UserAPI {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': config.anonKey,
+          'Authorization': `Bearer ${config.anonKey}`,
           'Content-Type': 'application/json',
           'Prefer': 'return=representation'
         }
@@ -197,6 +203,9 @@ export class UserAPI {
 
       console.log("📡 UserAPI.searchUsers: Making direct REST API query");
       
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
       // Use a simpler approach: search by name only with ilike
       const { data: users, error: searchError } = await supabase
         .from('profiles')
@@ -232,7 +241,7 @@ export class UserAPI {
       }
 
       console.log("🔍 UserAPI.searchUsers: Getting friendship status for found users");
-      const userIds = users.map(user => user.id);
+      const userIds = users.map((user: any) => user.id);
       console.log("  - User IDs to check friendship status:", userIds);
       
       // Check friendship status for found users
@@ -253,8 +262,8 @@ export class UserAPI {
       }
 
       // Map friendship status to users
-      const usersWithFriendshipStatus: UserSearchResult[] = users.map(user => {
-        const friendship = friendships?.find(f => f.friend_id === user.id);
+      const usersWithFriendshipStatus: UserSearchResult[] = users.map((user: any) => {
+        const friendship = friendships?.find((f: any) => f.friend_id === user.id);
         const result = {
           id: user.id,
           name: user.name,
@@ -286,6 +295,9 @@ export class UserAPI {
   // Get user's friends
   static async getFriends(userId: string): Promise<{ friends: UserSearchResult[]; error: string | null }> {
     try {
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
       // Get accepted friendships
       const { data: friendships, error: friendshipError } = await supabase
         .from('friendships')
@@ -333,6 +345,9 @@ export class UserAPI {
   // Send friend request
   static async sendFriendRequest(userId: string, friendId: string): Promise<{ success: boolean; error: string | null }> {
     try {
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
       // Check if friendship already exists
       const { data: existingFriendship } = await supabase
         .from('friendships')
@@ -373,6 +388,9 @@ export class UserAPI {
   // Accept friend request
   static async acceptFriendRequest(userId: string, friendId: string): Promise<{ success: boolean; error: string | null }> {
     try {
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
       // Update friendship status to accepted
       const { error: updateError } = await supabase
         .from('friendships')
@@ -414,6 +432,9 @@ export class UserAPI {
   // Remove friend
   static async removeFriend(userId: string, friendId: string): Promise<{ success: boolean; error: string | null }> {
     try {
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
       // Remove both friendship records
       const { error: removeError } = await supabase
         .from('friendships')
@@ -436,6 +457,9 @@ export class UserAPI {
   // Get user profile by ID
   static async getUserProfile(userId: string): Promise<{ profile: UserProfile | null; error: string | null }> {
     try {
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -458,6 +482,9 @@ export class UserAPI {
   // Get pending friend requests
   static async getPendingFriendRequests(userId: string): Promise<{ requests: UserSearchResult[]; error: string | null }> {
     try {
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
       const { data: pendingRequests, error: requestError } = await supabase
         .from('friendships')
         .select(`

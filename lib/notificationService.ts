@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { supabase } from './supabase';
+import { getSupabase } from './supabase';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -66,6 +66,9 @@ export class NotificationService {
 
   static async savePushToken(userId: string, token: string): Promise<void> {
     try {
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
       const { error } = await supabase
         .from('user_push_tokens')
         .upsert({
@@ -89,6 +92,9 @@ export class NotificationService {
     data?: NotificationData
   ): Promise<boolean> {
     try {
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
       // Get the recipient's push token from the database
       const { data: tokenData, error } = await supabase
         .from('user_push_tokens')
