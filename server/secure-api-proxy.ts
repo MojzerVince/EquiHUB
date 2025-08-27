@@ -24,6 +24,12 @@ app.use(cors({
   credentials: true,
 }));
 
+// Debug middleware to log all requests
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log(`🔍 DEBUG: ${req.method} ${req.path} - Headers:`, req.headers);
+  next();
+});
+
 // Validate API secret for authentication
 const validateApiSecret = (req: Request, res: Response, next: NextFunction) => {
   console.log('🔍 DEBUG: Incoming request to', req.path);
@@ -88,7 +94,24 @@ app.get('/', (req: Request, res: Response) => {
     status: 'ok', 
     message: 'EquiHUB Secure API Server',
     version: process.env.API_VERSION || '1.0.0',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    availableEndpoints: [
+      'GET /',
+      'POST /config',
+      'POST /test-config'
+    ]
+  });
+});
+
+/**
+ * Test configuration endpoint (without auth for debugging)
+ */
+app.post('/test-config', (req: Request, res: Response) => {
+  console.log('🔍 DEBUG: Test config endpoint reached!');
+  res.json({ 
+    message: 'Test endpoint working',
+    body: req.body,
+    headers: req.headers
   });
 });
 
