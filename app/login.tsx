@@ -1,3 +1,4 @@
+import { useDialog } from "@/contexts/DialogContext";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -13,7 +14,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useDialog } from "@/contexts/DialogContext";
 import { AuthAPI, LoginData } from "../lib/authAPI";
 
 const LoginScreen = () => {
@@ -66,8 +66,9 @@ const LoginScreen = () => {
       }
 
       if (user) {
-        // Navigate to main app
-        router.replace("/(tabs)");
+        // Don't navigate immediately - let the AuthContext handle navigation
+        // The ProtectedRoute will automatically redirect to tabs when user state updates
+        console.log("Login successful, waiting for auth state to update...");
       }
     } catch (error) {
       console.error("Login error:", error);

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { AuthAPI, AuthUser } from "../lib/authAPI";
 import { SessionManager } from "../lib/sessionManager";
-import { supabase } from "../lib/supabase";
+import { getSupabase } from "../lib/supabase";
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -38,33 +38,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       await getInitialSession();
     };
-    
+
     initializeAuth();
-    
+
     // Check stored user data
     checkStoredUserData();
 
     // Listen for auth changes (sign in/out events)
+    const supabase = getSupabase();
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, session?.user?.id);
+    } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+      console.log("📱 Auth state changed:", event, session?.user?.id);
 
       // Only handle explicit sign in/out events, not initial session
       if (event === "SIGNED_IN" && session?.user) {
-        // Verify the session with our REST API
-        const { user: verifiedUser } = await AuthAPI.getCurrentUser();
-        
-        if (verifiedUser) {
-          setUser(verifiedUser);
-          // Mark user as having used the app whenever they successfully authenticate
-          await SessionManager.markUserAsUsedApp();
-          setHasUserData(true);
-          // Refresh session if needed
-          await SessionManager.refreshSessionIfNeeded();
-        } else {
-          setUser(null);
-        }
+        console.log("✅ User signed in, setting user state directly");
+        const authUser: AuthUser = {
+          id: session.user.id,
+          email: session.user.email!,
+          created_at: session.user.created_at!,
+        };
+        setUser(authUser);
+        // Mark user as having used the app whenever they successfully authenticate
+        await SessionManager.markUserAsUsedApp();
+        setHasUserData(true);
+        // Refresh session if needed
+        await SessionManager.refreshSessionIfNeeded();
       } else if (event === "SIGNED_OUT") {
         setUser(null);
         // Clear session data on logout
@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setHasUserData(false);
       }
       // For INITIAL_SESSION, we rely on our REST API getInitialSession call
-      
+
       setLoading(false);
     });
 
@@ -132,6 +132,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Clear session data first before signOut
       await clearStoredCredentials();
 
+      const supabase = getSupabase();
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error("Error signing out:", error);
@@ -177,21 +178,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         SessionManager.getLastLoginTime(),
         SessionManager.getUserPreferences(),
         // Check for vaccination reminders (user-specific data)
-        import('@react-native-async-storage/async-storage').then(async (AsyncStorage) => {
-          const keys = await AsyncStorage.default.getAllKeys();
-          return keys.some(key => key.includes('vaccination_reminders_'));
-        })
+        import("@react-native-async-storage/async-storage").then(
+          async (AsyncStorage) => {
+            const keys = await AsyncStorage.default.getAllKeys();
+            return keys.some((key) => key.includes("vaccination_reminders_"));
+          }
+        ),
       ]);
 
       // If any of these checks return data, the user has used the app before
-      const hasData = checks.some(result => 
-        result.status === 'fulfilled' && 
-        result.value !== null && 
-        result.value !== undefined &&
-        (typeof result.value === 'boolean' ? result.value : 
-         typeof result.value === 'string' ? result.value.length > 0 : true)
+      const hasData = checks.some(
+        (result) =>
+          result.status === "fulfilled" &&
+          result.value !== null &&
+          result.value !== undefined &&
+          (typeof result.value === "boolean"
+            ? result.value
+            : typeof result.value === "string"
+            ? result.value.length > 0
+            : true)
       );
-      
+
       // Update the local state
       setHasUserData(hasData);
       return hasData;
