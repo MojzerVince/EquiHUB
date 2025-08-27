@@ -116,7 +116,54 @@ app.post('/test-config', (req: Request, res: Response) => {
 });
 
 /**
- * Secure configuration endpoint
+ * Secure configuration endpoint (GET version)
+ * Returns API keys and configuration for authenticated apps only
+ */
+app.get('/config', validateApiSecret, (req: Request, res: Response) => {
+  try {
+    console.log('🔍 DEBUG: GET Config endpoint reached successfully');
+    
+    // For GET requests, we can't get appVersion/bundleId from body
+    // So we'll use query parameters or skip validation
+    const appVersion = req.query.appVersion as string || 'unknown';
+    const bundleId = req.query.bundleId as string || 'com.mojzi1969.EquiHUB';
+
+    console.log('🔍 DEBUG: App version:', appVersion);
+    console.log('🔍 DEBUG: Bundle ID:', bundleId);
+
+    // Validate app identity
+    const allowedBundleIds = process.env.ALLOWED_BUNDLE_IDS?.split(',') || [];
+    console.log('🔍 DEBUG: Allowed bundle IDs:', allowedBundleIds);
+    
+    if (allowedBundleIds.length > 0 && !allowedBundleIds.includes(bundleId)) {
+      console.log('🔍 DEBUG: Bundle ID not authorized');
+      return res.status(403).json({ error: 'App not authorized' });
+    }
+
+    // Return secure configuration
+    const config = {
+      supabase: {
+        url: process.env.SUPABASE_URL,
+        anonKey: process.env.SUPABASE_ANON_KEY,
+      },
+      googleMaps: {
+        apiKey: process.env.GOOGLE_MAPS_API_KEY,
+      },
+      server: {
+        baseUrl: process.env.API_SERVER_URL,
+      },
+    };
+
+    console.log('🔍 DEBUG: Sending config with keys:', config ? Object.keys(config) : 'null');
+    res.json(config);
+  } catch (error) {
+    console.error('❌ Config endpoint error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Secure configuration endpoint (POST version)
  * Returns API keys and configuration for authenticated apps only
  */
 app.post('/config', validateApiSecret, (req: Request, res: Response) => {
