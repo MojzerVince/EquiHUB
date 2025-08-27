@@ -1,0 +1,12 @@
+{
+  "name": "equihub-monorepo",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd server && npm install && npm run build",
+    "start": "cd server && npm start",
+    "dev": "cd server && npm run dev"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
