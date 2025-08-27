@@ -1,5 +1,5 @@
 import { SessionManager } from './sessionManager';
-import { supabase, supabaseAnonKey, supabaseUrl } from './supabase';
+import { getSupabase } from './supabase';
 
 export interface AuthUser {
   id: string;
@@ -57,6 +57,8 @@ export class AuthAPI {
       }
 
       // Register the user with Supabase Auth and include metadata for the trigger
+      // Create Supabase user account
+      const supabase = getSupabase();
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -106,6 +108,7 @@ export class AuthAPI {
         return { user: null, error: 'Email and password are required' };
       }
 
+      const supabase = getSupabase();
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
@@ -143,6 +146,7 @@ export class AuthAPI {
   // Logout user
   static async logout(): Promise<{ error: string | null }> {
     try {
+      const supabase = getSupabase();
       const { error } = await supabase.auth.signOut();
 
       if (error) {
@@ -166,6 +170,15 @@ export class AuthAPI {
         module => module.default
       );
 
+      // Get secure configuration
+      const { secureConfig } = await import('./secureConfig');
+      const config = secureConfig.getSupabaseConfig();
+      
+      if (!config.url || !config.anonKey) {
+        console.log('❌ Supabase configuration not available');
+        return { user: null, error: 'Configuration not loaded' };
+      }
+
       // Try to get session from AsyncStorage - check multiple possible keys
       let sessionData: string | null = null;
       let accessToken: string | null = null;
@@ -173,7 +186,7 @@ export class AuthAPI {
       // Common Supabase session storage keys
       const possibleKeys = [
         'supabase.auth.token',
-        `sb-${supabaseUrl.split('//')[1].split('.')[0]}-auth-token`,
+        `sb-${config.url.split('//')[1].split('.')[0]}-auth-token`,
         'sb-grdsqxwghajehneksxik-auth-token', // Specific to this project
         '@supabase/auth-js:session',
       ];
@@ -236,10 +249,10 @@ export class AuthAPI {
 
       // Verify token by making a simple REST API call to auth.users endpoint
       console.log('🔐 Verifying access token with Supabase...');
-      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      const response = await fetch(`${config.url}/auth/v1/user`, {
         method: 'GET',
         headers: {
-          'apikey': supabaseAnonKey,
+          'apikey': config.anonKey,
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         }
@@ -294,6 +307,7 @@ export class AuthAPI {
         return { error: 'Please enter a valid email address' };
       }
 
+      const supabase = getSupabase();
       const { error } = await supabase.auth.resetPasswordForEmail(email);
 
       if (error) {
@@ -321,6 +335,7 @@ export class AuthAPI {
         return { error: 'Password must be at least 6 characters long' };
       }
 
+      const supabase = getSupabase();
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
@@ -344,6 +359,7 @@ export class AuthAPI {
     try {
       // This is a workaround since Supabase doesn't provide a direct way to check if user exists
       // We'll attempt to send a password reset which will succeed if user exists
+      const supabase = getSupabase();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: 'https://example.com/dummy' // Dummy redirect
       });

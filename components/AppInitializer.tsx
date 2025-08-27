@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { secureConfig } from '../lib/secureConfig';
 import { initializeSupabase } from '../lib/supabase';
 
@@ -15,6 +15,8 @@ interface AppInitializerProps {
 export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     initializeApp();
@@ -23,6 +25,13 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const initializeApp = async () => {
     try {
       console.log('🔧 Initializing secure configuration...');
+      
+      // Log environment variables for debugging
+      console.log('🔍 Environment check:');
+      console.log('- Server URL:', process.env.EXPO_PUBLIC_API_SERVER_URL);
+      console.log('- API Secret:', process.env.EXPO_PUBLIC_API_SECRET ? '***' + process.env.EXPO_PUBLIC_API_SECRET.slice(-4) : 'MISSING');
+      console.log('- App Version:', process.env.EXPO_PUBLIC_APP_VERSION);
+      console.log('- Bundle ID:', process.env.EXPO_PUBLIC_BUNDLE_ID);
       
       // Initialize secure configuration first
       await secureConfig.initialize();
@@ -33,10 +42,31 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
       console.log('✅ Supabase initialized securely');
       
       setIsInitialized(true);
+      setInitError(null);
     } catch (error) {
       console.error('❌ App initialization failed:', error);
-      setInitError(error instanceof Error ? error.message : 'Unknown error');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setInitError(errorMessage);
+      
+      // Auto-retry up to 3 times for network-related errors
+      if (retryCount < 3 && (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('server'))) {
+        console.log(`🔄 Auto-retrying initialization (attempt ${retryCount + 1}/3)...`);
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => {
+          initializeApp();
+        }, 2000 * (retryCount + 1)); // Increasing delay: 2s, 4s, 6s
+      }
     }
+  };
+
+  const handleManualRetry = () => {
+    setIsRetrying(true);
+    setInitError(null);
+    setRetryCount(0);
+    setTimeout(() => {
+      setIsRetrying(false);
+      initializeApp();
+    }, 1000);
   };
 
   if (initError) {
@@ -45,8 +75,25 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
         <Text style={styles.errorTitle}>Configuration Error</Text>
         <Text style={styles.errorText}>{initError}</Text>
         <Text style={styles.errorHelp}>
-          Please check your environment configuration and try again.
+          Debug Info:
         </Text>
+        <Text style={styles.debugText}>
+          • Server: {process.env.EXPO_PUBLIC_API_SERVER_URL || 'NOT SET'}{'\n'}
+          • Bundle: {process.env.EXPO_PUBLIC_BUNDLE_ID || 'NOT SET'}{'\n'}
+          • Version: {process.env.EXPO_PUBLIC_APP_VERSION || 'NOT SET'}{'\n'}
+          • Retries: {retryCount}/3
+        </Text>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={handleManualRetry}
+            disabled={isRetrying}
+          >
+            <Text style={styles.retryButtonText}>
+              {isRetrying ? 'Retrying...' : 'Retry Connection'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -95,6 +142,31 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'left',
+    backgroundColor: '#f5f5f5',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 16,
+    fontFamily: 'monospace',
+  },
+  buttonContainer: {
+    marginTop: 10,
+  },
+  retryButton: {
+    padding: 12,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    fontSize: 16,
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
 });
 

@@ -57,6 +57,14 @@ class SecureConfigManager {
       console.log('🔍 DEBUG: Attempting to connect to server:', serverUrl);
       console.log('🔍 DEBUG: Using API secret:', apiSecret ? '***' + apiSecret.slice(-4) : 'MISSING');
       
+      if (!serverUrl) {
+        throw new Error('Server URL not configured (EXPO_PUBLIC_API_SERVER_URL missing)');
+      }
+      
+      if (!apiSecret) {
+        throw new Error('API secret not configured (EXPO_PUBLIC_API_SECRET missing)');
+      }
+      
       const requestBody = {
         appVersion: require('../app.json').expo.version,
         bundleId: require('../app.json').expo.android.package,
@@ -79,7 +87,17 @@ class SecureConfigManager {
       if (!response.ok) {
         const errorText = await response.text();
         console.log('🔍 DEBUG: Response error text:', errorText);
-        throw new Error(`Config fetch failed: ${response.status} - ${errorText}`);
+        
+        // Provide specific error messages based on status code
+        if (response.status === 403) {
+          throw new Error(`App not authorized. Bundle ID '${requestBody.bundleId}' might not be in allowed list on server.`);
+        } else if (response.status === 401) {
+          throw new Error('Invalid API secret. Check EXPO_PUBLIC_API_SECRET configuration.');
+        } else if (response.status >= 500) {
+          throw new Error(`Server error (${response.status}). The configuration server might be down.`);
+        } else {
+          throw new Error(`Config fetch failed: ${response.status} - ${errorText}`);
+        }
       }
 
       this.config = await response.json();
