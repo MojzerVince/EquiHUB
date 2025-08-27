@@ -9,6 +9,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   Image,
   Modal,
   ScrollView,
@@ -248,6 +249,10 @@ const MapScreen = () => {
     "walk" | "trot" | "canter" | "gallop" | "halt"
   >("halt");
 
+  // App state tracking for coordinating foreground/background location
+  const [appState, setAppState] = useState(AppState.currentState);
+  const [isUsingBackgroundLocation, setIsUsingBackgroundLocation] = useState(false);
+
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
   );
@@ -262,6 +267,50 @@ const MapScreen = () => {
     // Request camera and media library permissions
     requestCameraPermissions();
   }, []);
+
+  // App state change handler for coordinating foreground/background location tracking
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState: string) => {
+      console.log(`🔄 App state changed from ${appState} to ${nextAppState}`);
+      
+      if (isTracking) {
+        if (nextAppState === 'background' && appState === 'active') {
+          console.log('📱 App going to background - switching to background location tracking');
+          await switchToBackgroundLocation();
+        } else if (nextAppState === 'active' && appState === 'background') {
+          console.log('📱 App coming to foreground - switching to foreground location tracking');
+          await switchToForegroundLocation();
+        }
+      }
+      
+      setAppState(nextAppState as any);
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription?.remove();
+    };
+  }, [appState, isTracking]);
+
+  // Background data sync effect - only when using background location
+  useEffect(() => {
+    let syncInterval: ReturnType<typeof setInterval> | null = null;
+    
+    if (isTracking && isUsingBackgroundLocation) {
+      console.log('🔄 Starting background data sync timer');
+      syncInterval = setInterval(async () => {
+        await syncBackgroundData();
+      }, highAccuracyMode ? 500 : 2000); // Sync every 500ms in high accuracy, 2s in normal
+    }
+    
+    return () => {
+      if (syncInterval) {
+        clearInterval(syncInterval);
+        console.log('⏹️ Stopped background data sync timer');
+      }
+    };
+  }, [isTracking, isUsingBackgroundLocation, highAccuracyMode]);
 
   // Request camera and media library permissions
   const requestCameraPermissions = async () => {
@@ -1242,6 +1291,110 @@ const MapScreen = () => {
     );
   };
 
+  // Switch to background location tracking (when app goes to background)
+  const switchToBackgroundLocation = async () => {
+    try {
+      console.log('🔄 Switching to background location tracking...');
+      
+      // Stop foreground location watcher
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
+        locationSubscriptionRef.current = null;
+        console.log('⏹️ Stopped foreground location watcher');
+      }
+
+      // Start background location tracking if not already running
+      const isAlreadyRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      if (!isAlreadyRunning) {
+        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: highAccuracyMode ? 250 : 1000,
+          distanceInterval: 1,
+          deferredUpdatesInterval: highAccuracyMode ? 250 : 1000,
+          showsBackgroundLocationIndicator: false,
+          foregroundService: {
+            notificationTitle: "🐎 EquiHUB",
+            notificationBody: "GPS tracking in background",
+            notificationColor: "#4A90E2",
+          },
+        });
+        console.log('🚀 Started background location tracking');
+      }
+      
+      setIsUsingBackgroundLocation(true);
+    } catch (error) {
+      console.error('❌ Error switching to background location:', error);
+    }
+  };
+
+  // Switch to foreground location tracking (when app comes to foreground)
+  const switchToForegroundLocation = async () => {
+    try {
+      console.log('🔄 Switching to foreground location tracking...');
+      
+      // Sync any background data first
+      await syncBackgroundData();
+      
+      // Stop background location tracking
+      const isRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      if (isRunning) {
+        await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+        console.log('⏹️ Stopped background location tracking');
+      }
+
+      // Start foreground location watcher
+      await restartLocationWatcherForTracking();
+      console.log('🚀 Started foreground location tracking');
+      
+      setIsUsingBackgroundLocation(false);
+    } catch (error) {
+      console.error('❌ Error switching to foreground location:', error);
+    }
+  };
+
+  // Sync background data with app state
+  const syncBackgroundData = async () => {
+    try {
+      const backgroundData = await AsyncStorage.getItem("current_tracking_points");
+      if (backgroundData) {
+        const backgroundPoints = JSON.parse(backgroundData);
+        if (backgroundPoints.length > 0) {
+          setTrackingPoints((prev) => {
+            const existingTimestamps = new Set(prev.map((p) => p.timestamp));
+            const newPoints = backgroundPoints.filter(
+              (p: TrackingPoint) => !existingTimestamps.has(p.timestamp)
+            );
+
+            if (newPoints.length > 0) {
+              console.log(`📊 Syncing ${newPoints.length} background points`);
+              
+              // Update current location to the most recent point
+              const latestPoint = newPoints[newPoints.length - 1];
+              setUserLocation({
+                latitude: latestPoint.latitude,
+                longitude: latestPoint.longitude,
+              });
+
+              // Update current gait based on latest point
+              updateCurrentGait(latestPoint);
+
+              // Update GPS strength
+              const strength = calculateGpsStrength(latestPoint.accuracy);
+              setGpsStrength(strength);
+
+              // Clear processed background data
+              AsyncStorage.removeItem("current_tracking_points");
+            }
+
+            return [...prev, ...newPoints];
+          });
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error syncing background data:", error);
+    }
+  };
+
   // Start GPS tracking
   const startTracking = async () => {
     if (horsesLoading) {
@@ -1304,15 +1457,10 @@ const MapScreen = () => {
       setSessionMedia([]); // Initialize empty media array for the session
       setCurrentGait("halt"); // Reset gait to halt at session start
 
-      // Restart location watcher with optimized settings for tracking
-      await restartLocationWatcherForTracking();
-
-      // Start background location tracking
-
       // Clear any existing tracking points in storage
       await AsyncStorage.removeItem("current_tracking_points");
 
-      // Ensure the task is not already running
+      // Ensure any background task is stopped first
       const isAlreadyRunning = await Location.hasStartedLocationUpdatesAsync(
         LOCATION_TASK_NAME
       );
@@ -1320,87 +1468,12 @@ const MapScreen = () => {
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
       }
 
-      // Start background location tracking
-      console.log(
-        `🚀 Starting background tracking with highAccuracyMode: ${highAccuracyMode}`
-      );
-      await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-        accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: highAccuracyMode ? 250 : 1000, // Ultra-fast in high accuracy, 1s in normal
-        distanceInterval: 1, // Update every 1 meter movement
-        deferredUpdatesInterval: highAccuracyMode ? 250 : 1000, // Match timeInterval
-        showsBackgroundLocationIndicator: false, // Hide the background indicator
-        foregroundService: {
-          notificationTitle: "🐎 EquiHUB",
-          notificationBody: "GPS tracking in background",
-          notificationColor: "#4A90E2",
-        },
-      });
-
-      // Set up a timer to sync background data with the app state
-      const syncInterval = setInterval(
-        async () => {
-          try {
-            // Check if the background task is still running
-            const isStillRunning =
-              await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
-            if (!isStillRunning) {
-              console.warn("⚠️ Background location task stopped unexpectedly");
-              // Don't automatically restart - let user know there was an issue
-              return;
-            }
-
-            const backgroundData = await AsyncStorage.getItem(
-              "current_tracking_points"
-            );
-            if (backgroundData) {
-              const backgroundPoints = JSON.parse(backgroundData);
-              if (backgroundPoints.length > 0) {
-                setTrackingPoints((prev) => {
-                  // Merge with existing points, avoiding duplicates
-                  const existingTimestamps = new Set(
-                    prev.map((p) => p.timestamp)
-                  );
-                  const newPoints = backgroundPoints.filter(
-                    (p: TrackingPoint) => !existingTimestamps.has(p.timestamp)
-                  );
-
-                  if (newPoints.length > 0) {
-                    console.log(
-                      "📊 Syncing background points:",
-                      newPoints.length
-                    );
-                    // Update current location to the most recent point
-                    const latestPoint = newPoints[newPoints.length - 1];
-                    setUserLocation({
-                      latitude: latestPoint.latitude,
-                      longitude: latestPoint.longitude,
-                    });
-
-                    // Update current gait based on latest point
-                    updateCurrentGait(latestPoint);
-
-                    // Update GPS strength
-                    const strength = calculateGpsStrength(latestPoint.accuracy);
-                    setGpsStrength(strength);
-
-                    // Clear processed background data to prevent memory buildup
-                    AsyncStorage.removeItem("current_tracking_points");
-                  }
-
-                  return [...prev, ...newPoints];
-                });
-              }
-            }
-          } catch (error) {
-            console.error("Error syncing background data:", error);
-          }
-        },
-        highAccuracyMode ? 250 : 1000
-      ); // Sync every 250ms in high accuracy mode, 1s in normal mode
-
-      // Store the sync interval reference for cleanup
-      trackingIntervalRef.current = syncInterval;
+      // Start with foreground location tracking (background will be activated when app goes to background)
+      console.log(`🚀 Starting foreground tracking with highAccuracyMode: ${highAccuracyMode}`);
+      await restartLocationWatcherForTracking();
+      
+      // Set state to indicate we're using foreground tracking
+      setIsUsingBackgroundLocation(false);
 
       // Start tracking notification
       await startTrackingNotification(
@@ -1427,23 +1500,23 @@ const MapScreen = () => {
       // Stop tracking notification first
       await stopTrackingNotification();
 
-      // Stop background location tracking
+      // Stop foreground location tracking
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
+        locationSubscriptionRef.current = null;
+        console.log('⏹️ Stopped foreground location tracking');
+      }
 
-      // Check if the task is actually running before trying to stop it
+      // Stop background location tracking if running
       const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(
         LOCATION_TASK_NAME
       );
       if (isTaskRunning) {
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+        console.log('⏹️ Stopped background location tracking');
       }
 
-      // Stop sync interval
-      if (trackingIntervalRef.current) {
-        clearInterval(trackingIntervalRef.current);
-        trackingIntervalRef.current = null;
-      }
-
-      // Get final background data before stopping
+      // Get any remaining background data before cleanup
       const finalBackgroundData = await AsyncStorage.getItem(
         "current_tracking_points"
       );
@@ -1455,6 +1528,7 @@ const MapScreen = () => {
             const newPoints = finalBackgroundPoints.filter(
               (p: TrackingPoint) => !existingTimestamps.has(p.timestamp)
             );
+            console.log(`📊 Adding ${newPoints.length} final background points`);
             return [...prev, ...newPoints];
           });
         }
@@ -1462,6 +1536,9 @@ const MapScreen = () => {
 
       // Clean up storage
       await AsyncStorage.removeItem("current_tracking_points");
+
+      // Reset app state tracking
+      setIsUsingBackgroundLocation(false);
 
       const endTime = Date.now();
       const duration = Math.floor((endTime - sessionStartTime) / 1000); // Duration in seconds
@@ -1711,7 +1788,7 @@ const MapScreen = () => {
     );
     setHighAccuracyMode(newMode);
 
-    // If tracking is active, restart both background and foreground tracking with new settings
+    // If tracking is active, restart the current tracking mode with new settings
     if (isTracking) {
       try {
         console.log(
@@ -1720,84 +1797,19 @@ const MapScreen = () => {
           } Accuracy`
         );
 
-        // Restart foreground tracking
-        await restartLocationWatcherForTracking();
+        if (isUsingBackgroundLocation) {
+          // Restart background tracking with new settings
+          console.log('🔄 Restarting background tracking with new accuracy settings');
+          await switchToBackgroundLocation();
+        } else {
+          // Restart foreground tracking with new settings
+          console.log('🔄 Restarting foreground tracking with new accuracy settings');
+          await restartLocationWatcherForTracking();
+        }
 
-        // Restart background tracking
-        const isTaskRunning = await Location.hasStartedLocationUpdatesAsync(
-          LOCATION_TASK_NAME
+        console.log(
+          `✅ Successfully updated to ${newMode ? "High" : "Normal"} Accuracy mode`
         );
-        if (isTaskRunning) {
-          await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-
-          // Restart with new settings
-          await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-            accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: newMode ? 250 : 1000,
-            distanceInterval: 1,
-            deferredUpdatesInterval: newMode ? 250 : 1000,
-            showsBackgroundLocationIndicator: false, // Hide the background indicator
-            foregroundService: {
-              notificationTitle: "🐎 EquiHUB",
-              notificationBody: "GPS tracking in background",
-              notificationColor: "#4A90E2",
-            },
-          });
-        }
-
-        // Restart sync interval with new timing
-        if (trackingIntervalRef.current) {
-          clearInterval(trackingIntervalRef.current);
-          const syncInterval = setInterval(
-            async () => {
-              try {
-                const isStillRunning =
-                  await Location.hasStartedLocationUpdatesAsync(
-                    LOCATION_TASK_NAME
-                  );
-                if (!isStillRunning) {
-                  console.warn(
-                    "⚠️ Background location task stopped unexpectedly"
-                  );
-                  return;
-                }
-
-                const backgroundData = await AsyncStorage.getItem(
-                  "current_tracking_points"
-                );
-                if (backgroundData) {
-                  const backgroundPoints = JSON.parse(backgroundData);
-                  if (backgroundPoints.length > 0) {
-                    setTrackingPoints((prev) => {
-                      const existingTimestamps = new Set(
-                        prev.map((p) => p.timestamp)
-                      );
-                      const newPoints = backgroundPoints.filter(
-                        (p: TrackingPoint) =>
-                          !existingTimestamps.has(p.timestamp)
-                      );
-
-                      if (newPoints.length > 0) {
-                        const latestPoint = newPoints[newPoints.length - 1];
-                        setUserLocation({
-                          latitude: latestPoint.latitude,
-                          longitude: latestPoint.longitude,
-                        });
-                        updateCurrentGait(latestPoint);
-                        return [...prev, ...newPoints];
-                      }
-                      return prev;
-                    });
-                  }
-                }
-              } catch (error) {
-                console.error("Error syncing background data:", error);
-              }
-            },
-            newMode ? 250 : 1000
-          );
-          trackingIntervalRef.current = syncInterval;
-        }
       } catch (error) {
         console.error("Error updating tracking mode:", error);
         // Revert the state if update failed
