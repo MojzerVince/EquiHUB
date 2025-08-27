@@ -7,8 +7,21 @@ let supabaseClient: any = null;
 
 export const initializeSupabase = async () => {
   try {
-    await secureConfig.initialize();
-    const config = secureConfig.getSupabaseConfig();
+    let config;
+    
+    try {
+      // Try to get config from secure config first
+      await secureConfig.initialize();
+      config = secureConfig.getSupabaseConfig();
+      console.log('✅ Using secure config for Supabase');
+    } catch (error) {
+      console.log('⚠️ Secure config failed, using fallback configuration');
+      // Fallback to hardcoded Supabase config for EquiHUB
+      config = {
+        url: 'https://grdsqxwghajehneksxik.supabase.co',
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms'
+      };
+    }
     
     supabaseClient = createClient(config.url, config.anonKey, {
       auth: {
@@ -35,7 +48,15 @@ export const getSupabase = () => {
 
 // Get secure configuration for direct API calls
 export const getSupabaseConfig = () => {
-  return secureConfig.getSupabaseConfig();
+  try {
+    return secureConfig.getSupabaseConfig();
+  } catch (error) {
+    // Fallback to hardcoded config
+    return {
+      url: 'https://grdsqxwghajehneksxik.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms'
+    };
+  }
 };
 
 // Legacy export for backward compatibility - will be removed in future versions

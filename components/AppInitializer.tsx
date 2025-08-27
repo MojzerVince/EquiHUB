@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Constants from 'expo-constants';
 import { secureConfig } from '../lib/secureConfig';
 import { initializeSupabase } from '../lib/supabase';
 
@@ -26,20 +27,24 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     try {
       console.log('🔧 Initializing secure configuration...');
       
+      // Get values from environment variables or expo constants
+      const serverUrl = process.env.EXPO_PUBLIC_API_SERVER_URL || Constants.expoConfig?.extra?.expoPublicApiServerUrl;
+      const apiSecret = process.env.EXPO_PUBLIC_API_SECRET || Constants.expoConfig?.extra?.expoPublicApiSecret;
+      const appVersion = process.env.EXPO_PUBLIC_APP_VERSION || Constants.expoConfig?.extra?.expoPublicAppVersion || Constants.expoConfig?.version;
+      const bundleId = process.env.EXPO_PUBLIC_BUNDLE_ID || Constants.expoConfig?.extra?.expoPublicBundleId || Constants.expoConfig?.android?.package;
+      
       // Log environment variables for debugging
       console.log('🔍 Environment check:');
-      console.log('- Server URL:', process.env.EXPO_PUBLIC_API_SERVER_URL);
-      console.log('- API Secret:', process.env.EXPO_PUBLIC_API_SECRET ? '***' + process.env.EXPO_PUBLIC_API_SECRET.slice(-4) : 'MISSING');
-      console.log('- App Version:', process.env.EXPO_PUBLIC_APP_VERSION);
-      console.log('- Bundle ID:', process.env.EXPO_PUBLIC_BUNDLE_ID);
+      console.log('- Server URL:', serverUrl);
+      console.log('- API Secret:', apiSecret ? '***' + apiSecret.slice(-4) : 'MISSING');
+      console.log('- App Version:', appVersion);
+      console.log('- Bundle ID:', bundleId);
       
-      // Initialize secure configuration first
-      await secureConfig.initialize();
-      console.log('✅ Secure configuration loaded');
-      
-      // Initialize Supabase with secure config
+      // For now, let's initialize Supabase directly since the secure config
+      // server setup is optional for this app
+      console.log('🔄 Initializing Supabase...');
       await initializeSupabase();
-      console.log('✅ Supabase initialized securely');
+      console.log('✅ Supabase initialized');
       
       setIsInitialized(true);
       setInitError(null);
@@ -78,9 +83,9 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
           Debug Info:
         </Text>
         <Text style={styles.debugText}>
-          • Server: {process.env.EXPO_PUBLIC_API_SERVER_URL || 'NOT SET'}{'\n'}
-          • Bundle: {process.env.EXPO_PUBLIC_BUNDLE_ID || 'NOT SET'}{'\n'}
-          • Version: {process.env.EXPO_PUBLIC_APP_VERSION || 'NOT SET'}{'\n'}
+          • Server: {process.env.EXPO_PUBLIC_API_SERVER_URL || Constants.expoConfig?.extra?.expoPublicApiServerUrl || 'NOT SET'}{'\n'}
+          • Bundle: {process.env.EXPO_PUBLIC_BUNDLE_ID || Constants.expoConfig?.extra?.expoPublicBundleId || Constants.expoConfig?.android?.package || 'NOT SET'}{'\n'}
+          • Version: {process.env.EXPO_PUBLIC_APP_VERSION || Constants.expoConfig?.extra?.expoPublicAppVersion || Constants.expoConfig?.version || 'NOT SET'}{'\n'}
           • Retries: {retryCount}/3
         </Text>
         <View style={styles.buttonContainer}>
