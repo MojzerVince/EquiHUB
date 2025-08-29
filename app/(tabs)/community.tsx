@@ -96,11 +96,13 @@ export default function CommunityScreen() {
   const [reportingPost, setReportingPost] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [forceRender, setForceRender] = useState(0); // Add this to force re-renders
+  const [postsLoaded, setPostsLoaded] = useState(false); // Track if posts have been loaded at least once
 
   // Refs to track loading operations and prevent duplicates
   const isLoadingPostsRef = useRef(false);
   const isLoadingFriendRequestsRef = useRef(false);
   const isLoadingFriendsRef = useRef(false);
+  const hasInitialLoadAttempted = useRef(false); // Track if we've attempted initial load
 
   // Memoize filtered posts to prevent excessive filtering on every render
   const visiblePosts = useMemo(() => {
@@ -238,8 +240,11 @@ export default function CommunityScreen() {
 
   // Load friends when component mounts and user is available (optimized)
   useEffect(() => {
-    console.log("🎯 Initial data useEffect triggered, user?.id:", !!user?.id);
-    if (user?.id) {
+    console.log("🎯 Initial data useEffect triggered, user?.id:", !!user?.id, "hasInitialLoadAttempted:", hasInitialLoadAttempted.current);
+    if (user?.id && !hasInitialLoadAttempted.current) {
+      // Mark that we've attempted initial load
+      hasInitialLoadAttempted.current = true;
+      
       // Use a flag to prevent multiple simultaneous loads
       let isMounted = true;
 
@@ -248,12 +253,14 @@ export default function CommunityScreen() {
 
         console.log("🚀 Starting initial data load...");
         try {
-          // Load data in parallel for better performance
+          // Load friends, requests, and hidden posts data in parallel
+          // Posts will only be loaded on first navigation or refresh
           await Promise.all([
             loadFriends(),
             loadFriendRequests(),
             loadHiddenPosts(),
-            loadPosts(),
+            // Only load posts if not already loaded during this app session
+            !postsLoaded ? loadPosts() : Promise.resolve(),
           ]);
           console.log("✅ Initial data load complete");
         } catch (error) {
@@ -267,7 +274,7 @@ export default function CommunityScreen() {
         isMounted = false;
       };
     }
-  }, [user?.id]); // Remove other dependencies to prevent multiple calls
+  }, [user?.id]); // Only depend on user?.id
 
   // Setup push notifications
   useEffect(() => {
@@ -420,6 +427,7 @@ export default function CommunityScreen() {
 
       console.log("📝 Setting posts, count:", allPosts.length);
       setPosts(allPosts);
+      setPostsLoaded(true); // Mark posts as loaded for the session
       console.log("✅ Posts set successfully");
     } catch (error) {
       console.error("Error loading posts:", error);
@@ -759,6 +767,9 @@ export default function CommunityScreen() {
       isLoadingFriendsRef.current = false;
       isLoadingFriendRequestsRef.current = false;
       isLoadingPostsRef.current = false;
+      
+      // Reset posts loaded flag to ensure fresh data on refresh
+      setPostsLoaded(false);
 
       // Run all loading functions in parallel for faster refresh
       await Promise.all([
@@ -800,9 +811,9 @@ export default function CommunityScreen() {
           console.log("🔄 useFocusEffect: Loading hidden posts");
           loadHiddenPosts();
         }
-        // Only reload posts if we have none and aren't already loading
-        if (posts.length === 0 && !isLoadingPosts && !isLoadingPostsRef.current) {
-          console.log("🔄 useFocusEffect: Loading posts (no data + not loading)");
+        // Only reload posts if we have none AND haven't loaded them in this session
+        if (posts.length === 0 && !postsLoaded && !isLoadingPosts && !isLoadingPostsRef.current) {
+          console.log("🔄 useFocusEffect: Loading posts (no data + not loaded in session + not loading)");
           loadPosts();
         }
       }, 500); // Increased delay to ensure initial load completes
