@@ -4,16 +4,16 @@ import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -164,7 +164,7 @@ const MyHorsesScreen = () => {
     [horseId: string]: any[];
   }>({});
 
-  // Load horses when user is authenticated
+  // Load horses when user is authenticated - from cache first, API only on refresh
   useEffect(() => {
     // Add a timeout to prevent getting stuck in loading state
     const loadingTimeout = setTimeout(() => {
@@ -174,7 +174,8 @@ const MyHorsesScreen = () => {
     }, 15000); // 15 second timeout
 
     if (!authLoading && user?.id && !loading && !horsesLoaded) {
-      loadHorses(user.id);
+      // Load from cache first on startup
+      loadHorsesFromCache(user.id);
     } else if (!authLoading && !user?.id) {
       // User is not authenticated, set loading to false
       setLoading(false);
@@ -255,9 +256,64 @@ const MyHorsesScreen = () => {
     }
   }, [user?.id, checkProMembership, checkingProStatus]);
 
-  const loadHorses = async (userId: string) => {
+  // Load horses from local cache (for startup)
+  const loadHorsesFromCache = async (userId: string) => {
     try {
       setLoading(true);
+      console.log('📱 Loading horses from local cache...');
+
+      // Try to load horses from AsyncStorage
+      const cachedHorsesData = await AsyncStorage.getItem(`user_horses_${userId}`);
+      
+      if (cachedHorsesData) {
+        const lightweightHorses = JSON.parse(cachedHorsesData);
+        console.log('✅ Found', lightweightHorses.length, 'horses in cache');
+        
+        // Load images separately and merge with metadata
+        const horsesWithImages = await Promise.all(
+          lightweightHorses.map(async (horse: any) => {
+            try {
+              const cachedImageData = await AsyncStorage.getItem(`horse_image_${horse.id}`);
+              if (cachedImageData) {
+                const imageData = JSON.parse(cachedImageData);
+                return {
+                  ...horse,
+                  image_url: imageData.image_url,
+                  image_base64: imageData.image_base64
+                };
+              }
+              return horse;
+            } catch (error) {
+              console.warn(`⚠️ Failed to load image for horse ${horse.id}:`, error);
+              return horse;
+            }
+          })
+        );
+        
+        setHorses(horsesWithImages);
+        setHorsesLoaded(true);
+        console.log('✅ Horses loaded from cache successfully');
+      } else {
+        console.log('📭 No cached horses found, will need to refresh to load data');
+        // No cached data - show empty state but don't make API call
+        setHorses([]);
+        setHorsesLoaded(true);
+      }
+    } catch (error) {
+      console.error('❌ Error loading horses from cache:', error);
+      // On cache error, show empty state
+      setHorses([]);
+      setHorsesLoaded(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load horses from API (for refresh and after updates)
+  const loadHorsesFromAPI = async (userId: string) => {
+    try {
+      setLoading(true);
+      console.log('🌐 Loading horses from API...');
 
       // Add timeout to detect hanging API calls
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -275,13 +331,13 @@ const MyHorsesScreen = () => {
       if (Array.isArray(horsesData)) {
         setHorses(horsesData);
         
-        // Store horses in AsyncStorage for other screens to use
+        // Store horses in AsyncStorage for future cache loads
         try {
           // Store horse metadata separately from images to prevent cursor window errors
           const lightweightHorses = horsesData.map(horse => ({
             ...horse,
-            image_url: undefined, // Remove image URL to reduce size
-            image_base64: undefined // Remove base64 images to prevent SQLite cursor window errors
+            image_url: undefined,
+            image_base64: undefined
           }));
           
           await AsyncStorage.setItem(`user_horses_${userId}`, JSON.stringify(lightweightHorses));
@@ -297,10 +353,10 @@ const MyHorsesScreen = () => {
                   cached_at: Date.now()
                 };
                 await AsyncStorage.setItem(`horse_image_${horse.id}`, JSON.stringify(imageData));
-                console.log(`✅ Image cached for horse: ${horse.name}`);
+                console.log(`📸 Stored image for horse: ${horse.name}`);
               } catch (imageError) {
-                console.warn(`⚠️ Failed to cache image for horse ${horse.name}:`, imageError);
-                // Continue with other horses even if one image fails
+                console.warn(`⚠️ Failed to store image for horse ${horse.name}:`, imageError);
+                // Continue - image storage failure shouldn't break the flow
               }
             }
           }
@@ -308,13 +364,15 @@ const MyHorsesScreen = () => {
           console.warn('⚠️ Failed to store horses in AsyncStorage:', storageError);
           // Continue execution - storage failure shouldn't break the app
         }
+        
+        console.log('✅ Horses loaded from API and cached successfully');
       } else {
         setHorses([]);
       }
 
       setHorsesLoaded(true);
     } catch (error) {
-      console.error("Error loading horses:", error);
+      console.error("❌ Error loading horses from API:", error);
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
@@ -327,18 +385,24 @@ const MyHorsesScreen = () => {
           "The request took too long. Please check your internet connection."
         );
       } else {
-        showError("Failed to load horses");
+        showError("Failed to load horses from server");
       }
     } finally {
       setLoading(false);
     }
   };
 
+  const loadHorses = async (userId: string) => {
+    // Backward compatibility - calls the API version
+    await loadHorsesFromAPI(userId);
+  };
+
   const onRefresh = async () => {
     if (user?.id) {
       setRefreshing(true);
       setHorsesLoaded(false); // Reset the loaded flag to allow reloading
-      await loadHorses(user.id);
+      // On refresh, use API to get fresh data
+      await loadHorsesFromAPI(user.id);
       setRefreshing(false);
     }
   };
@@ -513,7 +577,7 @@ const MyHorsesScreen = () => {
 
       if (updatedHorse) {
         setHorsesLoaded(false); // Reset flag to allow reloading
-        await loadHorses(user?.id);
+        await loadHorsesFromAPI(user?.id); // Refresh from API after update
         closeEditModal();
 
         // Check if image was provided but not saved
@@ -614,7 +678,7 @@ const MyHorsesScreen = () => {
 
       if (newHorse) {
         setHorsesLoaded(false); // Reset flag to allow reloading
-        await loadHorses(user?.id);
+        await loadHorsesFromAPI(user?.id); // Refresh from API after add
         closeAddModal();
 
         // Check if image was provided but not saved
@@ -662,12 +726,20 @@ const MyHorsesScreen = () => {
             prevHorses.filter((h) => h.id !== horse.id)
           );
 
+          // Clean up cached data for deleted horse
+          try {
+            await AsyncStorage.removeItem(`horse_image_${horse.id}`);
+            console.log(`🗑️ Removed cached image for deleted horse: ${horse.name}`);
+          } catch (cacheError) {
+            console.warn(`⚠️ Failed to remove cached image for ${horse.name}:`, cacheError);
+          }
+
           // Add a small delay to ensure the delete has been processed on the server
           await new Promise((resolve) => setTimeout(resolve, 500));
 
           // Then reload to ensure data consistency
           setHorsesLoaded(false); // Reset flag to allow reloading
-          await loadHorses(user?.id);
+          await loadHorsesFromAPI(user?.id); // Refresh from API after delete
 
           setSuccessMessage(`${horse.name} has been deleted`);
           setShowSuccessModal(true);
