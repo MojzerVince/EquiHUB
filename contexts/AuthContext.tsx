@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { AppState } from "react-native";
 import { AuthAPI, AuthUser } from "../lib/authAPI";
 import { SessionManager } from "../lib/sessionManager";
 import { getSupabase } from "../lib/supabase";
@@ -81,6 +82,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
+  // Handle app state changes to refresh session when app becomes active
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        console.log('📱 App became active - checking session status...');
+        
+        if (user) {
+          // If we have a user, refresh the session to ensure it's still valid
+          console.log('🔄 Refreshing existing session...');
+          await refreshUser();
+        } else {
+          // If no user, check for stored session
+          console.log('🔍 No user session - checking for stored session...');
+          await getInitialSession();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription?.remove();
+    };
+  }, [user]);
+
+  // Periodic session validation (every 5 minutes when app is active)
+  useEffect(() => {
+    if (!user) return;
+
+    const sessionCheckInterval = setInterval(async () => {
+      console.log('⏰ Periodic session check...');
+      try {
+        const isValid = await SessionManager.hasValidSession();
+        if (!isValid) {
+          console.log('❌ Session invalid - refreshing...');
+          await refreshUser();
+        } else {
+          console.log('✅ Session still valid');
+        }
+      } catch (error) {
+        console.error('Error in periodic session check:', error);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(sessionCheckInterval);
+  }, [user]);
+
   const checkStoredUserData = async () => {
     try {
       const hasData = await hasStoredUserData();
@@ -95,7 +143,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log("Getting initial session via REST API...");
 
-      // Use REST API to get current user - this avoids the problematic supabase.auth.getSession() timeouts
+      // First, check if we have a valid Supabase session using the client
+      const supabase = getSupabase();
+      
+      try {
+        console.log("🔍 Checking Supabase client session...");
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (session && session.user && !sessionError) {
+          console.log("✅ Found valid Supabase client session for:", session.user.email);
+          const authUser: AuthUser = {
+            id: session.user.id,
+            email: session.user.email!,
+            created_at: session.user.created_at!,
+          };
+          setUser(authUser);
+          await SessionManager.markUserAsUsedApp();
+          setHasUserData(true);
+          return;
+        } else {
+          console.log("⚠️ No valid Supabase client session found, trying REST API fallback");
+        }
+      } catch (clientError) {
+        console.log("⚠️ Supabase client session check failed, trying REST API fallback:", clientError);
+      }
+
+      // Fallback to REST API if client session check fails
       const { user, error } = await AuthAPI.getCurrentUser();
 
       if (error) {
@@ -211,21 +284,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      // Use REST API to refresh user - avoids timeout issues
+      console.log("🔄 Manually refreshing user session...");
+      
+      // First try to refresh the Supabase session
+      const supabase = getSupabase();
+      
+      try {
+        const { data: { session }, error } = await supabase.auth.refreshSession();
+        
+        if (session && session.user && !error) {
+          console.log("✅ Session refreshed successfully via Supabase");
+          const authUser: AuthUser = {
+            id: session.user.id,
+            email: session.user.email!,
+            created_at: session.user.created_at!,
+          };
+          setUser(authUser);
+          return;
+        } else {
+          console.log("⚠️ Supabase session refresh failed, trying current session check");
+        }
+      } catch (refreshError) {
+        console.log("⚠️ Supabase refresh error, trying current session check:", refreshError);
+      }
+      
+      // Fallback to REST API check
       const { user, error } = await AuthAPI.getCurrentUser();
 
       if (error) {
         console.error("Error refreshing user via REST API:", error);
+        setUser(null);
         return;
       }
 
       if (user) {
+        console.log("✅ Session refreshed successfully via REST API");
         setUser(user);
       } else {
+        console.log("❌ No valid session found - user needs to login again");
         setUser(null);
       }
     } catch (error) {
       console.error("Error in refreshUser:", error);
+      setUser(null);
     }
   };
 

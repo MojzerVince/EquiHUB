@@ -189,9 +189,26 @@ export class AuthAPI {
         `sb-${config.url.split('//')[1].split('.')[0]}-auth-token`,
         'sb-grdsqxwghajehneksxik-auth-token', // Specific to this project
         '@supabase/auth-js:session',
+        // Add additional patterns that might be used
+        `supabase.auth.token.${config.url.split('//')[1].split('.')[0]}`,
+        'supabase-auth-token',
       ];
 
       console.log('🔍 Checking for stored session tokens...');
+      
+      // First, let's see what keys are actually stored
+      try {
+        const allKeys = await AsyncStorage.getAllKeys();
+        const authRelatedKeys = allKeys.filter(key => 
+          key.includes('supabase') || 
+          key.includes('auth') || 
+          key.includes('sb-') ||
+          key.includes('session')
+        );
+        console.log('📱 All auth-related keys in storage:', authRelatedKeys);
+      } catch (e) {
+        console.log('❌ Could not enumerate AsyncStorage keys');
+      }
       
       // Try each possible key
       for (const key of possibleKeys) {
@@ -217,7 +234,10 @@ export class AuthAPI {
         try {
           const allKeys = await AsyncStorage.getAllKeys();
           const authKeys = allKeys.filter(key => 
-            key.includes('supabase') || key.includes('auth') || key.includes('sb-')
+            key.includes('supabase') || 
+            key.includes('auth') || 
+            key.includes('sb-') ||
+            key.includes('session')
           );
           
           console.log('📋 Found auth-related keys:', authKeys);
@@ -227,11 +247,24 @@ export class AuthAPI {
               const data = await AsyncStorage.getItem(key);
               if (data) {
                 const parsed = JSON.parse(data);
-                if (parsed.access_token) {
-                  accessToken = parsed.access_token;
-                  console.log(`✅ Found access token in key: ${key}`);
-                  break;
+                
+                // Check various possible token locations in the session data
+                const possibleTokenPaths = [
+                  parsed.access_token,
+                  parsed?.session?.access_token,
+                  parsed?.data?.session?.access_token,
+                  parsed?.user?.session?.access_token,
+                ];
+                
+                for (const token of possibleTokenPaths) {
+                  if (token && typeof token === 'string') {
+                    accessToken = token;
+                    console.log(`✅ Found access token in key: ${key}`);
+                    break;
+                  }
                 }
+                
+                if (accessToken) break;
               }
             } catch (e) {
               // Skip invalid JSON
@@ -260,7 +293,31 @@ export class AuthAPI {
 
       if (!response.ok) {
         if (response.status === 401) {
-          console.log('🔑 Token expired or invalid');
+          console.log('🔑 Token expired or invalid - attempting session refresh');
+          
+          // Try to refresh the session using the Supabase client
+          try {
+            const { getSupabase } = await import('./supabase');
+            const supabase = getSupabase();
+            const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+            
+            if (session && session.user && !refreshError) {
+              console.log('✅ Session refreshed successfully');
+              return {
+                user: {
+                  id: session.user.id,
+                  email: session.user.email!,
+                  created_at: session.user.created_at!
+                },
+                error: null
+              };
+            } else {
+              console.log('❌ Session refresh failed');
+            }
+          } catch (refreshError) {
+            console.log('❌ Error during session refresh:', refreshError);
+          }
+          
           // Clear invalid session from all possible keys
           for (const key of possibleKeys) {
             await AsyncStorage.removeItem(key);
