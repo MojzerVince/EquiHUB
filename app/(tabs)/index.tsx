@@ -277,8 +277,33 @@ const MyHorsesScreen = () => {
         
         // Store horses in AsyncStorage for other screens to use
         try {
-          await AsyncStorage.setItem(`user_horses_${userId}`, JSON.stringify(horsesData));
-          console.log('✅ Horses stored in AsyncStorage for offline use');
+          // Store horse metadata separately from images to prevent cursor window errors
+          const lightweightHorses = horsesData.map(horse => ({
+            ...horse,
+            image_url: undefined, // Remove image URL to reduce size
+            image_base64: undefined // Remove base64 images to prevent SQLite cursor window errors
+          }));
+          
+          await AsyncStorage.setItem(`user_horses_${userId}`, JSON.stringify(lightweightHorses));
+          console.log('✅ Horses metadata stored in AsyncStorage for offline use');
+          
+          // Store images separately with individual keys
+          for (const horse of horsesData) {
+            if (horse.image_url || horse.image_base64) {
+              try {
+                const imageData = {
+                  image_url: horse.image_url,
+                  image_base64: horse.image_base64,
+                  cached_at: Date.now()
+                };
+                await AsyncStorage.setItem(`horse_image_${horse.id}`, JSON.stringify(imageData));
+                console.log(`✅ Image cached for horse: ${horse.name}`);
+              } catch (imageError) {
+                console.warn(`⚠️ Failed to cache image for horse ${horse.name}:`, imageError);
+                // Continue with other horses even if one image fails
+              }
+            }
+          }
         } catch (storageError) {
           console.warn('⚠️ Failed to store horses in AsyncStorage:', storageError);
           // Continue execution - storage failure shouldn't break the app
