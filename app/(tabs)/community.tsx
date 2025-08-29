@@ -336,21 +336,11 @@ export default function CommunityScreen() {
   // Load posts from database
   const loadPosts = useCallback(async () => {
     console.log(
-      "🔄 loadPosts called, ref:",
-      isLoadingPostsRef.current,
-      "state:",
+      "🔄 loadPosts called, state:",
       isLoadingPosts,
       "user.id:",
       user?.id
     );
-
-    // Prevent concurrent calls using ref (more reliable than state)
-    if (isLoadingPostsRef.current) {
-      console.log("⚠️ Posts already loading (ref check), skipping...");
-      return;
-    }
-
-    isLoadingPostsRef.current = true;
 
     console.log("🚀 Setting isLoadingPosts to true...");
     setIsLoadingPosts(true);
@@ -429,7 +419,6 @@ export default function CommunityScreen() {
     } finally {
       console.log("🏁 loadPosts complete, resetting loading flags");
       setIsLoadingPosts(false);
-      isLoadingPostsRef.current = false;
     }
   }, [user?.id]);
 
@@ -441,16 +430,6 @@ export default function CommunityScreen() {
       setNotificationCount(0);
       return;
     }
-
-    // Prevent concurrent calls using ref
-    if (isLoadingFriendRequestsRef.current) {
-      console.log(
-        "⚠️ Friend requests already loading (ref check), skipping..."
-      );
-      return;
-    }
-
-    isLoadingFriendRequestsRef.current = true;
 
     setIsLoadingRequests(true);
 
@@ -490,7 +469,6 @@ export default function CommunityScreen() {
       setNotificationCount(0);
     } finally {
       setIsLoadingRequests(false);
-      isLoadingFriendRequestsRef.current = false;
     }
   }, [user?.id]);
 
@@ -702,51 +680,45 @@ export default function CommunityScreen() {
       return;
     }
 
-    // Prevent concurrent calls using ref
-    if (isLoadingFriendsRef.current) {
-      console.log("⚠️ Friends already loading (ref check), skipping...");
-      return;
-    }
-
-    isLoadingFriendsRef.current = true;
-
     setIsLoadingFriends(true);
 
     try {
-      // Temporary fix: Just set empty state immediately
-      // TODO: Re-enable API call once connection issues are resolved
-      setTimeout(() => {
-        setFriends([]);
-        setIsLoadingFriends(false);
-        isLoadingFriendsRef.current = false;
-      }, 500); // Small delay to show it's working
-
-      /*
-      // Original API call - commented out temporarily
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
-          reject(new Error("Loading friends timed out after 10 seconds"));
-        }, 10000);
+          reject(new Error("Loading friends timed out after 20 seconds"));
+        }, 20000); // Increased from 10 to 20 seconds
       });
 
-      const { friends: userFriends, error } = await Promise.race([
+      const { friends: userFriends, error } = (await Promise.race([
         UserAPI.getFriends(user.id),
         timeoutPromise,
-      ]) as { friends: UserSearchResult[]; error: string | null };
+      ])) as { friends: UserSearchResult[]; error: string | null };
 
       if (error) {
-        Alert.alert("Error", "Failed to load friends");
+        console.error("❌ Error loading friends:", error);
+        // Don't show alert for expected database issues - just log them
+        // Only show alert for unexpected errors that users need to know about
+        if (!error.includes("Database error") && !error.includes("Failed to get friends")) {
+          Alert.alert("Error", "Failed to load friends");
+        }
         setFriends([]);
         return;
       }
 
+      console.log("✅ Friends loaded successfully:", userFriends?.length || 0);
       setFriends(userFriends || []);
-      */
     } catch (error) {
-      console.error("Error loading friends:", error);
+      console.error("💥 Exception loading friends:", error);
+      // Only show alert for timeout errors or unexpected exceptions
+      if (error instanceof Error && error.message.includes("timed out")) {
+        Alert.alert("Timeout", "Loading friends took too long. Please try again.");
+      } else {
+        console.log("🔍 Friends loading failed silently:", error);
+        // Don't show alert for database connection issues - fail silently
+      }
       setFriends([]);
+    } finally {
       setIsLoadingFriends(false);
-      isLoadingFriendsRef.current = false;
     }
   }, [user?.id]);
 
