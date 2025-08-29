@@ -409,18 +409,57 @@ const MapScreen = () => {
     }
   };
 
-  // Load user's horses
+  // Load user's horses from AsyncStorage (with fallback to API)
   useEffect(() => {
     const loadUserHorses = async () => {
       if (user?.id) {
         setHorsesLoading(true);
         try {
-          const horses = await HorseAPI.getHorses(user.id);
-          setUserHorses(horses || []);
+          // First try to load horses from AsyncStorage
+          const cachedHorses = await AsyncStorage.getItem(`user_horses_${user.id}`);
+          
+          if (cachedHorses) {
+            const horses = JSON.parse(cachedHorses);
+            setUserHorses(horses || []);
+            console.log('✅ Loaded horses from AsyncStorage:', horses.length, 'horses');
+          } else {
+            // Fallback to API call if no cached data (first time user or cache cleared)
+            console.log('⚠️ No cached horses found, falling back to API call');
+            const horses = await HorseAPI.getHorses(user.id);
+            setUserHorses(horses || []);
+            
+            // Store for next time
+            if (horses && horses.length > 0) {
+              try {
+                await AsyncStorage.setItem(`user_horses_${user.id}`, JSON.stringify(horses));
+                console.log('✅ Horses cached for future use');
+              } catch (storageError) {
+                console.warn('⚠️ Failed to cache horses:', storageError);
+              }
+            }
+          }
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
-          showError(`Failed to load your horses\n\nError: ${errorMessage}`);
+          
+          // If JSON parsing fails or AsyncStorage fails, try API as fallback
+          if (errorMessage.includes('JSON') || errorMessage.includes('parse')) {
+            console.log('⚠️ Cached data corrupted, falling back to API call');
+            try {
+              const horses = await HorseAPI.getHorses(user.id);
+              setUserHorses(horses || []);
+              
+              // Update cache with fresh data
+              if (horses && horses.length > 0) {
+                await AsyncStorage.setItem(`user_horses_${user.id}`, JSON.stringify(horses));
+              }
+            } catch (apiError) {
+              const apiErrorMessage = apiError instanceof Error ? apiError.message : String(apiError);
+              showError(`Failed to load your horses\n\nError: ${apiErrorMessage}`);
+            }
+          } else {
+            showError(`Failed to load your horses\n\nError: ${errorMessage}`);
+          }
         } finally {
           setHorsesLoading(false);
         }
@@ -429,6 +468,43 @@ const MapScreen = () => {
 
     loadUserHorses();
   }, [user]);
+
+  // Function to refresh horses from API (can be called manually if needed)
+  const refreshHorsesFromAPI = async () => {
+    if (!user?.id) return;
+    
+    setHorsesLoading(true);
+    try {
+      console.log('🔄 Refreshing horses from API...');
+      const horses = await HorseAPI.getHorses(user.id);
+      setUserHorses(horses || []);
+      
+      // Update cache
+      if (horses) {
+        await AsyncStorage.setItem(`user_horses_${user.id}`, JSON.stringify(horses));
+        console.log('✅ Horses refreshed and cached');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showError(`Failed to refresh horses\n\nError: ${errorMessage}`);
+    } finally {
+      setHorsesLoading(false);
+    }
+  };
+
+  // Function to clear horses cache (for debugging/development)
+  const clearHorsesCache = async () => {
+    if (!user?.id) return;
+    
+    try {
+      await AsyncStorage.removeItem(`user_horses_${user.id}`);
+      console.log('🗑️ Horses cache cleared');
+      // Reload horses from API
+      await refreshHorsesFromAPI();
+    } catch (error) {
+      console.error('❌ Failed to clear horses cache:', error);
+    }
+  };
 
   // Load favorite training types from storage
   useEffect(() => {
@@ -2160,14 +2236,29 @@ const MapScreen = () => {
             {/* Horse Selection - Hidden during tracking */}
             {!isTracking && (
               <View style={styles.selectionContainer}>
-                <Text
-                  style={[
-                    styles.selectionTitle,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Select Horse
-                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <Text
+                    style={[
+                      styles.selectionTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Select Horse
+                  </Text>
+                  <TouchableOpacity
+                    onPress={refreshHorsesFromAPI}
+                    disabled={horsesLoading}
+                    style={{
+                      padding: 8,
+                      borderRadius: 6,
+                      backgroundColor: horsesLoading ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.05)',
+                    }}
+                  >
+                    <Text style={{ fontSize: 14, opacity: horsesLoading ? 0.5 : 1 }}>
+                      {horsesLoading ? '⏳' : '🔄'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -2222,6 +2313,29 @@ const MapScreen = () => {
                       >
                         Add horses in your profile
                       </Text>
+                      <TouchableOpacity
+                        style={{
+                          marginTop: 8,
+                          paddingVertical: 6,
+                          paddingHorizontal: 12,
+                          backgroundColor: currentTheme.colors.primary,
+                          borderRadius: 6,
+                        }}
+                        onPress={refreshHorsesFromAPI}
+                        disabled={horsesLoading}
+                      >
+                        <Text
+                          style={{
+                            color: "#FFFFFF",
+                            fontSize: 12,
+                            fontFamily: "Inder",
+                            fontWeight: "600",
+                            textAlign: "center",
+                          }}
+                        >
+                          {horsesLoading ? "Refreshing..." : "🔄 Refresh"}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   ) : (
                     userHorses.map((horse) => (

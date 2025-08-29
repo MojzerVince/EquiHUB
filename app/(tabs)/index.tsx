@@ -4,16 +4,16 @@ import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -274,6 +274,15 @@ const MyHorsesScreen = () => {
       // Ensure we have valid array data
       if (Array.isArray(horsesData)) {
         setHorses(horsesData);
+        
+        // Store horses in AsyncStorage for other screens to use
+        try {
+          await AsyncStorage.setItem(`user_horses_${userId}`, JSON.stringify(horsesData));
+          console.log('✅ Horses stored in AsyncStorage for offline use');
+        } catch (storageError) {
+          console.warn('⚠️ Failed to store horses in AsyncStorage:', storageError);
+          // Continue execution - storage failure shouldn't break the app
+        }
       } else {
         setHorses([]);
       }
