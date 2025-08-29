@@ -1379,6 +1379,9 @@ export default function CommunityScreen() {
   };
 
   const renderSearchResult = ({ item }: { item: UserSearchResult }) => {
+    // Check if this user is in our friends list or marked as friend in API response
+    const isFriend = friends.some(friend => friend.id === item.id) || item.is_friend;
+    
     return (
       <View
         key={item.id}
@@ -1409,7 +1412,7 @@ export default function CommunityScreen() {
             )}
           </View>
         </View>
-        {!item.is_friend && (
+        {!isFriend && (
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: theme.primary }]}
             onPress={() => handleAddFriend(item)}
@@ -1417,14 +1420,14 @@ export default function CommunityScreen() {
             <Text style={styles.addButtonText}>Add Friend</Text>
           </TouchableOpacity>
         )}
-        {item.is_friend && (
+        {isFriend && (
           <View
-            style={[styles.friendBadge, { backgroundColor: theme.surface }]}
+            style={[styles.friendBadge, { backgroundColor: theme.surface, borderColor: theme.border }]}
           >
             <Text
               style={[styles.friendBadgeText, { color: theme.textSecondary }]}
             >
-              Friends
+              Friend
             </Text>
           </View>
         )}
