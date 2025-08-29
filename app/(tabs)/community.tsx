@@ -338,10 +338,19 @@ export default function CommunityScreen() {
     console.log(
       "🔄 loadPosts called, state:",
       isLoadingPosts,
+      "ref state:",
+      isLoadingPostsRef.current,
       "user.id:",
       user?.id
     );
 
+    // Prevent multiple simultaneous calls
+    if (isLoadingPostsRef.current) {
+      console.log("🔄 loadPosts: Already loading, skipping duplicate call");
+      return;
+    }
+
+    isLoadingPostsRef.current = true;
     console.log("🚀 Setting isLoadingPosts to true...");
     setIsLoadingPosts(true);
 
@@ -418,6 +427,7 @@ export default function CommunityScreen() {
       setPosts([]);
     } finally {
       console.log("🏁 loadPosts complete, resetting loading flags");
+      isLoadingPostsRef.current = false;
       setIsLoadingPosts(false);
     }
   }, [user?.id]);
@@ -431,6 +441,13 @@ export default function CommunityScreen() {
       return;
     }
 
+    // Prevent multiple simultaneous calls
+    if (isLoadingFriendRequestsRef.current) {
+      console.log("🔄 loadFriendRequests: Already loading, skipping duplicate call");
+      return;
+    }
+
+    isLoadingFriendRequestsRef.current = true;
     setIsLoadingRequests(true);
 
     try {
@@ -459,7 +476,7 @@ export default function CommunityScreen() {
       );
 
       if (friendRequestsList.length === 0) {
-        console.log("� No pending friend requests found");
+        console.log("📭 No pending friend requests found");
       }
       setFriendRequests(friendRequestsList);
       setNotificationCount(friendRequestsList.length);
@@ -468,6 +485,7 @@ export default function CommunityScreen() {
       setFriendRequests([]);
       setNotificationCount(0);
     } finally {
+      isLoadingFriendRequestsRef.current = false;
       setIsLoadingRequests(false);
     }
   }, [user?.id]);
@@ -680,6 +698,13 @@ export default function CommunityScreen() {
       return;
     }
 
+    // Prevent multiple simultaneous calls
+    if (isLoadingFriendsRef.current) {
+      console.log("🔄 loadFriends: Already loading, skipping duplicate call");
+      return;
+    }
+
+    isLoadingFriendsRef.current = true;
     setIsLoadingFriends(true);
 
     try {
@@ -718,6 +743,7 @@ export default function CommunityScreen() {
       }
       setFriends([]);
     } finally {
+      isLoadingFriendsRef.current = false;
       setIsLoadingFriends(false);
     }
   }, [user?.id]);
@@ -729,6 +755,11 @@ export default function CommunityScreen() {
     setRefreshing(true);
 
     try {
+      // Reset all loading refs to allow fresh calls
+      isLoadingFriendsRef.current = false;
+      isLoadingFriendRequestsRef.current = false;
+      isLoadingPostsRef.current = false;
+
       // Run all loading functions in parallel for faster refresh
       await Promise.all([
         loadFriendRequests(),
@@ -756,24 +787,28 @@ export default function CommunityScreen() {
       // Add a small delay to prevent conflict with initial data loading
       const timeoutId = setTimeout(() => {
         // Only reload if we actually need data and nothing is loading
-        if (friends.length === 0 && !isLoadingFriends) {
+        if (friends.length === 0 && !isLoadingFriends && !isLoadingFriendsRef.current) {
+          console.log("🔄 useFocusEffect: Loading friends (no data + not loading)");
           loadFriends();
         }
         // Only reload friend requests if we have none and aren't already loading
-        if (friendRequests.length === 0 && !isLoadingRequests) {
+        if (friendRequests.length === 0 && !isLoadingRequests && !isLoadingFriendRequestsRef.current) {
+          console.log("🔄 useFocusEffect: Loading friend requests (no data + not loading)");
           loadFriendRequests();
         }
         if (hiddenPostIds.length === 0) {
+          console.log("🔄 useFocusEffect: Loading hidden posts");
           loadHiddenPosts();
         }
         // Only reload posts if we have none and aren't already loading
-        if (posts.length === 0 && !isLoadingPosts) {
+        if (posts.length === 0 && !isLoadingPosts && !isLoadingPostsRef.current) {
+          console.log("🔄 useFocusEffect: Loading posts (no data + not loading)");
           loadPosts();
         }
-      }, 200); // Slightly longer delay to ensure initial load completes
+      }, 500); // Increased delay to ensure initial load completes
 
       return () => clearTimeout(timeoutId);
-    }, [user?.id]) // Remove other dependencies to prevent excessive re-runs
+    }, [user?.id]) // Remove changing state dependencies to prevent infinite loops
   );
 
   // Search for users with manual trigger

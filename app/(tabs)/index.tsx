@@ -254,7 +254,7 @@ const MyHorsesScreen = () => {
     if (user?.id && !checkingProStatus) {
       checkProMembership();
     }
-  }, [user?.id, checkProMembership, checkingProStatus]);
+  }, [user?.id, checkingProStatus]); // Remove checkProMembership from dependencies to prevent infinite loop
 
   // Load horses from local cache (for startup)
   const loadHorsesFromCache = async (userId: string) => {
