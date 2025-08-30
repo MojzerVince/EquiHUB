@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 import { CommunityAPI } from "../lib/communityAPI";
 import { HorseAPI } from "../lib/horseAPI";
 import { convertImageToBase64 } from "../lib/imageUtils";
@@ -61,6 +62,8 @@ export default function SessionShareScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user } = useAuth();
+  const { currentTheme } = useTheme();
+  const theme = currentTheme.colors;
 
   // Add initialization guard to prevent multiple renders
   const [isInitialized, setIsInitialized] = useState(false);
@@ -356,9 +359,9 @@ export default function SessionShareScreen() {
   // Show loading screen while session data is being loaded
   if (loading) {
     return (
-      <View style={[styles.container, styles.loadingScreen]}>
-        <ActivityIndicator size="large" color="#FFD700" />
-        <Text style={styles.loadingScreenText}>Loading session data...</Text>
+      <View style={[styles.container, styles.loadingScreen, { backgroundColor: theme.primary }]}>
+        <ActivityIndicator size="large" color={theme.accent} />
+        <Text style={[styles.loadingScreenText, { color: theme.background }]}>Loading session data...</Text>
       </View>
     );
   }
@@ -366,22 +369,22 @@ export default function SessionShareScreen() {
   // Show error screen if session not found
   if (!session) {
     return (
-      <View style={[styles.container, styles.loadingScreen]}>
-        <Text style={styles.errorText}>Session not found</Text>
+      <View style={[styles.container, styles.loadingScreen, { backgroundColor: theme.primary }]}>
+        <Text style={[styles.errorText, { color: theme.error }]}>Session not found</Text>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={styles.backToSessionButton}
+          style={[styles.backToSessionButton, { backgroundColor: theme.accent }]}
         >
-          <Text style={styles.backToSessionButtonText}>Go Back</Text>
+          <Text style={[styles.backToSessionButtonText, { color: theme.background }]}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.primary }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.primary }]}>
         <TouchableOpacity
           onPress={() => {
             router.back();
@@ -389,52 +392,52 @@ export default function SessionShareScreen() {
           style={styles.backButton}
           disabled={isSharing}
         >
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={24} color={theme.background} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Share Session</Text>
+        <Text style={[styles.headerTitle, { color: theme.background }]}>Share Session</Text>
         <TouchableOpacity
           onPress={() => {
             sharePost();
           }}
-          style={[styles.shareButton, isSharing && styles.disabledButton]}
+          style={[styles.shareButton, { backgroundColor: theme.accent }, isSharing && styles.disabledButton]}
           disabled={isSharing}
         >
           {isSharing ? (
-            <ActivityIndicator size="small" color="#000000" />
+            <ActivityIndicator size="small" color={theme.background} />
           ) : (
-            <Text style={styles.shareButtonText}>Share</Text>
+            <Text style={[styles.shareButtonText, { color: theme.background }]}>Share</Text>
           )}
         </TouchableOpacity>
       </View>
 
       <ScrollView
-        style={[styles.content, isSharing && styles.disabledContent]}
+        style={[styles.content, { backgroundColor: theme.background }, isSharing && styles.disabledContent]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!isSharing}
       >
         {/* Session Summary */}
-        <View style={styles.sessionSummary}>
+        <View style={[styles.sessionSummary, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.summaryRow}>
-            <Ionicons name="person" size={16} color="#335C67" />
-            <Text style={styles.summaryText}>{session.horseName}</Text>
+            <Ionicons name="person" size={16} color={theme.primary} />
+            <Text style={[styles.summaryText, { color: theme.text }]}>{session.horseName}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Ionicons name="time" size={16} color="#335C67" />
-            <Text style={styles.summaryText}>
+            <Ionicons name="time" size={16} color={theme.primary} />
+            <Text style={[styles.summaryText, { color: theme.text }]}>
               {session.duration ? formatDuration(session.duration) : "Unknown"}
             </Text>
           </View>
           <View style={styles.summaryRow}>
-            <Ionicons name="location" size={16} color="#335C67" />
-            <Text style={styles.summaryText}>
+            <Ionicons name="location" size={16} color={theme.primary} />
+            <Text style={[styles.summaryText, { color: theme.text }]}>
               {session.distance
                 ? `${(session.distance / 1000).toFixed(1)} km`
                 : "Unknown"}
             </Text>
           </View>
           <View style={styles.summaryRow}>
-            <Ionicons name="speedometer" size={16} color="#335C67" />
-            <Text style={styles.summaryText}>
+            <Ionicons name="speedometer" size={16} color={theme.primary} />
+            <Text style={[styles.summaryText, { color: theme.text }]}>
               {session.averageSpeed
                 ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h`
                 : "Unknown"}
@@ -444,33 +447,33 @@ export default function SessionShareScreen() {
 
         {/* Text Input */}
         <View style={styles.textInputContainer}>
-          <Text style={styles.sectionTitle}>Post Content</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Post Content</Text>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
             value={postText}
             onChangeText={(text) => {
               setPostText(text);
             }}
             placeholder="Share your thoughts about this training session..."
-            placeholderTextColor="#6C757D"
+            placeholderTextColor={theme.textSecondary}
             multiline
             numberOfLines={4}
             maxLength={500}
             editable={!isSharing}
           />
-          <Text style={styles.characterCount}>{postText.length}/500</Text>
+          <Text style={[styles.characterCount, { color: theme.textSecondary }]}>{postText.length}/500</Text>
         </View>
 
         {/* Media Gallery - Enhanced styling */}
         {mediaItems.length > 0 && (
-          <View style={styles.mediaCard}>
-            <Text style={styles.sectionTitle}>
+          <View style={[styles.mediaCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
               Session Media ({mediaItems.length})
             </Text>
             {selectedMedia && (
-              <View style={styles.selectedCountContainer}>
-                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
-                <Text style={styles.selectedCountText}>1 photo selected</Text>
+              <View style={[styles.selectedCountContainer, { backgroundColor: theme.accent + '20' }]}>
+                <Ionicons name="checkmark-circle" size={16} color={theme.accent} />
+                <Text style={[styles.selectedCountText, { color: theme.accent }]}>1 photo selected</Text>
               </View>
             )}
             <ScrollView
@@ -517,24 +520,24 @@ export default function SessionShareScreen() {
                     <View
                       style={[
                         styles.selectionIndicator,
-                        selectedMedia === item.id && styles.selectedIndicator,
+                        selectedMedia === item.id && [styles.selectedIndicator, { backgroundColor: theme.accent, borderColor: theme.accent }],
                       ]}
                     >
                       {selectedMedia === item.id ? (
-                        <Ionicons name="checkmark" size={16} color="#000000" />
+                        <Ionicons name="checkmark" size={16} color={theme.background} />
                       ) : (
-                        <View style={styles.unselectedCircle} />
+                        <View style={[styles.unselectedCircle, { borderColor: theme.textSecondary }]} />
                       )}
                     </View>
 
                     {/* Selected Overlay */}
                     {selectedMedia === item.id && (
-                      <View style={styles.selectedOverlayNew} />
+                      <View style={[styles.selectedOverlayNew, { borderColor: theme.accent, backgroundColor: theme.accent + '33' }]} />
                     )}
                   </View>
 
                   {/* Timestamp */}
-                  <Text style={styles.mediaTimeNew}>
+                  <Text style={[styles.mediaTimeNew, { color: theme.textSecondary, backgroundColor: theme.surface }]}>
                     {new Date(item.timestamp).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -546,17 +549,17 @@ export default function SessionShareScreen() {
 
             {/* Selection Hint */}
             {!selectedMedia && (
-              <View style={styles.selectionHint}>
-                <Ionicons name="information-circle" size={16} color="#6C757D" />
-                <Text style={styles.hintText}>
+              <View style={[styles.selectionHint, { backgroundColor: theme.surface }]}>
+                <Ionicons name="information-circle" size={16} color={theme.textSecondary} />
+                <Text style={[styles.hintText, { color: theme.textSecondary }]}>
                   Tap a photo to include it in your post (photos only)
                 </Text>
               </View>
             )}
             {selectedMedia && (
-              <View style={styles.selectionHint}>
-                <Ionicons name="image" size={16} color="#28A745" />
-                <Text style={styles.hintText}>
+              <View style={[styles.selectionHint, { backgroundColor: theme.surface }]}>
+                <Ionicons name="image" size={16} color={theme.success} />
+                <Text style={[styles.hintText, { color: theme.textSecondary }]}>
                   This photo will be shown as the main image in your post
                 </Text>
               </View>
@@ -566,7 +569,7 @@ export default function SessionShareScreen() {
 
         {/* Horse Image Preview */}
         <View style={styles.horseImageSection}>
-          <Text style={styles.sectionTitle}>Horse Image</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Horse Image</Text>
           {horse?.image_url ? (
             <Image
               source={{ uri: horse.image_url }}
@@ -585,10 +588,10 @@ export default function SessionShareScreen() {
       {(() => {
         if (isSharing) {
           return (
-            <View style={styles.loadingOverlay}>
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#FFD700" />
-                <Text style={styles.loadingText}>Sharing to Community...</Text>
+            <View style={[styles.loadingOverlay, { backgroundColor: theme.background + 'CC' }]}>
+              <View style={[styles.loadingContainer, { backgroundColor: theme.surface }]}>
+                <ActivityIndicator size="large" color={theme.accent} />
+                <Text style={[styles.loadingText, { color: theme.text }]}>Sharing to Community...</Text>
               </View>
             </View>
           );
@@ -602,7 +605,6 @@ export default function SessionShareScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#335C67",
   },
   header: {
     flexDirection: "row",
@@ -611,7 +613,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingTop: 50,
-    backgroundColor: "#335C67",
   },
   backButton: {
     padding: 8,
@@ -640,7 +641,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     paddingTop: 20,
@@ -650,12 +650,10 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   sessionSummary: {
-    backgroundColor: "#F8F9FA",
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#E9ECEF",
   },
   summaryRow: {
     flexDirection: "row",
@@ -663,7 +661,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   summaryText: {
-    color: "#335C67",
     fontSize: 14,
     marginLeft: 8,
     fontWeight: "500",
@@ -672,25 +669,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    color: "#335C67",
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 12,
     fontFamily: "Inder",
   },
   textInput: {
-    backgroundColor: "#F8F9FA",
     borderRadius: 12,
     padding: 16,
-    color: "#335C67",
     fontSize: 16,
     textAlignVertical: "top",
     minHeight: 100,
     borderWidth: 1,
-    borderColor: "#E9ECEF",
   },
   characterCount: {
-    color: "#6C757D",
     fontSize: 12,
     textAlign: "right",
     marginTop: 4,
@@ -739,7 +731,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 200,
     borderRadius: 12,
-    backgroundColor: "#F8F9FA",
   },
   loadingOverlay: {
     position: "absolute",
@@ -747,13 +738,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1000,
   },
   loadingContainer: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 30,
     alignItems: "center",
@@ -768,7 +757,6 @@ const styles = StyleSheet.create({
     marginTop: 15,
     fontSize: 16,
     fontWeight: "600",
-    color: "#335C67",
     textAlign: "center",
   },
   loadingScreen: {
@@ -779,7 +767,6 @@ const styles = StyleSheet.create({
     marginTop: 15,
     fontSize: 16,
     fontWeight: "500",
-    color: "#FFFFFF",
     textAlign: "center",
   },
   errorText: {
@@ -803,7 +790,6 @@ const styles = StyleSheet.create({
 
   // Enhanced Media Gallery Styles
   mediaCard: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
@@ -813,12 +799,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
   },
   selectedCountContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF9E6",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -829,7 +813,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontSize: 14,
     fontWeight: "600",
-    color: "#B8860B",
   },
   mediaScrollView: {
     paddingVertical: 5,
@@ -889,15 +872,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.9)",
   },
   selectedIndicator: {
-    backgroundColor: "#FFD700",
-    borderColor: "#FFD700",
+    // Colors applied dynamically
   },
   unselectedCircle: {
     width: 16,
     height: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: "#6C757D",
     backgroundColor: "transparent",
   },
   selectedOverlayNew: {
@@ -906,18 +887,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(255, 215, 0, 0.2)",
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: "#FFD700",
   },
   mediaTimeNew: {
     marginTop: 8,
     fontSize: 12,
     fontWeight: "500",
-    color: "#6C757D",
     textAlign: "center",
-    backgroundColor: "#F8F9FA",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -930,13 +907,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: "#F8F9FA",
     borderRadius: 12,
   },
   hintText: {
     marginLeft: 6,
     fontSize: 13,
-    color: "#6C757D",
     fontStyle: "italic",
   },
 
@@ -965,6 +940,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inder",
     textAlign: "center",
-    color: "#6C757D",
   },
 });

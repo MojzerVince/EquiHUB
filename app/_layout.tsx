@@ -26,15 +26,6 @@ SplashScreen.hideAsync();
 
 const SplashWithAuth = ({ onFinish }: { onFinish: () => void }) => {
   const { user, loading } = useAuth();
-  const router = useRouter();
-
-  const handleForceContinue = () => {
-    try {
-      router.replace("/login");
-    } catch (error) {
-      console.error("Error during force continue navigation:", error);
-    }
-  };
 
   const handleSplashFinish = () => {
     // Call onFinish to hide splash screen
@@ -46,7 +37,6 @@ const SplashWithAuth = ({ onFinish }: { onFinish: () => void }) => {
       onFinish={handleSplashFinish}
       loading={loading}
       user={user}
-      onForceContinue={handleForceContinue}
     />
   );
 };
@@ -152,6 +142,18 @@ const AppContent = () => {
                 />
                 <Stack.Screen
                   name="session-share"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="user-profile"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="user-friends"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="user-horses"
                   options={{ headerShown: false }}
                 />
               </Stack>
