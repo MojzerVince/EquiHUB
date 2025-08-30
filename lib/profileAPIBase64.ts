@@ -1,26 +1,35 @@
-import { Badge, Profile, supabase, UserBadgeWithDetails } from './supabase';
+import { apiCache, CacheKeys } from './apiCache';
+import { Badge, getSupabase, Profile, UserBadgeWithDetails } from './supabase';
 
 export class ProfileAPIBase64 {
   // Get user profile
   static async getProfile(userId: string): Promise<Profile | null> {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
+    const cacheKey = CacheKeys.profile(userId);
+    
+    return apiCache.cachedApiCall(
+      cacheKey,
+      async () => {
+        try {
+          const { data, error } = await getSupabase()
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single()
 
-      if (error) {
-        console.error('Error fetching profile:', error)
-        return null
-      }
+          if (error) {
+            console.error('Error fetching profile:', error)
+            return null
+          }
 
-      // Return the data if found
-      return data
-    } catch (error) {
-      console.error('Error in getProfile:', error)
-      return null
-    }
+          // Return the data if found
+          return data
+        } catch (error) {
+          console.error('Error in getProfile:', error)
+          return null
+        }
+      },
+      'profiles' // Cache type
+    );
   }
 
   // Update user profile
@@ -32,7 +41,7 @@ export class ProfileAPIBase64 {
         updated_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('profiles')
         .update(updatePayload)
         .eq('id', userId)
@@ -43,6 +52,9 @@ export class ProfileAPIBase64 {
         console.error('Error details:', JSON.stringify(error, null, 2));
         return false
       }
+
+      // Invalidate cache after successful update
+      apiCache.delete(CacheKeys.profile(userId));
 
       return true
     } catch (error) {
@@ -55,7 +67,7 @@ export class ProfileAPIBase64 {
   static async updateMembershipData(userId: string, experience: number, isProMember: boolean): Promise<boolean> {
     try {
 
-      const { error } = await supabase
+      const { error } = await getSupabase()
         .from('profiles')
         .update({
           experience: experience,
@@ -68,6 +80,9 @@ export class ProfileAPIBase64 {
         console.error('Error updating membership data:', error)
         return false
       }
+
+      // Invalidate cache after successful update
+      apiCache.delete(CacheKeys.profile(userId));
 
       return true
     } catch (error) {
@@ -132,7 +147,7 @@ export class ProfileAPIBase64 {
   static async verifyDatabaseConnection(): Promise<boolean> {
     try {
       
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('profiles')
         .select('id, name, experience, is_pro_member')
         .limit(1);
@@ -157,7 +172,7 @@ export class ProfileAPIBase64 {
       
       // Test 1: Try a simple experience-only update
       console.log('Test 1: Updating experience to 7...');
-      const { data: updateData, error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await getSupabase()
         .from('profiles')
         .update({ 
           experience: 7,
@@ -209,7 +224,7 @@ export class ProfileAPIBase64 {
       console.log('=== SIMPLE EXPERIENCE UPDATE ===');
       console.log('Updating experience only for user:', userId, 'to:', experience);
       
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('profiles')
         .update({ 
           experience: experience,
@@ -234,7 +249,7 @@ export class ProfileAPIBase64 {
   // Create new profile with specific ID
   static async createProfile(userId: string, profileData: Omit<Profile, 'id' | 'created_at' | 'updated_at'>): Promise<Profile | null> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('profiles')
         .insert([{
           id: userId,
@@ -323,29 +338,37 @@ export class ProfileAPIBase64 {
 
   // Get all badges for a user
   static async getUserBadges(userId: string): Promise<UserBadgeWithDetails[]> {
-    try {
-      console.log('Fetching badges for user:', userId);
+    const cacheKey = CacheKeys.userBadges(userId);
+    
+    return apiCache.cachedApiCall(
+      cacheKey,
+      async () => {
+        try {
+          console.log('Fetching badges for user:', userId);
 
-      const { data, error } = await supabase
-        .from('user_badges')
-        .select(`
-          *,
-          badge:badges!user_badges_badge_id_fkey(*)
-        `)
-        .eq('user_id', userId)
-        .order('earned_at', { ascending: false });
+          const { data, error } = await getSupabase()
+            .from('user_badges')
+            .select(`
+              *,
+              badge:badges!user_badges_badge_id_fkey(*)
+            `)
+            .eq('user_id', userId)
+            .order('earned_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching user badges:', error);
-        return [];
-      }
+          if (error) {
+            console.error('Error fetching user badges:', error);
+            return [];
+          }
 
-      console.log('Retrieved user badges:', data);
-      return data || [];
-    } catch (error) {
-      console.error('Error in getUserBadges:', error);
-      return [];
-    }
+          console.log('Retrieved user badges:', data);
+          return data || [];
+        } catch (error) {
+          console.error('Error in getUserBadges:', error);
+          return [];
+        }
+      },
+      'badges' // Cache type
+    );
   }
 
   // Award a badge to a user
@@ -354,7 +377,7 @@ export class ProfileAPIBase64 {
       console.log('Awarding badge to user:', { userId, badgeId, metadata });
 
       // Check if user already has this badge
-      const { data: existingBadge } = await supabase
+      const { data: existingBadge } = await getSupabase()
         .from('user_badges')
         .select('id')
         .eq('user_id', userId)
@@ -366,7 +389,7 @@ export class ProfileAPIBase64 {
         return false;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('user_badges')
         .insert([{
           user_id: userId,
@@ -383,6 +406,9 @@ export class ProfileAPIBase64 {
         return false;
       }
 
+      // Invalidate badge cache after successful award
+      apiCache.delete(CacheKeys.userBadges(userId));
+
       console.log('Badge awarded successfully:', data);
       return true;
     } catch (error) {
@@ -393,25 +419,31 @@ export class ProfileAPIBase64 {
 
   // Get all available badge definitions
   static async getBadgeDefinitions(): Promise<Badge[]> {
-    try {
-      const { data, error } = await supabase
-        .from('badges')
-        .select('*')
-        .eq('is_active', true)
-        .order('category', { ascending: true })
-        .order('rarity', { ascending: false })
-        .order('name', { ascending: true });
+    return apiCache.cachedApiCall(
+      'badge_definitions',
+      async () => {
+        try {
+          const { data, error } = await getSupabase()
+            .from('badges')
+            .select('*')
+            .eq('is_active', true)
+            .order('category', { ascending: true })
+            .order('rarity', { ascending: false })
+            .order('name', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching badge definitions:', error);
-        return [];
-      }
+          if (error) {
+            console.error('Error fetching badge definitions:', error);
+            return [];
+          }
 
-      return data || [];
-    } catch (error) {
-      console.error('Error in getBadgeDefinitions:', error);
-      return [];
-    }
+          return data || [];
+        } catch (error) {
+          console.error('Error in getBadgeDefinitions:', error);
+          return [];
+        }
+      },
+      'badges' // Cache type
+    );
   }
 
   // Get user badge statistics
@@ -543,7 +575,7 @@ export class ProfileAPIBase64 {
   // Remove a badge from a user (admin function)
   static async removeBadge(userId: string, badgeId: string): Promise<boolean> {
     try {
-      const { error } = await supabase
+      const { error } = await getSupabase()
         .from('user_badges')
         .delete()
         .eq('user_id', userId)
@@ -553,6 +585,9 @@ export class ProfileAPIBase64 {
         console.error('Error removing badge:', error);
         return false;
       }
+
+      // Invalidate badge cache after successful removal
+      apiCache.delete(CacheKeys.userBadges(userId));
 
       console.log('Badge removed successfully');
       return true;
