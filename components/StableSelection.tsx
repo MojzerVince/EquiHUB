@@ -144,12 +144,13 @@ const StableSelection: React.FC<StableSelectionProps> = ({
         )}
         <View style={styles.stableStats}>
           <Text style={styles.statText}>
-            {item.member_count} member{item.member_count !== 1 ? "s" : ""}
+            {item.member_count} member
+            {item.member_count !== 1 ? <Text>s</Text> : <Text></Text>}
           </Text>
           {item.specialties && item.specialties.length > 0 && (
             <Text style={styles.statText}>
               • {item.specialties.slice(0, 2).join(", ")}
-              {item.specialties.length > 2 && "..."}
+              {item.specialties.length > 2 && <Text>...</Text>}
             </Text>
           )}
         </View>
