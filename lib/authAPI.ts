@@ -430,4 +430,133 @@ export class AuthAPI {
       return { exists: false, error: 'Failed to check if user exists.' };
     }
   }
+
+  // Delete user account permanently
+  static async deleteAccount(): Promise<{ success: boolean; error: string | null }> {
+    try {
+      console.log('Starting account deletion process...');
+
+      const supabase = getSupabase();
+      
+      // Get current user first
+      const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+      
+      if (getUserError || !user) {
+        console.error('Error getting user for deletion:', getUserError);
+        return { success: false, error: 'User not found or not authenticated.' };
+      }
+
+      const userId = user.id;
+      console.log('Deleting account for user:', userId);
+
+      // First, delete all user-related data from the database
+      // This includes profile, horses, posts, sessions, etc.
+      
+      // Delete user's posts
+      const { error: postsError } = await supabase
+        .from('community_posts')
+        .delete()
+        .eq('user_id', userId);
+
+      if (postsError) {
+        console.error('Error deleting user posts:', postsError);
+        // Continue anyway, we'll try to delete other data
+      }
+
+      // Delete user's horses
+      const { error: horsesError } = await supabase
+        .from('horses')
+        .delete()
+        .eq('user_id', userId);
+
+      if (horsesError) {
+        console.error('Error deleting user horses:', horsesError);
+        // Continue anyway
+      }
+
+      // Delete user's sessions
+      const { error: sessionsError } = await supabase
+        .from('training_sessions')
+        .delete()
+        .eq('user_id', userId);
+
+      if (sessionsError) {
+        console.error('Error deleting user sessions:', sessionsError);
+        // Continue anyway
+      }
+
+      // Delete user's gallery images
+      const { error: galleryError } = await supabase
+        .from('gallery_images')
+        .delete()
+        .eq('user_id', userId);
+
+      if (galleryError) {
+        console.error('Error deleting user gallery:', galleryError);
+        // Continue anyway
+      }
+
+      // Delete user's friend relationships
+      const { error: friendsError } = await supabase
+        .from('friend_requests')
+        .delete()
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+
+      if (friendsError) {
+        console.error('Error deleting friend relationships:', friendsError);
+        // Continue anyway
+      }
+
+      // Delete user's badges
+      const { error: badgesError } = await supabase
+        .from('user_badges')
+        .delete()
+        .eq('user_id', userId);
+
+      if (badgesError) {
+        console.error('Error deleting user badges:', badgesError);
+        // Continue anyway
+      }
+
+      // Delete user profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error('Error deleting user profile:', profileError);
+        // Continue anyway
+      }
+
+      // Clear all stored session data
+      await SessionManager.clearSessionData();
+
+      // Finally, delete the auth user account
+      const { error: deleteUserError } = await supabase.auth.admin.deleteUser(userId);
+
+      if (deleteUserError) {
+        console.error('Error deleting auth user:', deleteUserError);
+        // For client-side, we might not have admin access, so try regular sign out
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) {
+          console.error('Error signing out after failed deletion:', signOutError);
+        }
+        return { 
+          success: false, 
+          error: 'Account data cleared but authentication deletion failed. Please contact support.' 
+        };
+      }
+
+      console.log('Account deletion completed successfully');
+      return { success: true, error: null };
+
+    } catch (error) {
+      console.error('Account deletion error:', error);
+      return { 
+        success: false, 
+        error: 'An unexpected error occurred during account deletion. Please try again or contact support.' 
+      };
+    }
+  }
 }
