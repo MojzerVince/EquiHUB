@@ -132,145 +132,175 @@ const UserHorsesScreen = () => {
 
   if (loading) {
     return (
-      <SafeAreaView
+      <View
         style={[
           styles.container,
-          { backgroundColor: currentTheme.colors.background },
+          { backgroundColor: currentTheme.colors.primary },
         ]}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
+        <SafeAreaView
+          style={[
+            styles.safeArea,
+            { backgroundColor: currentTheme.colors.primary },
+          ]}
+        >
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <Text style={styles.backIcon}>←</Text>
+            </TouchableOpacity>
+            <Text style={[styles.header, { color: "#FFFFFF" }]}>Horses</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+        </SafeAreaView>
+        <View
+          style={[
+            styles.viewPort,
+            { backgroundColor: currentTheme.colors.surface },
+          ]}
+        >
+          <View style={styles.centered}>
+            <ActivityIndicator
+              size="large"
+              color={currentTheme.colors.primary}
+            />
             <Text
               style={[
-                styles.backButtonText,
-                { color: currentTheme.colors.primary },
+                styles.loadingText,
+                { color: currentTheme.colors.textSecondary },
               ]}
             >
-              ← Back
+              Loading horses...
             </Text>
-          </TouchableOpacity>
-          <Text
-            style={[styles.headerTitle, { color: currentTheme.colors.text }]}
-          >
-            Horses
-          </Text>
-          <View style={styles.headerSpacer} />
+          </View>
         </View>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-          <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            Loading horses...
-          </Text>
-        </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
-        { backgroundColor: currentTheme.colors.background },
+        { backgroundColor: currentTheme.colors.primary },
       ]}
     >
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Text
-            style={[
-              styles.backButtonText,
-              { color: currentTheme.colors.primary },
-            ]}
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
+        <View style={styles.headerContainer}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
           >
-            ← Back
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={[styles.header, { color: "#FFFFFF" }]}>
+            {`${userProfile?.name || "User"}'s Horses`}
           </Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: currentTheme.colors.text }]}>
-          {`${userProfile?.name || "User"}'s Horses`}
-        </Text>
-        <View style={styles.headerSpacer} />
-      </View>
+          <View style={styles.headerSpacer} />
+        </View>
+      </SafeAreaView>
 
-      {error ? (
-        <View style={styles.centered}>
-          <Text
-            style={[styles.errorText, { color: currentTheme.colors.error }]}
-          >
-            {error}
-          </Text>
-          <TouchableOpacity onPress={loadHorses} style={styles.retryButton}>
+      <View
+        style={[
+          styles.viewPort,
+          { backgroundColor: currentTheme.colors.surface },
+        ]}
+      >
+        {error ? (
+          <View style={styles.centered}>
+            <Text
+              style={[styles.errorText, { color: currentTheme.colors.error }]}
+            >
+              {error}
+            </Text>
+            <TouchableOpacity onPress={loadHorses} style={styles.retryButton}>
+              <Text
+                style={[
+                  styles.retryButtonText,
+                  { color: currentTheme.colors.primary },
+                ]}
+              >
+                Retry
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : horses.length === 0 ? (
+          <View style={styles.centered}>
             <Text
               style={[
-                styles.retryButtonText,
-                { color: currentTheme.colors.primary },
+                styles.emptyText,
+                { color: currentTheme.colors.textSecondary },
               ]}
             >
-              Retry
+              {`${
+                userProfile?.name || "This user"
+              } doesn't have any horses yet`}
             </Text>
-          </TouchableOpacity>
-        </View>
-      ) : horses.length === 0 ? (
-        <View style={styles.centered}>
-          <Text
-            style={[
-              styles.emptyText,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            {`${userProfile?.name || "This user"} doesn't have any horses yet`}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={horses}
-          renderItem={renderHorseItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-    </SafeAreaView>
+          </View>
+        ) : (
+          <FlatList
+            data={horses}
+            renderItem={renderHorseItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#335C67",
+  },
+  safeArea: {
+    backgroundColor: "#335C67",
+  },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    marginBottom: -45,
+    marginTop: -5,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    fontSize: 30,
+    fontFamily: "Inder",
+    color: "#fff",
+    textAlign: "center",
+    flex: 1,
+    fontWeight: "600",
   },
   backButton: {
+    position: "absolute",
+    left: 20,
     padding: 5,
   },
-  backButtonText: {
-    fontSize: 16,
-    fontFamily: "Inder",
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    fontFamily: "Inder",
-    textAlign: "center",
+  backIcon: {
+    fontSize: 24,
+    color: "#fff",
   },
   headerSpacer: {
     width: 50,
+  },
+  viewPort: {
+    backgroundColor: "#FFFFFF",
+    flex: 1,
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    marginTop: 5,
+    paddingTop: 20,
   },
   centered: {
     flex: 1,
