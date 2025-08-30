@@ -1,3 +1,5 @@
+import StableSelection from "@/components/StableSelection";
+import { useDialog } from "@/contexts/DialogContext";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -13,8 +15,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useDialog } from "@/contexts/DialogContext";
 import { AuthAPI, RegisterData } from "../lib/authAPI";
+import { StableWithMemberInfo } from "../lib/stableAPI";
 
 const RegisterScreen = () => {
   const router = useRouter();
@@ -34,6 +36,12 @@ const RegisterScreen = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Stable selection state
+  const [selectedStable, setSelectedStable] =
+    useState<StableWithMemberInfo | null>(null);
+  const [stableJoinCode, setStableJoinCode] = useState("");
+  const [showStableSelection, setShowStableSelection] = useState(false);
 
   // Form validation
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -104,7 +112,14 @@ const RegisterScreen = () => {
     setErrors({});
 
     try {
-      const { user, error } = await AuthAPI.register(formData);
+      // Prepare registration data with stable information
+      const registrationData: RegisterData = {
+        ...formData,
+        stable_id: selectedStable?.id,
+        stable_join_code: stableJoinCode || undefined,
+      };
+
+      const { user, error } = await AuthAPI.register(registrationData);
 
       if (error) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -114,10 +129,18 @@ const RegisterScreen = () => {
 
       if (user) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        showConfirm(
-          "Registration Successful!",
-          "Your account has been created successfully. Please check your email to verify your account before logging in. Once logged in, you'll stay signed in automatically on this device.",
-          () => router.replace("/login")
+
+        let successMessage =
+          "Your account has been created successfully. Please check your email to verify your account before logging in. Once logged in, you'll stay signed in automatically on this device.";
+
+        if (selectedStable) {
+          successMessage += `\n\nYou have been added to ${selectedStable.name}!`;
+        } else if (stableJoinCode) {
+          successMessage += "\n\nYou have been added to the stable!";
+        }
+
+        showConfirm("Registration Successful!", successMessage, () =>
+          router.replace("/login")
         );
       }
     } catch (error) {
@@ -145,6 +168,14 @@ const RegisterScreen = () => {
         [field as string]: "",
       }));
     }
+  };
+
+  const handleStableSelection = (
+    stable: StableWithMemberInfo | null,
+    joinCode?: string
+  ) => {
+    setSelectedStable(stable);
+    setStableJoinCode(joinCode || "");
   };
 
   const handleTermsPress = (type: "terms" | "privacy") => {
@@ -381,6 +412,67 @@ const RegisterScreen = () => {
                 {formData.description?.length || 0}/500
               </Text>
             </View>
+
+            {/* Stable Selection */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Stable/Ranch (Optional)</Text>
+              <Text style={styles.inputDescription}>
+                Join an existing stable or skip to join one later
+              </Text>
+
+              {selectedStable ? (
+                <View style={styles.selectedStableContainer}>
+                  <View style={styles.selectedStableInfo}>
+                    <Text style={styles.selectedStableName}>
+                      {selectedStable.name}
+                    </Text>
+                    <Text style={styles.selectedStableLocation}>
+                      {selectedStable.city && selectedStable.state_province
+                        ? `${selectedStable.city}, ${selectedStable.state_province}`
+                        : selectedStable.location || "Location not specified"}
+                    </Text>
+                    {selectedStable.member_count && (
+                      <Text style={styles.selectedStableMembers}>
+                        {selectedStable.member_count} member
+                        {selectedStable.member_count !== 1 ? "s" : ""}
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.changeStableButton}
+                    onPress={() => setShowStableSelection(true)}
+                  >
+                    <Text style={styles.changeStableButtonText}>Change</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : stableJoinCode ? (
+                <View style={styles.selectedStableContainer}>
+                  <View style={styles.selectedStableInfo}>
+                    <Text style={styles.selectedStableName}>
+                      Join Code: {stableJoinCode}
+                    </Text>
+                    <Text style={styles.selectedStableLocation}>
+                      You'll join this stable after registration
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.changeStableButton}
+                    onPress={() => setShowStableSelection(true)}
+                  >
+                    <Text style={styles.changeStableButtonText}>Change</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.selectStableButton}
+                  onPress={() => setShowStableSelection(true)}
+                >
+                  <Text style={styles.selectStableButtonText}>
+                    Choose a Stable
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* Buttons */}
@@ -440,6 +532,14 @@ const RegisterScreen = () => {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Stable Selection Modal */}
+      <StableSelection
+        visible={showStableSelection}
+        onClose={() => setShowStableSelection(false)}
+        onSelect={handleStableSelection}
+        selectedStable={selectedStable}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -635,6 +735,71 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     textDecorationLine: "underline",
+  },
+  // Stable selection styles
+  inputDescription: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    color: "#666",
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  selectedStableContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f8ff",
+    borderWidth: 1,
+    borderColor: "#335C67",
+    borderRadius: 12,
+    padding: 16,
+  },
+  selectedStableInfo: {
+    flex: 1,
+  },
+  selectedStableName: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    color: "#335C67",
+    marginBottom: 4,
+  },
+  selectedStableLocation: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    color: "#666",
+    marginBottom: 2,
+  },
+  selectedStableMembers: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    color: "#999",
+  },
+  changeStableButton: {
+    backgroundColor: "#335C67",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  changeStableButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  selectStableButton: {
+    backgroundColor: "#f9f9f9",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    borderStyle: "dashed",
+  },
+  selectStableButtonText: {
+    color: "#335C67",
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
   },
 });
 

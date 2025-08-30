@@ -14,6 +14,8 @@ export interface RegisterData {
   age: number;
   description?: string;
   riding_experience?: number;
+  stable_id?: string; // Optional stable to join during registration
+  stable_join_code?: string; // Optional join code for stable
 }
 
 export interface LoginData {
@@ -67,7 +69,9 @@ export class AuthAPI {
             name: data.name.trim(),
             age: data.age,
             description: data.description?.trim() || 'Equestrian enthusiast',
-            riding_experience: data.riding_experience || 0
+            riding_experience: data.riding_experience || 0,
+            stable_id: data.stable_id || null,
+            stable_join_code: data.stable_join_code || null
           }
         }
       });
