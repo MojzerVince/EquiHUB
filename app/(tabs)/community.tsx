@@ -475,9 +475,7 @@ export default function CommunityScreen() {
         })
       );
 
-      if (friendRequestsList.length === 0) {
-        console.log("📭 No pending friend requests found");
-      }
+      // Note: Success logging is handled by CommunityAPI
       setFriendRequests(friendRequestsList);
       setNotificationCount(friendRequestsList.length);
     } catch (error) {
