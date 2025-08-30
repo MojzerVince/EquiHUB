@@ -18,19 +18,16 @@ interface SplashScreenProps {
   onFinish: () => void;
   loading?: boolean;
   user?: any;
-  onForceContinue?: () => void;
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ 
   onFinish, 
   loading = false, 
-  user = null, 
-  onForceContinue 
+  user = null
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const loadingOpacity = useRef(new Animated.Value(0)).current;
-  const [showForceButton, setShowForceButton] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
 
   useEffect(() => {
@@ -87,22 +84,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
     }
   }, [animationComplete, loading, user, loadingOpacity, fadeAnim, onFinish]);
 
-  // Show force button after 3 seconds of loading (only for non-authenticated users)
-  useEffect(() => {
-    if (animationComplete && loading && !user) {
-      const timer = setTimeout(() => {
-        setShowForceButton(true);
-      }, 3000);
-
-      return () => {
-        clearTimeout(timer);
-        setShowForceButton(false);
-      };
-    } else {
-      setShowForceButton(false);
-    }
-  }, [animationComplete, loading, user]);
-
   return (
     <LinearGradient
       colors={['#F60E5C', '#F99471', '#F60E5C']}
@@ -133,16 +114,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
       <Animated.View style={[styles.loadingContainer, { opacity: loadingOpacity }]}>
         <ActivityIndicator size="large" color="#FFFFFF" style={styles.loadingSpinner} />
         <Text style={styles.loadingText}>Loading EquiHUB...</Text>
-        
-        {showForceButton && onForceContinue && (
-          <TouchableOpacity
-            style={styles.forceButton}
-            onPress={onForceContinue}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.forceButtonText}>Continue Anyway</Text>
-          </TouchableOpacity>
-        )}
       </Animated.View>
       
       <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
@@ -217,22 +188,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.9)',
     fontFamily: 'Inder',
     marginBottom: 20,
-  },
-  forceButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  forceButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: 'Inder',
-    textAlign: 'center',
-    fontWeight: '600',
   },
 });
 
