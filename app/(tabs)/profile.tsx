@@ -19,6 +19,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useDialog } from "../../contexts/DialogContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useLoadingState } from "../../hooks/useLoadingState";
+import API_CONFIG from "../../lib/apiConfig";
 import * as HorseAPI from "../../lib/horseAPI";
 import { ImageCompression } from "../../lib/imageCompression";
 import { SimpleStable, SimpleStableAPI } from "../../lib/simpleStableAPI";
@@ -137,7 +138,7 @@ const ProfileScreen = () => {
   // Direct API functions to bypass Supabase client issues
   const getProfileDirectAPI = async (userId: string) => {
     try {
-      const url = `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${userId}`;
+      const url = `${API_CONFIG.SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`;
 
       const response = (await Promise.race([
         fetch(url, {
@@ -187,7 +188,7 @@ const ProfileScreen = () => {
       };
 
       const response = await fetch(
-        "https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles",
+        `${API_CONFIG.SUPABASE_URL}/rest/v1/profiles`,
         {
           method: "POST",
           headers: {
@@ -238,7 +239,7 @@ const ProfileScreen = () => {
       });
 
       const fetchPromise = fetch(
-        `https://grdsqxwghajehneksxik.supabase.co/rest/v1/profiles?id=eq.${userId}`,
+        `${API_CONFIG.SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`,
         {
           method: "PATCH",
           headers: {
@@ -278,7 +279,7 @@ const ProfileScreen = () => {
   // Direct API functions for badges to bypass Supabase client issues
   const getUserBadgesDirectAPI = async (userId: string) => {
     try {
-      const url = `https://grdsqxwghajehneksxik.supabase.co/rest/v1/user_badges?user_id=eq.${userId}&select=*,badge:badges!user_badges_badge_id_fkey(*)`;
+      const url = `${API_CONFIG.SUPABASE_URL}/rest/v1/user_badges?user_id=eq.${userId}&select=*,badge:badges!user_badges_badge_id_fkey(*)`;
 
       const response = (await Promise.race([
         fetch(url, {

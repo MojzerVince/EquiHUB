@@ -7,22 +7,22 @@ import { useRouter } from "expo-router";
 import * as TaskManager from "expo-task-manager";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  AppState,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    AppState,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import MapView, {
-  Marker,
-  PROVIDER_GOOGLE,
-  Polyline,
-  Region,
+    Marker,
+    PROVIDER_GOOGLE,
+    Polyline,
+    Region,
 } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -456,7 +456,7 @@ const MapScreen = () => {
           // Handle specific SQLite cursor window error
           if (errorMessage.includes('CursorWindow') || errorMessage.includes('Row too big')) {
             console.log('⚠️ Large data detected, trying API with image optimization...');
-            await loadHorsesFromAPIOptimized();
+            await loadHorsesFromAPI();
           } else if (errorMessage.includes('JSON') || errorMessage.includes('parse')) {
             console.log('⚠️ Cached data corrupted, falling back to API call');
             await loadHorsesFromAPI();
@@ -473,7 +473,7 @@ const MapScreen = () => {
     loadUserHorses();
   }, [user]);
 
-  // Helper function to load horses from API (with caching)
+  // Helper function to load horses from API (with caching and optimization)
   const loadHorsesFromAPI = async () => {
     if (!user?.id) return;
     
@@ -481,7 +481,7 @@ const MapScreen = () => {
       const horses = await HorseAPI.getHorses(user.id);
       setUserHorses(horses || []);
       
-      // Store for next time (use lightweight version for metadata and separate image storage)
+      // Cache with separate image storage for optimization
       if (horses && horses.length > 0) {
         try {
           await cacheHorsesWithSeparateImages(horses);
@@ -499,27 +499,6 @@ const MapScreen = () => {
         showError(`Failed to load your horses\n\nError: ${errorMessage}`);
       }
       throw error; // Re-throw to handle in calling function
-    }
-  };
-
-  // Helper function to load horses with image optimization
-  const loadHorsesFromAPIOptimized = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const horses = await HorseAPI.getHorses(user.id);
-      
-      // Don't filter images here - let them be cached separately
-      setUserHorses(horses || []);
-      
-      // Cache with separate image storage
-      if (horses && horses.length > 0) {
-        await cacheHorsesWithSeparateImages(horses);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      showError(`Failed to load horses even with optimization\n\nError: ${errorMessage}`);
-      throw error;
     }
   };
 
@@ -592,7 +571,7 @@ const MapScreen = () => {
       if (errorMessage.includes('CursorWindow') || errorMessage.includes('Row too big')) {
         console.log('⚠️ Large data detected during refresh, trying optimization...');
         try {
-          await loadHorsesFromAPIOptimized();
+          await loadHorsesFromAPI();
           console.log('✅ Horses refreshed with optimization');
         } catch (optimizedError) {
           showError("Unable to load horse data - images too large.\n\nPlease try reducing image sizes in your horse profiles.");

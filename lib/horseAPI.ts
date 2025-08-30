@@ -1,78 +1,93 @@
 import * as FileSystem from 'expo-file-system';
-import { Horse, getSupabase } from './supabase';
+import { apiCache, CacheKeys } from './apiCache';
+import API_CONFIG from './apiConfig';
+import { getSupabase, Horse } from './supabase';
 
 export class HorseAPI {
   // Get horse count only - lightweight API call that returns just an integer
   static async getHorseCount(userId: string): Promise<number> {
-    try {
-      console.log(`🔥 HorseAPI: Getting horse count for user: ${userId}`);
-      
-      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
-      const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
-      
-      // Use Supabase's count feature to get only the count, not the actual data
-      const apiUrl = `${supabaseUrl}/rest/v1/horses?user_id=eq.${userId}&select=count`;
-      
-      const response = await fetch(apiUrl, {
-        method: 'HEAD', // HEAD request returns count in header without body data
-        headers: {
-          'apikey': apiKey,
-          'Authorization': `Bearer ${apiKey}`,
-          'Prefer': 'count=exact',
-          'Cache-Control': 'no-cache'
+    const cacheKey = CacheKeys.horseCount(userId);
+    
+    return apiCache.cachedApiCall(
+      cacheKey,
+      async () => {
+        try {
+          console.log(`🔥 HorseAPI: Getting horse count for user: ${userId}`);
+          
+          const supabaseUrl = API_CONFIG.SUPABASE_URL;
+          const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
+          
+          // Use Supabase's count feature to get only the count, not the actual data
+          const apiUrl = `${supabaseUrl}/rest/v1/horses?user_id=eq.${userId}&select=count`;
+          
+          const response = await fetch(apiUrl, {
+            method: 'HEAD', // HEAD request returns count in header without body data
+            headers: {
+              'apikey': apiKey,
+              'Authorization': `Bearer ${apiKey}`,
+              'Prefer': 'count=exact',
+              'Cache-Control': 'no-cache'
+            }
+          });
+
+          if (!response.ok) {
+            console.error('🔥 HorseAPI: Count API error:', response.status);
+            return 0;
+          }
+
+          // Extract count from Content-Range header
+          const contentRange = response.headers.get('content-range');
+          if (contentRange) {
+            const match = contentRange.match(/\/(\d+)$/);
+            const count = match ? parseInt(match[1], 10) : 0;
+            console.log(`🔥 HorseAPI: Horse count for user ${userId}: ${count}`);
+            return count;
+          }
+          
+          return 0;
+        } catch (error) {
+          console.error('🔥 HorseAPI: Error fetching horse count:', error);
+          return 0;
         }
-      });
-
-      if (!response.ok) {
-        console.error('🔥 HorseAPI: Count API error:', response.status);
-        return 0;
-      }
-
-      // Extract count from Content-Range header
-      const contentRange = response.headers.get('content-range');
-      if (contentRange) {
-        const match = contentRange.match(/\/(\d+)$/);
-        const count = match ? parseInt(match[1], 10) : 0;
-        console.log(`🔥 HorseAPI: Horse count for user ${userId}: ${count}`);
-        return count;
-      }
-      
-      return 0;
-    } catch (error) {
-      console.error('🔥 HorseAPI: Error fetching horse count:', error);
-      return 0;
-    }
+      },
+      'horses' // Cache type
+    );
   }
 
   // Get all horses for a user
   static async getHorses(userId: string): Promise<Horse[]> {
-    try {
-      console.log(`🔥 HorseAPI: Getting horses for user: ${userId}`);
-      
-      // Use direct REST API (Supabase client has compatibility issues)
-      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
-      const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
-      
-      // Remove timestamp parameter that was causing parsing error
-      const apiUrl = `${supabaseUrl}/rest/v1/horses?user_id=eq.${userId}&order=created_at.desc`;
-      
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': apiKey,
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
+    const cacheKey = CacheKeys.horses(userId);
+    
+    return apiCache.cachedApiCall(
+      cacheKey,
+      async () => {
+        try {
+          console.log(`🔥 HorseAPI: Getting horses for user: ${userId}`);
+          
+          // Use direct REST API (Supabase client has compatibility issues)
+          const supabaseUrl = API_CONFIG.SUPABASE_URL;
+          const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
+          
+          // Remove timestamp parameter that was causing parsing error
+          const apiUrl = `${supabaseUrl}/rest/v1/horses?user_id=eq.${userId}&order=created_at.desc`;
+          
+          const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+              'apikey': apiKey,
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🔥 HorseAPI: API error:', response.status, errorText);
-        return [];
-      }
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('🔥 HorseAPI: API error:', response.status, errorText);
+            return [];
+          }
 
       const data = await response.json();
       console.log(`🔥 HorseAPI: Retrieved ${data?.length || 0} horses for user ${userId}`);
@@ -80,10 +95,13 @@ export class HorseAPI {
       
       return data || [];
       
-    } catch (error) {
-      console.error('🔥 HorseAPI: Error fetching horses:', error);
-      return [];
-    }
+        } catch (error) {
+          console.error('🔥 HorseAPI: Error fetching horses:', error);
+          return [];
+        }
+      },
+      'horses' // Cache type
+    );
   }
 
   // Add a new horse
@@ -107,7 +125,7 @@ export class HorseAPI {
       }
 
       // Use direct REST API (Supabase client has compatibility issues)
-      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
+      const supabaseUrl = API_CONFIG.SUPABASE_URL;
       const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
       
       const newHorse = {
@@ -142,6 +160,10 @@ export class HorseAPI {
 
       const data = await response.json();
       const addedHorse = data && data.length > 0 ? data[0] : data;
+      
+      // Invalidate cache after successful add
+      apiCache.delete(CacheKeys.horses(userId));
+      apiCache.delete(CacheKeys.horseCount(userId));
       
       return addedHorse;
     } catch (error) {
@@ -178,7 +200,7 @@ export class HorseAPI {
       updateData.updated_at = new Date().toISOString();
 
       // Use direct REST API (Supabase client has compatibility issues)
-      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
+      const supabaseUrl = API_CONFIG.SUPABASE_URL;
       const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
 
       const response = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${horseId}&user_id=eq.${userId}`, {
@@ -200,6 +222,10 @@ export class HorseAPI {
 
       const data = await response.json();
       const updatedHorse = data && data.length > 0 ? data[0] : data;
+      
+      // Invalidate cache after successful update
+      apiCache.delete(CacheKeys.horses(userId));
+      
       return updatedHorse;
     } catch (error) {
       console.error('🔥 HorseAPI: Error in updateHorse:', error);
@@ -213,7 +239,7 @@ export class HorseAPI {
       console.log(`🔥 HorseAPI: Starting delete for horse ID: ${horseId}, user ID: ${userId}`);
       
       // Use direct REST API to get horse data first
-      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
+      const supabaseUrl = API_CONFIG.SUPABASE_URL;
       const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
 
       // Try to get horse data to delete image, but don't let this block the deletion
@@ -274,6 +300,11 @@ export class HorseAPI {
       const responseText = await deleteResponse.text();
       console.log(`🔥 HorseAPI: Delete response body:`, responseText);
       console.log(`🔥 HorseAPI: ✅ Horse deleted successfully from database`);
+      
+      // Invalidate cache after successful delete
+      apiCache.delete(CacheKeys.horses(userId));
+      apiCache.delete(CacheKeys.horseCount(userId));
+      
       return true;
     } catch (error) {
       console.error('🔥 HorseAPI: Error in deleteHorse:', error);
