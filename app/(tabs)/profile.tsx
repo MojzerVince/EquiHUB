@@ -1143,7 +1143,16 @@ const ProfileScreen = () => {
 
                 {/* Counters Container */}
                 <View style={styles.countersContainer}>
-                  <View style={styles.counterItem}>
+                  <TouchableOpacity
+                    style={styles.counterItem}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/user-horses",
+                        params: { userId: USER_ID },
+                      })
+                    }
+                    activeOpacity={0.7}
+                  >
                     <Text
                       style={[
                         styles.counterLabel,
@@ -1167,8 +1176,17 @@ const ProfileScreen = () => {
                         {horsesCount}
                       </Text>
                     )}
-                  </View>
-                  <View style={styles.counterItem}>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.counterItem}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/user-friends",
+                        params: { userId: USER_ID },
+                      })
+                    }
+                    activeOpacity={0.7}
+                  >
                     <Text
                       style={[
                         styles.counterLabel,
@@ -1192,7 +1210,7 @@ const ProfileScreen = () => {
                         {friendsCount}
                       </Text>
                     )}
-                  </View>
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.badgeContainer}>
