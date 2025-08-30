@@ -37,10 +37,23 @@ CREATE TABLE profiles (
   name TEXT NOT NULL,
   age INTEGER NOT NULL,
   description TEXT,
+  experience INTEGER DEFAULT 0,
+  is_pro_member BOOLEAN DEFAULT FALSE,
+  stable_ranch TEXT NULL,
   profile_image_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Add column comments
+COMMENT ON COLUMN profiles.experience IS 'Years of riding experience';
+COMMENT ON COLUMN profiles.is_pro_member IS 'Whether the user has a PRO membership';
+COMMENT ON COLUMN profiles.stable_ranch IS 'Name of the stable or ranch where the user rides (optional)';
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_profiles_experience ON profiles (experience);
+CREATE INDEX IF NOT EXISTS idx_profiles_is_pro_member ON profiles (is_pro_member);
+CREATE INDEX IF NOT EXISTS idx_profiles_stable_ranch ON profiles (stable_ranch) WHERE stable_ranch IS NOT NULL;
 
 -- Enable Row Level Security
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;

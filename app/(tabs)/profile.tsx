@@ -14,11 +14,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import SimpleStableSelection from "../../components/SimpleStableSelection";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDialog } from "../../contexts/DialogContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useLoadingState } from "../../hooks/useLoadingState";
 import * as HorseAPI from "../../lib/horseAPI";
+import { SimpleStable, SimpleStableAPI } from "../../lib/simpleStableAPI";
 import { UserBadgeWithDetails } from "../../lib/supabase";
 import * as UserAPI from "../../lib/userAPI";
 
@@ -35,6 +37,12 @@ const ProfileScreen = () => {
   const [userDescription, setUserDescription] = useState("Loading profile...");
   const [userExperience, setUserExperience] = useState("0");
   const [isProMember, setIsProMember] = useState(false);
+  const [userStableRanch, setUserStableRanch] = useState("");
+
+  // Stable selection state
+  const [selectedStable, setSelectedStable] = useState<SimpleStable | null>(null);
+  const [newStableData, setNewStableData] = useState<any>(null);
+  const [showStableSelection, setShowStableSelection] = useState(false);
 
   // Store the saved values to revert to when canceling
   const [savedUserName, setSavedUserName] = useState("Loading...");
@@ -43,6 +51,9 @@ const ProfileScreen = () => {
     useState("Loading profile...");
   const [savedUserExperience, setSavedUserExperience] = useState("0");
   const [savedIsProMember, setSavedIsProMember] = useState(false);
+  const [savedUserStableRanch, setSavedUserStableRanch] = useState("");
+  const [savedSelectedStable, setSavedSelectedStable] = useState<SimpleStable | null>(null);
+  const [savedNewStableData, setSavedNewStableData] = useState<any>(null);
 
   // State for custom success modal
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -459,6 +470,7 @@ const ProfileScreen = () => {
           description: "Welcome to EquiHub!",
           experience: 1,
           is_pro_member: false,
+          stable_ranch: "",
         });
 
         if (!newProfile) {
@@ -470,6 +482,7 @@ const ProfileScreen = () => {
             description: "Welcome to EquiHub!",
             experience: 1,
             is_pro_member: false,
+            stable_ranch: "",
             profile_image_url: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -481,11 +494,17 @@ const ProfileScreen = () => {
           setUserDescription(fallbackProfile.description);
           setUserExperience(fallbackProfile.experience.toString());
           setIsProMember(false);
+          setUserStableRanch(fallbackProfile.stable_ranch);
+          setSelectedStable(null);
+          setNewStableData(null);
           setSavedUserName(fallbackProfile.name);
           setSavedUserAge(fallbackProfile.age.toString());
           setSavedUserDescription(fallbackProfile.description);
           setSavedUserExperience(fallbackProfile.experience.toString());
           setSavedIsProMember(false);
+          setSavedUserStableRanch(fallbackProfile.stable_ranch);
+          setSavedSelectedStable(null);
+          setSavedNewStableData(null);
 
           return; // Exit early with fallback data
         }
@@ -497,6 +516,7 @@ const ProfileScreen = () => {
       // Update state with loaded/created profile data
       const loadedExperience = profile.experience || 0;
       const loadedProStatus = profile.is_pro_member || false;
+      const loadedStableRanch = profile.stable_ranch || "";
 
       // Determine final membership status based on database value
       const finalProStatus = determineMembershipStatus(loadedProStatus);
@@ -506,11 +526,17 @@ const ProfileScreen = () => {
       setUserDescription(profile.description);
       setUserExperience(loadedExperience.toString());
       setIsProMember(finalProStatus);
+      setUserStableRanch(loadedStableRanch);
+      setSelectedStable(null); // TODO: Load actual stable if stored in future
+      setNewStableData(null);
       setSavedUserName(profile.name);
       setSavedUserAge(profile.age.toString());
       setSavedUserDescription(profile.description);
       setSavedUserExperience(loadedExperience.toString());
       setSavedIsProMember(finalProStatus);
+      setSavedUserStableRanch(loadedStableRanch);
+      setSavedSelectedStable(null);
+      setSavedNewStableData(null);
 
       if (profile.profile_image_url) {
         setProfileImage({ uri: profile.profile_image_url });
@@ -549,6 +575,7 @@ const ProfileScreen = () => {
         // Update state with refreshed profile data
         const loadedExperience = profile.experience || 0;
         const loadedProStatus = profile.is_pro_member || false;
+        const loadedStableRanch = profile.stable_ranch || "";
 
         // Determine final membership status based on database value
         const finalProStatus = determineMembershipStatus(loadedProStatus);
@@ -558,11 +585,17 @@ const ProfileScreen = () => {
         setUserDescription(profile.description);
         setUserExperience(loadedExperience.toString());
         setIsProMember(finalProStatus);
+        setUserStableRanch(loadedStableRanch);
+        setSelectedStable(null); // TODO: Load actual stable if stored in future
+        setNewStableData(null);
         setSavedUserName(profile.name);
         setSavedUserAge(profile.age.toString());
         setSavedUserDescription(profile.description);
         setSavedUserExperience(loadedExperience.toString());
         setSavedIsProMember(finalProStatus);
+        setSavedUserStableRanch(loadedStableRanch);
+        setSavedSelectedStable(null);
+        setSavedNewStableData(null);
 
         if (profile.profile_image_url) {
           setProfileImage({ uri: profile.profile_image_url });
@@ -610,6 +643,30 @@ const ProfileScreen = () => {
     if (text.length <= 150) {
       setUserDescription(text);
     }
+  };
+
+  const handleStableSelection = (
+    stable: SimpleStable | null,
+    isNewStable?: boolean,
+    stableData?: any
+  ) => {
+    setSelectedStable(stable);
+    setNewStableData(isNewStable ? stableData : null);
+    
+    // Update the stable/ranch text for display and saving
+    if (stable) {
+      setUserStableRanch(stable.name);
+    } else if (isNewStable && stableData) {
+      setUserStableRanch(stableData.name);
+    } else {
+      setUserStableRanch("");
+    }
+  };
+
+  const handleClearStableSelection = () => {
+    setSelectedStable(null);
+    setNewStableData(null);
+    setUserStableRanch("");
   };
 
   const pickImage = async () => {
@@ -711,6 +768,7 @@ const ProfileScreen = () => {
         description: userDescription,
         experience: experienceValue,
         is_pro_member: finalProStatus,
+        stable_ranch: userStableRanch,
       };
 
       // Handle image upload if there's a new image
@@ -759,6 +817,51 @@ const ProfileScreen = () => {
         updateData.profile_image_url = savedProfileImage.uri;
       }
 
+      // Handle stable creation or joining before updating profile
+      let actualStableId: string | null = null;
+      if (newStableData && !selectedStable) {
+        // User created a new stable - create it in the database
+        try {
+          const { stable, error } = await SimpleStableAPI.createStable({
+            name: newStableData.name,
+            location: newStableData.location,
+            city: newStableData.city,
+            state_province: newStableData.state_province,
+            creator_id: USER_ID,
+          });
+
+          if (error || !stable) {
+            throw new Error(error || "Failed to create stable");
+          }
+
+          actualStableId = stable.id;
+          console.log("Successfully created new stable:", stable.name);
+        } catch (stableError) {
+          console.error("Error creating stable:", stableError);
+          showError("Failed to create stable. Profile will be saved without stable information.");
+          // Continue with profile save even if stable creation fails
+        }
+      } else if (selectedStable) {
+        // User selected an existing stable - join it
+        try {
+          const { success, error } = await SimpleStableAPI.joinStable(
+            selectedStable.id,
+            USER_ID
+          );
+
+          if (!success) {
+            throw new Error(error || "Failed to join stable");
+          }
+
+          actualStableId = selectedStable.id;
+          console.log("Successfully joined stable:", selectedStable.name);
+        } catch (stableError) {
+          console.error("Error joining stable:", stableError);
+          showError("Failed to join stable. Profile will be saved without stable information.");
+          // Continue with profile save even if stable joining fails
+        }
+      }
+
       // Update profile data using direct API approach (single update call)
       const success = await updateProfileDirectAPI(USER_ID, updateData);
 
@@ -772,6 +875,26 @@ const ProfileScreen = () => {
       setSavedUserDescription(userDescription);
       setSavedUserExperience(userExperience);
       setSavedIsProMember(finalProStatus);
+      setSavedUserStableRanch(userStableRanch);
+      
+      // If stable operation was successful, clear the temporary selection state
+      if (actualStableId) {
+        // Clear the new stable data since it's now saved
+        setNewStableData(null);
+        setSavedNewStableData(null);
+        // Keep the selected stable if we joined an existing one
+        if (selectedStable) {
+          setSavedSelectedStable(selectedStable);
+        } else {
+          // Clear selection for newly created stables since they're now in the database
+          setSelectedStable(null);
+          setSavedSelectedStable(null);
+        }
+      } else {
+        // No stable operation, save current state as-is
+        setSavedSelectedStable(selectedStable);
+        setSavedNewStableData(newStableData);
+      }
 
       // Also update current state to reflect the calculated pro status
       setIsProMember(finalProStatus);
@@ -805,6 +928,9 @@ const ProfileScreen = () => {
     setUserDescription(savedUserDescription);
     setUserExperience(savedUserExperience);
     setIsProMember(savedIsProMember);
+    setUserStableRanch(savedUserStableRanch);
+    setSelectedStable(savedSelectedStable);
+    setNewStableData(savedNewStableData);
     setProfileImage(savedProfileImage);
     setIsEditing(false);
   };
@@ -1141,6 +1267,25 @@ const ProfileScreen = () => {
                   </Text>
                 </View>
 
+                <View style={styles.stableRanchContainer}>
+                  <Text
+                    style={[
+                      styles.stableRanchLabel,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Stable/Ranch
+                  </Text>
+                  <Text
+                    style={[
+                      styles.stableRanchValue,
+                      { color: userStableRanch ? currentTheme.colors.text : currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    {userStableRanch || "Not specified"}
+                  </Text>
+                </View>
+
                 {/* Counters Container */}
                 <View style={styles.countersContainer}>
                   <TouchableOpacity
@@ -1320,6 +1465,73 @@ const ProfileScreen = () => {
                   placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                 />
+                
+                {/* Stable/Ranch Selection */}
+                <View style={styles.stableSelectionContainer}>
+                  <Text style={[styles.stableSelectionLabel, { color: currentTheme.colors.text }]}>
+                    Stable/Ranch (Optional)
+                  </Text>
+                  {selectedStable || newStableData ? (
+                    <View style={[styles.selectedStableContainer, { borderColor: currentTheme.colors.border }]}>
+                      <View style={styles.selectedStableInfo}>
+                        <Text style={[styles.selectedStableName, { color: currentTheme.colors.text }]}>
+                          {selectedStable?.name || newStableData?.name}
+                        </Text>
+                        {selectedStable && (
+                          <>
+                            {selectedStable.location && (
+                              <Text style={[styles.selectedStableLocation, { color: currentTheme.colors.textSecondary }]}>
+                                {selectedStable.location}
+                              </Text>
+                            )}
+                            {selectedStable.city && selectedStable.state_province && (
+                              <Text style={[styles.selectedStableMembers, { color: currentTheme.colors.textSecondary }]}>
+                                {selectedStable.city}, {selectedStable.state_province}
+                              </Text>
+                            )}
+                          </>
+                        )}
+                        {newStableData && (
+                          <>
+                            {newStableData.location && (
+                              <Text style={[styles.selectedStableLocation, { color: currentTheme.colors.textSecondary }]}>
+                                {newStableData.location}
+                              </Text>
+                            )}
+                            {newStableData.city && newStableData.state_province && (
+                              <Text style={[styles.selectedStableMembers, { color: currentTheme.colors.textSecondary }]}>
+                                {newStableData.city}, {newStableData.state_province}
+                              </Text>
+                            )}
+                          </>
+                        )}
+                      </View>
+                      <View style={styles.stableButtonsContainer}>
+                        <TouchableOpacity
+                          style={[styles.clearStableButton, { backgroundColor: currentTheme.colors.textSecondary }]}
+                          onPress={handleClearStableSelection}
+                        >
+                          <Text style={styles.clearStableButtonText}>Clear</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.changeStableButton, { backgroundColor: currentTheme.colors.primary }]}
+                          onPress={() => setShowStableSelection(true)}
+                        >
+                          <Text style={styles.changeStableButtonText}>Change</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.selectStableButton, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.border }]}
+                      onPress={() => setShowStableSelection(true)}
+                    >
+                      <Text style={[styles.selectStableButtonText, { color: currentTheme.colors.text }]}>
+                        Choose a Stable/Ranch
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </>
             )}
           </View>
@@ -1472,6 +1684,14 @@ const ProfileScreen = () => {
 
       {/* Badge Dialog */}
       {renderBadgeDialog()}
+
+      {/* Stable Selection Modal */}
+      <SimpleStableSelection
+        visible={showStableSelection}
+        onClose={() => setShowStableSelection(false)}
+        onSelect={handleStableSelection}
+        selectedStable={selectedStable}
+      />
     </View>
   );
 };
@@ -1740,6 +1960,95 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontFamily: "Inder",
     marginTop: 2,
+  },
+  stableRanchContainer: {
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  stableRanchLabel: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  stableRanchValue: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    marginTop: 2,
+  },
+  stableSelectionContainer: {
+    marginBottom: 15,
+  },
+  stableSelectionLabel: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    marginBottom: 8,
+    fontWeight: "600",
+  },
+  selectedStableContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f8ff",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+  },
+  selectedStableInfo: {
+    flex: 1,
+  },
+  selectedStableName: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  selectedStableLocation: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    marginBottom: 2,
+  },
+  selectedStableMembers: {
+    fontSize: 12,
+    fontFamily: "Inder",
+  },
+  stableButtonsContainer: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  clearStableButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  clearStableButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  changeStableButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  changeStableButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  selectStableButton: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    borderStyle: "dashed",
+  },
+  selectStableButtonText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
   },
   badgeContainer: {
     alignItems: "center",
