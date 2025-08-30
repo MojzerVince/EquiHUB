@@ -156,10 +156,32 @@ export class UserAPI {
         return { users: [], error: null };
       }
 
-      console.log("⏩ UserAPI.searchUsersDirectAPI: Skipping friendship status check for faster response");
+      console.log("🔍 UserAPI.searchUsersDirectAPI: Getting friendship status for found users");
+      const userIds = users.map((user: any) => user.id);
+      console.log("  - User IDs to check friendship status:", userIds);
+      
+      // Get the initialized Supabase client
+      const supabase = getSupabase();
+      
+      // Check friendship status for found users
+      const { data: friendships, error: friendshipError } = await supabase
+        .from('friendships')
+        .select('friend_id, status')
+        .eq('user_id', currentUserId)
+        .in('friend_id', userIds);
 
-      // Map users without friendship status (temporarily disabled for debugging)
+      console.log("📥 UserAPI.searchUsersDirectAPI: Friendship status received");
+      console.log("  - Friendship error:", friendshipError);
+      console.log("  - Friendships found:", friendships?.length || 0);
+
+      if (friendshipError) {
+        console.warn('⚠️ UserAPI.searchUsersDirectAPI: Friendship check failed, continuing without status');
+        console.warn('  - Friendship error:', friendshipError);
+      }
+
+      // Map users with proper friendship status
       const usersWithFriendshipStatus: UserSearchResult[] = users.map((user: any) => {
+        const friendship = friendships?.find((f: any) => f.friend_id === user.id);
         const result = {
           id: user.id,
           name: user.name,
@@ -167,7 +189,7 @@ export class UserAPI {
           age: user.age,
           description: user.description,
           is_pro_member: user.is_pro_member,
-          is_friend: false, // Temporarily always false for debugging
+          is_friend: friendship?.status === 'accepted',
           is_online: false
         };
         console.log(`  ✅ Mapped user: ${user.name} (${user.id}) - is_friend: ${result.is_friend}`);
@@ -295,11 +317,13 @@ export class UserAPI {
   // Get user's friends
   static async getFriends(userId: string): Promise<{ friends: UserSearchResult[]; error: string | null }> {
     try {
+      console.log("📊 UserAPI.getFriends: Starting friends query for user:", userId);
+      
       // Get the initialized Supabase client
       const supabase = getSupabase();
       
-      // Get accepted friendships
-      const { data: friendships, error: friendshipError } = await supabase
+      // Try the complex join query first (likely to fail due to foreign key issues)
+      let { data: friendships, error: friendshipError } = await supabase
         .from('friendships')
         .select(`
           friend_id,
@@ -315,11 +339,99 @@ export class UserAPI {
         .eq('user_id', userId)
         .eq('status', 'accepted');
 
+      // Always use the simpler approach since foreign key joins are problematic
+      if (friendshipError || !friendships) {
+        console.log("🔄 UserAPI.getFriends: Using simple query approach...");
+        if (friendshipError) {
+          console.log("  - Error code:", friendshipError.code);
+          console.log("  - Error message:", friendshipError.message);
+        }
+        
+        // Get friendships where user is either user_id OR friend_id (bidirectional search)
+        const { data: simpleFriendships, error: simpleError } = await supabase
+          .from('friendships')
+          .select('user_id, friend_id')
+          .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+          .eq('status', 'accepted');
+        
+        console.log("📥 UserAPI.getFriends: Bidirectional friendships query result:");
+        console.log("  - Error:", simpleError);
+        console.log("  - Data count:", simpleFriendships?.length || 0);
+        console.log("  - Raw data:", simpleFriendships);
+        
+        if (simpleError) {
+          friendshipError = simpleError;
+          friendships = null;
+        } else if (simpleFriendships && simpleFriendships.length > 0) {
+          console.log("🔄 UserAPI.getFriends: Getting profiles for friend IDs...");
+          
+          // Extract friend IDs - if user is user_id, take friend_id; if user is friend_id, take user_id
+          const friendIds = simpleFriendships.map((f: any) => {
+            return f.user_id === userId ? f.friend_id : f.user_id;
+          });
+          
+          // Remove duplicates
+          const uniqueFriendIds = [...new Set(friendIds)];
+          console.log("  - Friend IDs:", uniqueFriendIds);
+          
+          if (uniqueFriendIds.length > 0) {
+            const { data: profiles, error: profileError } = await supabase
+              .from('profiles')
+              .select('id, name, profile_image_url, age, description, is_pro_member')
+              .in('id', uniqueFriendIds);
+            
+            console.log("📥 UserAPI.getFriends: Profiles query result:");
+            console.log("  - Error:", profileError);
+            console.log("  - Data count:", profiles?.length || 0);
+            
+            if (profileError) {
+              friendshipError = profileError;
+              friendships = null;
+            } else {
+              // Combine the data manually
+              friendships = profiles?.map((profile: any) => ({
+                friend_id: profile.id,
+                friend_profile: profile
+              })) || [];
+              friendshipError = null;
+              console.log("✅ UserAPI.getFriends: Successfully combined data using bidirectional fallback method");
+            }
+          } else {
+            console.log("ℹ️ UserAPI.getFriends: No valid friend IDs found");
+            friendships = [];
+            friendshipError = null;
+          }
+        } else {
+          console.log("ℹ️ UserAPI.getFriends: No friendships found using bidirectional query");
+          friendships = [];
+          friendshipError = null;
+        }
+      }
+
+      console.log("📥 UserAPI.getFriends: Query result:");
+      console.log("  - Error:", friendshipError);
+      console.log("  - Data count:", friendships?.length || 0);
+
       if (friendshipError) {
-        return { friends: [], error: 'Failed to get friends' };
+        console.error("❌ UserAPI.getFriends: Database error:", friendshipError);
+        console.error("  - Error code:", friendshipError.code);
+        console.error("  - Error message:", friendshipError.message);
+        console.error("  - Error details:", friendshipError.details);
+        
+        // Check for specific error types
+        if (friendshipError.code === '42P01') {
+          return { friends: [], error: 'Friendships table does not exist' };
+        } else if (friendshipError.code === '42703') {
+          return { friends: [], error: 'Database column does not exist' };
+        } else if (friendshipError.message?.includes('RLS')) {
+          return { friends: [], error: 'Permission denied - check database permissions' };
+        }
+        
+        return { friends: [], error: `Database error: ${friendshipError.message}` };
       }
 
       if (!friendships || friendships.length === 0) {
+        console.log("ℹ️ UserAPI.getFriends: No friends found (this is normal for new users)");
         return { friends: [], error: null };
       }
 
@@ -335,10 +447,12 @@ export class UserAPI {
         is_online: false // We'll implement online status later
       }));
 
+      console.log("✅ UserAPI.getFriends: Successfully loaded", friends.length, "friends");
       return { friends, error: null };
 
     } catch (error) {
-      return { friends: [], error: 'An unexpected error occurred while getting friends' };
+      console.error("💥 UserAPI.getFriends: Exception:", error);
+      return { friends: [], error: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}` };
     }
   }
 

@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
 import React, {
   useCallback,
@@ -96,11 +95,13 @@ export default function CommunityScreen() {
   const [reportingPost, setReportingPost] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [forceRender, setForceRender] = useState(0); // Add this to force re-renders
+  const [postsLoaded, setPostsLoaded] = useState(false); // Track if posts have been loaded at least once
 
   // Refs to track loading operations and prevent duplicates
   const isLoadingPostsRef = useRef(false);
   const isLoadingFriendRequestsRef = useRef(false);
   const isLoadingFriendsRef = useRef(false);
+  const hasInitialLoadAttempted = useRef(false); // Track if we've attempted initial load
 
   // Memoize filtered posts to prevent excessive filtering on every render
   const visiblePosts = useMemo(() => {
@@ -236,19 +237,23 @@ export default function CommunityScreen() {
     );
   };
 
-  // Load friends when component mounts and user is available (optimized)
+  // Load initial data when component mounts and user is available (like horses screen)
   useEffect(() => {
-    console.log("🎯 Initial data useEffect triggered, user?.id:", !!user?.id);
-    if (user?.id) {
-      // Use a flag to prevent multiple simultaneous loads
-      let isMounted = true;
+    console.log(
+      "🎯 Initial data useEffect triggered, user?.id:",
+      !!user?.id,
+      "hasInitialLoadAttempted:",
+      hasInitialLoadAttempted.current
+    );
+
+    if (user?.id && !hasInitialLoadAttempted.current) {
+      hasInitialLoadAttempted.current = true;
+
+      console.log("🚀 Starting initial data load...");
 
       const loadInitialData = async () => {
-        if (!isMounted) return;
-
-        console.log("🚀 Starting initial data load...");
         try {
-          // Load data in parallel for better performance
+          // Load all data in parallel - similar to horses screen
           await Promise.all([
             loadFriends(),
             loadFriendRequests(),
@@ -262,12 +267,8 @@ export default function CommunityScreen() {
       };
 
       loadInitialData();
-
-      return () => {
-        isMounted = false;
-      };
     }
-  }, [user?.id]); // Remove other dependencies to prevent multiple calls
+  }, [user?.id]); // Only depend on user?.id - like horses screen
 
   // Setup push notifications
   useEffect(() => {
@@ -336,22 +337,21 @@ export default function CommunityScreen() {
   // Load posts from database
   const loadPosts = useCallback(async () => {
     console.log(
-      "🔄 loadPosts called, ref:",
-      isLoadingPostsRef.current,
-      "state:",
+      "🔄 loadPosts called, state:",
       isLoadingPosts,
+      "ref state:",
+      isLoadingPostsRef.current,
       "user.id:",
       user?.id
     );
 
-    // Prevent concurrent calls using ref (more reliable than state)
+    // Prevent multiple simultaneous calls
     if (isLoadingPostsRef.current) {
-      console.log("⚠️ Posts already loading (ref check), skipping...");
+      console.log("🔄 loadPosts: Already loading, skipping duplicate call");
       return;
     }
 
     isLoadingPostsRef.current = true;
-
     console.log("🚀 Setting isLoadingPosts to true...");
     setIsLoadingPosts(true);
 
@@ -421,6 +421,7 @@ export default function CommunityScreen() {
 
       console.log("📝 Setting posts, count:", allPosts.length);
       setPosts(allPosts);
+      setPostsLoaded(true); // Mark posts as loaded for the session
       console.log("✅ Posts set successfully");
     } catch (error) {
       console.error("Error loading posts:", error);
@@ -428,8 +429,8 @@ export default function CommunityScreen() {
       setPosts([]);
     } finally {
       console.log("🏁 loadPosts complete, resetting loading flags");
-      setIsLoadingPosts(false);
       isLoadingPostsRef.current = false;
+      setIsLoadingPosts(false);
     }
   }, [user?.id]);
 
@@ -442,16 +443,15 @@ export default function CommunityScreen() {
       return;
     }
 
-    // Prevent concurrent calls using ref
+    // Prevent multiple simultaneous calls
     if (isLoadingFriendRequestsRef.current) {
       console.log(
-        "⚠️ Friend requests already loading (ref check), skipping..."
+        "🔄 loadFriendRequests: Already loading, skipping duplicate call"
       );
       return;
     }
 
     isLoadingFriendRequestsRef.current = true;
-
     setIsLoadingRequests(true);
 
     try {
@@ -480,7 +480,7 @@ export default function CommunityScreen() {
       );
 
       if (friendRequestsList.length === 0) {
-        console.log("� No pending friend requests found");
+        console.log("📭 No pending friend requests found");
       }
       setFriendRequests(friendRequestsList);
       setNotificationCount(friendRequestsList.length);
@@ -489,8 +489,8 @@ export default function CommunityScreen() {
       setFriendRequests([]);
       setNotificationCount(0);
     } finally {
-      setIsLoadingRequests(false);
       isLoadingFriendRequestsRef.current = false;
+      setIsLoadingRequests(false);
     }
   }, [user?.id]);
 
@@ -702,51 +702,59 @@ export default function CommunityScreen() {
       return;
     }
 
-    // Prevent concurrent calls using ref
+    // Prevent multiple simultaneous calls
     if (isLoadingFriendsRef.current) {
-      console.log("⚠️ Friends already loading (ref check), skipping...");
+      console.log("🔄 loadFriends: Already loading, skipping duplicate call");
       return;
     }
 
     isLoadingFriendsRef.current = true;
-
     setIsLoadingFriends(true);
 
     try {
-      // Temporary fix: Just set empty state immediately
-      // TODO: Re-enable API call once connection issues are resolved
-      setTimeout(() => {
-        setFriends([]);
-        setIsLoadingFriends(false);
-        isLoadingFriendsRef.current = false;
-      }, 500); // Small delay to show it's working
-
-      /*
-      // Original API call - commented out temporarily
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
-          reject(new Error("Loading friends timed out after 10 seconds"));
-        }, 10000);
+          reject(new Error("Loading friends timed out after 20 seconds"));
+        }, 20000); // Increased from 10 to 20 seconds
       });
 
-      const { friends: userFriends, error } = await Promise.race([
+      const { friends: userFriends, error } = (await Promise.race([
         UserAPI.getFriends(user.id),
         timeoutPromise,
-      ]) as { friends: UserSearchResult[]; error: string | null };
+      ])) as { friends: UserSearchResult[]; error: string | null };
 
       if (error) {
-        Alert.alert("Error", "Failed to load friends");
+        console.error("❌ Error loading friends:", error);
+        // Don't show alert for expected database issues - just log them
+        // Only show alert for unexpected errors that users need to know about
+        if (
+          !error.includes("Database error") &&
+          !error.includes("Failed to get friends")
+        ) {
+          Alert.alert("Error", "Failed to load friends");
+        }
         setFriends([]);
         return;
       }
 
+      console.log("✅ Friends loaded successfully:", userFriends?.length || 0);
       setFriends(userFriends || []);
-      */
     } catch (error) {
-      console.error("Error loading friends:", error);
+      console.error("💥 Exception loading friends:", error);
+      // Only show alert for timeout errors or unexpected exceptions
+      if (error instanceof Error && error.message.includes("timed out")) {
+        Alert.alert(
+          "Timeout",
+          "Loading friends took too long. Please try again."
+        );
+      } else {
+        console.log("🔍 Friends loading failed silently:", error);
+        // Don't show alert for database connection issues - fail silently
+      }
       setFriends([]);
-      setIsLoadingFriends(false);
+    } finally {
       isLoadingFriendsRef.current = false;
+      setIsLoadingFriends(false);
     }
   }, [user?.id]);
 
@@ -757,6 +765,14 @@ export default function CommunityScreen() {
     setRefreshing(true);
 
     try {
+      // Reset all loading refs to allow fresh calls
+      isLoadingFriendsRef.current = false;
+      isLoadingFriendRequestsRef.current = false;
+      isLoadingPostsRef.current = false;
+
+      // Reset posts loaded flag to ensure fresh data on refresh
+      setPostsLoaded(false);
+
       // Run all loading functions in parallel for faster refresh
       await Promise.all([
         loadFriendRequests(),
@@ -774,35 +790,6 @@ export default function CommunityScreen() {
       setRefreshing(false);
     }
   }, [user?.id]); // Remove function dependencies to prevent excessive re-creation
-
-  // Refresh all data when screen is focused (optimized to prevent duplicate calls)
-  useFocusEffect(
-    useCallback(() => {
-      // Only run on focus if we don't have data and we're not currently loading
-      if (!user?.id) return;
-
-      // Add a small delay to prevent conflict with initial data loading
-      const timeoutId = setTimeout(() => {
-        // Only reload if we actually need data and nothing is loading
-        if (friends.length === 0 && !isLoadingFriends) {
-          loadFriends();
-        }
-        // Only reload friend requests if we have none and aren't already loading
-        if (friendRequests.length === 0 && !isLoadingRequests) {
-          loadFriendRequests();
-        }
-        if (hiddenPostIds.length === 0) {
-          loadHiddenPosts();
-        }
-        // Only reload posts if we have none and aren't already loading
-        if (posts.length === 0 && !isLoadingPosts) {
-          loadPosts();
-        }
-      }, 200); // Slightly longer delay to ensure initial load completes
-
-      return () => clearTimeout(timeoutId);
-    }, [user?.id]) // Remove other dependencies to prevent excessive re-runs
-  );
 
   // Search for users with manual trigger
   const handleSearchInput = (query: string) => {
@@ -897,7 +884,7 @@ export default function CommunityScreen() {
       try {
         // Get secure configuration for URL
         const config = getSupabaseConfig();
-        
+
         // Supabase stores session data under this key format
         const supabaseSessionKey = `sb-${
           config.url.split("//")[1].split(".")[0]
@@ -956,7 +943,7 @@ export default function CommunityScreen() {
         try {
           // Get the initialized Supabase client
           const supabase = getSupabase();
-          
+
           // Try multiple approaches to get the session
           const approaches = [
             // Approach 1: Quick session call
@@ -1379,6 +1366,10 @@ export default function CommunityScreen() {
   };
 
   const renderSearchResult = ({ item }: { item: UserSearchResult }) => {
+    // Check if this user is in our friends list or marked as friend in API response
+    const isFriend =
+      friends.some((friend) => friend.id === item.id) || item.is_friend;
+
     return (
       <View
         key={item.id}
@@ -1409,7 +1400,7 @@ export default function CommunityScreen() {
             )}
           </View>
         </View>
-        {!item.is_friend && (
+        {!isFriend && (
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: theme.primary }]}
             onPress={() => handleAddFriend(item)}
@@ -1417,14 +1408,17 @@ export default function CommunityScreen() {
             <Text style={styles.addButtonText}>Add Friend</Text>
           </TouchableOpacity>
         )}
-        {item.is_friend && (
+        {isFriend && (
           <View
-            style={[styles.friendBadge, { backgroundColor: theme.surface }]}
+            style={[
+              styles.friendBadge,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
           >
             <Text
               style={[styles.friendBadgeText, { color: theme.textSecondary }]}
             >
-              Friends
+              Friend
             </Text>
           </View>
         )}
@@ -2062,14 +2056,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F9FA",
     marginBottom: 15,
     borderRadius: 25,
-    width: "90%",
+    width: "92%",
     alignSelf: "center",
     padding: 5,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",

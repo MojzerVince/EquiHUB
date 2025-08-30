@@ -1,6 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useDialog } from "@/contexts/DialogContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
+import { AuthAPI } from "@/lib/authAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
@@ -31,6 +32,7 @@ const OptionsScreen = () => {
   // Settings state
   const [notifications, setNotifications] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   // Load hidden posts when component mounts
   useEffect(() => {
@@ -148,13 +150,80 @@ const OptionsScreen = () => {
   };
 
   const handleDeleteAccount = () => {
-    showConfirm(
+    if (isDeletingAccount) {
+      return; // Prevent multiple deletion attempts
+    }
+
+    Alert.alert(
       "Delete Account",
-      "This action cannot be undone. Are you sure you want to delete your account?",
-      () => {
-        // Handle account deletion logic here
-        console.log("Account deletion requested");
-      }
+      "⚠️ This action cannot be undone!\n\nDeleting your account will permanently remove:\n• Your profile and settings\n• All your horses and training data\n• Community posts and interactions\n• Photos and media uploads\n• Friend connections\n\nAre you absolutely sure you want to continue?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete Forever",
+          style: "destructive",
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              "Final Confirmation",
+              "This is your last chance to cancel.\n\nOnce deleted, your account cannot be recovered.",
+              [
+                {
+                  text: "Cancel",
+                  style: "cancel",
+                },
+                {
+                  text: "DELETE ACCOUNT",
+                  style: "destructive",
+                  onPress: async () => {
+                    setIsDeletingAccount(true);
+
+                    try {
+                      console.log("Starting account deletion process...");
+
+                      const { success, error } = await AuthAPI.deleteAccount();
+
+                      if (success) {
+                        Alert.alert(
+                          "Account Deleted",
+                          "Your account has been permanently deleted. Thank you for using EquiHUB.",
+                          [
+                            {
+                              text: "OK",
+                              onPress: () => {
+                                // The AuthContext will handle navigation automatically when user state clears
+                                console.log(
+                                  "Account deletion completed successfully"
+                                );
+                              },
+                            },
+                          ],
+                          { cancelable: false }
+                        );
+                      } else {
+                        showError(
+                          error ||
+                            "Failed to delete account. Please try again or contact support."
+                        );
+                      }
+                    } catch (error) {
+                      console.error("Account deletion error:", error);
+                      showError(
+                        "An unexpected error occurred. Please try again or contact support."
+                      );
+                    } finally {
+                      setIsDeletingAccount(false);
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
     );
   };
 
@@ -345,29 +414,44 @@ const OptionsScreen = () => {
     onPress,
     style,
     textStyle,
+    disabled = false,
+    showLoading = false,
   }: {
     title: string;
     onPress: () => void;
     style?: any;
     textStyle?: any;
+    disabled?: boolean;
+    showLoading?: boolean;
   }) => (
     <TouchableOpacity
       style={[
         styles.actionButton,
         { borderBottomColor: currentTheme.colors.accent },
         style,
+        disabled && styles.disabledButton,
       ]}
       onPress={onPress}
+      disabled={disabled}
     >
-      <Text
-        style={[
-          styles.actionButtonText,
-          { color: currentTheme.colors.text },
-          textStyle,
-        ]}
-      >
-        {title}
-      </Text>
+      <View style={styles.actionButtonContent}>
+        {showLoading && (
+          <ActivityIndicator
+            size="small"
+            color="#fff"
+            style={styles.actionButtonLoader}
+          />
+        )}
+        <Text
+          style={[
+            styles.actionButtonText,
+            { color: currentTheme.colors.text },
+            textStyle,
+          ]}
+        >
+          {title}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 
@@ -622,11 +706,19 @@ const OptionsScreen = () => {
                 textStyle={styles.logoutButtonText}
               />
               <ActionButton
-                title="Delete Account"
+                title={
+                  isDeletingAccount ? "Deleting Account..." : "Delete Account"
+                }
                 onPress={handleDeleteAccount}
+                disabled={isDeletingAccount}
+                showLoading={isDeletingAccount}
                 style={[
                   styles.deleteButton,
-                  { backgroundColor: currentTheme.colors.error },
+                  {
+                    backgroundColor: isDeletingAccount
+                      ? currentTheme.colors.textSecondary
+                      : currentTheme.colors.error,
+                  },
                 ]}
                 textStyle={styles.deleteButtonText}
               />
@@ -926,11 +1018,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#C5D9D1",
   },
+  actionButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionButtonLoader: {
+    marginRight: 8,
+  },
   actionButtonText: {
     fontSize: 16,
     color: "#335C67",
     fontFamily: "Inder",
     fontWeight: "500",
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   logoutButton: {
     backgroundColor: "#FF9800",

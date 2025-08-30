@@ -64,6 +64,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Mark user as having used the app whenever they successfully authenticate
         await SessionManager.markUserAsUsedApp();
         setHasUserData(true);
+        // Set loading to false immediately so ProtectedRoute can navigate
+        setLoading(false);
         // Refresh session if needed
         await SessionManager.refreshSessionIfNeeded();
       } else if (event === "SIGNED_OUT") {
@@ -71,10 +73,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Clear session data on logout
         await SessionManager.clearSessionData();
         setHasUserData(false);
+        setLoading(false);
       }
       // For INITIAL_SESSION, we rely on our REST API getInitialSession call
-
-      setLoading(false);
+      // Note: setLoading(false) is now handled in each event branch above
     });
 
     return () => {
