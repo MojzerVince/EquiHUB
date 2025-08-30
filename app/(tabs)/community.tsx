@@ -33,6 +33,7 @@ import {
   handleNotificationResponse,
 } from "../../lib/notificationService";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
+import { SimpleStableAPI, UserWithStable } from "../../lib/simpleStableAPI";
 import { getSupabase, getSupabaseConfig } from "../../lib/supabase";
 import { UserAPI, UserSearchResult } from "../../lib/userAPI";
 
@@ -191,53 +192,45 @@ export default function CommunityScreen() {
     },
   ];
 
-  // Friend suggestions data
-  const suggestedFriends: User[] = [
-    {
-      id: "suggestion1",
-      name: "Emma Johnson",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b612b188?w=150",
-      isOnline: true,
-      isFriend: false,
-    },
-    {
-      id: "suggestion2",
-      name: "Michael Chen",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-      isOnline: false,
-      isFriend: false,
-    },
-    {
-      id: "suggestion3",
-      name: "Sarah Williams",
-      avatar:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
-      isOnline: true,
-      isFriend: false,
-    },
-    {
-      id: "suggestion4",
-      name: "James Rodriguez",
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
-      isOnline: false,
-      isFriend: false,
-    },
-  ];
+  const [stableMates, setStableMates] = useState<UserWithStable[]>([]);
+  const [loadingStableMates, setLoadingStableMates] = useState(false);
+  const [addingFriends, setAddingFriends] = useState<Set<string>>(new Set());
 
-  // State for tracking added suggestions
-  const [addedSuggestions, setAddedSuggestions] = useState<string[]>([]);
+  // Load stable mates for friend suggestions
+  const loadStableMates = useCallback(async () => {
+    if (!user?.id) {
+      setStableMates([]);
+      return;
+    }
 
-  // Handle adding suggested friends
-  const handleAddSuggestedFriend = (friend: User) => {
-    setAddedSuggestions((prev) => [...prev, friend.id]);
-    Alert.alert(
-      "Friend Request Sent",
-      `Friend request sent to ${friend.name}!`
-    );
-  };
+    setLoadingStableMates(true);
+    try {
+      const { users, error } =
+        await SimpleStableAPI.getStableMatesForSuggestions(user.id);
+
+      if (error) {
+        console.error("Error loading stable mates:", error);
+        setStableMates([]);
+      } else {
+        // Filter out users who are already friends
+        const currentUserFriendsResponse = await UserAPI.getFriends(user.id);
+        const currentUserFriendIds = new Set(
+          currentUserFriendsResponse.friends?.map((f) => f.id) || []
+        );
+
+        const unfriendedStableMates = users.filter(
+          (mate) => !currentUserFriendIds.has(mate.id)
+        );
+
+        setStableMates(unfriendedStableMates);
+      }
+    } catch (error) {
+      console.error("Exception loading stable mates:", error);
+      setStableMates([]);
+    } finally {
+      setLoadingStableMates(false);
+    }
+  }, [user?.id]);
 
   // Load initial data when component mounts and user is available (like horses screen)
   useEffect(() => {
@@ -261,6 +254,7 @@ export default function CommunityScreen() {
             loadFriendRequests(),
             loadHiddenPosts(),
             loadPosts(),
+            loadStableMates(),
           ]);
           console.log("✅ Initial data load complete");
         } catch (error) {
@@ -781,6 +775,7 @@ export default function CommunityScreen() {
         loadFriends(),
         loadHiddenPosts(),
         loadPosts(), // Always refresh posts on manual pull-to-refresh
+        loadStableMates(),
       ]);
     } catch (error) {
       console.error("Error refreshing community data:", error);
@@ -1321,8 +1316,8 @@ export default function CommunityScreen() {
     </View>
   );
 
-  const renderSuggestedFriend = ({ item }: { item: User }) => {
-    const isAdded = addedSuggestions.includes(item.id);
+  const renderStableMate = ({ item }: { item: UserWithStable }) => {
+    const isAddingFriend = addingFriends.has(item.id);
 
     return (
       <TouchableOpacity
@@ -1337,42 +1332,66 @@ export default function CommunityScreen() {
       >
         <View style={styles.userInfo}>
           <View style={styles.avatarContainer}>
-            <Image source={{ uri: item.avatar }} style={styles.avatar} />
-            {item.isOnline && <View style={styles.onlineIndicator} />}
+            <Image
+              source={{ uri: getAvatarUrl(item.profile_image_url) }}
+              style={styles.avatar}
+            />
+            {item.is_online && <View style={styles.onlineIndicator} />}
           </View>
           <View style={styles.userDetails}>
             <Text style={[styles.userName, { color: theme.text }]}>
               {item.name}
             </Text>
             <Text style={[styles.userAge, { color: theme.textSecondary }]}>
-              {item.isOnline ? "Online" : "Offline"}
+              Age: {item.age}
             </Text>
+            {item.stable_name && (
+              <Text style={[styles.stableInfo, { color: theme.primary }]}>
+                🏇 {item.stable_name}
+              </Text>
+            )}
+            {item.description && (
+              <Text
+                style={[styles.userDescription, { color: theme.textSecondary }]}
+                numberOfLines={1}
+              >
+                {item.description}
+              </Text>
+            )}
           </View>
         </View>
-        {!isAdded ? (
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: theme.primary }]}
-            onPress={(e) => {
-              e.stopPropagation(); // Prevent navigation when pressing add friend button
-              handleAddSuggestedFriend(item);
-            }}
-          >
+        <TouchableOpacity
+          style={[
+            styles.addButton,
+            {
+              backgroundColor: isAddingFriend
+                ? theme.textSecondary
+                : theme.primary,
+              opacity: isAddingFriend ? 0.7 : 1,
+            },
+          ]}
+          onPress={(e) => {
+            e.stopPropagation();
+            // Convert UserWithStable to UserSearchResult format for handleAddFriend
+            const userSearchResult: UserSearchResult = {
+              id: item.id,
+              name: item.name,
+              age: item.age,
+              profile_image_url: item.profile_image_url,
+              description: item.description || "",
+              is_online: item.is_online || false,
+              is_friend: false,
+            };
+            handleAddFriend(userSearchResult);
+          }}
+          disabled={isAddingFriend}
+        >
+          {isAddingFriend ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
             <Text style={styles.addButtonText}>Add Friend</Text>
-          </TouchableOpacity>
-        ) : (
-          <View
-            style={[
-              styles.friendBadge,
-              { backgroundColor: theme.surface, borderColor: theme.border },
-            ]}
-          >
-            <Text
-              style={[styles.friendBadgeText, { color: theme.textSecondary }]}
-            >
-              Request Sent
-            </Text>
-          </View>
-        )}
+          )}
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -1639,15 +1658,36 @@ export default function CommunityScreen() {
             {/* Friend Suggestions Section */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Friend Suggestions
+                Friend Suggestions from Your Stable
               </Text>
-              <FlatList
-                data={suggestedFriends}
-                renderItem={renderSuggestedFriend}
-                keyExtractor={(item: User) => item.id}
-                scrollEnabled={false}
-                showsVerticalScrollIndicator={false}
-              />
+              {loadingStableMates ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={theme.primary} />
+                  <Text
+                    style={[styles.loadingText, { color: theme.textSecondary }]}
+                  >
+                    Loading stable mates...
+                  </Text>
+                </View>
+              ) : stableMates.length > 0 ? (
+                <FlatList
+                  data={stableMates}
+                  renderItem={renderStableMate}
+                  keyExtractor={(item: UserWithStable) => item.id}
+                  scrollEnabled={false}
+                  showsVerticalScrollIndicator={false}
+                />
+              ) : (
+                <View style={styles.noResultsContainer}>
+                  <Text
+                    style={[styles.emptyText, { color: theme.textSecondary }]}
+                  >
+                    {user
+                      ? "No suggestions available. Join a stable during registration to find stable mates!"
+                      : "Login to see friend suggestions"}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Search Section */}
@@ -2634,5 +2674,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: "transparent",
     zIndex: 5,
+  },
+  // Additional styles for stable mates
+  stableInfo: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: "center",
+    fontStyle: "italic",
   },
 });

@@ -1,4 +1,4 @@
-import StableSelection from "@/components/StableSelection";
+import SimpleStableSelection from "@/components/SimpleStableSelection";
 import { useDialog } from "@/contexts/DialogContext";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthAPI, RegisterData } from "../lib/authAPI";
-import { StableWithMemberInfo } from "../lib/stableAPI";
+import { SimpleStable, SimpleStableAPI } from "../lib/simpleStableAPI";
 
 const RegisterScreen = () => {
   const router = useRouter();
@@ -38,9 +38,10 @@ const RegisterScreen = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Stable selection state
-  const [selectedStable, setSelectedStable] =
-    useState<StableWithMemberInfo | null>(null);
-  const [stableJoinCode, setStableJoinCode] = useState("");
+  const [selectedStable, setSelectedStable] = useState<SimpleStable | null>(
+    null
+  );
+  const [newStableData, setNewStableData] = useState<any>(null);
   const [showStableSelection, setShowStableSelection] = useState(false);
 
   // Form validation
@@ -112,14 +113,8 @@ const RegisterScreen = () => {
     setErrors({});
 
     try {
-      // Prepare registration data with stable information
-      const registrationData: RegisterData = {
-        ...formData,
-        stable_id: selectedStable?.id,
-        stable_join_code: stableJoinCode || undefined,
-      };
-
-      const { user, error } = await AuthAPI.register(registrationData);
+      // First, register the user
+      const { user, error } = await AuthAPI.register(formData);
 
       if (error) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -128,15 +123,43 @@ const RegisterScreen = () => {
       }
 
       if (user) {
+        // Handle stable membership after successful registration
+        try {
+          if (newStableData) {
+            // Create new stable
+            const createResult = await SimpleStableAPI.createStable({
+              ...newStableData,
+              creator_id: user.id,
+            });
+
+            if (createResult.error) {
+              console.error("Error creating stable:", createResult.error);
+            }
+          } else if (selectedStable) {
+            // Join existing stable
+            const joinResult = await SimpleStableAPI.joinStable(
+              selectedStable.id,
+              user.id
+            );
+
+            if (joinResult.error) {
+              console.error("Error joining stable:", joinResult.error);
+            }
+          }
+        } catch (error) {
+          console.error("Error handling stable membership:", error);
+          // Don't fail registration for stable errors
+        }
+
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         let successMessage =
           "Your account has been created successfully. Please check your email to verify your account before logging in. Once logged in, you'll stay signed in automatically on this device.";
 
-        if (selectedStable) {
-          successMessage += `\n\nYou have been added to ${selectedStable.name}!`;
-        } else if (stableJoinCode) {
-          successMessage += "\n\nYou have been added to the stable!";
+        if (newStableData) {
+          successMessage += `\n\nYou have created and joined ${newStableData.name}!`;
+        } else if (selectedStable) {
+          successMessage += `\n\nYou have joined ${selectedStable.name}!`;
         }
 
         showConfirm("Registration Successful!", successMessage, () =>
@@ -171,11 +194,12 @@ const RegisterScreen = () => {
   };
 
   const handleStableSelection = (
-    stable: StableWithMemberInfo | null,
-    joinCode?: string
+    stable: SimpleStable | null,
+    isNewStable?: boolean,
+    stableData?: any
   ) => {
     setSelectedStable(stable);
-    setStableJoinCode(joinCode || "");
+    setNewStableData(isNewStable ? stableData : null);
   };
 
   const handleTermsPress = (type: "terms" | "privacy") => {
@@ -445,15 +469,20 @@ const RegisterScreen = () => {
                     <Text style={styles.changeStableButtonText}>Change</Text>
                   </TouchableOpacity>
                 </View>
-              ) : stableJoinCode ? (
+              ) : newStableData ? (
                 <View style={styles.selectedStableContainer}>
                   <View style={styles.selectedStableInfo}>
                     <Text style={styles.selectedStableName}>
-                      Join Code: {stableJoinCode}
+                      {newStableData.name}
                     </Text>
                     <Text style={styles.selectedStableLocation}>
-                      You'll join this stable after registration
+                      New stable - you'll be the owner
                     </Text>
+                    {newStableData.city && newStableData.state_province && (
+                      <Text style={styles.selectedStableMembers}>
+                        {newStableData.city}, {newStableData.state_province}
+                      </Text>
+                    )}
                   </View>
                   <TouchableOpacity
                     style={styles.changeStableButton}
@@ -534,7 +563,7 @@ const RegisterScreen = () => {
       </SafeAreaView>
 
       {/* Stable Selection Modal */}
-      <StableSelection
+      <SimpleStableSelection
         visible={showStableSelection}
         onClose={() => setShowStableSelection(false)}
         onSelect={handleStableSelection}

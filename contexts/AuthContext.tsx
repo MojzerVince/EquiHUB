@@ -203,9 +203,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log("Signing out user");
       // Clear user state immediately to trigger navigation
       setUser(null);
-
+      
       // Clear session data first before signOut
       await clearStoredCredentials();
+      
+      // Explicitly set hasUserData to false to ensure welcome page redirect
+      setHasUserData(false);
 
       const supabase = getSupabase();
       const { error } = await supabase.auth.signOut();
