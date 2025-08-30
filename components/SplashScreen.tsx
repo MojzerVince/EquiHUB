@@ -1,18 +1,17 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef, useState } from 'react';
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Animated,
-    Dimensions,
-    Image,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Image,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -20,10 +19,10 @@ interface SplashScreenProps {
   user?: any;
 }
 
-const SplashScreen: React.FC<SplashScreenProps> = ({ 
-  onFinish, 
-  loading = false, 
-  user = null
+const SplashScreen: React.FC<SplashScreenProps> = ({
+  onFinish,
+  loading = false,
+  user = null,
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -86,7 +85,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
 
   return (
     <LinearGradient
-      colors={['#F60E5C', '#F99471', '#F60E5C']}
+      colors={["#F60E5C", "#F99471", "#F60E5C"]}
       style={styles.container}
     >
       <StatusBar barStyle="light-content" backgroundColor="#F60E5C" />
@@ -101,7 +100,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
       >
         <View style={styles.logoIcon}>
           <Image
-            source={require('../assets/icons/1024x 1024-02.png')}
+            source={require("../assets/icons/1024x 1024-02.png")}
             style={styles.logoImage}
             resizeMode="contain"
           />
@@ -109,13 +108,19 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
         <Text style={styles.appName}>EquiHUB</Text>
         <Text style={styles.tagline}>Track Your Equestrian Journey</Text>
       </Animated.View>
-      
+
       {/* Loading indicator and controls */}
-      <Animated.View style={[styles.loadingContainer, { opacity: loadingOpacity }]}>
-        <ActivityIndicator size="large" color="#FFFFFF" style={styles.loadingSpinner} />
+      <Animated.View
+        style={[styles.loadingContainer, { opacity: loadingOpacity }]}
+      >
+        <ActivityIndicator
+          size="large"
+          color="#FFFFFF"
+          style={styles.loadingSpinner}
+        />
         <Text style={styles.loadingText}>Loading EquiHUB...</Text>
       </Animated.View>
-      
+
       <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
         <Text style={styles.footerText}>Powered by Innovation</Text>
       </Animated.View>
@@ -126,24 +131,24 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   logoIcon: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    overflow: 'hidden',
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    overflow: "hidden",
   },
   logoImage: {
     width: 100,
@@ -151,42 +156,42 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 36,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
     marginBottom: 8,
     letterSpacing: 2,
   },
   tagline: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontFamily: 'Inder',
-    textAlign: 'center',
+    color: "rgba(255, 255, 255, 0.8)",
+    fontFamily: "Inder",
+    textAlign: "center",
     marginTop: 8,
   },
   footer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 50,
-    alignItems: 'center',
+    alignItems: "center",
   },
   footerText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontFamily: 'Inder',
+    color: "rgba(255, 255, 255, 0.6)",
+    fontFamily: "Inder",
   },
   loadingContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 120,
-    alignItems: 'center',
-    width: '100%',
+    alignItems: "center",
+    width: "100%",
   },
   loadingSpinner: {
     marginBottom: 16,
   },
   loadingText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontFamily: 'Inder',
+    color: "rgba(255, 255, 255, 0.9)",
+    fontFamily: "Inder",
     marginBottom: 20,
   },
 });
