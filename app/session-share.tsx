@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as FileSystem from "expo-file-system";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +16,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import MapView, { Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { captureRef } from "react-native-view-shot";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { CommunityAPI } from "../lib/communityAPI";
@@ -34,6 +37,14 @@ interface MediaItem {
   };
 }
 
+interface TrackingPoint {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+  accuracy?: number;
+  speed?: number;
+}
+
 interface TrainingSession {
   id: string;
   userId: string;
@@ -47,6 +58,7 @@ interface TrainingSession {
   averageSpeed?: number;
   maxSpeed?: number;
   media?: MediaItem[]; // Photos and videos taken during session
+  trackingPoints?: TrackingPoint[]; // GPS tracking data
 }
 
 interface Horse {
@@ -69,6 +81,10 @@ export default function SessionShareScreen() {
 
   // Add initialization guard to prevent multiple renders
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Ref for capturing map view
+  const mapViewRef = useRef<View>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   // Get sessionId from params - this is the key piece of data we need
   const sessionId = Array.isArray(params.sessionId)
@@ -169,6 +185,41 @@ export default function SessionShareScreen() {
     } else {
       return `${remainingSeconds}s`;
     }
+  };
+
+  // Get map region from tracking points
+  const getMapRegion = () => {
+    if (!session?.trackingPoints || session.trackingPoints.length === 0) {
+      // Default region (you can adjust this to your preferred location)
+      return {
+        latitude: 37.78825,
+        longitude: -122.4324,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      };
+    }
+
+    const points = session.trackingPoints;
+    const latitudes = points.map(p => p.latitude);
+    const longitudes = points.map(p => p.longitude);
+    
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLng = Math.min(...longitudes);
+    const maxLng = Math.max(...longitudes);
+    
+    const centerLat = (minLat + maxLat) / 2;
+    const centerLng = (minLng + maxLng) / 2;
+    
+    const latDelta = Math.max(maxLat - minLat, 0.01) * 1.3; // Add padding
+    const lngDelta = Math.max(maxLng - minLng, 0.01) * 1.3; // Add padding
+    
+    return {
+      latitude: centerLat,
+      longitude: centerLng,
+      latitudeDelta: latDelta,
+      longitudeDelta: lngDelta,
+    };
   };
 
   // Get media items from session - filter to only photos
@@ -369,47 +420,82 @@ export default function SessionShareScreen() {
         return;
       }
 
-      // Get the best available image for Instagram story
-      let imageUri: string | null = null;
-
-      // Priority: Selected session media > Horse profile image
-      if (selectedMedia) {
-        const selectedMediaItem = mediaItems.find((item) => item.id === selectedMedia);
-        if (selectedMediaItem?.uri) {
-          imageUri = selectedMediaItem.uri;
-        }
-      } else if (horse?.image_url) {
-        imageUri = horse.image_url;
-      }
-
-      if (!imageUri) {
-        Alert.alert(
-          "No Image Available",
-          "Please select a photo from your session media or make sure your horse has a profile image to share to Instagram Story."
-        );
+      // Check if we have session data
+      if (!session) {
+        Alert.alert("Error", "Session data not available for sharing.");
         return;
       }
 
-      // Share to Instagram Stories (the image will be shared, stats can be added manually)
-      await Sharing.shareAsync(imageUri, {
-        mimeType: 'image/jpeg',
-        dialogTitle: 'Share to Instagram Story',
-        UTI: 'public.jpeg',
-      });
+      console.log('Creating map view for Instagram sharing...');
+      
+      // Check if map view ref is available
+      if (!mapViewRef.current) {
+        Alert.alert("Error", "Map view not ready. Please try again in a moment.");
+        return;
+      }
 
-      // Show success message with copyable stats
-      const sessionStats = `🐴 ${session?.horseName || 'Training Session'}\n` +
-        `⏱️ ${session?.duration ? formatDuration(session.duration) : 'Unknown'}\n` +
-        `📍 ${session?.distance ? `${(session.distance / 1000).toFixed(1)} km` : 'Unknown'}\n` +
-        `🏃 ${session?.averageSpeed ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h` : 'Unknown'}`;
+      // Wait a moment for the view to be fully rendered
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      Alert.alert(
-        "Shared Successfully! 📱",
-        `Image shared to Instagram! You can copy these stats to add to your story:\n\n${sessionStats}`,
-        [
-          { text: "OK", style: "default" }
-        ]
-      );
+      try {
+        console.log('Attempting to capture map view...');
+        
+        // Capture the map view as an image with explicit options
+        const imageUri = await captureRef(mapViewRef.current, {
+          format: 'jpg',
+          quality: 0.9,
+          result: 'tmpfile',
+          height: width * 16 / 9, // Instagram story aspect ratio
+          width: width,
+        });
+
+        console.log('Map view captured successfully:', imageUri);
+
+        // Share the captured image
+        await Sharing.shareAsync(imageUri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Share to Instagram Story',
+          UTI: 'public.jpeg',
+        });
+
+        // Show success message with copyable stats
+        const sessionStats = `🐴 ${session?.horseName || 'Training Session'}\n` +
+          `⏱️ ${session?.duration ? formatDuration(session.duration) : 'Unknown'}\n` +
+          `📍 ${session?.distance ? `${(session.distance / 1000).toFixed(1)} km` : 'Unknown'}\n` +
+          `🏃 ${session?.averageSpeed ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h` : 'Unknown'}`;
+
+        Alert.alert(
+          "Shared Successfully! 📱",
+          `Map shared to Instagram! You can copy these stats to add to your story:\n\n${sessionStats}`,
+          [
+            { text: "OK", style: "default" }
+          ]
+        );
+
+        // Clean up the temporary file
+        try {
+          await FileSystem.deleteAsync(imageUri, { idempotent: true });
+          console.log('Temporary map image cleaned up');
+        } catch (cleanupError) {
+          console.warn('Failed to clean up temporary map file:', cleanupError);
+        }
+
+      } catch (captureError) {
+        console.error('Error capturing map view:', captureError);
+        
+        // Provide more specific error message
+        const errorMessage = captureError instanceof Error ? captureError.message : 'Unknown error';
+        
+        if (errorMessage.includes('reactTag') || errorMessage.includes('No view found')) {
+          Alert.alert(
+            "Capture Failed", 
+            "The map view is not ready for capture. Please scroll down to see the map preview, then try again."
+          );
+        } else {
+          Alert.alert("Capture Failed", "Failed to create map image. Please try again.");
+        }
+        return;
+      }
 
     } catch (error) {
       console.error("Error sharing to Instagram Story:", error);
@@ -671,6 +757,135 @@ export default function SessionShareScreen() {
             />
           )}
         </View>
+
+        {/* Map View for Instagram Story Capture */}
+        <View style={styles.mapContainer}>
+          <View style={styles.mapTitleContainer}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Instagram Story Preview</Text>
+            {mapReady && (
+              <View style={[styles.readyIndicator, { backgroundColor: theme.success }]}>
+                <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+                <Text style={[styles.readyText, { color: "#FFFFFF" }]}>Ready</Text>
+              </View>
+            )}
+          </View>
+          <View 
+            ref={mapViewRef} 
+            style={styles.instagramMapView}
+            collapsable={false}
+            renderToHardwareTextureAndroid={true}
+          >
+            {/* Map Background */}
+            {session?.trackingPoints && session.trackingPoints.length > 0 ? (
+              <MapView
+                style={styles.mapBackground}
+                provider={PROVIDER_GOOGLE}
+                initialRegion={getMapRegion()}
+                scrollEnabled={false}
+                zoomEnabled={false}
+                rotateEnabled={false}
+                pitchEnabled={false}
+                showsUserLocation={false}
+                showsMyLocationButton={false}
+                showsCompass={false}
+                showsScale={false}
+                showsBuildings={false}
+                showsTraffic={false}
+                showsIndoors={false}
+                showsPointsOfInterest={false}
+                loadingEnabled={false}
+                onMapReady={() => {
+                  console.log('Map is ready for capture');
+                  setMapReady(true);
+                }}
+                onLayout={() => {
+                  console.log('Map layout complete');
+                }}
+              >
+                {/* Route Polyline */}
+                <Polyline
+                  coordinates={session.trackingPoints.map(point => ({
+                    latitude: point.latitude,
+                    longitude: point.longitude,
+                  }))}
+                  strokeColor="#FFD700"
+                  strokeWidth={4}
+                  lineJoin="round"
+                  lineCap="round"
+                />
+              </MapView>
+            ) : (
+              <View style={[styles.mapBackground, styles.fallbackBackground]}
+                onLayout={() => {
+                  console.log('Placeholder view layout complete');
+                  setMapReady(true);
+                }}
+              >
+                {/* Gradient-like background using overlapping colored views */}
+                <View style={[styles.gradientLayer, { backgroundColor: theme.primary + '40' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: theme.accent + '20' }]} />
+                
+                {/* Central content */}
+                <View style={styles.fallbackContent}>
+                  <View style={[styles.iconContainer, { backgroundColor: theme.accent + '20' }]}>
+                    <Ionicons name="location" size={60} color={theme.accent} />
+                  </View>
+                  <Text style={[styles.fallbackTitle, { color: theme.accent }]}>
+                    Training Session
+                  </Text>
+                  <Text style={[styles.fallbackSubtitle, { color: theme.textSecondary }]}>
+                    Session completed without GPS tracking
+                  </Text>
+                </View>
+              </View>
+            )}
+            
+            {/* Overlay with Session Stats */}
+            <View style={[styles.mapOverlay, { backgroundColor: theme.background + 'E6' }]}>
+              <View style={styles.mapHeader}>
+                <Text style={[styles.mapTitle, { color: theme.text }]}>
+                  🐴 {session.horseName}
+                </Text>
+                <Text style={[styles.mapSubtitle, { color: theme.textSecondary }]}>
+                  Training Session
+                </Text>
+              </View>
+              
+              <View style={styles.mapStats}>
+                <View style={styles.mapStatItem}>
+                  <Ionicons name="time" size={24} color={theme.accent} />
+                  <Text style={[styles.mapStatLabel, { color: theme.textSecondary }]}>Duration</Text>
+                  <Text style={[styles.mapStatValue, { color: theme.text }]}>
+                    {session.duration ? formatDuration(session.duration) : "Unknown"}
+                  </Text>
+                </View>
+                
+                <View style={styles.mapStatItem}>
+                  <Ionicons name="location" size={24} color={theme.accent} />
+                  <Text style={[styles.mapStatLabel, { color: theme.textSecondary }]}>Distance</Text>
+                  <Text style={[styles.mapStatValue, { color: theme.text }]}>
+                    {session.distance ? `${(session.distance / 1000).toFixed(1)} km` : "Unknown"}
+                  </Text>
+                </View>
+                
+                <View style={styles.mapStatItem}>
+                  <Ionicons name="speedometer" size={24} color={theme.accent} />
+                  <Text style={[styles.mapStatLabel, { color: theme.textSecondary }]}>Avg Speed</Text>
+                  <Text style={[styles.mapStatValue, { color: theme.text }]}>
+                    {session.averageSpeed ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h` : "Unknown"}
+                  </Text>
+                </View>
+              </View>
+              
+              {/* App Branding */}
+              <View style={styles.mapBranding}>
+                <Text style={[styles.mapBrandText, { color: theme.accent }]}>
+                  EquiHub
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
       </ScrollView>
 
       {/* Bottom Share Buttons */}
@@ -685,7 +900,7 @@ export default function SessionShareScreen() {
           ) : (
             <>
               <Ionicons name="logo-instagram" size={20} color="#FFFFFF" />
-              <Text style={styles.instagramButtonText}>Instagram Story</Text>
+              <Text style={styles.instagramButtonText}>Share Map View</Text>
             </>
           )}
         </TouchableOpacity>
@@ -1115,5 +1330,142 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inder",
     textAlign: "center",
+  },
+
+  // Instagram Map View Styles
+  mapContainer: {
+    marginBottom: 20,
+  },
+  mapTitleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  readyIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  readyText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  hiddenMapContainer: {
+    position: 'absolute',
+    top: -10000, // Hide the map view off-screen
+    left: 0,
+    width: width,
+    height: width * 16 / 9, // Instagram story aspect ratio
+  },
+  instagramMapView: {
+    width: width,
+    height: width * 16 / 9, // Instagram story aspect ratio (9:16)
+    position: 'relative',
+  },
+  mapBackground: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  fallbackBackground: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    backgroundColor: '#f8f9fa',
+  },
+  gradientLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  fallbackContent: {
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  iconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  fallbackTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    fontFamily: 'Inder',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  fallbackSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    opacity: 0.8,
+  },
+  noMapText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 30,
+    justifyContent: 'space-between',
+  },
+  mapHeader: {
+    alignItems: 'center',
+  },
+  mapTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    fontFamily: 'Inder',
+  },
+  mapSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  mapStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  mapStatItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  mapStatLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  mapStatValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 4,
+    textAlign: 'center',
+    fontFamily: 'Inder',
+  },
+  mapBranding: {
+    alignItems: 'center',
+  },
+  mapBrandText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    fontFamily: 'Inder',
   },
 });
