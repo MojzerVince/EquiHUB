@@ -19,6 +19,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDialog } from "../../contexts/DialogContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { apiCache, CacheKeys } from "../../lib/apiCache";
+import API_CONFIG from "../../lib/apiConfig";
 import { HorseAPI } from "../../lib/horseAPI";
 import { Horse } from "../../lib/supabase";
 
@@ -207,30 +209,33 @@ const MyHorsesScreen = () => {
       return;
     }
 
+    const cacheKey = CacheKeys.profile(user.id);
+    
+    // Check cache first to prevent excessive API calls
+    const cachedProfile = apiCache.get<{ is_pro_member: boolean }>(cacheKey);
+    if (cachedProfile && typeof cachedProfile.is_pro_member === 'boolean') {
+      setIsProMember(cachedProfile.is_pro_member);
+      return;
+    }
+
     setCheckingProStatus(true);
     try {
-      // First try to get from profiles table using direct REST API
-      const supabaseUrl = "https://grdsqxwghajehneksxik.supabase.co";
-      const apiKey =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms";
+      // Use centralized API config
+      const apiUrl = `${API_CONFIG.SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=is_pro_member`;
 
       try {
-        const response = await fetch(
-          `${supabaseUrl}/rest/v1/profiles?id=eq.${user.id}&select=is_pro_member`,
-          {
-            headers: {
-              apikey: apiKey,
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await fetch(apiUrl, {
+          headers: API_CONFIG.getHeaders(),
+        });
 
         if (response.ok) {
           const data = await response.json();
           if (data && data.length > 0) {
             const proStatus = data[0].is_pro_member || false;
             setIsProMember(proStatus);
+            
+            // Cache the result to prevent future calls
+            apiCache.setByType(cacheKey, { is_pro_member: proStatus }, 'profiles');
             return; // Success, exit early
           } else {
             setIsProMember(false);
@@ -250,11 +255,12 @@ const MyHorsesScreen = () => {
     }
   }, [user?.id]);
 
+  // Check pro membership only once per user session
   useEffect(() => {
-    if (user?.id && !checkingProStatus) {
+    if (user?.id) {
       checkProMembership();
     }
-  }, [user?.id, checkingProStatus]); // Remove checkProMembership from dependencies to prevent infinite loop
+  }, [user?.id]); // Only depend on user?.id changing
 
   // Load horses from local cache (for startup)
   const loadHorsesFromCache = async (userId: string) => {
