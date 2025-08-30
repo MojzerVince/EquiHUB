@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
 import React, {
   useCallback,
@@ -238,29 +237,28 @@ export default function CommunityScreen() {
     );
   };
 
-  // Load friends when component mounts and user is available (optimized)
+  // Load initial data when component mounts and user is available (like horses screen)
   useEffect(() => {
-    console.log("🎯 Initial data useEffect triggered, user?.id:", !!user?.id, "hasInitialLoadAttempted:", hasInitialLoadAttempted.current);
+    console.log(
+      "🎯 Initial data useEffect triggered, user?.id:",
+      !!user?.id,
+      "hasInitialLoadAttempted:",
+      hasInitialLoadAttempted.current
+    );
+
     if (user?.id && !hasInitialLoadAttempted.current) {
-      // Mark that we've attempted initial load
       hasInitialLoadAttempted.current = true;
-      
-      // Use a flag to prevent multiple simultaneous loads
-      let isMounted = true;
+
+      console.log("🚀 Starting initial data load...");
 
       const loadInitialData = async () => {
-        if (!isMounted) return;
-
-        console.log("🚀 Starting initial data load...");
         try {
-          // Load friends, requests, and hidden posts data in parallel
-          // Posts will only be loaded on first navigation or refresh
+          // Load all data in parallel - similar to horses screen
           await Promise.all([
             loadFriends(),
             loadFriendRequests(),
             loadHiddenPosts(),
-            // Only load posts if not already loaded during this app session
-            !postsLoaded ? loadPosts() : Promise.resolve(),
+            loadPosts(),
           ]);
           console.log("✅ Initial data load complete");
         } catch (error) {
@@ -269,12 +267,8 @@ export default function CommunityScreen() {
       };
 
       loadInitialData();
-
-      return () => {
-        isMounted = false;
-      };
     }
-  }, [user?.id]); // Only depend on user?.id
+  }, [user?.id]); // Only depend on user?.id - like horses screen
 
   // Setup push notifications
   useEffect(() => {
@@ -451,7 +445,9 @@ export default function CommunityScreen() {
 
     // Prevent multiple simultaneous calls
     if (isLoadingFriendRequestsRef.current) {
-      console.log("🔄 loadFriendRequests: Already loading, skipping duplicate call");
+      console.log(
+        "🔄 loadFriendRequests: Already loading, skipping duplicate call"
+      );
       return;
     }
 
@@ -731,7 +727,10 @@ export default function CommunityScreen() {
         console.error("❌ Error loading friends:", error);
         // Don't show alert for expected database issues - just log them
         // Only show alert for unexpected errors that users need to know about
-        if (!error.includes("Database error") && !error.includes("Failed to get friends")) {
+        if (
+          !error.includes("Database error") &&
+          !error.includes("Failed to get friends")
+        ) {
           Alert.alert("Error", "Failed to load friends");
         }
         setFriends([]);
@@ -744,7 +743,10 @@ export default function CommunityScreen() {
       console.error("💥 Exception loading friends:", error);
       // Only show alert for timeout errors or unexpected exceptions
       if (error instanceof Error && error.message.includes("timed out")) {
-        Alert.alert("Timeout", "Loading friends took too long. Please try again.");
+        Alert.alert(
+          "Timeout",
+          "Loading friends took too long. Please try again."
+        );
       } else {
         console.log("🔍 Friends loading failed silently:", error);
         // Don't show alert for database connection issues - fail silently
@@ -767,7 +769,7 @@ export default function CommunityScreen() {
       isLoadingFriendsRef.current = false;
       isLoadingFriendRequestsRef.current = false;
       isLoadingPostsRef.current = false;
-      
+
       // Reset posts loaded flag to ensure fresh data on refresh
       setPostsLoaded(false);
 
@@ -788,39 +790,6 @@ export default function CommunityScreen() {
       setRefreshing(false);
     }
   }, [user?.id]); // Remove function dependencies to prevent excessive re-creation
-
-  // Refresh all data when screen is focused (optimized to prevent duplicate calls)
-  useFocusEffect(
-    useCallback(() => {
-      // Only run on focus if we don't have data and we're not currently loading
-      if (!user?.id) return;
-
-      // Add a small delay to prevent conflict with initial data loading
-      const timeoutId = setTimeout(() => {
-        // Only reload if we actually need data and nothing is loading
-        if (friends.length === 0 && !isLoadingFriends && !isLoadingFriendsRef.current) {
-          console.log("🔄 useFocusEffect: Loading friends (no data + not loading)");
-          loadFriends();
-        }
-        // Only reload friend requests if we have none and aren't already loading
-        if (friendRequests.length === 0 && !isLoadingRequests && !isLoadingFriendRequestsRef.current) {
-          console.log("🔄 useFocusEffect: Loading friend requests (no data + not loading)");
-          loadFriendRequests();
-        }
-        if (hiddenPostIds.length === 0) {
-          console.log("🔄 useFocusEffect: Loading hidden posts");
-          loadHiddenPosts();
-        }
-        // Only reload posts if we have none AND haven't loaded them in this session
-        if (posts.length === 0 && !postsLoaded && !isLoadingPosts && !isLoadingPostsRef.current) {
-          console.log("🔄 useFocusEffect: Loading posts (no data + not loaded in session + not loading)");
-          loadPosts();
-        }
-      }, 500); // Increased delay to ensure initial load completes
-
-      return () => clearTimeout(timeoutId);
-    }, [user?.id]) // Remove changing state dependencies to prevent infinite loops
-  );
 
   // Search for users with manual trigger
   const handleSearchInput = (query: string) => {
@@ -915,7 +884,7 @@ export default function CommunityScreen() {
       try {
         // Get secure configuration for URL
         const config = getSupabaseConfig();
-        
+
         // Supabase stores session data under this key format
         const supabaseSessionKey = `sb-${
           config.url.split("//")[1].split(".")[0]
@@ -974,7 +943,7 @@ export default function CommunityScreen() {
         try {
           // Get the initialized Supabase client
           const supabase = getSupabase();
-          
+
           // Try multiple approaches to get the session
           const approaches = [
             // Approach 1: Quick session call
@@ -1398,8 +1367,9 @@ export default function CommunityScreen() {
 
   const renderSearchResult = ({ item }: { item: UserSearchResult }) => {
     // Check if this user is in our friends list or marked as friend in API response
-    const isFriend = friends.some(friend => friend.id === item.id) || item.is_friend;
-    
+    const isFriend =
+      friends.some((friend) => friend.id === item.id) || item.is_friend;
+
     return (
       <View
         key={item.id}
@@ -1440,7 +1410,10 @@ export default function CommunityScreen() {
         )}
         {isFriend && (
           <View
-            style={[styles.friendBadge, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            style={[
+              styles.friendBadge,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
           >
             <Text
               style={[styles.friendBadgeText, { color: theme.textSecondary }]}
@@ -2083,14 +2056,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F9FA",
     marginBottom: 15,
     borderRadius: 25,
-    width: "90%",
+    width: "92%",
     alignSelf: "center",
     padding: 5,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
