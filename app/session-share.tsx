@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Sharing from "expo-sharing";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { CommunityAPI } from "../lib/communityAPI";
@@ -356,12 +358,85 @@ export default function SessionShareScreen() {
     }
   };
 
+  const shareToInstagramStory = async () => {
+    try {
+      setIsSharing(true);
+
+      // Check if Instagram is available for sharing
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert("Error", "Sharing is not available on this device.");
+        return;
+      }
+
+      // Get the best available image for Instagram story
+      let imageUri: string | null = null;
+
+      // Priority: Selected session media > Horse profile image
+      if (selectedMedia) {
+        const selectedMediaItem = mediaItems.find((item) => item.id === selectedMedia);
+        if (selectedMediaItem?.uri) {
+          imageUri = selectedMediaItem.uri;
+        }
+      } else if (horse?.image_url) {
+        imageUri = horse.image_url;
+      }
+
+      if (!imageUri) {
+        Alert.alert(
+          "No Image Available",
+          "Please select a photo from your session media or make sure your horse has a profile image to share to Instagram Story."
+        );
+        return;
+      }
+
+      // Share to Instagram Stories (the image will be shared, stats can be added manually)
+      await Sharing.shareAsync(imageUri, {
+        mimeType: 'image/jpeg',
+        dialogTitle: 'Share to Instagram Story',
+        UTI: 'public.jpeg',
+      });
+
+      // Show success message with copyable stats
+      const sessionStats = `🐴 ${session?.horseName || 'Training Session'}\n` +
+        `⏱️ ${session?.duration ? formatDuration(session.duration) : 'Unknown'}\n` +
+        `📍 ${session?.distance ? `${(session.distance / 1000).toFixed(1)} km` : 'Unknown'}\n` +
+        `🏃 ${session?.averageSpeed ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h` : 'Unknown'}`;
+
+      Alert.alert(
+        "Shared Successfully! 📱",
+        `Image shared to Instagram! You can copy these stats to add to your story:\n\n${sessionStats}`,
+        [
+          { text: "OK", style: "default" }
+        ]
+      );
+
+    } catch (error) {
+      console.error("Error sharing to Instagram Story:", error);
+      Alert.alert("Error", "Failed to share to Instagram Story. Please try again.");
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   // Show loading screen while session data is being loaded
   if (loading) {
     return (
-      <View style={[styles.container, styles.loadingScreen, { backgroundColor: theme.primary }]}>
-        <ActivityIndicator size="large" color={theme.accent} />
-        <Text style={[styles.loadingScreenText, { color: theme.background }]}>Loading session data...</Text>
+      <View style={[styles.container, { backgroundColor: theme.primary }]}>
+        <SafeAreaView
+          style={[
+            styles.safeArea,
+            { backgroundColor: theme.primary },
+          ]}
+        >
+          <View style={styles.headerContainer}>
+            <Text style={styles.header}>Share Session</Text>
+          </View>
+        </SafeAreaView>
+        <View style={[styles.loadingScreenContainer, { backgroundColor: theme.background }]}>
+          <ActivityIndicator size="large" color={theme.accent} />
+          <Text style={[styles.loadingScreenText, { color: theme.text }]}>Loading session data...</Text>
+        </View>
       </View>
     );
   }
@@ -369,51 +444,65 @@ export default function SessionShareScreen() {
   // Show error screen if session not found
   if (!session) {
     return (
-      <View style={[styles.container, styles.loadingScreen, { backgroundColor: theme.primary }]}>
-        <Text style={[styles.errorText, { color: theme.error }]}>Session not found</Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={[styles.backToSessionButton, { backgroundColor: theme.accent }]}
+      <View style={[styles.container, { backgroundColor: theme.primary }]}>
+        <SafeAreaView
+          style={[
+            styles.safeArea,
+            { backgroundColor: theme.primary },
+          ]}
         >
-          <Text style={[styles.backToSessionButtonText, { color: theme.background }]}>Go Back</Text>
-        </TouchableOpacity>
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.header}>Share Session</Text>
+            <View style={styles.backButton} /> {/* Spacer for centering */}
+          </View>
+        </SafeAreaView>
+        <View style={[styles.errorScreenContainer, { backgroundColor: theme.background }]}>
+          <Text style={[styles.errorText, { color: theme.error }]}>Session not found</Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={[styles.backToSessionButton, { backgroundColor: theme.accent }]}
+          >
+            <Text style={[styles.backToSessionButtonText, { color: theme.background }]}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.primary }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.primary }]}>
-        <TouchableOpacity
-          onPress={() => {
-            router.back();
-          }}
-          style={styles.backButton}
-          disabled={isSharing}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.background} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.background }]}>Share Session</Text>
-        <TouchableOpacity
-          onPress={() => {
-            sharePost();
-          }}
-          style={[styles.shareButton, { backgroundColor: theme.accent }, isSharing && styles.disabledButton]}
-          disabled={isSharing}
-        >
-          {isSharing ? (
-            <ActivityIndicator size="small" color={theme.background} />
-          ) : (
-            <Text style={[styles.shareButtonText, { color: theme.background }]}>Share</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: theme.primary },
+        ]}
+      >
+        <View style={styles.headerContainer}>
+          <TouchableOpacity
+            onPress={() => {
+              router.back();
+            }}
+            style={styles.backButton}
+            disabled={isSharing}
+          >
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.header}>Share Session</Text>
+          <View style={styles.backButton} /> {/* Spacer for centering */}
+        </View>
+      </SafeAreaView>
 
       <ScrollView
-        style={[styles.content, { backgroundColor: theme.background }, isSharing && styles.disabledContent]}
+        style={[styles.viewPort, { backgroundColor: theme.background }, isSharing && styles.disabledContent]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!isSharing}
+        contentContainerStyle={styles.scrollContent}
       >
         {/* Session Summary */}
         <View style={[styles.sessionSummary, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -584,6 +673,39 @@ export default function SessionShareScreen() {
         </View>
       </ScrollView>
 
+      {/* Bottom Share Buttons */}
+      <View style={[styles.bottomButtonsContainer, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
+        <TouchableOpacity
+          onPress={shareToInstagramStory}
+          style={[styles.instagramButton, { backgroundColor: "#E1306C" }, isSharing && styles.disabledButton]}
+          disabled={isSharing}
+        >
+          {isSharing ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Ionicons name="logo-instagram" size={20} color="#FFFFFF" />
+              <Text style={styles.instagramButtonText}>Instagram Story</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={sharePost}
+          style={[styles.communityButton, { backgroundColor: theme.accent }, isSharing && styles.disabledButton]}
+          disabled={isSharing}
+        >
+          {isSharing ? (
+            <ActivityIndicator size="small" color={theme.background} />
+          ) : (
+            <>
+              <Ionicons name="people" size={20} color={theme.background} />
+              <Text style={[styles.communityButtonText, { color: theme.background }]}>Share to Community</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+
       {/* Full Screen Loading Overlay */}
       {(() => {
         if (isSharing) {
@@ -606,47 +728,45 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  safeArea: {
+    backgroundColor: "#335C67",
+  },
+  headerContainer: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingTop: 50,
+    position: "relative",
+    marginBottom: -45,
+    marginTop: -5,
   },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
+  header: {
     fontSize: 24,
     fontFamily: "Inder",
     fontWeight: "600",
     color: "#FFFFFF",
+    flex: 1,
+    textAlign: "center",
   },
-  shareButton: {
-    backgroundColor: "#FFD700",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    minWidth: 60,
-    alignItems: "center",
+  backButton: {
+    padding: 8,
+    zIndex: 1,
   },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  shareButtonText: {
-    color: "#000000",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  content: {
+  viewPort: {
     flex: 1,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
+    marginTop: 5,
     paddingTop: 20,
     paddingHorizontal: 16,
   },
+  scrollContent: {
+    paddingBottom: 20,
+  },
   disabledContent: {
+    opacity: 0.6,
+  },
+  disabledButton: {
     opacity: 0.6,
   },
   sessionSummary: {
@@ -759,15 +879,27 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
-  loadingScreen: {
+  loadingScreenContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    marginTop: 5,
   },
   loadingScreenText: {
     marginTop: 15,
     fontSize: 16,
     fontWeight: "500",
     textAlign: "center",
+  },
+  errorScreenContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    marginTop: 5,
   },
   errorText: {
     fontSize: 18,
@@ -784,6 +916,49 @@ const styles = StyleSheet.create({
   },
   backToSessionButtonText: {
     color: "#000000",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+
+  // Bottom Share Buttons
+  bottomButtonsContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    borderTopWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  instagramButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 25,
+    gap: 8,
+  },
+  instagramButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  communityButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 25,
+    gap: 8,
+  },
+  communityButtonText: {
     fontWeight: "600",
     fontSize: 16,
   },
