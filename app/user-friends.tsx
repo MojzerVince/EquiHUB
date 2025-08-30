@@ -164,11 +164,15 @@ const UserFriendsScreen = () => {
   };
 
   const renderFriendItem = ({ item }: { item: FriendWithStatus }) => (
-    <View
+    <TouchableOpacity
       style={[
         styles.friendCard,
         { backgroundColor: currentTheme.colors.surface },
       ]}
+      onPress={() =>
+        router.push({ pathname: "/user-profile", params: { userId: item.id } })
+      }
+      activeOpacity={0.8}
     >
       <Image
         source={{
@@ -211,7 +215,12 @@ const UserFriendsScreen = () => {
       </View>
 
       {!isOwnProfile && item.friendshipStatus !== "self" && (
-        <View style={styles.actionContainer}>
+        <TouchableOpacity
+          style={styles.actionContainer}
+          onPress={(e) => {
+            e.stopPropagation(); // Prevent navigation when pressing action buttons
+          }}
+        >
           {item.friendshipStatus === "none" && (
             <TouchableOpacity
               style={[
@@ -248,9 +257,9 @@ const UserFriendsScreen = () => {
               <Text style={styles.statusText}>Friends</Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
       )}
-    </View>
+    </TouchableOpacity>
   );
 
   if (loading) {

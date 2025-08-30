@@ -289,187 +289,207 @@ const UserProfileScreen = () => {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        style={[
+          styles.viewPort,
+          { backgroundColor: currentTheme.colors.surface },
+        ]}
       >
-        <View style={styles.profileImageContainer}>
-          <Image
-            source={getProfileImage()}
-            style={[
-              styles.profileImage,
-              { borderColor: currentTheme.colors.primary },
-            ]}
-          />
-        </View>
-
-        <Text style={[styles.userName, { color: currentTheme.colors.text }]}>
-          {profile.name}
-        </Text>
-        <Text style={[styles.userAge, { color: currentTheme.colors.text }]}>
-          {profile.age} years old
-        </Text>
-        <Text
-          style={[
-            styles.userDescription,
-            { color: currentTheme.colors.textSecondary },
-          ]}
-        >
-          {profile.description}
-        </Text>
-
-        <View style={styles.experienceContainer}>
-          <Text
-            style={[
-              styles.experienceLabel,
-              { color: currentTheme.colors.text },
-            ]}
-          >
-            Experience
-          </Text>
-          <Text
-            style={[
-              styles.experienceValue,
-              { color: currentTheme.colors.text },
-            ]}
-          >
-            {profile.experience} years
-          </Text>
-        </View>
-
-        {/* Counters Container */}
-        <View style={styles.countersContainer}>
-          <TouchableOpacity
-            style={styles.counterItem}
-            onPress={() =>
-              router.push({
-                pathname: "/user-horses",
-                params: { userId: userId },
-              })
-            }
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.counterLabel,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              Horses
-            </Text>
-            {countersLoading ? (
-              <ActivityIndicator
-                size="small"
-                color={currentTheme.colors.primary}
-              />
-            ) : (
-              <Text
-                style={[
-                  styles.counterValue,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                {horsesCount}
-              </Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.counterItem}
-            onPress={() =>
-              router.push({
-                pathname: "/user-friends",
-                params: { userId: userId },
-              })
-            }
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.counterLabel,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              Friends
-            </Text>
-            {countersLoading ? (
-              <ActivityIndicator
-                size="small"
-                color={currentTheme.colors.primary}
-              />
-            ) : (
-              <Text
-                style={[
-                  styles.counterValue,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                {friendsCount}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.badgeContainer}>
+        <View style={styles.profileContainer}>
+          {/* Profile Section */}
           <View
             style={[
-              styles.badge,
-              profile.is_pro_member ? styles.proBadge : styles.regularBadge,
-              { backgroundColor: currentTheme.colors.surface },
+              styles.profileSection,
+              { backgroundColor: currentTheme.colors.background },
             ]}
           >
+            <View style={styles.profileImageContainer}>
+              <Image
+                source={getProfileImage()}
+                style={[
+                  styles.profileImage,
+                  { borderColor: currentTheme.colors.primary },
+                ]}
+              />
+            </View>
+
+            <Text
+              style={[styles.userName, { color: currentTheme.colors.text }]}
+            >
+              {profile.name}
+            </Text>
+            <Text style={[styles.userAge, { color: currentTheme.colors.text }]}>
+              {profile.age} years old
+            </Text>
             <Text
               style={[
-                styles.badgeText,
-                profile.is_pro_member
-                  ? styles.proBadgeText
-                  : styles.regularBadgeText,
-                { color: currentTheme.colors.text },
+                styles.userDescription,
+                { color: currentTheme.colors.textSecondary },
               ]}
             >
-              {profile.is_pro_member ? "PRO MEMBER" : "RIDER"}
+              {profile.description}
             </Text>
-          </View>
-        </View>
 
-        {!isOwnProfile && (
-          <View style={styles.actionContainer}>
-            {friendshipStatus === "none" && (
-              <TouchableOpacity
+            <View style={styles.experienceContainer}>
+              <Text
                 style={[
-                  styles.addFriendButton,
-                  { backgroundColor: currentTheme.colors.primary },
+                  styles.experienceLabel,
+                  { color: currentTheme.colors.text },
                 ]}
-                onPress={handleAddFriend}
-                disabled={sendingRequest}
               >
-                {sendingRequest ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                Experience
+              </Text>
+              <Text
+                style={[
+                  styles.experienceValue,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                {profile.experience} years
+              </Text>
+            </View>
+
+            {/* Counters Container */}
+            <View style={styles.countersContainer}>
+              <TouchableOpacity
+                style={styles.counterItem}
+                onPress={() =>
+                  router.push({
+                    pathname: "/user-horses",
+                    params: { userId: userId },
+                  })
+                }
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.counterLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Horses
+                </Text>
+                {countersLoading ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={currentTheme.colors.primary}
+                  />
                 ) : (
-                  <Text style={styles.addFriendButtonText}>Add Friend</Text>
+                  <Text
+                    style={[
+                      styles.counterValue,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    {horsesCount}
+                  </Text>
                 )}
               </TouchableOpacity>
-            )}
-            {friendshipStatus === "pending" && (
+              <TouchableOpacity
+                style={styles.counterItem}
+                onPress={() =>
+                  router.push({
+                    pathname: "/user-friends",
+                    params: { userId: userId },
+                  })
+                }
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.counterLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Friends
+                </Text>
+                {countersLoading ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={currentTheme.colors.primary}
+                  />
+                ) : (
+                  <Text
+                    style={[
+                      styles.counterValue,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    {friendsCount}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.badgeContainer}>
               <View
                 style={[
-                  styles.statusBadge,
-                  { backgroundColor: currentTheme.colors.warning || "#FFA500" },
+                  styles.badge,
+                  profile.is_pro_member ? styles.proBadge : styles.regularBadge,
+                  { backgroundColor: currentTheme.colors.surface },
                 ]}
               >
-                <Text style={styles.statusText}>Friend Request Sent</Text>
+                <Text
+                  style={[
+                    styles.badgeText,
+                    profile.is_pro_member
+                      ? styles.proBadgeText
+                      : styles.regularBadgeText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  {profile.is_pro_member ? "PRO MEMBER" : "RIDER"}
+                </Text>
               </View>
-            )}
-            {friendshipStatus === "friends" && (
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: currentTheme.colors.success || "#4CAF50" },
-                ]}
-              >
-                <Text style={styles.statusText}>Friends</Text>
+            </View>
+
+            {!isOwnProfile && (
+              <View style={styles.actionContainer}>
+                {friendshipStatus === "none" && (
+                  <TouchableOpacity
+                    style={[
+                      styles.addFriendButton,
+                      { backgroundColor: currentTheme.colors.primary },
+                    ]}
+                    onPress={handleAddFriend}
+                    disabled={sendingRequest}
+                  >
+                    {sendingRequest ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.addFriendButtonText}>Add Friend</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+                {friendshipStatus === "pending" && (
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor:
+                          currentTheme.colors.warning || "#FFA500",
+                      },
+                    ]}
+                  >
+                    <Text style={styles.statusText}>Friend Request Sent</Text>
+                  </View>
+                )}
+                {friendshipStatus === "friends" && (
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor:
+                          currentTheme.colors.success || "#4CAF50",
+                      },
+                    ]}
+                  >
+                    <Text style={styles.statusText}>Friends</Text>
+                  </View>
+                )}
               </View>
             )}
           </View>
-        )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -504,6 +524,28 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 50,
   },
+  viewPort: {
+    flex: 1,
+  },
+  profileContainer: {
+    flex: 1,
+  },
+  profileSection: {
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 30,
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginVertical: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
   centered: {
     flex: 1,
     justifyContent: "center",
@@ -527,11 +569,6 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: 16,
     fontFamily: "Inder",
-  },
-  content: {
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 20,
   },
   profileImageContainer: {
     marginBottom: 20,
