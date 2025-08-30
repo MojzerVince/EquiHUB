@@ -42,6 +42,34 @@ export interface FriendWithProfile {
 }
 
 export class UserAPI {
+  // Get friends count only - lightweight API call that returns just an integer
+  static async getFriendsCount(userId: string): Promise<number> {
+    try {
+      console.log("📊 UserAPI.getFriendsCount: Getting friends count for user:", userId);
+      
+      const supabase = getSupabase();
+      
+      // Use count query to get only the number, not the actual data
+      const { count, error } = await supabase
+        .from('friendships')
+        .select('*', { count: 'exact', head: true })
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+        .eq('status', 'accepted');
+      
+      if (error) {
+        console.error("❌ UserAPI.getFriendsCount: Database error:", error);
+        return 0;
+      }
+      
+      const friendsCount = count || 0;
+      console.log(`📊 UserAPI.getFriendsCount: Friends count for user ${userId}: ${friendsCount}`);
+      return friendsCount;
+    } catch (error) {
+      console.error("💥 UserAPI.getFriendsCount: Exception:", error);
+      return 0;
+    }
+  }
+
   // Test database connection and table access
   static async testDatabaseConnection(): Promise<{ success: boolean; error: string | null; data?: any }> {
     try {

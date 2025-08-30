@@ -2,6 +2,48 @@ import * as FileSystem from 'expo-file-system';
 import { Horse, getSupabase } from './supabase';
 
 export class HorseAPI {
+  // Get horse count only - lightweight API call that returns just an integer
+  static async getHorseCount(userId: string): Promise<number> {
+    try {
+      console.log(`🔥 HorseAPI: Getting horse count for user: ${userId}`);
+      
+      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
+      const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms';
+      
+      // Use Supabase's count feature to get only the count, not the actual data
+      const apiUrl = `${supabaseUrl}/rest/v1/horses?user_id=eq.${userId}&select=count`;
+      
+      const response = await fetch(apiUrl, {
+        method: 'HEAD', // HEAD request returns count in header without body data
+        headers: {
+          'apikey': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
+          'Prefer': 'count=exact',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        console.error('🔥 HorseAPI: Count API error:', response.status);
+        return 0;
+      }
+
+      // Extract count from Content-Range header
+      const contentRange = response.headers.get('content-range');
+      if (contentRange) {
+        const match = contentRange.match(/\/(\d+)$/);
+        const count = match ? parseInt(match[1], 10) : 0;
+        console.log(`🔥 HorseAPI: Horse count for user ${userId}: ${count}`);
+        return count;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error('🔥 HorseAPI: Error fetching horse count:', error);
+      return 0;
+    }
+  }
+
   // Get all horses for a user
   static async getHorses(userId: string): Promise<Horse[]> {
     try {

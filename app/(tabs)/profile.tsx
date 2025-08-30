@@ -20,6 +20,7 @@ import { useDialog } from "../../contexts/DialogContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useLoadingState } from "../../hooks/useLoadingState";
 import * as HorseAPI from "../../lib/horseAPI";
+import { ImageCompression } from "../../lib/imageCompression";
 import { SimpleStable, SimpleStableAPI } from "../../lib/simpleStableAPI";
 import { UserBadgeWithDetails } from "../../lib/supabase";
 import * as UserAPI from "../../lib/userAPI";
@@ -428,14 +429,14 @@ const ProfileScreen = () => {
   const loadCounters = async () => {
     setCountersLoading(true);
     try {
-      // Load horses and friends counts
-      const [horsesData, friendsResponse] = await Promise.all([
-        HorseAPI.HorseAPI.getHorses(USER_ID),
-        UserAPI.UserAPI.getFriends(USER_ID),
+      // Load horses and friends counts using lightweight API calls
+      const [horsesCount, friendsCount] = await Promise.all([
+        HorseAPI.HorseAPI.getHorseCount(USER_ID),
+        UserAPI.UserAPI.getFriendsCount(USER_ID),
       ]);
 
-      setHorsesCount(horsesData?.length || 0);
-      setFriendsCount(friendsResponse?.friends?.length || 0);
+      setHorsesCount(horsesCount);
+      setFriendsCount(friendsCount);
     } catch (error) {
       console.error("Error loading counters:", error);
       // Don't show error for counters, just set to 0
@@ -669,6 +670,22 @@ const ProfileScreen = () => {
     setUserStableRanch("");
   };
 
+  const compressImageForUpload = async (imageUri: string) => {
+    try {
+      const compressedImage = await ImageCompression.compressImage(imageUri, {
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.6,
+        format: 'jpeg'
+      });
+      console.log('📷 Image compressed for profile upload');
+      return compressedImage;
+    } catch (error) {
+      console.error('📷 Error compressing image:', error);
+      return { uri: imageUri }; // Return original if compression fails
+    }
+  };
+
   const pickImage = async () => {
     // Request permission to access media library
     const permissionResult =
@@ -698,12 +715,14 @@ const ProfileScreen = () => {
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.5, // Reduced from 0.8 to save data
       base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
-      setProfileImage({ uri: result.assets[0].uri });
+      // Further compress the image before setting it
+      const compressedImage = await compressImageForUpload(result.assets[0].uri);
+      setProfileImage({ uri: compressedImage.uri });
     }
   };
 
@@ -713,12 +732,14 @@ const ProfileScreen = () => {
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.5, // Reduced from 0.8 to save data
       base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
-      setProfileImage({ uri: result.assets[0].uri });
+      // Further compress the image before setting it
+      const compressedImage = await compressImageForUpload(result.assets[0].uri);
+      setProfileImage({ uri: compressedImage.uri });
     }
   };
 
