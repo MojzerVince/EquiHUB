@@ -1,5 +1,5 @@
 import * as FileSystem from 'expo-file-system';
-import { Horse, supabase } from './supabase';
+import { Horse, getSupabase } from './supabase';
 
 export class HorseAPI {
   // Get all horses for a user
@@ -261,7 +261,7 @@ export class HorseAPI {
       console.log('🔥 HorseAPI: Blob created, size:', blob.size);
 
       // Try to upload using Supabase client
-      const { data, error } = await supabase.storage
+      const { data, error } = await getSupabase().storage
         .from('horse-images')
         .upload(fileName, blob, {
           contentType: 'image/jpeg',
@@ -280,7 +280,7 @@ export class HorseAPI {
       console.log('🔥 HorseAPI: Upload successful:', data);
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = getSupabase().storage
         .from('horse-images')
         .getPublicUrl(fileName);
 
@@ -309,7 +309,7 @@ export class HorseAPI {
       const fileName = urlParts.slice(-3).join('/'); // userId/horses/filename.jpg
       console.log(`🔥 HorseAPI: Attempting to delete storage file: ${fileName}`);
 
-      const { error } = await supabase.storage
+      const { error } = await getSupabase().storage
         .from('horse-images')
         .remove([fileName]);
         
