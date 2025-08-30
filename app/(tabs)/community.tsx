@@ -1324,7 +1324,7 @@ export default function CommunityScreen() {
         style={[styles.searchResultItem, { backgroundColor: theme.surface }]}
         onPress={() =>
           router.push({
-            pathname: "/user-profile",
+            pathname: "/profile",
             params: { userId: item.id },
           })
         }
@@ -1407,7 +1407,7 @@ export default function CommunityScreen() {
         style={[styles.searchResultItem, { backgroundColor: theme.surface }]}
         onPress={() =>
           router.push({
-            pathname: "/user-profile",
+            pathname: "/profile",
             params: { userId: item.id },
           })
         }
