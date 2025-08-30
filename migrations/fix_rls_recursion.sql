@@ -21,3 +21,28 @@ WHERE schemaname = 'public'
 -- Test that we can now insert without policy errors
 -- This should work without infinite recursion
 SELECT 'Tables are ready for stable creation' as status;
+
+-- Ensure trigger function exists for automatic member count updates
+CREATE OR REPLACE FUNCTION public.update_stable_member_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE public.stables 
+    SET member_count = member_count + 1, updated_at = NOW()
+    WHERE id = NEW.stable_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE public.stables 
+    SET member_count = GREATEST(member_count - 1, 0), updated_at = NOW()
+    WHERE id = OLD.stable_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Ensure trigger exists
+DROP TRIGGER IF EXISTS trigger_update_stable_member_count ON public.stable_members;
+CREATE TRIGGER trigger_update_stable_member_count
+  AFTER INSERT OR DELETE ON public.stable_members
+  FOR EACH ROW EXECUTE FUNCTION public.update_stable_member_count();

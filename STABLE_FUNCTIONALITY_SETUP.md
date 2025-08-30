@@ -68,5 +68,12 @@ After running the migrations, you can:
 - ✅ Added stable joining logic for existing stables
 - ✅ Added proper error handling with user-friendly messages
 - ✅ Added state management for stable operations
+- ✅ Removed problematic RPC function calls, now uses database triggers
+
+## Common Errors and Fixes
+
+- **Infinite recursion error**: Run `migrations/fix_rls_recursion.sql`
+- **Function not found error**: Run `migrations/remove_rpc_functions.sql`
+- **Schema cache issues**: Restart Supabase database in dashboard
 
 The functionality is now **fully implemented** and just needs the database schema to be complete!

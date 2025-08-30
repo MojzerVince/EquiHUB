@@ -172,15 +172,8 @@ export class SimpleStableAPI {
         return { success: false, error: 'Failed to join stable' };
       }
 
-      // Update member count
-      const { error: updateError } = await supabase.rpc('increment_stable_member_count', {
-        stable_id: stableId
-      });
-
-      if (updateError) {
-        console.error('Error updating member count:', updateError);
-        // Don't fail the whole operation for this
-      }
+      // Member count is automatically updated by database trigger
+      // No need to manually call increment function
 
       return { success: true, error: null };
     } catch (error) {
