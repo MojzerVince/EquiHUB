@@ -18,7 +18,9 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useDialog } from "../../contexts/DialogContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useLoadingState } from "../../hooks/useLoadingState";
+import * as HorseAPI from "../../lib/horseAPI";
 import { UserBadgeWithDetails } from "../../lib/supabase";
+import * as UserAPI from "../../lib/userAPI";
 
 const ProfileScreen = () => {
   const router = useRouter();
@@ -74,6 +76,11 @@ const ProfileScreen = () => {
     commonBadges: 0,
     categories: {} as { [key: string]: number },
   });
+
+  // Counters state
+  const [horsesCount, setHorsesCount] = useState(0);
+  const [friendsCount, setFriendsCount] = useState(0);
+  const [countersLoading, setCountersLoading] = useState(false);
 
   // Badge dialog state
   const [selectedBadge, setSelectedBadge] =
@@ -355,6 +362,14 @@ const ProfileScreen = () => {
         console.error("Error loading badges during initialization:", error);
         // Don't prevent profile loading if badges fail
       }
+
+      // Load counters (don't block if this fails)
+      try {
+        await loadCounters();
+      } catch (error) {
+        console.error("Error loading counters during initialization:", error);
+        // Don't prevent profile loading if counters fail
+      }
     } catch (error) {
       console.error("Error during profile initialization:", error);
       setError("Failed to load profile. Please try refreshing.");
@@ -396,6 +411,27 @@ const ProfileScreen = () => {
       });
     } finally {
       setBadgesLoading(false);
+    }
+  };
+
+  const loadCounters = async () => {
+    setCountersLoading(true);
+    try {
+      // Load horses and friends counts
+      const [horsesData, friendsResponse] = await Promise.all([
+        HorseAPI.HorseAPI.getHorses(USER_ID),
+        UserAPI.UserAPI.getFriends(USER_ID),
+      ]);
+
+      setHorsesCount(horsesData?.length || 0);
+      setFriendsCount(friendsResponse?.friends?.length || 0);
+    } catch (error) {
+      console.error("Error loading counters:", error);
+      // Don't show error for counters, just set to 0
+      setHorsesCount(0);
+      setFriendsCount(0);
+    } finally {
+      setCountersLoading(false);
     }
   };
 
@@ -1104,6 +1140,61 @@ const ProfileScreen = () => {
                     {userExperience} years
                   </Text>
                 </View>
+
+                {/* Counters Container */}
+                <View style={styles.countersContainer}>
+                  <View style={styles.counterItem}>
+                    <Text
+                      style={[
+                        styles.counterLabel,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      Horses
+                    </Text>
+                    {countersLoading ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={currentTheme.colors.primary}
+                      />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.counterValue,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        {horsesCount}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.counterItem}>
+                    <Text
+                      style={[
+                        styles.counterLabel,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      Friends
+                    </Text>
+                    {countersLoading ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={currentTheme.colors.primary}
+                      />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.counterValue,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        {friendsCount}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+
                 <View style={styles.badgeContainer}>
                   <TouchableOpacity
                     style={[
@@ -2025,6 +2116,30 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     fontStyle: "italic",
+  },
+  countersContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    marginVertical: 15,
+    width: "100%",
+  },
+  counterItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  counterLabel: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    marginBottom: 5,
+  },
+  counterValue: {
+    fontSize: 24,
+    fontWeight: "bold",
+    fontFamily: "Inder",
   },
 });
 
