@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
+import { useRouter } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -73,6 +74,7 @@ interface Post {
 export default function CommunityScreen() {
   const { currentTheme } = useTheme();
   const { user } = useAuth();
+  const router = useRouter();
   const theme = currentTheme.colors;
   const [posts, setPosts] = useState<Post[]>([]);
   const [friends, setFriends] = useState<UserSearchResult[]>([]);
@@ -1323,8 +1325,15 @@ export default function CommunityScreen() {
     const isAdded = addedSuggestions.includes(item.id);
 
     return (
-      <View
+      <TouchableOpacity
         style={[styles.searchResultItem, { backgroundColor: theme.surface }]}
+        onPress={() =>
+          router.push({
+            pathname: "/user-profile",
+            params: { userId: item.id },
+          })
+        }
+        activeOpacity={0.8}
       >
         <View style={styles.userInfo}>
           <View style={styles.avatarContainer}>
@@ -1343,7 +1352,10 @@ export default function CommunityScreen() {
         {!isAdded ? (
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: theme.primary }]}
-            onPress={() => handleAddSuggestedFriend(item)}
+            onPress={(e) => {
+              e.stopPropagation(); // Prevent navigation when pressing add friend button
+              handleAddSuggestedFriend(item);
+            }}
           >
             <Text style={styles.addButtonText}>Add Friend</Text>
           </TouchableOpacity>
@@ -1361,7 +1373,7 @@ export default function CommunityScreen() {
             </Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -1371,9 +1383,16 @@ export default function CommunityScreen() {
       friends.some((friend) => friend.id === item.id) || item.is_friend;
 
     return (
-      <View
+      <TouchableOpacity
         key={item.id}
         style={[styles.searchResultItem, { backgroundColor: theme.surface }]}
+        onPress={() =>
+          router.push({
+            pathname: "/user-profile",
+            params: { userId: item.id },
+          })
+        }
+        activeOpacity={0.8}
       >
         <View style={styles.userInfo}>
           <View style={styles.avatarContainer}>
@@ -1403,7 +1422,10 @@ export default function CommunityScreen() {
         {!isFriend && (
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: theme.primary }]}
-            onPress={() => handleAddFriend(item)}
+            onPress={(e) => {
+              e.stopPropagation(); // Prevent navigation when pressing add friend button
+              handleAddFriend(item);
+            }}
           >
             <Text style={styles.addButtonText}>Add Friend</Text>
           </TouchableOpacity>
@@ -1422,7 +1444,7 @@ export default function CommunityScreen() {
             </Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 
