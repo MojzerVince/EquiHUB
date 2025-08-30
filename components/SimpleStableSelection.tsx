@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useTheme } from "../contexts/ThemeContext";
 import { SimpleStable, SimpleStableAPI } from "../lib/simpleStableAPI";
@@ -113,9 +113,16 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
       activeOpacity={0.7}
     >
       <View style={styles.stableInfo}>
-        <Text style={[styles.stableName, { color: currentTheme.colors.text }]}>
-          {stable.name}
-        </Text>
+        <View style={styles.stableNameContainer}>
+          <Text style={[styles.stableName, { color: currentTheme.colors.text }]}>
+            {stable.name}
+          </Text>
+          {stable.is_verified && (
+            <View style={styles.verifiedBadge}>
+              <Text style={styles.verifiedBadgeText}>✓ Verified</Text>
+            </View>
+          )}
+        </View>
         <Text
           style={[
             styles.stableLocation,
@@ -708,6 +715,25 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     padding: 20,
+  },
+  stableNameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  verifiedBadge: {
+    backgroundColor: "#4CAF50",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  verifiedBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: "Inder",
   },
 });
 

@@ -1474,9 +1474,16 @@ const ProfileScreen = () => {
                   {selectedStable || newStableData ? (
                     <View style={[styles.selectedStableContainer, { borderColor: currentTheme.colors.border }]}>
                       <View style={styles.selectedStableInfo}>
-                        <Text style={[styles.selectedStableName, { color: currentTheme.colors.text }]}>
-                          {selectedStable?.name || newStableData?.name}
-                        </Text>
+                        <View style={styles.selectedStableNameContainer}>
+                          <Text style={[styles.selectedStableName, { color: currentTheme.colors.text }]}>
+                            {selectedStable?.name || newStableData?.name}
+                          </Text>
+                          {selectedStable?.is_verified && (
+                            <View style={styles.selectedStableVerifiedBadge}>
+                              <Text style={styles.selectedStableVerifiedBadgeText}>✓ Verified</Text>
+                            </View>
+                          )}
+                        </View>
                         {selectedStable && (
                           <>
                             {selectedStable.location && (
@@ -2002,6 +2009,25 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     fontWeight: "600",
     marginBottom: 4,
+  },
+  selectedStableNameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  selectedStableVerifiedBadge: {
+    backgroundColor: "#4CAF50",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  selectedStableVerifiedBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: "Inder",
   },
   selectedStableLocation: {
     fontSize: 14,

@@ -8,6 +8,7 @@ export interface SimpleStable {
   city?: string;
   state_province?: string;
   member_count?: number;
+  is_verified?: boolean;
 }
 
 // User with stable info for friend suggestions
@@ -34,8 +35,9 @@ export class SimpleStableAPI {
       
       const { data, error } = await supabase
         .from('stables')
-        .select('id, name, location, city, state_province, member_count')
+        .select('id, name, location, city, state_province, member_count, is_verified')
         .or(`name.ilike.%${query}%, location.ilike.%${query}%, city.ilike.%${query}%`)
+        .order('is_verified', { ascending: false })
         .order('member_count', { ascending: false })
         .limit(20);
 
@@ -61,7 +63,8 @@ export class SimpleStableAPI {
       
       const { data, error } = await supabase
         .from('stables')
-        .select('id, name, location, city, state_province, member_count')
+        .select('id, name, location, city, state_province, member_count, is_verified')
+        .order('is_verified', { ascending: false })
         .order('member_count', { ascending: false })
         .limit(limit);
 
@@ -103,9 +106,10 @@ export class SimpleStableAPI {
           state_province: data.state_province,
           country: data.country,
           description: data.description,
-          member_count: 1
+          member_count: 1,
+          is_verified: false // New stables start as unverified
         })
-        .select('id, name, location, city, state_province, member_count')
+        .select('id, name, location, city, state_province, member_count, is_verified')
         .single();
 
       if (stableError) {
@@ -268,7 +272,8 @@ export class SimpleStableAPI {
             location,
             city,
             state_province,
-            member_count
+            member_count,
+            is_verified
           )
         `)
         .eq('user_id', userId)
