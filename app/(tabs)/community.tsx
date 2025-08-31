@@ -706,6 +706,22 @@ export default function CommunityScreen() {
     setIsLoadingFriends(true);
 
     try {
+      // Add diagnostic logging for debugging
+      if (__DEV__) {
+        console.log("🔍 Community: Starting friendship diagnosis...");
+        try {
+          const diagnosis = await UserAPI.diagnoseFriendships(user.id);
+          console.log("📊 Community: Friendship diagnosis complete:", {
+            totalRecords: diagnosis.allRecords.length,
+            asUser: diagnosis.asUser.length,
+            asFriend: diagnosis.asFriend.length,
+            issues: diagnosis.reciprocalIssues.length
+          });
+        } catch (diagError) {
+          console.warn("⚠️ Community: Diagnosis failed:", diagError);
+        }
+      }
+
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error("Loading friends timed out after 20 seconds"));
@@ -785,6 +801,30 @@ export default function CommunityScreen() {
       setRefreshing(false);
     }
   }, [user?.id]); // Remove function dependencies to prevent excessive re-creation
+
+  // Debug function to manually fix friendships (development only)
+  const debugFixFriendships = useCallback(async () => {
+    if (!user?.id || !__DEV__) return;
+
+    try {
+      console.log("🔧 Manual friendship fix triggered");
+      const result = await UserAPI.fixBrokenFriendships(user.id);
+      
+      Alert.alert(
+        "Friendship Fix Results",
+        `Fixed: ${result.fixed} broken friendships\nErrors: ${result.errors.length}\n\n${result.errors.join('\n')}`,
+        [
+          {
+            text: "Reload Friends",
+            onPress: () => loadFriends()
+          },
+          { text: "OK" }
+        ]
+      );
+    } catch (error) {
+      Alert.alert("Error", `Failed to fix friendships: ${error}`);
+    }
+  }, [user?.id, loadFriends]);
 
   // Search for users with manual trigger
   const handleSearchInput = (query: string) => {
@@ -1536,13 +1576,23 @@ export default function CommunityScreen() {
         <View style={styles.headerContainer}>
           <Text style={[styles.header, { color: "#FFFFFF" }]}>Community</Text>
           {user && (
-            <TouchableOpacity
-              style={styles.notificationIcon}
-              onPress={() => setShowNotifications(true)}
-            >
-              <Text style={{ fontSize: 18, color: "#FFFFFF" }}>🔔</Text>
-              <NotificationBadge count={notificationCount} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {__DEV__ && (
+                <TouchableOpacity
+                  style={[styles.notificationIcon, { marginRight: 8 }]}
+                  onPress={debugFixFriendships}
+                >
+                  <Text style={{ fontSize: 16, color: "#FFFFFF" }}>🔧</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.notificationIcon}
+                onPress={() => setShowNotifications(true)}
+              >
+                <Text style={{ fontSize: 18, color: "#FFFFFF" }}>🔔</Text>
+                <NotificationBadge count={notificationCount} />
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </SafeAreaView>

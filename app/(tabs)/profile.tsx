@@ -24,7 +24,6 @@ import * as HorseAPI from "../../lib/horseAPI";
 import { ImageCompression } from "../../lib/imageCompression";
 import { SimpleStable, SimpleStableAPI } from "../../lib/simpleStableAPI";
 import { UserBadgeWithDetails } from "../../lib/supabase";
-import * as UserAPI from "../../lib/userAPI";
 
 const ProfileScreen = () => {
   const router = useRouter();
@@ -92,7 +91,6 @@ const ProfileScreen = () => {
 
   // Counters state
   const [horsesCount, setHorsesCount] = useState(0);
-  const [friendsCount, setFriendsCount] = useState(0);
   const [countersLoading, setCountersLoading] = useState(false);
 
   // Badge dialog state
@@ -430,19 +428,14 @@ const ProfileScreen = () => {
   const loadCounters = async () => {
     setCountersLoading(true);
     try {
-      // Load horses and friends counts using lightweight API calls
-      const [horsesCount, friendsCount] = await Promise.all([
-        HorseAPI.HorseAPI.getHorseCount(USER_ID),
-        UserAPI.UserAPI.getFriendsCount(USER_ID),
-      ]);
+      // Load horses count using lightweight API call
+      const horsesCount = await HorseAPI.HorseAPI.getHorseCount(USER_ID);
 
       setHorsesCount(horsesCount);
-      setFriendsCount(friendsCount);
     } catch (error) {
       console.error("Error loading counters:", error);
       // Don't show error for counters, just set to 0
       setHorsesCount(0);
-      setFriendsCount(0);
     } finally {
       setCountersLoading(false);
     }
@@ -1341,40 +1334,6 @@ const ProfileScreen = () => {
                         ]}
                       >
                         {horsesCount}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.counterItem}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/user-friends",
-                        params: { userId: USER_ID },
-                      })
-                    }
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.counterLabel,
-                        { color: currentTheme.colors.textSecondary },
-                      ]}
-                    >
-                      Friends
-                    </Text>
-                    {countersLoading ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={currentTheme.colors.primary}
-                      />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.counterValue,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        {friendsCount}
                       </Text>
                     )}
                   </TouchableOpacity>

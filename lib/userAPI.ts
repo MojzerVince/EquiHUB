@@ -70,6 +70,201 @@ export class UserAPI {
     }
   }
 
+  // Diagnose friendship records for a user (debugging function)
+  static async diagnoseFriendships(userId: string): Promise<{ 
+    allRecords: any[], 
+    asUser: any[], 
+    asFriend: any[], 
+    reciprocalIssues: string[],
+    error: string | null 
+  }> {
+    try {
+      console.log("🔍 UserAPI.diagnoseFriendships: Diagnosing friendships for user:", userId);
+      
+      const supabase = getSupabase();
+      
+      // Get all friendship records involving this user
+      const { data: allRecords, error } = await supabase
+        .from('friendships')
+        .select('id, user_id, friend_id, status, created_at')
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+        .eq('status', 'accepted')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error("❌ UserAPI.diagnoseFriendships: Database error:", error);
+        return { allRecords: [], asUser: [], asFriend: [], reciprocalIssues: [], error: error.message };
+      }
+
+      if (!allRecords || allRecords.length === 0) {
+        console.log("ℹ️ UserAPI.diagnoseFriendships: No friendship records found");
+        return { allRecords: [], asUser: [], asFriend: [], reciprocalIssues: [], error: null };
+      }
+
+      // Separate records where user is the user_id vs friend_id
+      const asUser = allRecords.filter((r: any) => r.user_id === userId);
+      const asFriend = allRecords.filter((r: any) => r.friend_id === userId);
+
+      console.log("📊 UserAPI.diagnoseFriendships: Analysis:");
+      console.log("  - Total records:", allRecords.length);
+      console.log("  - As user_id:", asUser.length);
+      console.log("  - As friend_id:", asFriend.length);
+      console.log("  - Records where user is user_id:", asUser.map((r: any) => `${r.user_id} -> ${r.friend_id}`));
+      console.log("  - Records where user is friend_id:", asFriend.map((r: any) => `${r.user_id} -> ${r.friend_id}`));
+
+      // Check for reciprocal issues
+      const reciprocalIssues: string[] = [];
+      
+      // For each record where user is user_id, check if reciprocal exists
+      for (const record of asUser) {
+        const reciprocalExists = asFriend.some((r: any) => r.user_id === record.friend_id);
+        if (!reciprocalExists) {
+          reciprocalIssues.push(`Missing reciprocal for ${record.user_id} -> ${record.friend_id}`);
+        }
+      }
+
+      // For each record where user is friend_id, check if reciprocal exists  
+      for (const record of asFriend) {
+        const reciprocalExists = asUser.some((r: any) => r.friend_id === record.user_id);
+        if (!reciprocalExists) {
+          reciprocalIssues.push(`Missing reciprocal for ${record.user_id} -> ${record.friend_id}`);
+        }
+      }
+
+      console.log("🚨 UserAPI.diagnoseFriendships: Reciprocal issues:", reciprocalIssues);
+
+      return { 
+        allRecords, 
+        asUser, 
+        asFriend, 
+        reciprocalIssues,
+        error: null 
+      };
+
+    } catch (error) {
+      console.error("💥 UserAPI.diagnoseFriendships: Exception:", error);
+      return { 
+        allRecords: [], 
+        asUser: [], 
+        asFriend: [], 
+        reciprocalIssues: [], 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  // Fix broken friendships by creating missing reciprocal records
+  static async fixBrokenFriendships(userId: string): Promise<{ 
+    fixed: number, 
+    errors: string[], 
+    error: string | null 
+  }> {
+    try {
+      console.log("🔧 UserAPI.fixBrokenFriendships: Fixing broken friendships for user:", userId);
+      
+      // First diagnose the issues
+      const diagnosis = await this.diagnoseFriendships(userId);
+      
+      if (diagnosis.error) {
+        return { fixed: 0, errors: [diagnosis.error], error: diagnosis.error };
+      }
+
+      if (diagnosis.reciprocalIssues.length === 0) {
+        console.log("✅ UserAPI.fixBrokenFriendships: No broken friendships found");
+        return { fixed: 0, errors: [], error: null };
+      }
+
+      console.log("🔧 UserAPI.fixBrokenFriendships: Found", diagnosis.reciprocalIssues.length, "issues to fix");
+
+      const supabase = getSupabase();
+      let fixed = 0;
+      const errors: string[] = [];
+
+      // Create missing reciprocal records
+      for (const record of diagnosis.asUser) {
+        const reciprocalExists = diagnosis.asFriend.some((r: any) => r.user_id === record.friend_id);
+        if (!reciprocalExists) {
+          try {
+            console.log(`🔧 Creating reciprocal record: ${record.friend_id} -> ${record.user_id}`);
+            
+            const { error: insertError } = await supabase
+              .from('friendships')
+              .insert({
+                user_id: record.friend_id,
+                friend_id: record.user_id,
+                status: 'accepted',
+                created_at: new Date().toISOString()
+              });
+
+            if (insertError) {
+              if (insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
+                console.log("ℹ️ Reciprocal record already exists, skipping");
+              } else {
+                console.error("❌ Error creating reciprocal record:", insertError);
+                errors.push(`Failed to create reciprocal for ${record.friend_id} -> ${record.user_id}: ${insertError.message}`);
+              }
+            } else {
+              console.log("✅ Reciprocal record created successfully");
+              fixed++;
+            }
+          } catch (error) {
+            console.error("💥 Exception creating reciprocal record:", error);
+            errors.push(`Exception creating reciprocal for ${record.friend_id} -> ${record.user_id}: ${error}`);
+          }
+        }
+      }
+
+      // Create missing reciprocal records for the other direction
+      for (const record of diagnosis.asFriend) {
+        const reciprocalExists = diagnosis.asUser.some((r: any) => r.friend_id === record.user_id);
+        if (!reciprocalExists) {
+          try {
+            console.log(`🔧 Creating reciprocal record: ${record.friend_id} -> ${record.user_id}`);
+            
+            const { error: insertError } = await supabase
+              .from('friendships')
+              .insert({
+                user_id: record.friend_id,
+                friend_id: record.user_id,
+                status: 'accepted',
+                created_at: new Date().toISOString()
+              });
+
+            if (insertError) {
+              if (insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
+                console.log("ℹ️ Reciprocal record already exists, skipping");
+              } else {
+                console.error("❌ Error creating reciprocal record:", insertError);
+                errors.push(`Failed to create reciprocal for ${record.friend_id} -> ${record.user_id}: ${insertError.message}`);
+              }
+            } else {
+              console.log("✅ Reciprocal record created successfully");
+              fixed++;
+            }
+          } catch (error) {
+            console.error("💥 Exception creating reciprocal record:", error);
+            errors.push(`Exception creating reciprocal for ${record.friend_id} -> ${record.user_id}: ${error}`);
+          }
+        }
+      }
+
+      console.log(`🎉 UserAPI.fixBrokenFriendships: Fixed ${fixed} broken friendships`);
+      if (errors.length > 0) {
+        console.log("⚠️ UserAPI.fixBrokenFriendships: Errors encountered:", errors);
+      }
+
+      return { fixed, errors, error: null };
+
+    } catch (error) {
+      console.error("💥 UserAPI.fixBrokenFriendships: Exception:", error);
+      return { 
+        fixed: 0, 
+        errors: [], 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
   // Test database connection and table access
   static async testDatabaseConnection(): Promise<{ success: boolean; error: string | null; data?: any }> {
     try {
@@ -349,6 +544,17 @@ export class UserAPI {
       
       // Get the initialized Supabase client
       const supabase = getSupabase();
+
+      // First, try to fix any broken friendships silently
+      try {
+        console.log("🔧 UserAPI.getFriends: Checking for broken friendships...");
+        const fixResult = await this.fixBrokenFriendships(userId);
+        if (fixResult.fixed > 0) {
+          console.log(`✅ UserAPI.getFriends: Fixed ${fixResult.fixed} broken friendships`);
+        }
+      } catch (fixError) {
+        console.warn("⚠️ UserAPI.getFriends: Failed to fix broken friendships, continuing anyway:", fixError);
+      }
       
       // Try the complex join query first (likely to fail due to foreign key issues)
       let { data: friendships, error: friendshipError } = await supabase
@@ -395,12 +601,16 @@ export class UserAPI {
           
           // Extract friend IDs - if user is user_id, take friend_id; if user is friend_id, take user_id
           const friendIds = simpleFriendships.map((f: any) => {
-            return f.user_id === userId ? f.friend_id : f.user_id;
+            const friendId = f.user_id === userId ? f.friend_id : f.user_id;
+            console.log(`  - Processing friendship: user_id=${f.user_id}, friend_id=${f.friend_id}, extracted=${friendId}`);
+            return friendId;
           });
           
           // Remove duplicates
           const uniqueFriendIds = [...new Set(friendIds)];
-          console.log("  - Friend IDs:", uniqueFriendIds);
+          console.log("  - All Friend IDs:", friendIds);
+          console.log("  - Unique Friend IDs:", uniqueFriendIds);
+          console.log("  - Duplicates removed:", friendIds.length - uniqueFriendIds.length);
           
           if (uniqueFriendIds.length > 0) {
             const { data: profiles, error: profileError } = await supabase

@@ -349,7 +349,31 @@ export class CommunityAPI {
         { status: 'accepted' }
       );
 
-      console.log('✅ Friend request accepted');
+      console.log('✅ Friend request accepted, now creating reciprocal friendship...');
+
+      // Create reciprocal friendship record
+      try {
+        await this.makeRequest(
+          'friendships',
+          'POST',
+          {
+            user_id: userId,
+            friend_id: friendId,
+            status: 'accepted'
+          }
+        );
+        console.log('✅ Reciprocal friendship created successfully');
+      } catch (reciprocalError) {
+        // Check if it's a duplicate key error (which is expected if reciprocal already exists)
+        console.log('⚠️ Reciprocal friendship creation result:', reciprocalError);
+        // Don't fail the whole operation if reciprocal creation fails due to duplicate
+        if (!String(reciprocalError).includes('duplicate') && !String(reciprocalError).includes('unique')) {
+          console.error('❌ Unexpected error creating reciprocal friendship:', reciprocalError);
+          // Don't throw error, but log it - the main friendship is already accepted
+        }
+      }
+
+      console.log('✅ Friend request acceptance complete');
       return { success: true, error: null };
 
     } catch (error) {
