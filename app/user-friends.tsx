@@ -1,13 +1,13 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
@@ -287,7 +287,7 @@ const UserFriendsScreen = () => {
           <Text
             style={[styles.headerTitle, { color: currentTheme.colors.text }]}
           >
-            Friends
+            {isOwnProfile ? "My Friends" : `${userProfile?.name || "User"}'s Friends`}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -328,7 +328,7 @@ const UserFriendsScreen = () => {
           </Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: currentTheme.colors.text }]}>
-          {`${userProfile?.name || "User"}'s Friends`}
+          {isOwnProfile ? "My Friends" : `${userProfile?.name || "User"}'s Friends`}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
