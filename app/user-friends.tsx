@@ -31,6 +31,7 @@ const UserFriendsScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [addingFriends, setAddingFriends] = useState<Set<string>>(new Set());
+  const [removingFriends, setRemovingFriends] = useState<Set<string>>(new Set());
 
   const isOwnProfile = user?.id === userId;
 
@@ -163,6 +164,45 @@ const UserFriendsScreen = () => {
     }
   };
 
+  const handleRemoveFriend = async (friendId: string) => {
+    if (!user?.id) return;
+
+    setRemovingFriends((prev) => new Set(prev).add(friendId));
+
+    try {
+      const result = await UserAPI.UserAPI.removeFriend(user.id, friendId);
+
+      if (result.error) {
+        showError(result.error);
+      } else {
+        showSuccess("Friend removed successfully!");
+        // Update the friendship status or reload friends
+        if (isOwnProfile) {
+          // If viewing own profile, remove the friend from the list
+          setFriends((prev) => prev.filter((friend) => friend.id !== friendId));
+        } else {
+          // If viewing someone else's profile, update the status
+          setFriends((prev) =>
+            prev.map((friend) =>
+              friend.id === friendId
+                ? { ...friend, friendshipStatus: "none" }
+                : friend
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error removing friend:", error);
+      showError("Failed to remove friend");
+    } finally {
+      setRemovingFriends((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(friendId);
+        return newSet;
+      });
+    }
+  };
+
   const renderFriendItem = ({ item }: { item: FriendWithStatus }) => (
     <TouchableOpacity
       style={[
@@ -248,15 +288,45 @@ const UserFriendsScreen = () => {
             </View>
           )}
           {item.friendshipStatus === "friends" && (
-            <View
+            <TouchableOpacity
               style={[
-                styles.statusBadge,
-                { backgroundColor: currentTheme.colors.success || "#4CAF50" },
+                styles.removeButton,
+                { backgroundColor: currentTheme.colors.error || "#FF6B6B" },
               ]}
+              onPress={() => handleRemoveFriend(item.id)}
+              disabled={removingFriends.has(item.id)}
             >
-              <Text style={styles.statusText}>Friends</Text>
-            </View>
+              {removingFriends.has(item.id) ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.removeButtonText}>Delete Friend</Text>
+              )}
+            </TouchableOpacity>
           )}
+        </TouchableOpacity>
+      )}
+
+      {isOwnProfile && (
+        <TouchableOpacity
+          style={styles.actionContainer}
+          onPress={(e) => {
+            e.stopPropagation(); // Prevent navigation when pressing action buttons
+          }}
+        >
+          <TouchableOpacity
+            style={[
+              styles.removeButton,
+              { backgroundColor: currentTheme.colors.error || "#FF6B6B" },
+            ]}
+            onPress={() => handleRemoveFriend(item.id)}
+            disabled={removingFriends.has(item.id)}
+          >
+            {removingFriends.has(item.id) ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.removeButtonText}>Delete Friend</Text>
+            )}
+          </TouchableOpacity>
         </TouchableOpacity>
       )}
     </TouchableOpacity>
@@ -509,6 +579,19 @@ const styles = StyleSheet.create({
   statusText: {
     color: "#fff",
     fontSize: 11,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  removeButton: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 80,
+    alignItems: "center",
+  },
+  removeButtonText: {
+    color: "#fff",
+    fontSize: 12,
     fontWeight: "bold",
     fontFamily: "Inder",
   },
