@@ -7,22 +7,22 @@ import { useRouter } from "expo-router";
 import * as TaskManager from "expo-task-manager";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    AppState,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  AppState,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import MapView, {
-    Marker,
-    PROVIDER_GOOGLE,
-    Polyline,
-    Region,
+  Marker,
+  PROVIDER_GOOGLE,
+  Polyline,
+  Region,
 } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -141,38 +141,46 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
     // Process all location updates, not just the first one
     if (locations && locations.length > 0) {
-      const trackingPoints = locations.map((location: any) => ({
+      console.log(`🔄 Processing ${locations.length} background location(s)`);
+      
+      const trackingPoints = locations.map((location: any, index: number) => ({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        timestamp: Date.now() + Math.random(), // Add small random to avoid timestamp collisions
+        timestamp: location.timestamp || (Date.now() + index), // Use actual timestamp when available
         accuracy: location.coords.accuracy,
-        speed: location.coords.speed,
+        speed: location.coords.speed || 0,
+        altitude: location.coords.altitude,
+        heading: location.coords.heading,
       }));
 
       try {
         // Get existing points
-        const existingData = await AsyncStorage.getItem(
-          "current_tracking_points"
-        );
+        const existingData = await AsyncStorage.getItem("current_tracking_points");
         const existingPoints = existingData ? JSON.parse(existingData) : [];
 
-        // Add new points
-        const updatedPoints = [...existingPoints, ...trackingPoints];
-
-        // Limit stored points to prevent memory issues (keep last 1000 points)
-        const limitedPoints = updatedPoints.slice(-1000);
-
-        await AsyncStorage.setItem(
-          "current_tracking_points",
-          JSON.stringify(limitedPoints)
+        // Filter out points with poor accuracy (optional - can be adjusted)
+        const goodAccuracyPoints = trackingPoints.filter((point: TrackingPoint) => 
+          !point.accuracy || point.accuracy <= 50 // Only accept points with accuracy ≤ 50 meters
         );
 
-        console.log(
-          "📊 Background locations saved:",
-          trackingPoints.length,
-          "total:",
-          limitedPoints.length
-        );
+        if (goodAccuracyPoints.length > 0) {
+          // Add new points
+          const updatedPoints = [...existingPoints, ...goodAccuracyPoints];
+
+          // Limit stored points to prevent memory issues (keep last 2000 points for longer rides)
+          const limitedPoints = updatedPoints.slice(-2000);
+
+          await AsyncStorage.setItem("current_tracking_points", JSON.stringify(limitedPoints));
+
+          console.log(
+            `📊 Background locations saved: ${goodAccuracyPoints.length}/${trackingPoints.length} (good accuracy), total: ${limitedPoints.length}`
+          );
+
+          // Update last known location timestamp for debugging
+          await AsyncStorage.setItem("last_background_update", Date.now().toString());
+        } else {
+          console.log("⚠️ All background locations filtered out due to poor accuracy");
+        }
       } catch (error) {
         console.error("Error saving background location:", error);
       }
@@ -272,6 +280,7 @@ const MapScreen = () => {
   useEffect(() => {
     const handleAppStateChange = async (nextAppState: string) => {
       console.log(`🔄 App state changed from ${appState} to ${nextAppState}`);
+      console.log(`📍 Current tracking state: isTracking=${isTracking}, backgroundMode=${isUsingBackgroundLocation}`);
       
       if (isTracking) {
         if (nextAppState === 'background' && appState === 'active') {
@@ -281,6 +290,8 @@ const MapScreen = () => {
           console.log('📱 App coming to foreground - switching to foreground location tracking');
           await switchToForegroundLocation();
         }
+      } else {
+        console.log('📍 Not tracking, skipping location mode switch');
       }
       
       setAppState(nextAppState as any);
@@ -1226,6 +1237,8 @@ const MapScreen = () => {
   const requestLocationPermission = async () => {
     try {
       setLoading(true);
+      
+      // First request foreground permission
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         setLocationPermission(false);
@@ -1234,6 +1247,13 @@ const MapScreen = () => {
         );
         return;
       }
+
+      // For tracking functionality, also request background permission upfront
+      const backgroundStatus = await Location.getBackgroundPermissionsAsync();
+      if (backgroundStatus.status !== "granted") {
+        console.log("Background location permission not granted, will request when needed");
+      }
+
       setLocationPermission(true);
       getCurrentLocation();
     } catch (error) {
@@ -1513,22 +1533,65 @@ const MapScreen = () => {
       if (!isAlreadyRunning) {
         await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
           accuracy: Location.Accuracy.BestForNavigation,
-          timeInterval: highAccuracyMode ? 250 : 1000,
-          distanceInterval: 1,
-          deferredUpdatesInterval: highAccuracyMode ? 250 : 1000,
-          showsBackgroundLocationIndicator: false,
+          timeInterval: highAccuracyMode ? 1000 : 2000, // Increased from 250ms to 1-2s for better battery
+          distanceInterval: 1, // Update every 1 meter
+          deferredUpdatesInterval: 1000, // Batch updates every 1 second
+          showsBackgroundLocationIndicator: true, // Show location indicator for better user awareness
           foregroundService: {
-            notificationTitle: "🐎 EquiHUB",
-            notificationBody: "GPS tracking in background",
+            notificationTitle: "🐎 EquiHUB GPS Tracking",
+            notificationBody: "Recording your ride in the background",
             notificationColor: "#4A90E2",
+            // Add notification icon for Android
+            killServiceOnDestroy: false,
           },
+          // Additional options for better background tracking
+          pausesUpdatesAutomatically: false, // Don't pause location updates automatically
+          activityType: Location.LocationActivityType.Fitness, // Optimize for fitness tracking
         });
-        console.log('🚀 Started background location tracking');
+        console.log('🚀 Started background location tracking with enhanced settings');
       }
       
       setIsUsingBackgroundLocation(true);
     } catch (error) {
       console.error('❌ Error switching to background location:', error);
+      
+      // Show user-friendly error message
+      Alert.alert(
+        "Background Tracking Issue", 
+        "Unable to start background GPS tracking. Please check your location permissions and try again.",
+        [{ text: "OK" }]
+      );
+    }
+  };
+
+  // Debug function to check background tracking status
+  const checkBackgroundTrackingStatus = async () => {
+    try {
+      const isRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      const lastUpdate = await AsyncStorage.getItem("last_background_update");
+      const backgroundPoints = await AsyncStorage.getItem("current_tracking_points");
+      
+      const pointsCount = backgroundPoints ? JSON.parse(backgroundPoints).length : 0;
+      const lastUpdateTime = lastUpdate ? new Date(parseInt(lastUpdate)).toLocaleTimeString() : "Never";
+      
+      console.log(`🔍 Background Tracking Status:
+        - Task Running: ${isRunning}
+        - Using Background: ${isUsingBackgroundLocation}
+        - Points Stored: ${pointsCount}
+        - Last Update: ${lastUpdateTime}
+        - App State: ${AppState.currentState}
+      `);
+
+      // Show status to user in development
+      if (__DEV__) {
+        Alert.alert(
+          "Background Tracking Status",
+          `Task Running: ${isRunning}\nBackground Mode: ${isUsingBackgroundLocation}\nPoints: ${pointsCount}\nLast Update: ${lastUpdateTime}`,
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      console.error("Error checking background status:", error);
     }
   };
 
@@ -2233,6 +2296,17 @@ const MapScreen = () => {
 
             {/* Map control buttons */}
             <View style={styles.mapControlsContainer}>
+              {/* Debug button for checking background status (only in development) */}
+              {__DEV__ && isTracking && (
+                <TouchableOpacity
+                  style={[styles.mapControlButton, { backgroundColor: "#FF9500", marginBottom: 10 }]}
+                  onPress={checkBackgroundTrackingStatus}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.mapControlButtonText}>🔍</Text>
+                </TouchableOpacity>
+              )}
+              
               <TouchableOpacity
                 style={styles.mapControlButton}
                 onPress={toggleMapType}
