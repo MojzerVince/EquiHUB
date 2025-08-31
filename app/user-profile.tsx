@@ -1,14 +1,14 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
@@ -39,7 +39,6 @@ const UserProfileScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [horsesCount, setHorsesCount] = useState(0);
-  const [friendsCount, setFriendsCount] = useState(0);
   const [countersLoading, setCountersLoading] = useState(true);
   const [friendshipStatus, setFriendshipStatus] = useState<
     "none" | "pending" | "friends"
@@ -122,17 +121,12 @@ const UserProfileScreen = () => {
 
     setCountersLoading(true);
     try {
-      const [horsesData, friendsResponse] = await Promise.all([
-        HorseAPI.HorseAPI.getHorses(userId),
-        UserAPI.UserAPI.getFriends(userId),
-      ]);
+      const horsesData = await HorseAPI.HorseAPI.getHorses(userId);
 
       setHorsesCount(horsesData?.length || 0);
-      setFriendsCount(friendsResponse?.friends?.length || 0);
     } catch (error) {
       console.error("Error loading counters:", error);
       setHorsesCount(0);
-      setFriendsCount(0);
     } finally {
       setCountersLoading(false);
     }
@@ -624,40 +618,6 @@ const UserProfileScreen = () => {
                     ]}
                   >
                     {horsesCount}
-                  </Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.counterItem}
-                onPress={() =>
-                  router.push({
-                    pathname: "/user-friends",
-                    params: { userId: userId },
-                  })
-                }
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.counterLabel,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  Friends
-                </Text>
-                {countersLoading ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={currentTheme.colors.primary}
-                  />
-                ) : (
-                  <Text
-                    style={[
-                      styles.counterValue,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    {friendsCount}
                   </Text>
                 )}
               </TouchableOpacity>
