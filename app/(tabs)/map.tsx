@@ -142,11 +142,11 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     // Process all location updates, not just the first one
     if (locations && locations.length > 0) {
       console.log(`🔄 Processing ${locations.length} background location(s)`);
-      
+
       const trackingPoints = locations.map((location: any, index: number) => ({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        timestamp: location.timestamp || (Date.now() + index), // Use actual timestamp when available
+        timestamp: location.timestamp || Date.now() + index, // Use actual timestamp when available
         accuracy: location.coords.accuracy,
         speed: location.coords.speed || 0,
         altitude: location.coords.altitude,
@@ -155,12 +155,14 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
       try {
         // Get existing points
-        const existingData = await AsyncStorage.getItem("current_tracking_points");
+        const existingData = await AsyncStorage.getItem(
+          "current_tracking_points"
+        );
         const existingPoints = existingData ? JSON.parse(existingData) : [];
 
         // Filter out points with poor accuracy (optional - can be adjusted)
-        const goodAccuracyPoints = trackingPoints.filter((point: TrackingPoint) => 
-          !point.accuracy || point.accuracy <= 50 // Only accept points with accuracy ≤ 50 meters
+        const goodAccuracyPoints = trackingPoints.filter(
+          (point: TrackingPoint) => !point.accuracy || point.accuracy <= 50 // Only accept points with accuracy ≤ 50 meters
         );
 
         if (goodAccuracyPoints.length > 0) {
@@ -170,16 +172,24 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
           // Limit stored points to prevent memory issues (keep last 2000 points for longer rides)
           const limitedPoints = updatedPoints.slice(-2000);
 
-          await AsyncStorage.setItem("current_tracking_points", JSON.stringify(limitedPoints));
+          await AsyncStorage.setItem(
+            "current_tracking_points",
+            JSON.stringify(limitedPoints)
+          );
 
           console.log(
             `📊 Background locations saved: ${goodAccuracyPoints.length}/${trackingPoints.length} (good accuracy), total: ${limitedPoints.length}`
           );
 
           // Update last known location timestamp for debugging
-          await AsyncStorage.setItem("last_background_update", Date.now().toString());
+          await AsyncStorage.setItem(
+            "last_background_update",
+            Date.now().toString()
+          );
         } else {
-          console.log("⚠️ All background locations filtered out due to poor accuracy");
+          console.log(
+            "⚠️ All background locations filtered out due to poor accuracy"
+          );
         }
       } catch (error) {
         console.error("Error saving background location:", error);
@@ -259,7 +269,8 @@ const MapScreen = () => {
 
   // App state tracking for coordinating foreground/background location
   const [appState, setAppState] = useState(AppState.currentState);
-  const [isUsingBackgroundLocation, setIsUsingBackgroundLocation] = useState(false);
+  const [isUsingBackgroundLocation, setIsUsingBackgroundLocation] =
+    useState(false);
 
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
@@ -280,25 +291,34 @@ const MapScreen = () => {
   useEffect(() => {
     const handleAppStateChange = async (nextAppState: string) => {
       console.log(`🔄 App state changed from ${appState} to ${nextAppState}`);
-      console.log(`📍 Current tracking state: isTracking=${isTracking}, backgroundMode=${isUsingBackgroundLocation}`);
-      
+      console.log(
+        `📍 Current tracking state: isTracking=${isTracking}, backgroundMode=${isUsingBackgroundLocation}`
+      );
+
       if (isTracking) {
-        if (nextAppState === 'background' && appState === 'active') {
-          console.log('📱 App going to background - switching to background location tracking');
+        if (nextAppState === "background" && appState === "active") {
+          console.log(
+            "📱 App going to background - switching to background location tracking"
+          );
           await switchToBackgroundLocation();
-        } else if (nextAppState === 'active' && appState === 'background') {
-          console.log('📱 App coming to foreground - switching to foreground location tracking');
+        } else if (nextAppState === "active" && appState === "background") {
+          console.log(
+            "📱 App coming to foreground - switching to foreground location tracking"
+          );
           await switchToForegroundLocation();
         }
       } else {
-        console.log('📍 Not tracking, skipping location mode switch');
+        console.log("📍 Not tracking, skipping location mode switch");
       }
-      
+
       setAppState(nextAppState as any);
     };
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange
+    );
+
     return () => {
       subscription?.remove();
     };
@@ -307,18 +327,21 @@ const MapScreen = () => {
   // Background data sync effect - only when using background location
   useEffect(() => {
     let syncInterval: ReturnType<typeof setInterval> | null = null;
-    
+
     if (isTracking && isUsingBackgroundLocation) {
-      console.log('🔄 Starting background data sync timer');
-      syncInterval = setInterval(async () => {
-        await syncBackgroundData();
-      }, highAccuracyMode ? 500 : 2000); // Sync every 500ms in high accuracy, 2s in normal
+      console.log("🔄 Starting background data sync timer");
+      syncInterval = setInterval(
+        async () => {
+          await syncBackgroundData();
+        },
+        highAccuracyMode ? 500 : 2000
+      ); // Sync every 500ms in high accuracy, 2s in normal
     }
-    
+
     return () => {
       if (syncInterval) {
         clearInterval(syncInterval);
-        console.log('⏹️ Stopped background data sync timer');
+        console.log("⏹️ Stopped background data sync timer");
       }
     };
   }, [isTracking, isUsingBackgroundLocation, highAccuracyMode]);
@@ -427,49 +450,69 @@ const MapScreen = () => {
         setHorsesLoading(true);
         try {
           // First try to load horses from AsyncStorage
-          const cachedHorses = await AsyncStorage.getItem(`user_horses_${user.id}`);
-          
+          const cachedHorses = await AsyncStorage.getItem(
+            `user_horses_${user.id}`
+          );
+
           if (cachedHorses) {
             const horses = JSON.parse(cachedHorses);
-            
+
             // Load images separately for each horse
             const horsesWithImages = await Promise.all(
               horses.map(async (horse: Horse) => {
                 try {
-                  const cachedImage = await AsyncStorage.getItem(`horse_image_${horse.id}`);
+                  const cachedImage = await AsyncStorage.getItem(
+                    `horse_image_${horse.id}`
+                  );
                   if (cachedImage) {
                     const imageData = JSON.parse(cachedImage);
                     return {
                       ...horse,
                       image_url: imageData.image_url,
-                      image_base64: imageData.image_base64
+                      image_base64: imageData.image_base64,
                     };
                   }
                   return horse;
                 } catch (imageError) {
-                  console.warn(`⚠️ Failed to load image for horse ${horse.name}:`, imageError);
+                  console.warn(
+                    `⚠️ Failed to load image for horse ${horse.name}:`,
+                    imageError
+                  );
                   return horse; // Return horse without image if image loading fails
                 }
               })
             );
-            
+
             setUserHorses(horsesWithImages || []);
-            console.log('✅ Loaded horses from AsyncStorage:', horsesWithImages.length, 'horses with images');
+            console.log(
+              "✅ Loaded horses from AsyncStorage:",
+              horsesWithImages.length,
+              "horses with images"
+            );
           } else {
             // Fallback to API call if no cached data (first time user or cache cleared)
-            console.log('⚠️ No cached horses found, falling back to API call');
+            console.log("⚠️ No cached horses found, falling back to API call");
             await loadHorsesFromAPI();
           }
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error('❌ Error loading horses:', errorMessage);
-          
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          console.error("❌ Error loading horses:", errorMessage);
+
           // Handle specific SQLite cursor window error
-          if (errorMessage.includes('CursorWindow') || errorMessage.includes('Row too big')) {
-            console.log('⚠️ Large data detected, trying API with image optimization...');
+          if (
+            errorMessage.includes("CursorWindow") ||
+            errorMessage.includes("Row too big")
+          ) {
+            console.log(
+              "⚠️ Large data detected, trying API with image optimization..."
+            );
             await loadHorsesFromAPI();
-          } else if (errorMessage.includes('JSON') || errorMessage.includes('parse')) {
-            console.log('⚠️ Cached data corrupted, falling back to API call');
+          } else if (
+            errorMessage.includes("JSON") ||
+            errorMessage.includes("parse")
+          ) {
+            console.log("⚠️ Cached data corrupted, falling back to API call");
             await loadHorsesFromAPI();
           } else {
             // For other errors, show error message
@@ -487,25 +530,34 @@ const MapScreen = () => {
   // Helper function to load horses from API (with caching and optimization)
   const loadHorsesFromAPI = async () => {
     if (!user?.id) return;
-    
+
     try {
       const horses = await HorseAPI.getHorses(user.id);
       setUserHorses(horses || []);
-      
+
       // Cache with separate image storage for optimization
       if (horses && horses.length > 0) {
         try {
           await cacheHorsesWithSeparateImages(horses);
         } catch (storageError) {
-          console.warn('⚠️ Failed to cache horses (data too large):', storageError);
+          console.warn(
+            "⚠️ Failed to cache horses (data too large):",
+            storageError
+          );
         }
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
       // Handle cursor window error specifically
-      if (errorMessage.includes('CursorWindow') || errorMessage.includes('Row too big')) {
-        showError("Unable to load horse data - images too large.\n\nPlease try reducing image sizes in your horse profiles or contact support.");
+      if (
+        errorMessage.includes("CursorWindow") ||
+        errorMessage.includes("Row too big")
+      ) {
+        showError(
+          "Unable to load horse data - images too large.\n\nPlease try reducing image sizes in your horse profiles or contact support."
+        );
       } else {
         showError(`Failed to load your horses\n\nError: ${errorMessage}`);
       }
@@ -517,15 +569,18 @@ const MapScreen = () => {
   const cacheHorsesWithSeparateImages = async (horses: Horse[]) => {
     try {
       // Store metadata without images
-      const lightweightHorses = horses.map(horse => ({
+      const lightweightHorses = horses.map((horse) => ({
         ...horse,
         image_url: undefined,
-        image_base64: undefined
+        image_base64: undefined,
       }));
-      
-      await AsyncStorage.setItem(`user_horses_${user?.id}`, JSON.stringify(lightweightHorses));
-      console.log('✅ Horses metadata cached successfully');
-      
+
+      await AsyncStorage.setItem(
+        `user_horses_${user?.id}`,
+        JSON.stringify(lightweightHorses)
+      );
+      console.log("✅ Horses metadata cached successfully");
+
       // Store images separately
       for (const horse of horses) {
         if (horse.image_url || horse.image_base64) {
@@ -533,35 +588,46 @@ const MapScreen = () => {
             const imageData = {
               image_url: horse.image_url,
               image_base64: horse.image_base64,
-              cached_at: Date.now()
+              cached_at: Date.now(),
             };
-            await AsyncStorage.setItem(`horse_image_${horse.id}`, JSON.stringify(imageData));
+            await AsyncStorage.setItem(
+              `horse_image_${horse.id}`,
+              JSON.stringify(imageData)
+            );
             console.log(`✅ Image cached for horse: ${horse.name}`);
           } catch (imageError) {
-            console.warn(`⚠️ Failed to cache image for horse ${horse.name}:`, imageError);
+            console.warn(
+              `⚠️ Failed to cache image for horse ${horse.name}:`,
+              imageError
+            );
             // Continue with other horses even if one image fails
           }
         }
       }
     } catch (storageError) {
-      console.warn('⚠️ Failed to cache horses:', storageError);
+      console.warn("⚠️ Failed to cache horses:", storageError);
     }
   };
 
   // Helper function to get horse image from cache
-  const getHorseImageFromCache = async (horseId: string): Promise<{image_url?: string, image_base64?: string} | null> => {
+  const getHorseImageFromCache = async (
+    horseId: string
+  ): Promise<{ image_url?: string; image_base64?: string } | null> => {
     try {
       const cachedImage = await AsyncStorage.getItem(`horse_image_${horseId}`);
       if (cachedImage) {
         const imageData = JSON.parse(cachedImage);
         return {
           image_url: imageData.image_url,
-          image_base64: imageData.image_base64
+          image_base64: imageData.image_base64,
         };
       }
       return null;
     } catch (error) {
-      console.warn(`⚠️ Failed to get cached image for horse ${horseId}:`, error);
+      console.warn(
+        `⚠️ Failed to get cached image for horse ${horseId}:`,
+        error
+      );
       return null;
     }
   };
@@ -569,23 +635,31 @@ const MapScreen = () => {
   // Function to refresh horses from API (can be called manually if needed)
   const refreshHorsesFromAPI = async () => {
     if (!user?.id) return;
-    
+
     setHorsesLoading(true);
     try {
-      console.log('🔄 Refreshing horses from API...');
+      console.log("🔄 Refreshing horses from API...");
       await loadHorsesFromAPI();
-      console.log('✅ Horses refreshed and cached');
+      console.log("✅ Horses refreshed and cached");
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
       // Handle cursor window error specifically
-      if (errorMessage.includes('CursorWindow') || errorMessage.includes('Row too big')) {
-        console.log('⚠️ Large data detected during refresh, trying optimization...');
+      if (
+        errorMessage.includes("CursorWindow") ||
+        errorMessage.includes("Row too big")
+      ) {
+        console.log(
+          "⚠️ Large data detected during refresh, trying optimization..."
+        );
         try {
           await loadHorsesFromAPI();
-          console.log('✅ Horses refreshed with optimization');
+          console.log("✅ Horses refreshed with optimization");
         } catch (optimizedError) {
-          showError("Unable to load horse data - images too large.\n\nPlease try reducing image sizes in your horse profiles.");
+          showError(
+            "Unable to load horse data - images too large.\n\nPlease try reducing image sizes in your horse profiles."
+          );
         }
       } else {
         showError(`Failed to refresh horses\n\nError: ${errorMessage}`);
@@ -598,28 +672,31 @@ const MapScreen = () => {
   // Function to clear horses cache (for debugging/development)
   const clearHorsesCache = async () => {
     if (!user?.id) return;
-    
+
     try {
       // Clear main horses cache
       await AsyncStorage.removeItem(`user_horses_${user.id}`);
-      
+
       // Clear individual horse image caches
       const allKeys = await AsyncStorage.getAllKeys();
-      const horseImageKeys = allKeys.filter(key => key.startsWith('horse_image_'));
+      const horseImageKeys = allKeys.filter((key) =>
+        key.startsWith("horse_image_")
+      );
       if (horseImageKeys.length > 0) {
         await AsyncStorage.multiRemove(horseImageKeys);
         console.log(`🗑️ Cleared ${horseImageKeys.length} horse image caches`);
       }
-      
-      console.log('🗑️ All horses cache cleared');
-      
+
+      console.log("🗑️ All horses cache cleared");
+
       // Clear user horses from state
       setUserHorses([]);
-      
+
       // Show user that cache was cleared
       showDialog({
         title: "Cache Cleared",
-        message: "Horse cache and images have been cleared. The app will reload fresh data from the server.",
+        message:
+          "Horse cache and images have been cleared. The app will reload fresh data from the server.",
         buttons: [
           {
             text: "Reload Data",
@@ -629,7 +706,7 @@ const MapScreen = () => {
               try {
                 await loadHorsesFromAPI();
               } catch (error) {
-                console.error('Failed to reload after cache clear:', error);
+                console.error("Failed to reload after cache clear:", error);
               }
             },
           },
@@ -641,8 +718,8 @@ const MapScreen = () => {
         ],
       });
     } catch (error) {
-      console.error('❌ Failed to clear horses cache:', error);
-      showError('Failed to clear cache');
+      console.error("❌ Failed to clear horses cache:", error);
+      showError("Failed to clear cache");
     }
   };
 
@@ -1237,7 +1314,7 @@ const MapScreen = () => {
   const requestLocationPermission = async () => {
     try {
       setLoading(true);
-      
+
       // First request foreground permission
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
@@ -1251,7 +1328,9 @@ const MapScreen = () => {
       // For tracking functionality, also request background permission upfront
       const backgroundStatus = await Location.getBackgroundPermissionsAsync();
       if (backgroundStatus.status !== "granted") {
-        console.log("Background location permission not granted, will request when needed");
+        console.log(
+          "Background location permission not granted, will request when needed"
+        );
       }
 
       setLocationPermission(true);
@@ -1519,17 +1598,19 @@ const MapScreen = () => {
   // Switch to background location tracking (when app goes to background)
   const switchToBackgroundLocation = async () => {
     try {
-      console.log('🔄 Switching to background location tracking...');
-      
+      console.log("🔄 Switching to background location tracking...");
+
       // Stop foreground location watcher
       if (locationSubscriptionRef.current) {
         locationSubscriptionRef.current.remove();
         locationSubscriptionRef.current = null;
-        console.log('⏹️ Stopped foreground location watcher');
+        console.log("⏹️ Stopped foreground location watcher");
       }
 
       // Start background location tracking if not already running
-      const isAlreadyRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      const isAlreadyRunning = await Location.hasStartedLocationUpdatesAsync(
+        LOCATION_TASK_NAME
+      );
       if (!isAlreadyRunning) {
         await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
           accuracy: Location.Accuracy.BestForNavigation,
@@ -1548,16 +1629,18 @@ const MapScreen = () => {
           pausesUpdatesAutomatically: false, // Don't pause location updates automatically
           activityType: Location.LocationActivityType.Fitness, // Optimize for fitness tracking
         });
-        console.log('🚀 Started background location tracking with enhanced settings');
+        console.log(
+          "🚀 Started background location tracking with enhanced settings"
+        );
       }
-      
+
       setIsUsingBackgroundLocation(true);
     } catch (error) {
-      console.error('❌ Error switching to background location:', error);
-      
+      console.error("❌ Error switching to background location:", error);
+
       // Show user-friendly error message
       Alert.alert(
-        "Background Tracking Issue", 
+        "Background Tracking Issue",
         "Unable to start background GPS tracking. Please check your location permissions and try again.",
         [{ text: "OK" }]
       );
@@ -1567,13 +1650,21 @@ const MapScreen = () => {
   // Debug function to check background tracking status
   const checkBackgroundTrackingStatus = async () => {
     try {
-      const isRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      const isRunning = await Location.hasStartedLocationUpdatesAsync(
+        LOCATION_TASK_NAME
+      );
       const lastUpdate = await AsyncStorage.getItem("last_background_update");
-      const backgroundPoints = await AsyncStorage.getItem("current_tracking_points");
-      
-      const pointsCount = backgroundPoints ? JSON.parse(backgroundPoints).length : 0;
-      const lastUpdateTime = lastUpdate ? new Date(parseInt(lastUpdate)).toLocaleTimeString() : "Never";
-      
+      const backgroundPoints = await AsyncStorage.getItem(
+        "current_tracking_points"
+      );
+
+      const pointsCount = backgroundPoints
+        ? JSON.parse(backgroundPoints).length
+        : 0;
+      const lastUpdateTime = lastUpdate
+        ? new Date(parseInt(lastUpdate)).toLocaleTimeString()
+        : "Never";
+
       console.log(`🔍 Background Tracking Status:
         - Task Running: ${isRunning}
         - Using Background: ${isUsingBackgroundLocation}
@@ -1598,32 +1689,36 @@ const MapScreen = () => {
   // Switch to foreground location tracking (when app comes to foreground)
   const switchToForegroundLocation = async () => {
     try {
-      console.log('🔄 Switching to foreground location tracking...');
-      
+      console.log("🔄 Switching to foreground location tracking...");
+
       // Sync any background data first
       await syncBackgroundData();
-      
+
       // Stop background location tracking
-      const isRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      const isRunning = await Location.hasStartedLocationUpdatesAsync(
+        LOCATION_TASK_NAME
+      );
       if (isRunning) {
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-        console.log('⏹️ Stopped background location tracking');
+        console.log("⏹️ Stopped background location tracking");
       }
 
       // Start foreground location watcher
       await restartLocationWatcherForTracking();
-      console.log('🚀 Started foreground location tracking');
-      
+      console.log("🚀 Started foreground location tracking");
+
       setIsUsingBackgroundLocation(false);
     } catch (error) {
-      console.error('❌ Error switching to foreground location:', error);
+      console.error("❌ Error switching to foreground location:", error);
     }
   };
 
   // Sync background data with app state
   const syncBackgroundData = async () => {
     try {
-      const backgroundData = await AsyncStorage.getItem("current_tracking_points");
+      const backgroundData = await AsyncStorage.getItem(
+        "current_tracking_points"
+      );
       if (backgroundData) {
         const backgroundPoints = JSON.parse(backgroundData);
         if (backgroundPoints.length > 0) {
@@ -1635,7 +1730,7 @@ const MapScreen = () => {
 
             if (newPoints.length > 0) {
               console.log(`📊 Syncing ${newPoints.length} background points`);
-              
+
               // Update current location to the most recent point
               const latestPoint = newPoints[newPoints.length - 1];
               setUserLocation({
@@ -1737,9 +1832,11 @@ const MapScreen = () => {
       }
 
       // Start with foreground location tracking (background will be activated when app goes to background)
-      console.log(`🚀 Starting foreground tracking with highAccuracyMode: ${highAccuracyMode}`);
+      console.log(
+        `🚀 Starting foreground tracking with highAccuracyMode: ${highAccuracyMode}`
+      );
       await restartLocationWatcherForTracking();
-      
+
       // Set state to indicate we're using foreground tracking
       setIsUsingBackgroundLocation(false);
 
@@ -1772,7 +1869,7 @@ const MapScreen = () => {
       if (locationSubscriptionRef.current) {
         locationSubscriptionRef.current.remove();
         locationSubscriptionRef.current = null;
-        console.log('⏹️ Stopped foreground location tracking');
+        console.log("⏹️ Stopped foreground location tracking");
       }
 
       // Stop background location tracking if running
@@ -1781,7 +1878,7 @@ const MapScreen = () => {
       );
       if (isTaskRunning) {
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-        console.log('⏹️ Stopped background location tracking');
+        console.log("⏹️ Stopped background location tracking");
       }
 
       // Get any remaining background data before cleanup
@@ -1796,7 +1893,9 @@ const MapScreen = () => {
             const newPoints = finalBackgroundPoints.filter(
               (p: TrackingPoint) => !existingTimestamps.has(p.timestamp)
             );
-            console.log(`📊 Adding ${newPoints.length} final background points`);
+            console.log(
+              `📊 Adding ${newPoints.length} final background points`
+            );
             return [...prev, ...newPoints];
           });
         }
@@ -2067,16 +2166,22 @@ const MapScreen = () => {
 
         if (isUsingBackgroundLocation) {
           // Restart background tracking with new settings
-          console.log('🔄 Restarting background tracking with new accuracy settings');
+          console.log(
+            "🔄 Restarting background tracking with new accuracy settings"
+          );
           await switchToBackgroundLocation();
         } else {
           // Restart foreground tracking with new settings
-          console.log('🔄 Restarting foreground tracking with new accuracy settings');
+          console.log(
+            "🔄 Restarting foreground tracking with new accuracy settings"
+          );
           await restartLocationWatcherForTracking();
         }
 
         console.log(
-          `✅ Successfully updated to ${newMode ? "High" : "Normal"} Accuracy mode`
+          `✅ Successfully updated to ${
+            newMode ? "High" : "Normal"
+          } Accuracy mode`
         );
       } catch (error) {
         console.error("Error updating tracking mode:", error);
@@ -2299,14 +2404,17 @@ const MapScreen = () => {
               {/* Debug button for checking background status (only in development) */}
               {__DEV__ && isTracking && (
                 <TouchableOpacity
-                  style={[styles.mapControlButton, { backgroundColor: "#FF9500", marginBottom: 10 }]}
+                  style={[
+                    styles.mapControlButton,
+                    { backgroundColor: "#FF9500", marginBottom: 10 },
+                  ]}
                   onPress={checkBackgroundTrackingStatus}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.mapControlButtonText}>🔍</Text>
                 </TouchableOpacity>
               )}
-              
+
               <TouchableOpacity
                 style={styles.mapControlButton}
                 onPress={toggleMapType}
@@ -2439,29 +2547,14 @@ const MapScreen = () => {
             {/* Horse Selection - Hidden during tracking */}
             {!isTracking && (
               <View style={styles.selectionContainer}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                  <Text
-                    style={[
-                      styles.selectionTitle,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    Select Horse
-                  </Text>
-                  <TouchableOpacity
-                    onPress={refreshHorsesFromAPI}
-                    disabled={horsesLoading}
-                    style={{
-                      padding: 8,
-                      borderRadius: 6,
-                      backgroundColor: horsesLoading ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.05)',
-                    }}
-                  >
-                    <Text style={{ fontSize: 14, opacity: horsesLoading ? 0.5 : 1 }}>
-                      {horsesLoading ? '⏳' : '🔄'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                <Text
+                  style={[
+                    styles.selectionTitle,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Select Horse
+                </Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -2516,29 +2609,6 @@ const MapScreen = () => {
                       >
                         Add horses in your profile
                       </Text>
-                      <TouchableOpacity
-                        style={{
-                          marginTop: 8,
-                          paddingVertical: 6,
-                          paddingHorizontal: 12,
-                          backgroundColor: currentTheme.colors.primary,
-                          borderRadius: 6,
-                        }}
-                        onPress={refreshHorsesFromAPI}
-                        disabled={horsesLoading}
-                      >
-                        <Text
-                          style={{
-                            color: "#FFFFFF",
-                            fontSize: 12,
-                            fontFamily: "Inder",
-                            fontWeight: "600",
-                            textAlign: "center",
-                          }}
-                        >
-                          {horsesLoading ? "Refreshing..." : "🔄 Refresh"}
-                        </Text>
-                      </TouchableOpacity>
                     </View>
                   ) : (
                     userHorses.map((horse) => (
@@ -3367,7 +3437,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   historyButtonText: {
-    fontSize: 20,
+    fontSize: 26,
     color: "#FFFFFF",
   },
   gpsContainer: {
