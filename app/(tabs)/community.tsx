@@ -202,48 +202,75 @@ export default function CommunityScreen() {
   const MAX_USERS = 16;
 
   // Load location-based stable mates for friend suggestions
-  const loadStableMates = useCallback(async () => {
-    if (!user?.id) {
-      setStableMates([]);
-      setTotalPages(0);
-      setCurrentPage(0);
-      return;
-    }
-
-    setLoadingStableMates(true);
-    try {
-      // Use new location-based API instead of same-stable API
-      const { users, error } =
-        await SimpleStableAPI.getLocationBasedSuggestions(user.id);
-
-      if (error) {
-        console.error("Error loading location-based suggestions:", error);
+  const loadStableMates = useCallback(
+    async (friendsList?: UserSearchResult[]) => {
+      if (!user?.id) {
         setStableMates([]);
         setTotalPages(0);
         setCurrentPage(0);
-      } else {
-        // Filter out users who are already friends using existing friends state
-        const currentUserFriendIds = new Set(friends.map((f) => f.id) || []);
-
-        const unfriendedStableMates = users.filter(
-          (mate) => !currentUserFriendIds.has(mate.id)
-        );
-
-        // Limit to MAX_USERS (16) and calculate pages
-        const limitedUsers = unfriendedStableMates.slice(0, MAX_USERS);
-        setStableMates(limitedUsers);
-        setTotalPages(Math.ceil(limitedUsers.length / USERS_PER_PAGE));
-        setCurrentPage(0); // Reset to first page when data refreshes
+        return;
       }
-    } catch (error) {
-      console.error("Exception loading location-based suggestions:", error);
-      setStableMates([]);
-      setTotalPages(0);
-      setCurrentPage(0);
-    } finally {
-      setLoadingStableMates(false);
-    }
-  }, [user?.id, friends]); // Add friends dependency to refilter when friends list changes
+
+      setLoadingStableMates(true);
+      try {
+        // Use new location-based API instead of same-stable API
+        const { users, error } =
+          await SimpleStableAPI.getLocationBasedSuggestions(user.id);
+
+        if (error) {
+          console.error("Error loading location-based suggestions:", error);
+          setStableMates([]);
+          setTotalPages(0);
+          setCurrentPage(0);
+        } else {
+          console.log("🎯 Raw location suggestions received:", users.length);
+
+          // Use provided friends list or fall back to state
+          const currentFriends = friendsList || friends;
+          console.log(
+            "🔍 Using friends list for filtering:",
+            currentFriends.map((f) => f.id)
+          );
+
+          // Filter out users who are already friends using existing friends state (backup filtering)
+          const currentUserFriendIds = new Set(
+            currentFriends.map((f) => f.id) || []
+          );
+
+          const unfriendedStableMates = users.filter((mate) => {
+            const isAlreadyFriend = currentUserFriendIds.has(mate.id);
+            if (isAlreadyFriend) {
+              console.warn(
+                "⚠️ Found friend in suggestions (should have been filtered by API):",
+                mate.name,
+                mate.id
+              );
+            }
+            return !isAlreadyFriend;
+          });
+
+          console.log(
+            "📝 After friend filtering:",
+            unfriendedStableMates.length
+          );
+
+          // Limit to MAX_USERS (16) and calculate pages
+          const limitedUsers = unfriendedStableMates.slice(0, MAX_USERS);
+          setStableMates(limitedUsers);
+          setTotalPages(Math.ceil(limitedUsers.length / USERS_PER_PAGE));
+          setCurrentPage(0); // Reset to first page when data refreshes
+        }
+      } catch (error) {
+        console.error("Exception loading location-based suggestions:", error);
+        setStableMates([]);
+        setTotalPages(0);
+        setCurrentPage(0);
+      } finally {
+        setLoadingStableMates(false);
+      }
+    },
+    [user?.id, friends]
+  ); // Add friends dependency to refilter when friends list changes
 
   // Pagination helper functions
   const getCurrentPageUsers = () => {
@@ -286,16 +313,34 @@ export default function CommunityScreen() {
 
       const loadInitialData = async () => {
         try {
-          // Load friends first, then everything else in parallel
-          await loadFriends();
+          // Load friends first and get the result directly
+          console.log("📥 Loading friends first...");
+          const { friends: loadedFriends, error } = await UserAPI.getFriends(
+            user.id
+          );
 
-          // Load remaining data in parallel
-          await Promise.all([
-            loadFriendRequests(),
-            loadHiddenPosts(),
-            loadPosts(),
-            loadStableMates(), // This now uses the friends data for filtering
-          ]);
+          if (!error && loadedFriends) {
+            console.log("✅ Friends loaded directly:", loadedFriends.length);
+            setFriends(loadedFriends);
+
+            // Load remaining data in parallel, passing the fresh friends data
+            await Promise.all([
+              loadFriendRequests(),
+              loadHiddenPosts(),
+              loadPosts(),
+              loadStableMates(loadedFriends), // Pass fresh friends data directly
+            ]);
+          } else {
+            console.error("Failed to load friends:", error);
+            // Still try to load other data
+            await Promise.all([
+              loadFriendRequests(),
+              loadHiddenPosts(),
+              loadPosts(),
+              loadStableMates([]), // Pass empty friends list
+            ]);
+          }
+
           console.log("✅ Initial data load complete");
         } catch (error) {
           console.error("Error loading initial community data:", error);
@@ -809,16 +854,36 @@ export default function CommunityScreen() {
       // Reset posts loaded flag to ensure fresh data on refresh
       setPostsLoaded(false);
 
-      // Load friends first, then everything else in parallel
-      await loadFriends();
+      // Load friends first and get the result directly (same as initial load)
+      console.log("🔄 Refreshing: Loading friends first...");
+      const { friends: loadedFriends, error } = await UserAPI.getFriends(
+        user.id
+      );
 
-      // Run remaining loading functions in parallel for faster refresh
-      await Promise.all([
-        loadFriendRequests(),
-        loadHiddenPosts(),
-        loadPosts(), // Always refresh posts on manual pull-to-refresh
-        loadStableMates(), // This now uses the friends data for filtering
-      ]);
+      if (!error && loadedFriends) {
+        console.log(
+          "✅ Refresh: Friends loaded directly:",
+          loadedFriends.length
+        );
+        setFriends(loadedFriends);
+
+        // Run remaining loading functions in parallel for faster refresh
+        await Promise.all([
+          loadFriendRequests(),
+          loadHiddenPosts(),
+          loadPosts(), // Always refresh posts on manual pull-to-refresh
+          loadStableMates(loadedFriends), // Pass fresh friends data directly
+        ]);
+      } else {
+        console.error("Refresh: Failed to load friends:", error);
+        // Still try to refresh other data
+        await Promise.all([
+          loadFriendRequests(),
+          loadHiddenPosts(),
+          loadPosts(),
+          loadStableMates([]), // Pass empty friends list
+        ]);
+      }
     } catch (error) {
       console.error("Error refreshing community data:", error);
       Alert.alert(

@@ -313,13 +313,34 @@ export class SimpleStableAPI {
 
       const stableIds = sameLocationStables.map((stable: any) => stable.id);
 
-      // Step 3: Get users from these stables (limit 16, exclude current user)
-      const { data: stableMembers, error: membersError } = await supabase
+      // Step 3: Get existing friend IDs to exclude them
+      const { data: friendships, error: friendshipsError } = await supabase
+        .from('friendships')
+        .select('friend_id')
+        .eq('user_id', userId)
+        .eq('status', 'accepted');
+
+      if (friendshipsError) {
+        console.error('Error getting friendships:', friendshipsError);
+        // Continue without friendship filtering rather than failing completely
+      }
+
+      const friendIds = friendships?.map((f: any) => f.friend_id) || [];
+      console.log('Excluding friend IDs:', friendIds);
+
+      // Step 4: Get users from these stables (limit 16, exclude current user and friends)
+      let membersQuery = supabase
         .from('stable_members')
         .select('user_id, stable_id')
         .in('stable_id', stableIds)
-        .neq('user_id', userId) // Exclude current user
-        .limit(16);
+        .neq('user_id', userId); // Exclude current user
+
+      // Also exclude existing friends if any
+      if (friendIds.length > 0) {
+        membersQuery = membersQuery.not('user_id', 'in', `(${friendIds.join(',')})`);
+      }
+
+      const { data: stableMembers, error: membersError } = await membersQuery.limit(16);
 
       if (membersError) {
         console.error('Error getting stable members:', membersError);
@@ -333,7 +354,7 @@ export class SimpleStableAPI {
       // Get user IDs
       const userIds = stableMembers.map((member: any) => member.user_id);
 
-      // Step 4: Get profiles for these users
+      // Step 5: Get profiles for these users
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, name, age, profile_image_url, description')
@@ -344,7 +365,7 @@ export class SimpleStableAPI {
         return { users: [], error: 'Failed to load user profiles' };
       }
 
-      // Step 5: Get stable names for each user
+      // Step 6: Get stable names for each user
       const { data: stablesInfo, error: stablesInfoError } = await supabase
         .from('stables')
         .select('id, name, city, state_province, location')
