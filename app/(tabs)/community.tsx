@@ -25,6 +25,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { ChallengeAPI } from "../../lib/challengeAPI";
+import { ChallengeStorageService } from "../../lib/challengeStorage";
 import { CommunityAPI, PostWithUser } from "../../lib/communityAPI";
 import { HiddenPostsManager } from "../../lib/hiddenPostsManager";
 import { getImageDataUrl } from "../../lib/imageUtils";
@@ -36,6 +38,12 @@ import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { SimpleStableAPI, UserWithStable } from "../../lib/simpleStableAPI";
 import { getSupabase, getSupabaseConfig } from "../../lib/supabase";
 import { UserAPI, UserSearchResult } from "../../lib/userAPI";
+import {
+  ActiveChallenge,
+  Challenge,
+  ChallengeGoal,
+  UserBadge,
+} from "../../types/challengeTypes";
 
 // TypeScript interfaces
 interface FriendRequest {
@@ -99,6 +107,41 @@ export default function CommunityScreen() {
   const [reportReason, setReportReason] = useState("");
   const [forceRender, setForceRender] = useState(0); // Add this to force re-renders
   const [postsLoaded, setPostsLoaded] = useState(false); // Track if posts have been loaded at least once
+
+  // Challenge-related state
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [loadingChallenges, setLoadingChallenges] = useState(false);
+  const [activeChallenge, setActiveChallenge] =
+    useState<ActiveChallenge | null>(null);
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(
+    null
+  );
+  const [showChallengeGoals, setShowChallengeGoals] = useState(false);
+  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
+  const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>(
+    []
+  );
+  const [showGoalSelection, setShowGoalSelection] = useState(false);
+
+  // Goal options for challenge selection
+  const goalOptions: ChallengeGoal[] = [
+    { id: "1", label: "20km Goal", target: 20, unit: "km", difficulty: "easy" },
+    {
+      id: "2",
+      label: "50km Goal",
+      target: 50,
+      unit: "km",
+      difficulty: "medium",
+    },
+    { id: "3", label: "75km Goal", target: 75, unit: "km", difficulty: "hard" },
+    {
+      id: "4",
+      label: "100km Goal",
+      target: 100,
+      unit: "km",
+      difficulty: "extreme",
+    },
+  ];
 
   // Refs to track loading operations and prevent duplicates
   const isLoadingPostsRef = useRef(false);
@@ -333,6 +376,142 @@ export default function CommunityScreen() {
     }
   };
 
+  // Helper function to get challenge details by ID
+  const getChallengeById = (challengeId: string): Challenge | null => {
+    return challenges.find((challenge) => challenge.id === challengeId) || null;
+  };
+
+  // Challenge-related functions
+  const loadChallenges = useCallback(async () => {
+    if (!user?.id) return;
+
+    setLoadingChallenges(true);
+    try {
+      // For now, use mock data. Later you can switch to real API
+      const challengeList = ChallengeAPI.getMockChallenges();
+      setChallenges(challengeList);
+      setAvailableChallenges(challengeList);
+    } catch (error) {
+      console.error("Error loading challenges:", error);
+    } finally {
+      setLoadingChallenges(false);
+    }
+  }, [user?.id]);
+
+  const loadActiveChallenge = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const active = await ChallengeStorageService.getActiveChallenge(user.id);
+      setActiveChallenge(active);
+    } catch (error) {
+      console.error("Error loading active challenge:", error);
+    }
+  }, [user?.id]);
+
+  const loadUserBadges = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const badges = await ChallengeStorageService.getUserBadges(user.id);
+      setUserBadges(badges);
+    } catch (error) {
+      console.error("Error loading user badges:", error);
+    }
+  }, [user?.id]);
+
+  const handleStartChallenge = (challenge: Challenge) => {
+    if (activeChallenge) {
+      Alert.alert(
+        "Active Challenge",
+        "You already have an active challenge. Complete or leave your current challenge before starting a new one.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    setSelectedChallenge(challenge);
+    setShowGoalSelection(true);
+  };
+
+  const handleSelectGoal = async (goal: ChallengeGoal) => {
+    if (!user?.id || !selectedChallenge) return;
+
+    try {
+      const newActiveChallenge: ActiveChallenge = {
+        challengeId: selectedChallenge.id,
+        goalId: goal.id,
+        startDate: new Date().toISOString(),
+        progress: 0,
+        target: goal.target,
+        unit: goal.unit,
+        lastUpdated: new Date().toISOString(),
+        sessions: [],
+        isCompleted: false,
+        earnedRewards: [],
+      };
+
+      const success = await ChallengeStorageService.saveActiveChallenge(
+        user.id,
+        newActiveChallenge
+      );
+
+      if (success) {
+        setActiveChallenge(newActiveChallenge);
+        setShowGoalSelection(false);
+        setSelectedChallenge(null);
+
+        Alert.alert(
+          "Challenge Started!",
+          `Good luck with your ${goal.label} goal!`,
+          [{ text: "Let's Go!" }]
+        );
+      } else {
+        Alert.alert("Error", "Failed to start challenge. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error starting challenge:", error);
+      Alert.alert("Error", "Failed to start challenge. Please try again.");
+    }
+  };
+
+  const handleViewProgress = () => {
+    if (activeChallenge) {
+      // For now, show an alert. Later you can create a dedicated screen
+      Alert.alert(
+        "Challenge Progress",
+        `Progress: ${activeChallenge.progress.toFixed(1)} / ${
+          activeChallenge.target
+        } ${activeChallenge.unit}\n\nCompletion: ${(
+          (activeChallenge.progress / activeChallenge.target) *
+          100
+        ).toFixed(1)}%`,
+        [{ text: "OK" }]
+      );
+    }
+  };
+
+  const handleLeaveChallenge = async () => {
+    if (activeChallenge && user?.id) {
+      Alert.alert(
+        "Leave Challenge",
+        "Are you sure you want to leave this challenge? Your progress will be lost.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Leave",
+            style: "destructive",
+            onPress: async () => {
+              await ChallengeStorageService.removeActiveChallenge(user.id);
+              setActiveChallenge(null);
+              loadChallenges(); // Reload available challenges
+            },
+          },
+        ]
+      );
+    }
+  };
+
   // Load initial data when component mounts and user is available (like horses screen)
   useEffect(() => {
     console.log(
@@ -365,6 +544,9 @@ export default function CommunityScreen() {
               loadHiddenPosts(),
               loadPosts(),
               loadStableMates(loadedFriends), // Pass fresh friends data directly
+              loadChallenges(), // Load available challenges
+              loadActiveChallenge(), // Load active challenge
+              loadUserBadges(), // Load user badges
             ]);
           } else {
             console.error("Failed to load friends:", error);
@@ -374,6 +556,9 @@ export default function CommunityScreen() {
               loadHiddenPosts(),
               loadPosts(),
               loadStableMates([]), // Pass empty friends list
+              loadChallenges(), // Load available challenges
+              loadActiveChallenge(), // Load active challenge
+              loadUserBadges(), // Load user badges
             ]);
           }
 
@@ -2033,35 +2218,274 @@ export default function CommunityScreen() {
             </View>
           </>
         ) : activeTab === "Challenges" ? (
-          <View style={styles.placeholderContainer}>
-            <View
-              style={[
-                styles.placeholderCard,
-                { backgroundColor: theme.surface },
-              ]}
-            >
-              <Text style={styles.placeholderEmoji}>🏆</Text>
-              <Text style={[styles.placeholderTitle, { color: theme.text }]}>
-                Challenges Coming Soon!
-              </Text>
-              <Text
-                style={[styles.placeholderText, { color: theme.textSecondary }]}
+          <View
+            style={[
+              styles.scrollContainer,
+              { backgroundColor: theme.background },
+            ]}
+          >
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Active Challenge Section */}
+              {activeChallenge ? (
+                <View
+                  style={[
+                    styles.activeChallengeCard,
+                    { backgroundColor: theme.surface },
+                  ]}
+                >
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Active Challenge
+                  </Text>
+                  <View
+                    style={[
+                      styles.challengeCard,
+                      { backgroundColor: theme.surface },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.challengeTitle, { color: theme.text }]}
+                    >
+                      {getChallengeById(activeChallenge.challengeId)?.title ||
+                        "Challenge"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.challengeDescription,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      {getChallengeById(activeChallenge.challengeId)
+                        ?.description || "Challenge description"}
+                    </Text>
+
+                    {/* Progress Bar */}
+                    <View style={styles.progressContainer}>
+                      <View
+                        style={[
+                          styles.progressBar,
+                          { backgroundColor: theme.border },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.progressFill,
+                            {
+                              backgroundColor: theme.primary,
+                              width: `${Math.min(
+                                (activeChallenge.progress /
+                                  activeChallenge.target) *
+                                  100,
+                                100
+                              )}%`,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text
+                        style={[styles.progressText, { color: theme.text }]}
+                      >
+                        {activeChallenge.progress.toFixed(1)} /{" "}
+                        {activeChallenge.target} {activeChallenge.unit}
+                      </Text>
+                    </View>
+
+                    {/* Action Buttons */}
+                    <View style={styles.challengeActions}>
+                      <TouchableOpacity
+                        style={[
+                          styles.challengeActionButton,
+                          styles.challengePrimaryButton,
+                          { backgroundColor: theme.primary },
+                        ]}
+                        onPress={handleViewProgress}
+                      >
+                        <Text
+                          style={[
+                            styles.challengeButtonText,
+                            { color: "white" },
+                          ]}
+                        >
+                          View Progress
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.challengeActionButton,
+                          styles.challengeSecondaryButton,
+                          { borderColor: theme.primary },
+                        ]}
+                        onPress={handleLeaveChallenge}
+                      >
+                        <Text
+                          style={[
+                            styles.challengeButtonText,
+                            styles.challengeSecondaryButtonText,
+                            { color: theme.primary },
+                          ]}
+                        >
+                          Leave Challenge
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                /* Available Challenges Section */
+                <View
+                  style={[
+                    styles.availableChallengesSection,
+                    { backgroundColor: theme.background },
+                  ]}
+                >
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Available Challenges
+                  </Text>
+                  {availableChallenges.map((challenge) => (
+                    <View
+                      key={challenge.id}
+                      style={[
+                        styles.challengeCard,
+                        { backgroundColor: theme.surface },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.challengeTitle, { color: theme.text }]}
+                      >
+                        {challenge.title}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.challengeDescription,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        {challenge.description}
+                      </Text>
+
+                      <View style={styles.challengeDetails}>
+                        <Text
+                          style={[styles.challengeInfo, { color: theme.text }]}
+                        >
+                          Type: {challenge.type}
+                        </Text>
+                        <Text
+                          style={[styles.challengeInfo, { color: theme.text }]}
+                        >
+                          Difficulty: {challenge.difficulty}
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.challengeActionButton,
+                          styles.challengePrimaryButton,
+                          { backgroundColor: theme.primary },
+                        ]}
+                        onPress={() => handleStartChallenge(challenge)}
+                      >
+                        <Text
+                          style={[
+                            styles.challengeButtonText,
+                            { color: "white" },
+                          ]}
+                        >
+                          Start Challenge
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+
+                  {availableChallenges.length === 0 && (
+                    <View style={styles.emptyState}>
+                      <Text
+                        style={[
+                          styles.emptyStateText,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        No challenges available at the moment
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Goal Selection Modal */}
+              <Modal
+                visible={showGoalSelection}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setShowGoalSelection(false)}
               >
-                Compete with friends in exciting equestrian challenges.{"\n\n"}•
-                Weekly riding challenges{"\n"}• Distance competitions{"\n"}•
-                Skill-based contests{"\n"}• Leaderboards and rewards
-              </Text>
-              <View
-                style={[
-                  styles.placeholderBadge,
-                  { backgroundColor: theme.primary },
-                ]}
-              >
-                <Text style={styles.placeholderBadgeText}>
-                  Under Development
-                </Text>
-              </View>
-            </View>
+                <View style={styles.challengeModalOverlay}>
+                  <View
+                    style={[
+                      styles.challengeModalContent,
+                      { backgroundColor: theme.surface },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.challengeModalTitle,
+                        { color: theme.text },
+                      ]}
+                    >
+                      Choose Your Goal
+                    </Text>
+                    <Text
+                      style={[
+                        styles.challengeModalSubtitle,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      Select your target distance for this challenge
+                    </Text>
+
+                    {goalOptions.map((goal) => (
+                      <TouchableOpacity
+                        key={goal.id}
+                        style={[
+                          styles.goalOption,
+                          { backgroundColor: theme.background },
+                        ]}
+                        onPress={() => handleSelectGoal(goal)}
+                      >
+                        <Text style={[styles.goalText, { color: theme.text }]}>
+                          {goal.label}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.goalDescription,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
+                          {goal.target} {goal.unit} - {goal.difficulty} level
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+
+                    <TouchableOpacity
+                      style={[
+                        styles.challengeActionButton,
+                        styles.challengeSecondaryButton,
+                        { borderColor: theme.primary },
+                      ]}
+                      onPress={() => setShowGoalSelection(false)}
+                    >
+                      <Text
+                        style={[
+                          styles.challengeButtonText,
+                          styles.challengeSecondaryButtonText,
+                          { color: theme.primary },
+                        ]}
+                      >
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+            </ScrollView>
           </View>
         ) : (
           <View style={styles.placeholderContainer}>
@@ -2980,5 +3404,145 @@ const styles = StyleSheet.create({
   },
   scrollPage: {
     paddingHorizontal: 4, // Small padding for page separation
+  },
+  // Challenge styles
+  activeChallengeCard: {
+    margin: 15,
+    padding: 15,
+    borderRadius: 15,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  challengeCard: {
+    padding: 15,
+    borderRadius: 12,
+    marginVertical: 8,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  challengeTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  challengeDescription: {
+    fontSize: 14,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  progressContainer: {
+    marginVertical: 12,
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  challengeActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+  challengeActionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    marginHorizontal: 4,
+  },
+  challengePrimaryButton: {
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  challengeSecondaryButton: {
+    borderWidth: 1,
+    backgroundColor: "transparent",
+  },
+  challengeButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  challengeSecondaryButtonText: {
+    // Additional styling for secondary button text
+  },
+  availableChallengesSection: {
+    padding: 15,
+  },
+  challengeDetails: {
+    marginVertical: 8,
+  },
+  challengeInfo: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyStateText: {
+    fontSize: 16,
+    textAlign: "center",
+  },
+  challengeModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  challengeModalContent: {
+    width: "90%",
+    maxWidth: 400,
+    padding: 20,
+    borderRadius: 15,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  challengeModalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  challengeModalSubtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  goalOption: {
+    padding: 15,
+    borderRadius: 10,
+    marginVertical: 5,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  goalText: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  goalDescription: {
+    fontSize: 12,
   },
 });
