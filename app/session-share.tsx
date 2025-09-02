@@ -58,7 +58,7 @@ interface TrainingSession {
   averageSpeed?: number;
   maxSpeed?: number;
   media?: MediaItem[]; // Photos and videos taken during session
-  trackingPoints?: TrackingPoint[]; // GPS tracking data
+  path: TrackingPoint[]; // GPS tracking data (changed from trackingPoints)
 }
 
 interface Horse {
@@ -189,7 +189,7 @@ export default function SessionShareScreen() {
 
   // Get map region from tracking points
   const getMapRegion = () => {
-    if (!session?.trackingPoints || session.trackingPoints.length === 0) {
+    if (!session?.path || session.path.length === 0) {
       // Default region (you can adjust this to your preferred location)
       return {
         latitude: 37.78825,
@@ -199,9 +199,9 @@ export default function SessionShareScreen() {
       };
     }
 
-    const points = session.trackingPoints;
-    const latitudes = points.map(p => p.latitude);
-    const longitudes = points.map(p => p.longitude);
+    const points = session.path;
+    const latitudes = points.map((p: TrackingPoint) => p.latitude);
+    const longitudes = points.map((p: TrackingPoint) => p.longitude);
     
     const minLat = Math.min(...latitudes);
     const maxLat = Math.max(...latitudes);
@@ -776,7 +776,7 @@ export default function SessionShareScreen() {
             renderToHardwareTextureAndroid={true}
           >
             {/* Map Background */}
-            {session?.trackingPoints && session.trackingPoints.length > 0 ? (
+            {session?.path && session.path.length > 0 ? (
               <MapView
                 style={styles.mapBackground}
                 provider={PROVIDER_GOOGLE}
@@ -804,7 +804,7 @@ export default function SessionShareScreen() {
               >
                 {/* Route Polyline */}
                 <Polyline
-                  coordinates={session.trackingPoints.map(point => ({
+                  coordinates={session.path.map((point: TrackingPoint) => ({
                     latitude: point.latitude,
                     longitude: point.longitude,
                   }))}
