@@ -1946,8 +1946,9 @@ const MapScreen = () => {
       // Update active challenge if user has one
       if (user?.id) {
         try {
-          const activeChallenge = await ChallengeStorageService.getActiveChallenge(user.id);
-          
+          const activeChallenge =
+            await ChallengeStorageService.getActiveChallenge(user.id);
+
           if (activeChallenge) {
             // Create a challenge session from the completed training session
             const challengeSession: ChallengeSession = {
@@ -1966,26 +1967,42 @@ const MapScreen = () => {
 
             if (success) {
               // Check if challenge was completed
-              const updatedChallenge = await ChallengeStorageService.getActiveChallenge(user.id);
-              
+              const updatedChallenge =
+                await ChallengeStorageService.getActiveChallenge(user.id);
+
               if (updatedChallenge?.isCompleted) {
                 // Show challenge completion notification
                 setTimeout(() => {
                   Alert.alert(
                     "🏆 Challenge Completed!",
-                    `Congratulations! You've completed your ${updatedChallenge.target}${updatedChallenge.unit} challenge!\n\nTotal Progress: ${updatedChallenge.progress.toFixed(1)}${updatedChallenge.unit}`,
+                    `Congratulations! You've completed your ${
+                      updatedChallenge.target
+                    }${
+                      updatedChallenge.unit
+                    } challenge!\n\nTotal Progress: ${updatedChallenge.progress.toFixed(
+                      1
+                    )}${updatedChallenge.unit}`,
                     [{ text: "Amazing!" }]
                   );
                 }, 1000); // Show after session completion dialog
               } else if (updatedChallenge) {
                 // Show progress update
-                const progressPercentage = (updatedChallenge.progress / updatedChallenge.target * 100).toFixed(1);
-                console.log(`📊 Challenge progress updated: ${updatedChallenge.progress.toFixed(1)}/${updatedChallenge.target}${updatedChallenge.unit} (${progressPercentage}%)`);
+                const progressPercentage = (
+                  (updatedChallenge.progress / updatedChallenge.target) *
+                  100
+                ).toFixed(1);
+                console.log(
+                  `📊 Challenge progress updated: ${updatedChallenge.progress.toFixed(
+                    1
+                  )}/${updatedChallenge.target}${
+                    updatedChallenge.unit
+                  } (${progressPercentage}%)`
+                );
               }
             }
           }
         } catch (error) {
-          console.error('Error updating challenge progress:', error);
+          console.error("Error updating challenge progress:", error);
           // Don't show error to user as this is not critical to session completion
         }
       }
