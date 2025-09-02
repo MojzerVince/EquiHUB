@@ -11,7 +11,6 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Image,
   Modal,
   RefreshControl,
@@ -196,21 +195,32 @@ export default function CommunityScreen() {
   const [loadingStableMates, setLoadingStableMates] = useState(false);
   const [addingFriends, setAddingFriends] = useState<Set<string>>(new Set());
 
-  // Load stable mates for friend suggestions
+  // Pagination state for stable mates
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const USERS_PER_PAGE = 4;
+  const MAX_USERS = 16;
+
+  // Load location-based stable mates for friend suggestions
   const loadStableMates = useCallback(async () => {
     if (!user?.id) {
       setStableMates([]);
+      setTotalPages(0);
+      setCurrentPage(0);
       return;
     }
 
     setLoadingStableMates(true);
     try {
+      // Use new location-based API instead of same-stable API
       const { users, error } =
-        await SimpleStableAPI.getStableMatesForSuggestions(user.id);
+        await SimpleStableAPI.getLocationBasedSuggestions(user.id);
 
       if (error) {
-        console.error("Error loading stable mates:", error);
+        console.error("Error loading location-based suggestions:", error);
         setStableMates([]);
+        setTotalPages(0);
+        setCurrentPage(0);
       } else {
         // Filter out users who are already friends using existing friends state
         const currentUserFriendIds = new Set(friends.map((f) => f.id) || []);
@@ -219,15 +229,46 @@ export default function CommunityScreen() {
           (mate) => !currentUserFriendIds.has(mate.id)
         );
 
-        setStableMates(unfriendedStableMates);
+        // Limit to MAX_USERS (16) and calculate pages
+        const limitedUsers = unfriendedStableMates.slice(0, MAX_USERS);
+        setStableMates(limitedUsers);
+        setTotalPages(Math.ceil(limitedUsers.length / USERS_PER_PAGE));
+        setCurrentPage(0); // Reset to first page when data refreshes
       }
     } catch (error) {
-      console.error("Exception loading stable mates:", error);
+      console.error("Exception loading location-based suggestions:", error);
       setStableMates([]);
+      setTotalPages(0);
+      setCurrentPage(0);
     } finally {
       setLoadingStableMates(false);
     }
   }, [user?.id, friends]); // Add friends dependency to refilter when friends list changes
+
+  // Pagination helper functions
+  const getCurrentPageUsers = () => {
+    const startIndex = currentPage * USERS_PER_PAGE;
+    const endIndex = startIndex + USERS_PER_PAGE;
+    return stableMates.slice(startIndex, endIndex);
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToPage = (pageIndex: number) => {
+    if (pageIndex >= 0 && pageIndex < totalPages) {
+      setCurrentPage(pageIndex);
+    }
+  };
 
   // Load initial data when component mounts and user is available (like horses screen)
   useEffect(() => {
@@ -1322,7 +1363,8 @@ export default function CommunityScreen() {
 
     return (
       <TouchableOpacity
-        style={[styles.searchResultItem, { backgroundColor: theme.surface }]}
+        key={item.id}
+        style={[styles.gridUserCard, { backgroundColor: theme.surface }]}
         onPress={() =>
           router.push({
             pathname: "/user-profile",
@@ -1331,39 +1373,38 @@ export default function CommunityScreen() {
         }
         activeOpacity={0.8}
       >
-        <View style={styles.userInfo}>
+        <View style={styles.gridUserInfo}>
           <View style={styles.avatarContainer}>
             <Image
               source={{ uri: getAvatarUrl(item.profile_image_url) }}
-              style={styles.avatar}
+              style={styles.gridAvatar}
             />
             {item.is_online && <View style={styles.onlineIndicator} />}
           </View>
-          <View style={styles.userDetails}>
-            <Text style={[styles.userName, { color: theme.text }]}>
-              {item.name}
+          <Text
+            style={[styles.gridUserName, { color: theme.text }]}
+            numberOfLines={1}
+          >
+            {item.name}
+          </Text>
+          <Text
+            style={[styles.gridUserAge, { color: theme.textSecondary }]}
+            numberOfLines={1}
+          >
+            Age {item.age}
+          </Text>
+          {item.stable_name && (
+            <Text
+              style={[styles.gridStableInfo, { color: theme.primary }]}
+              numberOfLines={1}
+            >
+              🏇 {item.stable_name}
             </Text>
-            <Text style={[styles.userAge, { color: theme.textSecondary }]}>
-              Age: {item.age}
-            </Text>
-            {item.stable_name && (
-              <Text style={[styles.stableInfo, { color: theme.primary }]}>
-                🏇 {item.stable_name}
-              </Text>
-            )}
-            {item.description && (
-              <Text
-                style={[styles.userDescription, { color: theme.textSecondary }]}
-                numberOfLines={1}
-              >
-                {item.description}
-              </Text>
-            )}
-          </View>
+          )}
         </View>
         <TouchableOpacity
           style={[
-            styles.addButton,
+            styles.gridAddButton,
             {
               backgroundColor: isAddingFriend
                 ? theme.textSecondary
@@ -1390,7 +1431,7 @@ export default function CommunityScreen() {
           {isAddingFriend ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={styles.addButtonText}>Add Friend</Text>
+            <Text style={styles.gridAddButtonText}>Add</Text>
           )}
         </TouchableOpacity>
       </TouchableOpacity>
@@ -1659,7 +1700,7 @@ export default function CommunityScreen() {
             {/* Friend Suggestions Section */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Friend Suggestions from Your Stable
+                Riders from Your Area
               </Text>
               {loadingStableMates ? (
                 <View style={styles.loadingContainer}>
@@ -1667,24 +1708,92 @@ export default function CommunityScreen() {
                   <Text
                     style={[styles.loadingText, { color: theme.textSecondary }]}
                   >
-                    Loading stable mates...
+                    Loading location-based suggestions...
                   </Text>
                 </View>
               ) : stableMates.length > 0 ? (
-                <FlatList
-                  data={stableMates}
-                  renderItem={renderStableMate}
-                  keyExtractor={(item: UserWithStable) => item.id}
-                  scrollEnabled={false}
-                  showsVerticalScrollIndicator={false}
-                />
+                <View style={styles.paginatedContainer}>
+                  {/* Current page users */}
+                  <View style={styles.usersGrid}>
+                    {getCurrentPageUsers().map((user) =>
+                      renderStableMate({ item: user })
+                    )}
+                  </View>
+
+                  {/* Pagination indicators and controls */}
+                  {totalPages > 1 && (
+                    <View style={styles.paginationContainer}>
+                      <TouchableOpacity
+                        style={[
+                          styles.paginationArrow,
+                          { opacity: currentPage === 0 ? 0.3 : 1 },
+                        ]}
+                        onPress={goToPrevPage}
+                        disabled={currentPage === 0}
+                      >
+                        <Text
+                          style={[
+                            styles.paginationArrowText,
+                            { color: theme.primary },
+                          ]}
+                        >
+                          ‹
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View style={styles.paginationDots}>
+                        {Array.from({ length: totalPages }, (_, index) => (
+                          <TouchableOpacity
+                            key={index}
+                            style={[
+                              styles.paginationDot,
+                              {
+                                backgroundColor:
+                                  index === currentPage
+                                    ? theme.primary
+                                    : theme.textSecondary + "30",
+                              },
+                            ]}
+                            onPress={() => goToPage(index)}
+                          />
+                        ))}
+                      </View>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.paginationArrow,
+                          { opacity: currentPage === totalPages - 1 ? 0.3 : 1 },
+                        ]}
+                        onPress={goToNextPage}
+                        disabled={currentPage === totalPages - 1}
+                      >
+                        <Text
+                          style={[
+                            styles.paginationArrowText,
+                            { color: theme.primary },
+                          ]}
+                        >
+                          ›
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {/* Page info */}
+                  <Text
+                    style={[styles.pageInfo, { color: theme.textSecondary }]}
+                  >
+                    Page {currentPage + 1} of {totalPages} •{" "}
+                    {stableMates.length} users from your area
+                  </Text>
+                </View>
               ) : (
                 <View style={styles.noResultsContainer}>
                   <Text
                     style={[styles.emptyText, { color: theme.textSecondary }]}
                   >
                     {user
-                      ? "No suggestions available. Join a stable during registration to find stable mates!"
+                      ? "No location-based suggestions available. Join a stable in your area to find nearby riders!"
                       : "Login to see friend suggestions"}
                   </Text>
                 </View>
@@ -2686,5 +2795,101 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     fontStyle: "italic",
+  },
+  // Pagination styles for friend suggestions
+  paginatedContainer: {
+    marginTop: 8,
+  },
+  usersGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  paginationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  paginationArrow: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    minWidth: 36,
+    alignItems: "center",
+  },
+  paginationArrowText: {
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  paginationDots: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    gap: 8,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  pageInfo: {
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 4,
+  },
+  // Grid card styles for friend suggestions
+  gridUserCard: {
+    width: "48%", // Two cards per row with gap
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    alignItems: "center",
+  },
+  gridUserInfo: {
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  gridAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  gridUserName: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 8,
+    textAlign: "center",
+  },
+  gridUserAge: {
+    fontSize: 12,
+    marginTop: 2,
+    textAlign: "center",
+  },
+  gridStableInfo: {
+    fontSize: 11,
+    fontWeight: "500",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  gridAddButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    minWidth: 60,
+    alignItems: "center",
+  },
+  gridAddButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

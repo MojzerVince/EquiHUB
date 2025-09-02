@@ -269,6 +269,131 @@ export class SimpleStableAPI {
     }
   }
 
+  // Get location-based friend suggestions (new method)
+  static async getLocationBasedSuggestions(userId: string): Promise<{
+    users: UserWithStable[];
+    error: string | null;
+  }> {
+    try {
+      const supabase = getSupabase();
+      
+      // Step 1: Get user's stable's state_province
+      const { data: userStableInfo, error: userStableError } = await supabase
+        .from('stable_members')
+        .select(`
+          stables!inner(
+            state_province
+          )
+        `)
+        .eq('user_id', userId)
+        .single();
+
+      if (userStableError || !userStableInfo?.stables?.state_province) {
+        console.log('User has no stable or stable has no state_province');
+        return { users: [], error: null }; // User not in any stable or stable has no location
+      }
+
+      const userStateProvince = userStableInfo.stables.state_province;
+      console.log('User state_province:', userStateProvince);
+
+      // Step 2: Get other stables with the same state_province
+      const { data: sameLocationStables, error: stablesError } = await supabase
+        .from('stables')
+        .select('id')
+        .eq('state_province', userStateProvince);
+
+      if (stablesError) {
+        console.error('Error getting same location stables:', stablesError);
+        return { users: [], error: 'Failed to load location-based stables' };
+      }
+
+      if (!sameLocationStables || sameLocationStables.length === 0) {
+        return { users: [], error: null }; // No stables in same location
+      }
+
+      const stableIds = sameLocationStables.map((stable: any) => stable.id);
+
+      // Step 3: Get users from these stables (limit 16, exclude current user)
+      const { data: stableMembers, error: membersError } = await supabase
+        .from('stable_members')
+        .select('user_id, stable_id')
+        .in('stable_id', stableIds)
+        .neq('user_id', userId) // Exclude current user
+        .limit(16);
+
+      if (membersError) {
+        console.error('Error getting stable members:', membersError);
+        return { users: [], error: 'Failed to load stable members' };
+      }
+
+      if (!stableMembers || stableMembers.length === 0) {
+        return { users: [], error: null }; // No other members
+      }
+
+      // Get user IDs
+      const userIds = stableMembers.map((member: any) => member.user_id);
+
+      // Step 4: Get profiles for these users
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, age, profile_image_url, description')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error getting profiles:', profilesError);
+        return { users: [], error: 'Failed to load user profiles' };
+      }
+
+      // Step 5: Get stable names for each user
+      const { data: stablesInfo, error: stablesInfoError } = await supabase
+        .from('stables')
+        .select('id, name, city, state_province, location')
+        .in('id', stableIds);
+
+      if (stablesInfoError) {
+        console.error('Error getting stables info:', stablesInfoError);
+        return { users: [], error: 'Failed to load stables info' };
+      }
+
+      // Create a map of stable_id to stable info
+      const stablesMap = new Map();
+      stablesInfo?.forEach((stable: any) => {
+        stablesMap.set(stable.id, stable);
+      });
+
+      // Create a map of user_id to stable_id
+      const userStableMap = new Map();
+      stableMembers.forEach((member: any) => {
+        userStableMap.set(member.user_id, member.stable_id);
+      });
+
+      const users: UserWithStable[] = (profiles || []).map((profile: any) => {
+        const userStableId = userStableMap.get(profile.id);
+        const stable = stablesMap.get(userStableId);
+        
+        return {
+          id: profile.id,
+          name: profile.name,
+          age: profile.age,
+          profile_image_url: profile.profile_image_url,
+          description: profile.description,
+          is_online: false, // We can implement online status later if needed
+          stable_id: stable?.id,
+          stable_name: stable?.name,
+          stable_location: stable?.city && stable?.state_province 
+            ? `${stable.city}, ${stable.state_province}`
+            : stable?.location
+        };
+      });
+
+      console.log(`Found ${users.length} location-based suggestions`);
+      return { users, error: null };
+    } catch (error) {
+      console.error('Exception getting location-based suggestions:', error);
+      return { users: [], error: 'Failed to load location-based suggestions' };
+    }
+  }
+
   // Get user's current stable info
   static async getUserStable(userId: string): Promise<{
     stable: SimpleStable | null;
