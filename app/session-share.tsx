@@ -16,7 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import { useAuth } from "../contexts/AuthContext";
@@ -813,6 +813,36 @@ export default function SessionShareScreen() {
                   lineJoin="round"
                   lineCap="round"
                 />
+                
+                {/* Start Point Marker */}
+                {session.path.length > 0 && (
+                  <Marker
+                    coordinate={{
+                      latitude: session.path[0].latitude,
+                      longitude: session.path[0].longitude,
+                    }}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                  >
+                    <View style={styles.startMarker}>
+                      <Ionicons name="play-circle" size={24} color="#00C851" />
+                    </View>
+                  </Marker>
+                )}
+                
+                {/* End Point Marker */}
+                {session.path.length > 1 && (
+                  <Marker
+                    coordinate={{
+                      latitude: session.path[session.path.length - 1].latitude,
+                      longitude: session.path[session.path.length - 1].longitude,
+                    }}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                  >
+                    <View style={styles.endMarker}>
+                      <Ionicons name="checkmark-circle" size={24} color="#FF4444" />
+                    </View>
+                  </Marker>
+                )}
               </MapView>
             ) : (
               <View style={[styles.mapBackground, styles.fallbackBackground]}
@@ -842,91 +872,54 @@ export default function SessionShareScreen() {
             
             {/* Overlay with Session Stats */}
             <View style={styles.mapOverlay}>
-              <View style={styles.mapHeader}>
-                <Text style={[styles.mapTitle, { 
-                  color: '#FFFFFF',
-                  textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                  textShadowOffset: { width: 1, height: 1 },
-                  textShadowRadius: 3
-                }]}>
+              {/* Top Left - App Branding */}
+              <View style={styles.mapTopLeft}>
+                <View style={styles.mapBrandingContainer}>
+                  <Text style={styles.mapBrandText}>
+                    EquiHub
+                  </Text>
+                </View>
+              </View>
+              
+              {/* Center - Horse Name */}
+              <View style={styles.mapCenter}>
+                <Text style={styles.mapTitle}>
                   🐴 {session.horseName}
                 </Text>
-                <Text style={[styles.mapSubtitle, { 
-                  color: '#FFFFFF',
-                  textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                  textShadowOffset: { width: 1, height: 1 },
-                  textShadowRadius: 3
-                }]}>
+                <Text style={styles.mapSubtitle}>
                   Training Session
                 </Text>
               </View>
               
-              <View style={styles.mapStats}>
-                <View style={styles.mapStatItem}>
-                  <Ionicons name="time" size={24} color="#FFFFFF" />
-                  <Text style={[styles.mapStatLabel, { 
-                    color: '#FFFFFF',
-                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                    textShadowOffset: { width: 1, height: 1 },
-                    textShadowRadius: 2
-                  }]}>Duration</Text>
-                  <Text style={[styles.mapStatValue, { 
-                    color: '#FFFFFF',
-                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                    textShadowOffset: { width: 1, height: 1 },
-                    textShadowRadius: 2
-                  }]}>
-                    {session.duration ? formatDuration(session.duration) : "Unknown"}
-                  </Text>
+              {/* Bottom - Stats Container */}
+              <View style={styles.mapBottom}>
+                <View style={styles.mapStatsContainer}>
+                  <View style={styles.mapStats}>
+                    <View style={styles.mapStatItem}>
+                      <Ionicons name="time" size={20} color="#FFFFFF" />
+                      <Text style={styles.mapStatLabel}>Duration</Text>
+                      <Text style={styles.mapStatValue}>
+                        {session.duration ? formatDuration(session.duration) : "Unknown"}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.mapStatItem}>
+                      <Ionicons name="location" size={20} color="#FFFFFF" />
+                      <Text style={styles.mapStatLabel}>Distance</Text>
+                      <Text style={styles.mapStatValue}>
+                        {session.distance ? `${(session.distance / 1000).toFixed(1)} km` : "Unknown"}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.mapStatItem}>
+                      <Ionicons name="speedometer" size={20} color="#FFFFFF" />
+                      <Text style={styles.mapStatLabel}>Avg Speed</Text>
+                      <Text style={styles.mapStatValue}>
+                        {session.averageSpeed ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h` : "Unknown"}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-                
-                <View style={styles.mapStatItem}>
-                  <Ionicons name="location" size={24} color="#FFFFFF" />
-                  <Text style={[styles.mapStatLabel, { 
-                    color: '#FFFFFF',
-                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                    textShadowOffset: { width: 1, height: 1 },
-                    textShadowRadius: 2
-                  }]}>Distance</Text>
-                  <Text style={[styles.mapStatValue, { 
-                    color: '#FFFFFF',
-                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                    textShadowOffset: { width: 1, height: 1 },
-                    textShadowRadius: 2
-                  }]}>
-                    {session.distance ? `${(session.distance / 1000).toFixed(1)} km` : "Unknown"}
-                  </Text>
-                </View>
-                
-                <View style={styles.mapStatItem}>
-                  <Ionicons name="speedometer" size={24} color="#FFFFFF" />
-                  <Text style={[styles.mapStatLabel, { 
-                    color: '#FFFFFF',
-                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                    textShadowOffset: { width: 1, height: 1 },
-                    textShadowRadius: 2
-                  }]}>Avg Speed</Text>
-                  <Text style={[styles.mapStatValue, { 
-                    color: '#FFFFFF',
-                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                    textShadowOffset: { width: 1, height: 1 },
-                    textShadowRadius: 2
-                  }]}>
-                    {session.averageSpeed ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h` : "Unknown"}
-                  </Text>
-                </View>
-              </View>
-              
-              {/* App Branding */}
-              <View style={styles.mapBranding}>
-                <Text style={[styles.mapBrandText, { 
-                  color: '#FFFFFF',
-                  textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                  textShadowOffset: { width: 1, height: 1 },
-                  textShadowRadius: 3
-                }]}>
-                  EquiHub
-                </Text>
               </View>
             </View>
           </View>
@@ -1465,8 +1458,34 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    padding: 30,
     justifyContent: 'space-between',
+  },
+  mapTopLeft: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+  },
+  mapBrandingContainer: {
+    backgroundColor: 'rgba(128, 128, 128, 0.5)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  mapCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mapBottom: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+  },
+  mapStatsContainer: {
+    backgroundColor: 'rgba(128, 128, 128, 0.5)',
+    borderRadius: 12,
+    padding: 16,
   },
   mapHeader: {
     alignItems: 'center',
@@ -1476,17 +1495,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     fontFamily: 'Inder',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   mapSubtitle: {
     fontSize: 16,
     textAlign: 'center',
     marginTop: 4,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   mapStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginVertical: 20,
   },
   mapStatItem: {
     alignItems: 'center',
@@ -1495,22 +1521,59 @@ const styles = StyleSheet.create({
   mapStatLabel: {
     fontSize: 12,
     fontWeight: '500',
-    marginTop: 8,
+    marginTop: 6,
     textAlign: 'center',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   mapStatValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginTop: 4,
+    marginTop: 2,
     textAlign: 'center',
     fontFamily: 'Inder',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   mapBranding: {
     alignItems: 'center',
   },
   mapBrandText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'Inder',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  // Start and End Marker Styles
+  startMarker: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: '#00C851',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  endMarker: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: '#FF4444',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
