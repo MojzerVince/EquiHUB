@@ -789,36 +789,6 @@ export default function CommunityScreen() {
     }
   }, [user?.id]); // Remove function dependencies to prevent excessive re-creation
 
-  // Debug function to manually fix friendships (development only)
-  const debugFixFriendships = useCallback(async () => {
-    if (!user?.id || !__DEV__) return;
-
-    try {
-      console.log("🔧 Manual friendship fix triggered");
-      const result = await UserAPI.fixBrokenFriendships(user.id);
-
-      Alert.alert(
-        "Friendship Fix Results",
-        `Fixed: ${result.fixed} broken friendships\nErrors: ${
-          result.errors.length
-        }\n\n${result.errors.join("\n")}`,
-        [
-          {
-            text: "Reload Friends",
-            onPress: () => {
-              // Reset loading ref to allow fresh call
-              isLoadingFriendsRef.current = false;
-              loadFriends();
-            },
-          },
-          { text: "OK" },
-        ]
-      );
-    } catch (error) {
-      Alert.alert("Error", `Failed to fix friendships: ${error}`);
-    }
-  }, [user?.id]); // Remove loadFriends dependency to prevent circular re-renders
-
   // Search for users with manual trigger
   const handleSearchInput = (query: string) => {
     setSearchQuery(query);
@@ -1569,23 +1539,13 @@ export default function CommunityScreen() {
         <View style={styles.headerContainer}>
           <Text style={[styles.header, { color: "#FFFFFF" }]}>Community</Text>
           {user && (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              {__DEV__ && (
-                <TouchableOpacity
-                  style={[styles.notificationIcon, { marginRight: 8 }]}
-                  onPress={debugFixFriendships}
-                >
-                  <Text style={{ fontSize: 16, color: "#FFFFFF" }}>🔧</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={styles.notificationIcon}
-                onPress={() => setShowNotifications(true)}
-              >
-                <Text style={{ fontSize: 18, color: "#FFFFFF" }}>🔔</Text>
-                <NotificationBadge count={notificationCount} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.notificationIcon}
+              onPress={() => setShowNotifications(true)}
+            >
+              <Text style={{ fontSize: 18, color: "#FFFFFF" }}>🔔</Text>
+              <NotificationBadge count={notificationCount} />
+            </TouchableOpacity>
           )}
         </View>
       </SafeAreaView>
