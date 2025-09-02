@@ -328,7 +328,7 @@ export class SimpleStableAPI {
       const friendIds = friendships?.map((f: any) => f.friend_id) || [];
       console.log('Excluding friend IDs:', friendIds);
 
-      // Step 4: Get users from these stables (limit 16, exclude current user and friends)
+      // Step 4: Get users from these stables (limit 8, exclude current user and friends)
       let membersQuery = supabase
         .from('stable_members')
         .select('user_id, stable_id')
@@ -340,7 +340,7 @@ export class SimpleStableAPI {
         membersQuery = membersQuery.not('user_id', 'in', `(${friendIds.join(',')})`);
       }
 
-      const { data: stableMembers, error: membersError } = await membersQuery.limit(16);
+      const { data: stableMembers, error: membersError } = await membersQuery.limit(8);
 
       if (membersError) {
         console.error('Error getting stable members:', membersError);

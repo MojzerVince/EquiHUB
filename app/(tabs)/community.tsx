@@ -11,6 +11,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Image,
   Modal,
   RefreshControl,
@@ -198,8 +199,11 @@ export default function CommunityScreen() {
   // Pagination state for stable mates
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const USERS_PER_PAGE = 4;
-  const MAX_USERS = 16;
+  const USERS_PER_PAGE = 2;
+  const MAX_USERS = 8;
+
+  // Ref for horizontal scroll view
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Load location-based stable mates for friend suggestions
   const loadStableMates = useCallback(
@@ -254,7 +258,7 @@ export default function CommunityScreen() {
             unfriendedStableMates.length
           );
 
-          // Limit to MAX_USERS (16) and calculate pages
+          // Limit to MAX_USERS (8) and calculate pages
           const limitedUsers = unfriendedStableMates.slice(0, MAX_USERS);
           setStableMates(limitedUsers);
           setTotalPages(Math.ceil(limitedUsers.length / USERS_PER_PAGE));
@@ -282,18 +286,50 @@ export default function CommunityScreen() {
   const goToNextPage = () => {
     if (currentPage < totalPages - 1) {
       setCurrentPage(currentPage + 1);
+      // Scroll to next page
+      const nextPageIndex = currentPage + 1;
+      scrollViewRef.current?.scrollTo({
+        x: nextPageIndex * (Dimensions.get("window").width - 32), // Account for padding
+        animated: true,
+      });
     }
   };
 
   const goToPrevPage = () => {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1);
+      // Scroll to previous page
+      const prevPageIndex = currentPage - 1;
+      scrollViewRef.current?.scrollTo({
+        x: prevPageIndex * (Dimensions.get("window").width - 32), // Account for padding
+        animated: true,
+      });
     }
   };
 
   const goToPage = (pageIndex: number) => {
     if (pageIndex >= 0 && pageIndex < totalPages) {
       setCurrentPage(pageIndex);
+      // Scroll to specific page
+      scrollViewRef.current?.scrollTo({
+        x: pageIndex * (Dimensions.get("window").width - 32), // Account for padding
+        animated: true,
+      });
+    }
+  };
+
+  // Handle scroll end to update current page
+  const handleScrollEnd = (event: any) => {
+    const pageWidth = Dimensions.get("window").width - 32; // Account for padding
+    const currentPageIndex = Math.round(
+      event.nativeEvent.contentOffset.x / pageWidth
+    );
+    if (
+      currentPageIndex >= 0 &&
+      currentPageIndex < totalPages &&
+      currentPageIndex !== currentPage
+    ) {
+      setCurrentPage(currentPageIndex);
     }
   };
 
@@ -1778,79 +1814,59 @@ export default function CommunityScreen() {
                 </View>
               ) : stableMates.length > 0 ? (
                 <View style={styles.paginatedContainer}>
-                  {/* Current page users */}
-                  <View style={styles.usersGrid}>
-                    {getCurrentPageUsers().map((user) =>
-                      renderStableMate({ item: user })
-                    )}
-                  </View>
-
-                  {/* Pagination indicators and controls */}
-                  {totalPages > 1 && (
-                    <View style={styles.paginationContainer}>
-                      <TouchableOpacity
+                  {/* Swipeable horizontal ScrollView */}
+                  <ScrollView
+                    ref={scrollViewRef}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={handleScrollEnd}
+                    style={styles.horizontalScrollView}
+                    contentContainerStyle={styles.scrollViewContent}
+                    decelerationRate="fast"
+                    snapToInterval={Dimensions.get("window").width - 32} // Account for padding
+                    snapToAlignment="start"
+                  >
+                    {Array.from({ length: totalPages }, (_, pageIndex) => (
+                      <View
+                        key={pageIndex}
                         style={[
-                          styles.paginationArrow,
-                          { opacity: currentPage === 0 ? 0.3 : 1 },
+                          styles.scrollPage,
+                          { width: Dimensions.get("window").width - 32 },
                         ]}
-                        onPress={goToPrevPage}
-                        disabled={currentPage === 0}
                       >
-                        <Text
-                          style={[
-                            styles.paginationArrowText,
-                            { color: theme.primary },
-                          ]}
-                        >
-                          ‹
-                        </Text>
-                      </TouchableOpacity>
-
-                      <View style={styles.paginationDots}>
-                        {Array.from({ length: totalPages }, (_, index) => (
-                          <TouchableOpacity
-                            key={index}
-                            style={[
-                              styles.paginationDot,
-                              {
-                                backgroundColor:
-                                  index === currentPage
-                                    ? theme.primary
-                                    : theme.textSecondary + "30",
-                              },
-                            ]}
-                            onPress={() => goToPage(index)}
-                          />
-                        ))}
+                        <View style={styles.usersGrid}>
+                          {stableMates
+                            .slice(
+                              pageIndex * USERS_PER_PAGE,
+                              (pageIndex + 1) * USERS_PER_PAGE
+                            )
+                            .map((user) => renderStableMate({ item: user }))}
+                        </View>
                       </View>
+                    ))}
+                  </ScrollView>
 
-                      <TouchableOpacity
-                        style={[
-                          styles.paginationArrow,
-                          { opacity: currentPage === totalPages - 1 ? 0.3 : 1 },
-                        ]}
-                        onPress={goToNextPage}
-                        disabled={currentPage === totalPages - 1}
-                      >
-                        <Text
+                  {/* Pagination dots */}
+                  {totalPages > 1 && (
+                    <View style={styles.simplePaginationContainer}>
+                      {Array.from({ length: totalPages }, (_, index) => (
+                        <TouchableOpacity
+                          key={index}
                           style={[
-                            styles.paginationArrowText,
-                            { color: theme.primary },
+                            styles.paginationDot,
+                            {
+                              backgroundColor:
+                                index === currentPage
+                                  ? theme.primary + "80" // Slightly lighter for current page
+                                  : theme.textSecondary + "30",
+                            },
                           ]}
-                        >
-                          ›
-                        </Text>
-                      </TouchableOpacity>
+                          onPress={() => goToPage(index)}
+                        />
+                      ))}
                     </View>
                   )}
-
-                  {/* Page info */}
-                  <Text
-                    style={[styles.pageInfo, { color: theme.textSecondary }]}
-                  >
-                    Page {currentPage + 1} of {totalPages} •{" "}
-                    {stableMates.length} users from your area
-                  </Text>
                 </View>
               ) : (
                 <View style={styles.noResultsContainer}>
@@ -2896,9 +2912,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  simplePaginationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    marginBottom: 12,
+    gap: 12,
   },
   pageInfo: {
     fontSize: 12,
@@ -2907,7 +2931,7 @@ const styles = StyleSheet.create({
   },
   // Grid card styles for friend suggestions
   gridUserCard: {
-    width: "48%", // Two cards per row with gap
+    width: "48%", // Two cards per row with gap - adjusted for horizontal scroll
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 12,
@@ -2918,6 +2942,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     alignItems: "center",
+    marginHorizontal: "1%", // Add small horizontal margin for better spacing
   },
   gridUserInfo: {
     alignItems: "center",
@@ -2956,5 +2981,15 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "600",
+  },
+  // Horizontal scroll view styles
+  horizontalScrollView: {
+    marginBottom: 8,
+  },
+  scrollViewContent: {
+    alignItems: "flex-start",
+  },
+  scrollPage: {
+    paddingHorizontal: 4, // Small padding for page separation
   },
 });
