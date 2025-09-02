@@ -2885,7 +2885,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 4,
   },
   paginationContainer: {
     flexDirection: "row",
@@ -2893,17 +2893,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 8,
     paddingHorizontal: 16,
-  },
-  paginationArrow: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    minWidth: 36,
-    alignItems: "center",
-  },
-  paginationArrowText: {
-    fontSize: 24,
-    fontWeight: "bold",
   },
   paginationDots: {
     flexDirection: "row",
@@ -2920,8 +2909,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
-    marginBottom: 12,
+    marginBottom: -10,
     gap: 12,
   },
   pageInfo: {
@@ -2985,6 +2973,7 @@ const styles = StyleSheet.create({
   // Horizontal scroll view styles
   horizontalScrollView: {
     marginBottom: 8,
+    borderRadius: 16,
   },
   scrollViewContent: {
     alignItems: "flex-start",
