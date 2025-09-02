@@ -99,6 +99,7 @@ export default function CommunityScreen() {
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showFriendsManagement, setShowFriendsManagement] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [hiddenPostIds, setHiddenPostIds] = useState<string[]>([]);
@@ -844,6 +845,45 @@ export default function CommunityScreen() {
     } catch (error) {
       Alert.alert("Error", "Failed to decline friend request");
     }
+  };
+
+  // Handle removing a friend
+  const handleRemoveFriend = async (friend: UserSearchResult) => {
+    if (!user?.id) return;
+
+    Alert.alert(
+      "Remove Friend",
+      `Are you sure you want to remove ${friend.name} from your friends?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { success, error } = await UserAPI.removeFriend(user.id, friend.id);
+              
+              if (error) {
+                Alert.alert("Error", error);
+                return;
+              }
+
+              if (success) {
+                // Remove friend from local state
+                setFriends((prev) => prev.filter((f) => f.id !== friend.id));
+                
+                Alert.alert("Success", `${friend.name} has been removed from your friends.`);
+              }
+            } catch (error) {
+              Alert.alert("Error", "Failed to remove friend");
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Load hidden posts from storage
@@ -1864,6 +1904,20 @@ export default function CommunityScreen() {
         ]}
       >
         <View style={styles.headerContainer}>
+          {user && (
+            <TouchableOpacity
+              style={styles.friendsButton}
+              onPress={async () => {
+                setShowFriendsManagement(true);
+                // Refresh friends list when opening the modal
+                if (user?.id) {
+                  await loadFriends();
+                }
+              }}
+            >
+              <Text style={{ fontSize: 18, color: "#FFFFFF" }}>👥</Text>
+            </TouchableOpacity>
+          )}
           <Text style={[styles.header, { color: "#FFFFFF" }]}>Community</Text>
           {user && (
             <TouchableOpacity
@@ -2688,6 +2742,90 @@ export default function CommunityScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Friends Management Modal */}
+      <Modal
+        visible={showFriendsManagement}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFriendsManagement(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { 
+            backgroundColor: currentTheme.colors.surface,
+            height: '60%',
+            minHeight: 400
+          }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: currentTheme.colors.text }]}>
+                Friends Management
+              </Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowFriendsManagement(false)}
+              >
+                <Text style={[styles.modalCloseText, { color: currentTheme.colors.textSecondary }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView 
+              style={styles.friendsListContainer}
+              contentContainerStyle={{ minHeight: 200 }}
+            >
+              {isLoadingFriends ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+                  <Text style={[styles.loadingText, { color: currentTheme.colors.text }]}>
+                    Loading friends...
+                  </Text>
+                </View>
+              ) : friends.length === 0 ? (
+                <View style={styles.friendsEmptyStateContainer}>
+                  <Text style={[styles.friendsEmptyStateText, { color: currentTheme.colors.text }]}>
+                    You don't have any friends yet.
+                  </Text>
+                  <Text style={[styles.friendsEmptyStateSubtext, { color: currentTheme.colors.textSecondary }]}>
+                    Start connecting with people in the community!
+                  </Text>
+                </View>
+              ) : (
+                friends.map((friend) => (
+                  <View key={friend.id} style={[styles.friendItemContainer, { backgroundColor: currentTheme.colors.background }]}>
+                    <View style={styles.friendInfoContainer}>
+                      {friend.profile_image_url ? (
+                        <Image 
+                          source={{ uri: friend.profile_image_url }} 
+                          style={styles.friendAvatarImage}
+                        />
+                      ) : (
+                        <View style={styles.defaultFriendAvatar}>
+                          <Text style={styles.defaultFriendAvatarText}>
+                            {friend.name.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={styles.friendDetailsContainer}>
+                        <Text style={[styles.friendDisplayName, { color: currentTheme.colors.text }]}>
+                          {friend.name}
+                        </Text>
+                        <Text style={[styles.friendDisplayDescription, { color: currentTheme.colors.textSecondary }]}>
+                          {friend.description || "No description"}
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.removeFriendButton}
+                      onPress={() => handleRemoveFriend(friend)}
+                    >
+                      <Text style={styles.removeFriendButtonText}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -3205,6 +3343,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.1)",
     zIndex: 10,
   },
+  friendsButton: {
+    position: "absolute",
+    left: 20,
+    padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    zIndex: 10,
+  },
   // Modal Styles
   modalOverlay: {
     flex: 1,
@@ -3544,5 +3695,86 @@ const styles = StyleSheet.create({
   },
   goalDescription: {
     fontSize: 12,
+  },
+  // Friends Management Modal Styles
+  friendsListContainer: {
+    flex: 1,
+    padding: 15,
+    paddingTop: 10,
+  },
+  friendItemContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 15,
+    marginBottom: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
+  },
+  friendInfoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  friendAvatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 15,
+  },
+  defaultFriendAvatar: {
+    backgroundColor: "#335C67",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 15,
+  },
+  defaultFriendAvatarText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  friendDetailsContainer: {
+    flex: 1,
+  },
+  friendDisplayName: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  friendDisplayDescription: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  removeFriendButton: {
+    backgroundColor: "#FF6B6B",
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  removeFriendButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  friendsEmptyStateContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  friendsEmptyStateText: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  friendsEmptyStateSubtext: {
+    fontSize: 14,
+    textAlign: "center",
+    paddingHorizontal: 40,
   },
 });
