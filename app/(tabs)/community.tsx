@@ -212,11 +212,8 @@ export default function CommunityScreen() {
         console.error("Error loading stable mates:", error);
         setStableMates([]);
       } else {
-        // Filter out users who are already friends
-        const currentUserFriendsResponse = await UserAPI.getFriends(user.id);
-        const currentUserFriendIds = new Set(
-          currentUserFriendsResponse.friends?.map((f) => f.id) || []
-        );
+        // Filter out users who are already friends using existing friends state
+        const currentUserFriendIds = new Set(friends.map((f) => f.id) || []);
 
         const unfriendedStableMates = users.filter(
           (mate) => !currentUserFriendIds.has(mate.id)
@@ -230,7 +227,7 @@ export default function CommunityScreen() {
     } finally {
       setLoadingStableMates(false);
     }
-  }, [user?.id]);
+  }, [user?.id, friends]); // Add friends dependency to refilter when friends list changes
 
   // Load initial data when component mounts and user is available (like horses screen)
   useEffect(() => {
@@ -248,13 +245,15 @@ export default function CommunityScreen() {
 
       const loadInitialData = async () => {
         try {
-          // Load all data in parallel - similar to horses screen
+          // Load friends first, then everything else in parallel
+          await loadFriends();
+
+          // Load remaining data in parallel
           await Promise.all([
-            loadFriends(),
             loadFriendRequests(),
             loadHiddenPosts(),
             loadPosts(),
-            loadStableMates(),
+            loadStableMates(), // This now uses the friends data for filtering
           ]);
           console.log("✅ Initial data load complete");
         } catch (error) {
@@ -681,12 +680,14 @@ export default function CommunityScreen() {
     const interval = setInterval(() => {
       // Only refresh if there are pending requests to reduce API calls
       if (friendRequests.length > 0) {
+        // Reset loading ref to allow fresh call
+        isLoadingFriendRequestsRef.current = false;
         loadFriendRequests();
       }
     }, 600000); // Check every 10 minutes instead of 5 minutes
 
     return () => clearInterval(interval);
-  }, [user?.id, friendRequests.length, loadFriendRequests]); // Add loadFriendRequests to dependencies
+  }, [user?.id, friendRequests.length]); // Remove loadFriendRequests to prevent circular re-renders
 
   // Load friends from database
   const loadFriends = useCallback(async () => {
@@ -706,22 +707,6 @@ export default function CommunityScreen() {
     setIsLoadingFriends(true);
 
     try {
-      // Add diagnostic logging for debugging
-      if (__DEV__) {
-        console.log("🔍 Community: Starting friendship diagnosis...");
-        try {
-          const diagnosis = await UserAPI.diagnoseFriendships(user.id);
-          console.log("📊 Community: Friendship diagnosis complete:", {
-            totalRecords: diagnosis.allRecords.length,
-            asUser: diagnosis.asUser.length,
-            asFriend: diagnosis.asFriend.length,
-            issues: diagnosis.reciprocalIssues.length
-          });
-        } catch (diagError) {
-          console.warn("⚠️ Community: Diagnosis failed:", diagError);
-        }
-      }
-
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error("Loading friends timed out after 20 seconds"));
@@ -783,13 +768,15 @@ export default function CommunityScreen() {
       // Reset posts loaded flag to ensure fresh data on refresh
       setPostsLoaded(false);
 
-      // Run all loading functions in parallel for faster refresh
+      // Load friends first, then everything else in parallel
+      await loadFriends();
+
+      // Run remaining loading functions in parallel for faster refresh
       await Promise.all([
         loadFriendRequests(),
-        loadFriends(),
         loadHiddenPosts(),
         loadPosts(), // Always refresh posts on manual pull-to-refresh
-        loadStableMates(),
+        loadStableMates(), // This now uses the friends data for filtering
       ]);
     } catch (error) {
       console.error("Error refreshing community data:", error);
@@ -809,22 +796,28 @@ export default function CommunityScreen() {
     try {
       console.log("🔧 Manual friendship fix triggered");
       const result = await UserAPI.fixBrokenFriendships(user.id);
-      
+
       Alert.alert(
         "Friendship Fix Results",
-        `Fixed: ${result.fixed} broken friendships\nErrors: ${result.errors.length}\n\n${result.errors.join('\n')}`,
+        `Fixed: ${result.fixed} broken friendships\nErrors: ${
+          result.errors.length
+        }\n\n${result.errors.join("\n")}`,
         [
           {
             text: "Reload Friends",
-            onPress: () => loadFriends()
+            onPress: () => {
+              // Reset loading ref to allow fresh call
+              isLoadingFriendsRef.current = false;
+              loadFriends();
+            },
           },
-          { text: "OK" }
+          { text: "OK" },
         ]
       );
     } catch (error) {
       Alert.alert("Error", `Failed to fix friendships: ${error}`);
     }
-  }, [user?.id, loadFriends]);
+  }, [user?.id]); // Remove loadFriends dependency to prevent circular re-renders
 
   // Search for users with manual trigger
   const handleSearchInput = (query: string) => {
@@ -1576,7 +1569,7 @@ export default function CommunityScreen() {
         <View style={styles.headerContainer}>
           <Text style={[styles.header, { color: "#FFFFFF" }]}>Community</Text>
           {user && (
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
               {__DEV__ && (
                 <TouchableOpacity
                   style={[styles.notificationIcon, { marginRight: 8 }]}

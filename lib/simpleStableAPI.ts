@@ -205,47 +205,61 @@ export class SimpleStableAPI {
         return { users: [], error: null }; // User not in any stable
       }
 
-      // Get other members from the same stable
-      const { data, error } = await supabase
+      // Get other members from the same stable - use a simpler approach
+      const { data: stableMembers, error: membersError } = await supabase
         .from('stable_members')
-        .select(`
-          user_id,
-          profiles!inner(
-            id,
-            name,
-            age,
-            profile_image_url,
-            description
-          ),
-          stables!inner(
-            id,
-            name,
-            location,
-            city,
-            state_province
-          )
-        `)
+        .select('user_id')
         .eq('stable_id', userStable.stable_id)
         .neq('user_id', userId) // Exclude the current user
         .limit(10);
 
-      if (error) {
-        console.error('Error getting stable mates:', error);
-        return { users: [], error: 'Failed to load stable mates' };
+      if (membersError) {
+        console.error('Error getting stable members:', membersError);
+        return { users: [], error: 'Failed to load stable members' };
       }
 
-      const users: UserWithStable[] = (data || []).map((item: any) => ({
-        id: item.profiles.id,
-        name: item.profiles.name,
-        age: item.profiles.age,
-        profile_image_url: item.profiles.profile_image_url,
-        description: item.profiles.description,
+      if (!stableMembers || stableMembers.length === 0) {
+        return { users: [], error: null }; // No other members
+      }
+
+      // Get user IDs
+      const userIds = stableMembers.map((member: { user_id: string }) => member.user_id);
+
+      // Get profiles for these users
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, age, profile_image_url, description')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error getting profiles:', profilesError);
+        return { users: [], error: 'Failed to load user profiles' };
+      }
+
+      // Get stable info
+      const { data: stable, error: stableError } = await supabase
+        .from('stables')
+        .select('id, name, location, city, state_province')
+        .eq('id', userStable.stable_id)
+        .single();
+
+      if (stableError) {
+        console.error('Error getting stable info:', stableError);
+        return { users: [], error: 'Failed to load stable info' };
+      }
+
+      const users: UserWithStable[] = (profiles || []).map((profile: any) => ({
+        id: profile.id,
+        name: profile.name,
+        age: profile.age,
+        profile_image_url: profile.profile_image_url,
+        description: profile.description,
         is_online: false, // We can implement online status later if needed
-        stable_id: item.stables.id,
-        stable_name: item.stables.name,
-        stable_location: item.stables.city && item.stables.state_province 
-          ? `${item.stables.city}, ${item.stables.state_province}`
-          : item.stables.location
+        stable_id: stable.id,
+        stable_name: stable.name,
+        stable_location: stable.city && stable.state_province 
+          ? `${stable.city}, ${stable.state_province}`
+          : stable.location
       }));
 
       return { users, error: null };

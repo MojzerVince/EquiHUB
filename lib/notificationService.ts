@@ -69,16 +69,39 @@ export class NotificationService {
       // Get the initialized Supabase client
       const supabase = getSupabase();
       
+      // First, try to delete any existing tokens for this user and token combination
+      await supabase
+        .from('user_push_tokens')
+        .delete()
+        .eq('user_id', userId)
+        .eq('push_token', token);
+      
+      // Then insert the new token
       const { error } = await supabase
         .from('user_push_tokens')
-        .upsert({
+        .insert({
           user_id: userId,
           push_token: token,
           updated_at: new Date().toISOString(),
         });
 
       if (error) {
-        console.error('Error saving push token:', error);
+        // If there's still a duplicate key error, try to update instead
+        if (error.code === '23505') {
+          const { error: updateError } = await supabase
+            .from('user_push_tokens')
+            .update({
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', userId)
+            .eq('push_token', token);
+          
+          if (updateError) {
+            console.error('Error updating push token:', updateError);
+          }
+        } else {
+          console.error('Error saving push token:', error);
+        }
       }
     } catch (error) {
       console.error('Error saving push token:', error);
