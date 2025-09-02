@@ -2297,7 +2297,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
-    marginTop: 5,
+    marginTop: -4,
     paddingTop: 10,
   },
   stickyTabWrapper: {

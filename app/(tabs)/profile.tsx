@@ -41,7 +41,9 @@ const ProfileScreen = () => {
   const [userStableRanch, setUserStableRanch] = useState("");
 
   // Stable selection state
-  const [selectedStable, setSelectedStable] = useState<SimpleStable | null>(null);
+  const [selectedStable, setSelectedStable] = useState<SimpleStable | null>(
+    null
+  );
   const [newStableData, setNewStableData] = useState<any>(null);
   const [showStableSelection, setShowStableSelection] = useState(false);
 
@@ -53,7 +55,8 @@ const ProfileScreen = () => {
   const [savedUserExperience, setSavedUserExperience] = useState("0");
   const [savedIsProMember, setSavedIsProMember] = useState(false);
   const [savedUserStableRanch, setSavedUserStableRanch] = useState("");
-  const [savedSelectedStable, setSavedSelectedStable] = useState<SimpleStable | null>(null);
+  const [savedSelectedStable, setSavedSelectedStable] =
+    useState<SimpleStable | null>(null);
   const [savedNewStableData, setSavedNewStableData] = useState<any>(null);
 
   // State for custom success modal
@@ -647,7 +650,7 @@ const ProfileScreen = () => {
   ) => {
     setSelectedStable(stable);
     setNewStableData(isNewStable ? stableData : null);
-    
+
     // Update the stable/ranch text for display and saving
     if (stable) {
       setUserStableRanch(stable.name);
@@ -670,12 +673,12 @@ const ProfileScreen = () => {
         maxWidth: 400,
         maxHeight: 400,
         quality: 0.6,
-        format: 'jpeg'
+        format: "jpeg",
       });
-      console.log('📷 Image compressed for profile upload');
+      console.log("📷 Image compressed for profile upload");
       return compressedImage;
     } catch (error) {
-      console.error('📷 Error compressing image:', error);
+      console.error("📷 Error compressing image:", error);
       return { uri: imageUri }; // Return original if compression fails
     }
   };
@@ -715,7 +718,9 @@ const ProfileScreen = () => {
 
     if (!result.canceled && result.assets[0]) {
       // Further compress the image before setting it
-      const compressedImage = await compressImageForUpload(result.assets[0].uri);
+      const compressedImage = await compressImageForUpload(
+        result.assets[0].uri
+      );
       setProfileImage({ uri: compressedImage.uri });
     }
   };
@@ -732,7 +737,9 @@ const ProfileScreen = () => {
 
     if (!result.canceled && result.assets[0]) {
       // Further compress the image before setting it
-      const compressedImage = await compressImageForUpload(result.assets[0].uri);
+      const compressedImage = await compressImageForUpload(
+        result.assets[0].uri
+      );
       setProfileImage({ uri: compressedImage.uri });
     }
   };
@@ -853,7 +860,9 @@ const ProfileScreen = () => {
           console.log("Successfully created new stable:", stable.name);
         } catch (stableError) {
           console.error("Error creating stable:", stableError);
-          showError("Failed to create stable. Profile will be saved without stable information.");
+          showError(
+            "Failed to create stable. Profile will be saved without stable information."
+          );
           // Continue with profile save even if stable creation fails
         }
       } else if (selectedStable) {
@@ -872,7 +881,9 @@ const ProfileScreen = () => {
           console.log("Successfully joined stable:", selectedStable.name);
         } catch (stableError) {
           console.error("Error joining stable:", stableError);
-          showError("Failed to join stable. Profile will be saved without stable information.");
+          showError(
+            "Failed to join stable. Profile will be saved without stable information."
+          );
           // Continue with profile save even if stable joining fails
         }
       }
@@ -891,7 +902,7 @@ const ProfileScreen = () => {
       setSavedUserExperience(userExperience);
       setSavedIsProMember(finalProStatus);
       setSavedUserStableRanch(userStableRanch);
-      
+
       // If stable operation was successful, clear the temporary selection state
       if (actualStableId) {
         // Clear the new stable data since it's now saved
@@ -1294,7 +1305,11 @@ const ProfileScreen = () => {
                   <Text
                     style={[
                       styles.stableRanchValue,
-                      { color: userStableRanch ? currentTheme.colors.text : currentTheme.colors.textSecondary },
+                      {
+                        color: userStableRanch
+                          ? currentTheme.colors.text
+                          : currentTheme.colors.textSecondary,
+                      },
                     ]}
                   >
                     {userStableRanch || "Not specified"}
@@ -1446,75 +1461,146 @@ const ProfileScreen = () => {
                   placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                 />
-                
+
                 {/* Stable/Ranch Selection */}
                 <View style={styles.stableSelectionContainer}>
-                  <Text style={[styles.stableSelectionLabel, { color: currentTheme.colors.text }]}>
+                  <Text
+                    style={[
+                      styles.stableSelectionLabel,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
                     Stable/Ranch (Optional)
                   </Text>
                   {selectedStable || newStableData ? (
-                    <View style={[styles.selectedStableContainer, { borderColor: currentTheme.colors.border }]}>
+                    <View
+                      style={[
+                        styles.selectedStableContainer,
+                        { borderColor: currentTheme.colors.border },
+                      ]}
+                    >
                       <View style={styles.selectedStableInfo}>
                         <View style={styles.selectedStableNameContainer}>
-                          <Text style={[styles.selectedStableName, { color: currentTheme.colors.text }]}>
+                          <Text
+                            style={[
+                              styles.selectedStableName,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
                             {selectedStable?.name || newStableData?.name}
                           </Text>
                           {selectedStable?.is_verified && (
                             <View style={styles.selectedStableVerifiedBadge}>
-                              <Text style={styles.selectedStableVerifiedBadgeText}>✓ Verified</Text>
+                              <Text
+                                style={styles.selectedStableVerifiedBadgeText}
+                              >
+                                ✓ Verified
+                              </Text>
                             </View>
                           )}
                         </View>
                         {selectedStable && (
                           <>
                             {selectedStable.location && (
-                              <Text style={[styles.selectedStableLocation, { color: currentTheme.colors.textSecondary }]}>
+                              <Text
+                                style={[
+                                  styles.selectedStableLocation,
+                                  { color: currentTheme.colors.textSecondary },
+                                ]}
+                              >
                                 {selectedStable.location}
                               </Text>
                             )}
-                            {selectedStable.city && selectedStable.state_province && (
-                              <Text style={[styles.selectedStableMembers, { color: currentTheme.colors.textSecondary }]}>
-                                {selectedStable.city}, {selectedStable.state_province}
-                              </Text>
-                            )}
+                            {selectedStable.city &&
+                              selectedStable.state_province && (
+                                <Text
+                                  style={[
+                                    styles.selectedStableMembers,
+                                    {
+                                      color: currentTheme.colors.textSecondary,
+                                    },
+                                  ]}
+                                >
+                                  {selectedStable.city},{" "}
+                                  {selectedStable.state_province}
+                                </Text>
+                              )}
                           </>
                         )}
                         {newStableData && (
                           <>
                             {newStableData.location && (
-                              <Text style={[styles.selectedStableLocation, { color: currentTheme.colors.textSecondary }]}>
+                              <Text
+                                style={[
+                                  styles.selectedStableLocation,
+                                  { color: currentTheme.colors.textSecondary },
+                                ]}
+                              >
                                 {newStableData.location}
                               </Text>
                             )}
-                            {newStableData.city && newStableData.state_province && (
-                              <Text style={[styles.selectedStableMembers, { color: currentTheme.colors.textSecondary }]}>
-                                {newStableData.city}, {newStableData.state_province}
-                              </Text>
-                            )}
+                            {newStableData.city &&
+                              newStableData.state_province && (
+                                <Text
+                                  style={[
+                                    styles.selectedStableMembers,
+                                    {
+                                      color: currentTheme.colors.textSecondary,
+                                    },
+                                  ]}
+                                >
+                                  {newStableData.city},{" "}
+                                  {newStableData.state_province}
+                                </Text>
+                              )}
                           </>
                         )}
                       </View>
                       <View style={styles.stableButtonsContainer}>
                         <TouchableOpacity
-                          style={[styles.clearStableButton, { backgroundColor: currentTheme.colors.textSecondary }]}
+                          style={[
+                            styles.clearStableButton,
+                            {
+                              backgroundColor:
+                                currentTheme.colors.textSecondary,
+                            },
+                          ]}
                           onPress={handleClearStableSelection}
                         >
-                          <Text style={styles.clearStableButtonText}>Clear</Text>
+                          <Text style={styles.clearStableButtonText}>
+                            Clear
+                          </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={[styles.changeStableButton, { backgroundColor: currentTheme.colors.primary }]}
+                          style={[
+                            styles.changeStableButton,
+                            { backgroundColor: currentTheme.colors.primary },
+                          ]}
                           onPress={() => setShowStableSelection(true)}
                         >
-                          <Text style={styles.changeStableButtonText}>Change</Text>
+                          <Text style={styles.changeStableButtonText}>
+                            Change
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   ) : (
                     <TouchableOpacity
-                      style={[styles.selectStableButton, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.border }]}
+                      style={[
+                        styles.selectStableButton,
+                        {
+                          backgroundColor: currentTheme.colors.surface,
+                          borderColor: currentTheme.colors.border,
+                        },
+                      ]}
                       onPress={() => setShowStableSelection(true)}
                     >
-                      <Text style={[styles.selectStableButtonText, { color: currentTheme.colors.text }]}>
+                      <Text
+                        style={[
+                          styles.selectStableButtonText,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
                         Choose a Stable/Ranch
                       </Text>
                     </TouchableOpacity>
@@ -1794,7 +1880,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
-    marginTop: 5,
+    marginTop: -4,
     paddingTop: 20,
   },
   profileContainer: {

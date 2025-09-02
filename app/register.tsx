@@ -590,8 +590,8 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     paddingHorizontal: 30,
-    paddingTop: 40,
-    paddingBottom: 30,
+    paddingTop: 20,
+    paddingBottom: 10,
     alignItems: "center",
   },
   title: {

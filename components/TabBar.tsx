@@ -93,6 +93,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     paddingTop: 12,
+    paddingBottom: 2,
     flexDirection: "row",
     backgroundColor: "#335C67",
     justifyContent: "center",
