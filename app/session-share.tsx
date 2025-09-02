@@ -445,7 +445,7 @@ export default function SessionShareScreen() {
           format: 'jpg',
           quality: 0.9,
           result: 'tmpfile',
-          height: width * 16 / 9, // Instagram story aspect ratio
+          height: width, // Square aspect ratio
           width: width,
         });
 
@@ -841,37 +841,77 @@ export default function SessionShareScreen() {
             )}
             
             {/* Overlay with Session Stats */}
-            <View style={[styles.mapOverlay, { backgroundColor: theme.background + 'E6' }]}>
+            <View style={styles.mapOverlay}>
               <View style={styles.mapHeader}>
-                <Text style={[styles.mapTitle, { color: theme.text }]}>
+                <Text style={[styles.mapTitle, { 
+                  color: '#FFFFFF',
+                  textShadowColor: 'rgba(0, 0, 0, 0.75)',
+                  textShadowOffset: { width: 1, height: 1 },
+                  textShadowRadius: 3
+                }]}>
                   🐴 {session.horseName}
                 </Text>
-                <Text style={[styles.mapSubtitle, { color: theme.textSecondary }]}>
+                <Text style={[styles.mapSubtitle, { 
+                  color: '#FFFFFF',
+                  textShadowColor: 'rgba(0, 0, 0, 0.75)',
+                  textShadowOffset: { width: 1, height: 1 },
+                  textShadowRadius: 3
+                }]}>
                   Training Session
                 </Text>
               </View>
               
               <View style={styles.mapStats}>
                 <View style={styles.mapStatItem}>
-                  <Ionicons name="time" size={24} color={theme.accent} />
-                  <Text style={[styles.mapStatLabel, { color: theme.textSecondary }]}>Duration</Text>
-                  <Text style={[styles.mapStatValue, { color: theme.text }]}>
+                  <Ionicons name="time" size={24} color="#FFFFFF" />
+                  <Text style={[styles.mapStatLabel, { 
+                    color: '#FFFFFF',
+                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 2
+                  }]}>Duration</Text>
+                  <Text style={[styles.mapStatValue, { 
+                    color: '#FFFFFF',
+                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 2
+                  }]}>
                     {session.duration ? formatDuration(session.duration) : "Unknown"}
                   </Text>
                 </View>
                 
                 <View style={styles.mapStatItem}>
-                  <Ionicons name="location" size={24} color={theme.accent} />
-                  <Text style={[styles.mapStatLabel, { color: theme.textSecondary }]}>Distance</Text>
-                  <Text style={[styles.mapStatValue, { color: theme.text }]}>
+                  <Ionicons name="location" size={24} color="#FFFFFF" />
+                  <Text style={[styles.mapStatLabel, { 
+                    color: '#FFFFFF',
+                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 2
+                  }]}>Distance</Text>
+                  <Text style={[styles.mapStatValue, { 
+                    color: '#FFFFFF',
+                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 2
+                  }]}>
                     {session.distance ? `${(session.distance / 1000).toFixed(1)} km` : "Unknown"}
                   </Text>
                 </View>
                 
                 <View style={styles.mapStatItem}>
-                  <Ionicons name="speedometer" size={24} color={theme.accent} />
-                  <Text style={[styles.mapStatLabel, { color: theme.textSecondary }]}>Avg Speed</Text>
-                  <Text style={[styles.mapStatValue, { color: theme.text }]}>
+                  <Ionicons name="speedometer" size={24} color="#FFFFFF" />
+                  <Text style={[styles.mapStatLabel, { 
+                    color: '#FFFFFF',
+                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 2
+                  }]}>Avg Speed</Text>
+                  <Text style={[styles.mapStatValue, { 
+                    color: '#FFFFFF',
+                    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 2
+                  }]}>
                     {session.averageSpeed ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h` : "Unknown"}
                   </Text>
                 </View>
@@ -879,7 +919,12 @@ export default function SessionShareScreen() {
               
               {/* App Branding */}
               <View style={styles.mapBranding}>
-                <Text style={[styles.mapBrandText, { color: theme.accent }]}>
+                <Text style={[styles.mapBrandText, { 
+                  color: '#FFFFFF',
+                  textShadowColor: 'rgba(0, 0, 0, 0.75)',
+                  textShadowOffset: { width: 1, height: 1 },
+                  textShadowRadius: 3
+                }]}>
                   EquiHub
                 </Text>
               </View>
@@ -1359,11 +1404,11 @@ const styles = StyleSheet.create({
     top: -10000, // Hide the map view off-screen
     left: 0,
     width: width,
-    height: width * 16 / 9, // Instagram story aspect ratio
+    height: width, // Square aspect ratio
   },
   instagramMapView: {
     width: width,
-    height: width * 16 / 9, // Instagram story aspect ratio (9:16)
+    height: width, // Square aspect ratio (1:1)
     position: 'relative',
   },
   mapBackground: {
