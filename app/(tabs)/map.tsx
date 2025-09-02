@@ -28,8 +28,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDialog } from "../../contexts/DialogContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { ChallengeStorageService } from "../../lib/challengeStorage";
 import { HorseAPI } from "../../lib/horseAPI";
 import { Horse } from "../../lib/supabase";
+import { ChallengeSession } from "../../types/challengeTypes";
 
 // Types for tracking sessions
 interface TrackingPoint {
@@ -1940,6 +1942,53 @@ const MapScreen = () => {
 
       // Save session to storage
       await saveSessionToStorage(completedSession);
+
+      // Update active challenge if user has one
+      if (user?.id) {
+        try {
+          const activeChallenge = await ChallengeStorageService.getActiveChallenge(user.id);
+          
+          if (activeChallenge) {
+            // Create a challenge session from the completed training session
+            const challengeSession: ChallengeSession = {
+              id: completedSession.id,
+              distance: totalDistance / 1000, // Convert to kilometers
+              duration: duration / 60, // Convert to minutes
+              date: new Date().toISOString(),
+              horseName: completedSession.horseName,
+            };
+
+            // Add session to active challenge
+            const success = await ChallengeStorageService.addChallengeSession(
+              user.id,
+              challengeSession
+            );
+
+            if (success) {
+              // Check if challenge was completed
+              const updatedChallenge = await ChallengeStorageService.getActiveChallenge(user.id);
+              
+              if (updatedChallenge?.isCompleted) {
+                // Show challenge completion notification
+                setTimeout(() => {
+                  Alert.alert(
+                    "🏆 Challenge Completed!",
+                    `Congratulations! You've completed your ${updatedChallenge.target}${updatedChallenge.unit} challenge!\n\nTotal Progress: ${updatedChallenge.progress.toFixed(1)}${updatedChallenge.unit}`,
+                    [{ text: "Amazing!" }]
+                  );
+                }, 1000); // Show after session completion dialog
+              } else if (updatedChallenge) {
+                // Show progress update
+                const progressPercentage = (updatedChallenge.progress / updatedChallenge.target * 100).toFixed(1);
+                console.log(`📊 Challenge progress updated: ${updatedChallenge.progress.toFixed(1)}/${updatedChallenge.target}${updatedChallenge.unit} (${progressPercentage}%)`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error updating challenge progress:', error);
+          // Don't show error to user as this is not critical to session completion
+        }
+      }
 
       // Reset tracking state
       setIsTracking(false);
