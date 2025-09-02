@@ -1713,12 +1713,6 @@ export default function CommunityScreen() {
           >
             {item.name}
           </Text>
-          <Text
-            style={[styles.gridUserAge, { color: theme.textSecondary }]}
-            numberOfLines={1}
-          >
-            Age {item.age}
-          </Text>
           {item.stable_name && (
             <Text
               style={[styles.gridStableInfo, { color: theme.primary }]}
@@ -1744,7 +1738,7 @@ export default function CommunityScreen() {
             const userSearchResult: UserSearchResult = {
               id: item.id,
               name: item.name,
-              age: item.age,
+              age: item.age || 0, // Default to 0 if age is not available
               profile_image_url: item.profile_image_url,
               description: item.description || "",
               is_online: item.is_online || false,
@@ -3520,11 +3514,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     marginTop: 8,
-    textAlign: "center",
-  },
-  gridUserAge: {
-    fontSize: 12,
-    marginTop: 2,
     textAlign: "center",
   },
   gridStableInfo: {

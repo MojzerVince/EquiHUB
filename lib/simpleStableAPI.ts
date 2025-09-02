@@ -15,7 +15,7 @@ export interface SimpleStable {
 export interface UserWithStable {
   id: string;
   name: string;
-  age: number;
+  age?: number;
   profile_image_url?: string;
   description?: string;
   is_online?: boolean;
@@ -357,7 +357,7 @@ export class SimpleStableAPI {
       // Step 5: Get profiles for these users
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, name, age, profile_image_url, description')
+        .select('id, name, profile_image_url, description')
         .in('id', userIds);
 
       if (profilesError) {
