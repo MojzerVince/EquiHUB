@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDialog } from "../../contexts/DialogContext";
+import { useMetric } from "../../contexts/MetricContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { apiCache, CacheKeys } from "../../lib/apiCache";
 import API_CONFIG from "../../lib/apiConfig";
@@ -98,6 +99,7 @@ const MyHorsesScreen = () => {
   const { user, loading: authLoading } = useAuth();
   const { currentTheme } = useTheme();
   const { showError, showDelete, showConfirm } = useDialog();
+  const { formatHeight, formatWeight, metricSystem } = useMetric();
   const [refreshing, setRefreshing] = useState(false);
   const [horses, setHorses] = useState<Horse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -573,7 +575,12 @@ const MyHorsesScreen = () => {
 
     const heightNum = parseInt(normalizedHeight);
     if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
-      showError("Please enter a valid height (50-250 cm)");
+      const heightUnit = metricSystem === "metric" ? "cm" : "inches";
+      const minHeight = metricSystem === "metric" ? "50" : "20";
+      const maxHeight = metricSystem === "metric" ? "250" : "98";
+      showError(
+        `Please enter a valid height (${minHeight}-${maxHeight} ${heightUnit})`
+      );
       return;
     }
 
@@ -581,7 +588,12 @@ const MyHorsesScreen = () => {
     if (normalizedWeight) {
       weightNum = parseInt(normalizedWeight);
       if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
-        showError("Please enter a valid weight (50-2000 kg)");
+        const weightUnit = metricSystem === "metric" ? "kg" : "lbs";
+        const minWeight = metricSystem === "metric" ? "50" : "110";
+        const maxWeight = metricSystem === "metric" ? "2000" : "4400";
+        showError(
+          `Please enter a valid weight (${minWeight}-${maxWeight} ${weightUnit})`
+        );
         return;
       }
     }
@@ -681,7 +693,12 @@ const MyHorsesScreen = () => {
 
     const heightNum = parseInt(normalizedHeight);
     if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
-      showError("Please enter a valid height (50-250 cm)");
+      const heightUnit = metricSystem === "metric" ? "cm" : "inches";
+      const minHeight = metricSystem === "metric" ? "50" : "20";
+      const maxHeight = metricSystem === "metric" ? "250" : "98";
+      showError(
+        `Please enter a valid height (${minHeight}-${maxHeight} ${heightUnit})`
+      );
       return;
     }
 
@@ -689,7 +706,12 @@ const MyHorsesScreen = () => {
     if (normalizedWeight) {
       weightNum = parseInt(normalizedWeight);
       if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
-        showError("Please enter a valid weight (50-2000 kg)");
+        const weightUnit = metricSystem === "metric" ? "kg" : "lbs";
+        const minWeight = metricSystem === "metric" ? "50" : "110";
+        const maxWeight = metricSystem === "metric" ? "2000" : "4400";
+        showError(
+          `Please enter a valid weight (${minWeight}-${maxWeight} ${weightUnit})`
+        );
         return;
       }
     }
@@ -2191,7 +2213,7 @@ const MyHorsesScreen = () => {
                           { color: currentTheme.colors.text, fontSize: 14 },
                         ]}
                       >
-                        {horse.height || 0} cm
+                        {formatHeight(horse.height || 0)}
                       </Text>
                     </View>
                     {horse.weight ? (
@@ -2213,7 +2235,7 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text, fontSize: 14 },
                           ]}
                         >
-                          {horse.weight || 0} kg
+                          {formatWeight(horse.weight || 0)}
                         </Text>
                       </View>
                     ) : null}

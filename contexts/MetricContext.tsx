@@ -22,6 +22,10 @@ export interface MetricContextType {
   formatWeight: (kilograms: number) => string;
   formatWeightValue: (kilograms: number) => number;
   formatWeightUnit: () => string;
+  // Height conversion functions
+  formatHeight: (centimeters: number) => string;
+  formatHeightValue: (centimeters: number) => number;
+  formatHeightUnit: () => string;
 }
 
 const MetricContext = createContext<MetricContextType | undefined>(undefined);
@@ -162,6 +166,30 @@ export const MetricProvider: React.FC<{ children: React.ReactNode }> = ({
     return metricSystem === "metric" ? "kg" : "lbs";
   };
 
+  // Height conversion functions
+  const formatHeight = (centimeters: number): string => {
+    if (metricSystem === "metric") {
+      return `${centimeters} cm`;
+    } else {
+      const inches = centimeters / 2.54;
+      const feet = Math.floor(inches / 12);
+      const remainingInches = Math.round(inches % 12);
+      return `${feet}'${remainingInches}"`;
+    }
+  };
+
+  const formatHeightValue = (centimeters: number): number => {
+    if (metricSystem === "metric") {
+      return centimeters;
+    } else {
+      return centimeters / 2.54; // inches
+    }
+  };
+
+  const formatHeightUnit = (): string => {
+    return metricSystem === "metric" ? "cm" : "in";
+  };
+
   // Don't render children until metric system is loaded
   if (isLoading) {
     return null;
@@ -182,6 +210,9 @@ export const MetricProvider: React.FC<{ children: React.ReactNode }> = ({
     formatWeight,
     formatWeightValue,
     formatWeightUnit,
+    formatHeight,
+    formatHeightValue,
+    formatHeightUnit,
   };
 
   return (
