@@ -34,6 +34,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [hasUserData, setHasUserData] = useState<boolean | null>(null);
 
+  // Check stored user data on mount
+  useEffect(() => {
+    checkStoredUserData();
+  }, []);
+
   useEffect(() => {
     // Initialize auth using REST API - much faster and more reliable
     const initializeAuth = async () => {
@@ -41,9 +46,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initializeAuth();
-
-    // Check stored user data
-    checkStoredUserData();
 
     // Listen for auth changes (sign in/out events)
     const supabase = getSupabase();
