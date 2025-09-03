@@ -2,16 +2,16 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SimpleStableSelection from "../../components/SimpleStableSelection";
@@ -839,7 +839,7 @@ const ProfileScreen = () => {
         updateData.profile_image_url = savedProfileImage.uri;
       }
 
-      // Handle stable creation or joining before updating profile
+      // Handle stable creation before updating profile
       let actualStableId: string | null = null;
       if (newStableData && !selectedStable) {
         // User created a new stable - create it in the database
@@ -866,26 +866,9 @@ const ProfileScreen = () => {
           // Continue with profile save even if stable creation fails
         }
       } else if (selectedStable) {
-        // User selected an existing stable - join it
-        try {
-          const { success, error } = await SimpleStableAPI.joinStable(
-            selectedStable.id,
-            USER_ID
-          );
-
-          if (!success) {
-            throw new Error(error || "Failed to join stable");
-          }
-
-          actualStableId = selectedStable.id;
-          console.log("Successfully joined stable:", selectedStable.name);
-        } catch (stableError) {
-          console.error("Error joining stable:", stableError);
-          showError(
-            "Failed to join stable. Profile will be saved without stable information."
-          );
-          // Continue with profile save even if stable joining fails
-        }
+        // User selected an existing stable - store reference
+        actualStableId = selectedStable.id;
+        console.log("Using selected stable:", selectedStable.name);
       }
 
       // Update profile data using direct API approach (single update call)
@@ -908,7 +891,7 @@ const ProfileScreen = () => {
         // Clear the new stable data since it's now saved
         setNewStableData(null);
         setSavedNewStableData(null);
-        // Keep the selected stable if we joined an existing one
+        // Keep the selected stable if we selected an existing one
         if (selectedStable) {
           setSavedSelectedStable(selectedStable);
         } else {

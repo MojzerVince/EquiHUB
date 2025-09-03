@@ -123,7 +123,7 @@ const RegisterScreen = () => {
       }
 
       if (user) {
-        // Handle stable membership after successful registration
+        // Handle stable creation after successful registration
         try {
           if (newStableData) {
             // Create new stable
@@ -135,19 +135,10 @@ const RegisterScreen = () => {
             if (createResult.error) {
               console.error("Error creating stable:", createResult.error);
             }
-          } else if (selectedStable) {
-            // Join existing stable
-            const joinResult = await SimpleStableAPI.joinStable(
-              selectedStable.id,
-              user.id
-            );
-
-            if (joinResult.error) {
-              console.error("Error joining stable:", joinResult.error);
-            }
           }
+          // Note: Stable selection (without joining) can be handled in profile later
         } catch (error) {
-          console.error("Error handling stable membership:", error);
+          console.error("Error handling stable creation:", error);
           // Don't fail registration for stable errors
         }
 
@@ -157,9 +148,9 @@ const RegisterScreen = () => {
           "Your account has been created successfully. Please check your email to verify your account before logging in. Once logged in, you'll stay signed in automatically on this device.";
 
         if (newStableData) {
-          successMessage += `\n\nYou have created and joined ${newStableData.name}!`;
+          successMessage += `\n\nYou have created ${newStableData.name}!`;
         } else if (selectedStable) {
-          successMessage += `\n\nYou have joined ${selectedStable.name}!`;
+          successMessage += `\n\nYou can set your stable preference in your profile after logging in.`;
         }
 
         showConfirm("Registration Successful!", successMessage, () =>
@@ -441,7 +432,7 @@ const RegisterScreen = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Stable/Ranch (Optional)</Text>
               <Text style={styles.inputDescription}>
-                Join an existing stable or skip to join one later
+                Choose a stable to associate with or skip to set this later
               </Text>
 
               {selectedStable ? (
@@ -455,12 +446,6 @@ const RegisterScreen = () => {
                         ? `${selectedStable.city}, ${selectedStable.state_province}`
                         : selectedStable.location || "Location not specified"}
                     </Text>
-                    {selectedStable.member_count && (
-                      <Text style={styles.selectedStableMembers}>
-                        {selectedStable.member_count} member
-                        {selectedStable.member_count !== 1 ? "s" : ""}
-                      </Text>
-                    )}
                   </View>
                   <TouchableOpacity
                     style={styles.changeStableButton}

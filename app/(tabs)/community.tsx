@@ -236,8 +236,8 @@ export default function CommunityScreen() {
     },
   ];
 
-  const [stableMates, setStableMates] = useState<UserWithStable[]>([]);
-  const [loadingStableMates, setLoadingStableMates] = useState(false);
+  const [suggestedUsers, setSuggestedUsers] = useState<UserWithStable[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [addingFriends, setAddingFriends] = useState<Set<string>>(new Set());
 
   // Pagination state for stable mates
@@ -249,17 +249,17 @@ export default function CommunityScreen() {
   // Ref for horizontal scroll view
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Load location-based stable mates for friend suggestions
-  const loadStableMates = useCallback(
+  // Load general friend suggestions for the user
+  const loadSuggestions = useCallback(
     async (friendsList?: UserSearchResult[]) => {
       if (!user?.id) {
-        setStableMates([]);
+        setSuggestedUsers([]);
         setTotalPages(0);
         setCurrentPage(0);
         return;
       }
 
-      setLoadingStableMates(true);
+      setLoadingSuggestions(true);
       try {
         // Use new location-based API instead of same-stable API
         const { users, error } =
@@ -267,7 +267,7 @@ export default function CommunityScreen() {
 
         if (error) {
           console.error("Error loading location-based suggestions:", error);
-          setStableMates([]);
+          setSuggestedUsers([]);
           setTotalPages(0);
           setCurrentPage(0);
         } else {
@@ -285,7 +285,7 @@ export default function CommunityScreen() {
             currentFriends.map((f) => f.id) || []
           );
 
-          const unfriendedStableMates = users.filter((mate) => {
+          const unfriendedUsers = users.filter((mate) => {
             const isAlreadyFriend = currentUserFriendIds.has(mate.id);
             if (isAlreadyFriend) {
               console.warn(
@@ -299,22 +299,22 @@ export default function CommunityScreen() {
 
           console.log(
             "📝 After friend filtering:",
-            unfriendedStableMates.length
+            unfriendedUsers.length
           );
 
           // Limit to MAX_USERS (8) and calculate pages
-          const limitedUsers = unfriendedStableMates.slice(0, MAX_USERS);
-          setStableMates(limitedUsers);
+          const limitedUsers = unfriendedUsers.slice(0, MAX_USERS);
+          setSuggestedUsers(limitedUsers);
           setTotalPages(Math.ceil(limitedUsers.length / USERS_PER_PAGE));
           setCurrentPage(0); // Reset to first page when data refreshes
         }
       } catch (error) {
         console.error("Exception loading location-based suggestions:", error);
-        setStableMates([]);
+        setSuggestedUsers([]);
         setTotalPages(0);
         setCurrentPage(0);
       } finally {
-        setLoadingStableMates(false);
+        setLoadingSuggestions(false);
       }
     },
     [user?.id, friends]
@@ -324,7 +324,7 @@ export default function CommunityScreen() {
   const getCurrentPageUsers = () => {
     const startIndex = currentPage * USERS_PER_PAGE;
     const endIndex = startIndex + USERS_PER_PAGE;
-    return stableMates.slice(startIndex, endIndex);
+    return suggestedUsers.slice(startIndex, endIndex);
   };
 
   const goToNextPage = () => {
@@ -544,7 +544,7 @@ export default function CommunityScreen() {
               loadFriendRequests(),
               loadHiddenPosts(),
               loadPosts(),
-              loadStableMates(loadedFriends), // Pass fresh friends data directly
+              loadSuggestions(loadedFriends), // Pass fresh friends data directly
               loadChallenges(), // Load available challenges
               loadActiveChallenge(), // Load active challenge
               loadUserBadges(), // Load user badges
@@ -556,7 +556,7 @@ export default function CommunityScreen() {
               loadFriendRequests(),
               loadHiddenPosts(),
               loadPosts(),
-              loadStableMates([]), // Pass empty friends list
+              loadSuggestions([]), // Pass empty friends list
               loadChallenges(), // Load available challenges
               loadActiveChallenge(), // Load active challenge
               loadUserBadges(), // Load user badges
@@ -1133,7 +1133,7 @@ export default function CommunityScreen() {
           loadFriendRequests(),
           loadHiddenPosts(),
           loadPosts(), // Always refresh posts on manual pull-to-refresh
-          loadStableMates(loadedFriends), // Pass fresh friends data directly
+          loadSuggestions(loadedFriends), // Pass fresh friends data directly
         ]);
       } else {
         console.error("Refresh: Failed to load friends:", error);
@@ -1142,7 +1142,7 @@ export default function CommunityScreen() {
           loadFriendRequests(),
           loadHiddenPosts(),
           loadPosts(),
-          loadStableMates([]), // Pass empty friends list
+          loadSuggestions([]), // Pass empty friends list
         ]);
       }
     } catch (error) {
@@ -1684,7 +1684,7 @@ export default function CommunityScreen() {
     </View>
   );
 
-  const renderStableMate = ({ item }: { item: UserWithStable }) => {
+  const renderSuggestedUser = ({ item }: { item: UserWithStable }) => {
     const isAddingFriend = addingFriends.has(item.id);
 
     return (
@@ -1713,14 +1713,6 @@ export default function CommunityScreen() {
           >
             {item.name}
           </Text>
-          {item.stable_name && (
-            <Text
-              style={[styles.gridStableInfo, { color: theme.primary }]}
-              numberOfLines={1}
-            >
-              🏇 {item.stable_name}
-            </Text>
-          )}
         </View>
         <TouchableOpacity
           style={[
@@ -2036,7 +2028,7 @@ export default function CommunityScreen() {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Riders from Your Area
               </Text>
-              {loadingStableMates ? (
+              {loadingSuggestions ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="small" color={theme.primary} />
                   <Text
@@ -2045,7 +2037,7 @@ export default function CommunityScreen() {
                     Loading location-based suggestions...
                   </Text>
                 </View>
-              ) : stableMates.length > 0 ? (
+              ) : suggestedUsers.length > 0 ? (
                 <View style={styles.paginatedContainer}>
                   {/* Swipeable horizontal ScrollView */}
                   <ScrollView
@@ -2069,12 +2061,12 @@ export default function CommunityScreen() {
                         ]}
                       >
                         <View style={styles.usersGrid}>
-                          {stableMates
+                          {suggestedUsers
                             .slice(
                               pageIndex * USERS_PER_PAGE,
                               (pageIndex + 1) * USERS_PER_PAGE
                             )
-                            .map((user) => renderStableMate({ item: user }))}
+                            .map((user: UserWithStable) => renderSuggestedUser({ item: user }))}
                         </View>
                       </View>
                     ))}
@@ -3514,12 +3506,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     marginTop: 8,
-    textAlign: "center",
-  },
-  gridStableInfo: {
-    fontSize: 11,
-    fontWeight: "500",
-    marginTop: 4,
     textAlign: "center",
   },
   gridAddButton: {

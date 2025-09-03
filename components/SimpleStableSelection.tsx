@@ -133,16 +133,6 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
             ? `${stable.city}, ${stable.state_province}`
             : stable.location || "Location not specified"}
         </Text>
-        {stable.member_count && (
-          <Text
-            style={[
-              styles.memberCount,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            {stable.member_count} member{stable.member_count !== 1 ? "s" : ""}
-          </Text>
-        )}
       </View>
       <View
         style={[
@@ -610,10 +600,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inder",
     marginBottom: 2,
-  },
-  memberCount: {
-    fontSize: 12,
-    fontFamily: "Inder",
   },
   selectButton: {
     paddingHorizontal: 16,
