@@ -1341,16 +1341,18 @@ const ProfileScreen = () => {
 
             {!isEditing ? (
               <>
-                <Text
-                  style={[styles.userName, { color: currentTheme.colors.text }]}
-                >
-                  {userName}
-                </Text>
-                <Text
-                  style={[styles.userAge, { color: currentTheme.colors.text }]}
-                >
-                  {userAge}
-                </Text>
+                <View style={styles.nameAgeContainer}>
+                  <Text
+                    style={[styles.userName, { color: currentTheme.colors.text }]}
+                  >
+                    {userName}
+                  </Text>
+                  <Text
+                    style={[styles.userAge, { color: currentTheme.colors.text }]}
+                  >
+                    {userAge}
+                  </Text>
+                </View>
                 <Text
                   style={[
                     styles.userDescription,
@@ -2104,15 +2106,20 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     fontWeight: "bold",
   },
+  nameAgeContainer: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "center",
+    marginBottom: 15,
+    gap: 15,
+  },
   userName: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 5,
     fontFamily: "Inder",
   },
   userAge: {
     fontSize: 20,
-    marginBottom: 15,
     fontFamily: "Inder",
   },
   userDescription: {
