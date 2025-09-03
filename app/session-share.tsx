@@ -923,19 +923,6 @@ export default function SessionShareScreen() {
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
               Instagram Story Preview
             </Text>
-            {mapReady && (
-              <View
-                style={[
-                  styles.readyIndicator,
-                  { backgroundColor: theme.success },
-                ]}
-              >
-                <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
-                <Text style={[styles.readyText, { color: "#FFFFFF" }]}>
-                  Ready
-                </Text>
-              </View>
-            )}
           </View>
           <View
             ref={mapViewRef}
@@ -1377,7 +1364,7 @@ const styles = StyleSheet.create({
   bottomButtonsContainer: {
     flexDirection: "row",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     gap: 12,
     borderTopWidth: 1,
     shadowColor: "#000",
@@ -1385,6 +1372,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
+    marginBottom: 35,
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
   },
   instagramButton: {
     flex: 1,
@@ -1683,6 +1673,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: "center",
     minWidth: 80,
+    marginRight: 16,
   },
   mapHorseImage: {
     width: 40,
@@ -1712,6 +1703,7 @@ const styles = StyleSheet.create({
     bottom: 16,
     left: 16,
     right: 16,
+    alignItems: "center",
   },
   mapStatsContainer: {
     backgroundColor: "rgba(128, 128, 128, 0.5)",
