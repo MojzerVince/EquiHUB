@@ -1713,6 +1713,14 @@ export default function CommunityScreen() {
           >
             {item.name}
           </Text>
+          {item.stable_name && (
+            <Text
+              style={[styles.gridStableName, { color: theme.textSecondary }]}
+              numberOfLines={1}
+            >
+              {item.stable_name}
+            </Text>
+          )}
         </View>
         <TouchableOpacity
           style={[
@@ -2034,7 +2042,7 @@ export default function CommunityScreen() {
                   <Text
                     style={[styles.loadingText, { color: theme.textSecondary }]}
                   >
-                    Loading location-based suggestions...
+                    Loading friend suggestions...
                   </Text>
                 </View>
               ) : suggestedUsers.length > 0 ? (
@@ -3507,6 +3515,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 8,
     textAlign: "center",
+  },
+  gridStableName: {
+    fontSize: 12,
+    fontWeight: "400",
+    marginTop: 2,
+    textAlign: "center",
+    fontStyle: "italic",
   },
   gridAddButton: {
     paddingHorizontal: 12,
