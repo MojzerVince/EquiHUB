@@ -71,9 +71,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // If user is NOT authenticated but still in tabs group, redirect to appropriate auth page
     if (!user && inTabsGroup) {
       if (shouldShowWelcome) {
-        navigateIfNeeded("/", "Not authenticated in tabs - redirecting to welcome");
+        navigateIfNeeded(
+          "/",
+          "Not authenticated in tabs - redirecting to welcome"
+        );
       } else {
-        navigateIfNeeded("/login", "Not authenticated in tabs - redirecting to login");
+        navigateIfNeeded(
+          "/login",
+          "Not authenticated in tabs - redirecting to login"
+        );
       }
       return;
     }
@@ -92,7 +98,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       navigateIfNeeded("/(tabs)", "Redirecting to tabs");
     } else if (!user && onWelcome && !shouldShowWelcome) {
       // User is on welcome but has stored data - redirect to login
-      navigateIfNeeded("/login", "Redirecting to login (returning user on welcome)");
+      navigateIfNeeded(
+        "/login",
+        "Redirecting to login (returning user on welcome)"
+      );
     } else {
       console.log("ProtectedRoute: No action taken - staying on current route");
       lastNavigationRef.current = null; // Reset navigation tracking
