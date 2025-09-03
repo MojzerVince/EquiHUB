@@ -99,7 +99,13 @@ const MyHorsesScreen = () => {
   const { user, loading: authLoading } = useAuth();
   const { currentTheme } = useTheme();
   const { showError, showDelete, showConfirm } = useDialog();
-  const { formatHeight, formatWeight, metricSystem } = useMetric();
+  const {
+    formatHeight,
+    formatWeight,
+    formatHeightUnit,
+    formatWeightUnit,
+    metricSystem,
+  } = useMetric();
   const [refreshing, setRefreshing] = useState(false);
   const [horses, setHorses] = useState<Horse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -2589,7 +2595,7 @@ const MyHorsesScreen = () => {
                     { color: currentTheme.colors.text },
                   ]}
                 >
-                  Height (cm)
+                  Height ({formatHeightUnit()})
                 </Text>
                 <TextInput
                   style={[
@@ -2602,7 +2608,11 @@ const MyHorsesScreen = () => {
                   ]}
                   value={editHeight}
                   onChangeText={setEditHeight}
-                  placeholder="Enter height (100-220 cm)"
+                  placeholder={
+                    metricSystem === "metric"
+                      ? "Enter height (100-220 cm)"
+                      : "Enter height (39-87 in)"
+                  }
                   placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                   returnKeyType="next"
@@ -2617,7 +2627,7 @@ const MyHorsesScreen = () => {
                     { color: currentTheme.colors.text },
                   ]}
                 >
-                  Weight (kg) - Optional
+                  Weight ({formatWeightUnit()}) - Optional
                 </Text>
                 <TextInput
                   style={[
@@ -2842,7 +2852,7 @@ const MyHorsesScreen = () => {
                     { color: currentTheme.colors.text },
                   ]}
                 >
-                  Height (cm)
+                  Height ({formatHeightUnit()})
                 </Text>
                 <TextInput
                   style={[
@@ -2855,7 +2865,11 @@ const MyHorsesScreen = () => {
                   ]}
                   value={addHeight}
                   onChangeText={setAddHeight}
-                  placeholder="Enter height (100-220 cm)"
+                  placeholder={
+                    metricSystem === "metric"
+                      ? "Enter height (100-220 cm)"
+                      : "Enter height (39-87 in)"
+                  }
                   placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
                   returnKeyType="next"
@@ -2870,7 +2884,7 @@ const MyHorsesScreen = () => {
                     { color: currentTheme.colors.text },
                   ]}
                 >
-                  Weight (kg) - Optional
+                  Weight ({formatWeightUnit()}) - Optional
                 </Text>
                 <TextInput
                   style={[
