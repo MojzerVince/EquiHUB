@@ -65,6 +65,9 @@ export class ChallengeStorageService {
       // Update progress based on challenge unit
       if (activeChallenge.unit === 'km') {
         activeChallenge.progress += session.distance;
+      } else if (activeChallenge.unit === 'mi') {
+        // Convert km to miles for imperial challenges
+        activeChallenge.progress += session.distance * 0.621371;
       } else if (activeChallenge.unit === 'hours') {
         activeChallenge.progress += session.duration / 60; // Convert minutes to hours
       } else if (activeChallenge.unit === 'sessions') {

@@ -27,6 +27,7 @@ import MapView, {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDialog } from "../../contexts/DialogContext";
+import { useMetric } from "../../contexts/MetricContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { ChallengeStorageService } from "../../lib/challengeStorage";
 import { HorseAPI } from "../../lib/horseAPI";
@@ -202,6 +203,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
 const MapScreen = () => {
   const { currentTheme } = useTheme();
+  const { formatDistance, formatSpeed } = useMetric();
   const { showError, showDialog } = useDialog();
   const { user } = useAuth();
   const router = useRouter();
@@ -2021,15 +2023,15 @@ const MapScreen = () => {
       // Show custom completion dialog
       const durationMinutes = Math.floor(duration / 60);
       const durationSeconds = duration % 60;
-      const distanceKm = (totalDistance / 1000).toFixed(2);
-      const avgSpeedKmh = (averageSpeed * 3.6).toFixed(1);
+      const formattedDistance = formatDistance(totalDistance);
+      const formattedSpeed = formatSpeed(averageSpeed);
       const predominantGaitName =
         gaitAnalysis.predominantGait.charAt(0).toUpperCase() +
         gaitAnalysis.predominantGait.slice(1);
 
       showDialog({
         title: "🎉 Session Completed!",
-        message: `Congratulations! Your training session with ${completedSession.horseName} has been successfully completed.\n\n📊 Session Summary:\n• Duration: ${durationMinutes}m ${durationSeconds}s\n• Distance: ${distanceKm} km\n• Average Speed: ${avgSpeedKmh} km/h\n• Predominant Gait: ${predominantGaitName}\n• Gait Transitions: ${gaitAnalysis.transitionCount}`,
+        message: `Congratulations! Your training session with ${completedSession.horseName} has been successfully completed.\n\n📊 Session Summary:\n• Duration: ${durationMinutes}m ${durationSeconds}s\n• Distance: ${formattedDistance}\n• Average Speed: ${formattedSpeed}\n• Predominant Gait: ${predominantGaitName}\n• Gait Transitions: ${gaitAnalysis.transitionCount}`,
         buttons: [
           {
             text: "View Details",
@@ -3173,10 +3175,7 @@ const MapScreen = () => {
                         { color: currentTheme.colors.text },
                       ]}
                     >
-                      {(calculateTotalDistance(trackingPoints) / 1000).toFixed(
-                        2
-                      )}{" "}
-                      km
+                      {formatDistance(calculateTotalDistance(trackingPoints))}
                     </Text>
                   </View>
                   <View style={styles.trackingStatItem}>

@@ -15,6 +15,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import CustomSplashScreen from "@/components/SplashScreen";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DialogProvider } from "@/contexts/DialogContext";
+import { MetricProvider } from "@/contexts/MetricContext";
 import { ThemeProvider as CustomThemeProvider } from "@/contexts/ThemeContext";
 import { TrackingProvider } from "@/contexts/TrackingContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -106,61 +107,66 @@ const AppContent = () => {
   // Main app with auth loading
   return (
     <CustomThemeProvider>
-      <DialogProvider>
-        <TrackingProvider>
-          <ThemeProvider
-            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-          >
-            <ProtectedRoute splashActive={false}>
-              <Stack>
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="login" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="register"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="sessions"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="session-details"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="session-summary"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="subscription"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="pro-features"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="session-share"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="user-profile"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="user-friends"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="user-horses"
-                  options={{ headerShown: false }}
-                />
-              </Stack>
-            </ProtectedRoute>
-          </ThemeProvider>
-        </TrackingProvider>
-      </DialogProvider>
+      <MetricProvider>
+        <DialogProvider>
+          <TrackingProvider>
+            <ThemeProvider
+              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+            >
+              <ProtectedRoute splashActive={false}>
+                <Stack>
+                  <Stack.Screen name="index" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen name="login" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="register"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="sessions"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="session-details"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="session-summary"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="subscription"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="pro-features"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="session-share"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="user-profile"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="user-friends"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="user-horses"
+                    options={{ headerShown: false }}
+                  />
+                </Stack>
+              </ProtectedRoute>
+            </ThemeProvider>
+          </TrackingProvider>
+        </DialogProvider>
+      </MetricProvider>
     </CustomThemeProvider>
   );
 };

@@ -24,6 +24,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useMetric } from "../../contexts/MetricContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { ChallengeAPI } from "../../lib/challengeAPI";
 import { ChallengeStorageService } from "../../lib/challengeStorage";
@@ -82,6 +83,7 @@ interface Post {
 
 export default function CommunityScreen() {
   const { currentTheme } = useTheme();
+  const { formatDistance, formatDistanceUnit } = useMetric();
   const { user } = useAuth();
   const router = useRouter();
   const theme = currentTheme.colors;
@@ -124,25 +126,70 @@ export default function CommunityScreen() {
   );
   const [showGoalSelection, setShowGoalSelection] = useState(false);
 
-  // Goal options for challenge selection
-  const goalOptions: ChallengeGoal[] = [
-    { id: "1", label: "20km Goal", target: 20, unit: "km", difficulty: "easy" },
-    {
-      id: "2",
-      label: "50km Goal",
-      target: 50,
-      unit: "km",
-      difficulty: "medium",
-    },
-    { id: "3", label: "75km Goal", target: 75, unit: "km", difficulty: "hard" },
-    {
-      id: "4",
-      label: "100km Goal",
-      target: 100,
-      unit: "km",
-      difficulty: "extreme",
-    },
-  ];
+  // Goal options for challenge selection - dynamic based on metric system
+  const { metricSystem } = useMetric();
+  const goalOptions: ChallengeGoal[] =
+    metricSystem === "metric"
+      ? [
+          {
+            id: "1",
+            label: "20km Goal",
+            target: 20,
+            unit: "km",
+            difficulty: "easy",
+          },
+          {
+            id: "2",
+            label: "50km Goal",
+            target: 50,
+            unit: "km",
+            difficulty: "medium",
+          },
+          {
+            id: "3",
+            label: "75km Goal",
+            target: 75,
+            unit: "km",
+            difficulty: "hard",
+          },
+          {
+            id: "4",
+            label: "100km Goal",
+            target: 100,
+            unit: "km",
+            difficulty: "extreme",
+          },
+        ]
+      : [
+          {
+            id: "1",
+            label: "12mi Goal",
+            target: 12,
+            unit: "mi",
+            difficulty: "easy",
+          },
+          {
+            id: "2",
+            label: "30mi Goal",
+            target: 30,
+            unit: "mi",
+            difficulty: "medium",
+          },
+          {
+            id: "3",
+            label: "45mi Goal",
+            target: 45,
+            unit: "mi",
+            difficulty: "hard",
+          },
+          {
+            id: "4",
+            label: "60mi Goal",
+            target: 60,
+            unit: "mi",
+            difficulty: "extreme",
+          },
+        ];
 
   // Refs to track loading operations and prevent duplicates
   const isLoadingPostsRef = useRef(false);
@@ -297,10 +344,7 @@ export default function CommunityScreen() {
             return !isAlreadyFriend;
           });
 
-          console.log(
-            "📝 After friend filtering:",
-            unfriendedUsers.length
-          );
+          console.log("📝 After friend filtering:", unfriendedUsers.length);
 
           // Limit to MAX_USERS (8) and calculate pages
           const limitedUsers = unfriendedUsers.slice(0, MAX_USERS);
@@ -864,8 +908,11 @@ export default function CommunityScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              const { success, error } = await UserAPI.removeFriend(user.id, friend.id);
-              
+              const { success, error } = await UserAPI.removeFriend(
+                user.id,
+                friend.id
+              );
+
               if (error) {
                 Alert.alert("Error", error);
                 return;
@@ -874,8 +921,11 @@ export default function CommunityScreen() {
               if (success) {
                 // Remove friend from local state
                 setFriends((prev) => prev.filter((f) => f.id !== friend.id));
-                
-                Alert.alert("Success", `${friend.name} has been removed from your friends.`);
+
+                Alert.alert(
+                  "Success",
+                  `${friend.name} has been removed from your friends.`
+                );
               }
             } catch (error) {
               Alert.alert("Error", "Failed to remove friend");
@@ -2074,7 +2124,9 @@ export default function CommunityScreen() {
                               pageIndex * USERS_PER_PAGE,
                               (pageIndex + 1) * USERS_PER_PAGE
                             )
-                            .map((user: UserWithStable) => renderSuggestedUser({ item: user }))}
+                            .map((user: UserWithStable) =>
+                              renderSuggestedUser({ item: user })
+                            )}
                         </View>
                       </View>
                     ))}
@@ -2745,50 +2797,88 @@ export default function CommunityScreen() {
         onRequestClose={() => setShowFriendsManagement(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { 
-            backgroundColor: currentTheme.colors.surface,
-            height: '60%',
-            minHeight: 400
-          }]}>
+          <View
+            style={[
+              styles.modalContainer,
+              {
+                backgroundColor: currentTheme.colors.surface,
+                height: "60%",
+                minHeight: 400,
+              },
+            ]}
+          >
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: currentTheme.colors.text }]}>
+              <Text
+                style={[styles.modalTitle, { color: currentTheme.colors.text }]}
+              >
                 Friends Management
               </Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setShowFriendsManagement(false)}
               >
-                <Text style={[styles.modalCloseText, { color: currentTheme.colors.textSecondary }]}>✕</Text>
+                <Text
+                  style={[
+                    styles.modalCloseText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  ✕
+                </Text>
               </TouchableOpacity>
             </View>
-            
-            <ScrollView 
+
+            <ScrollView
               style={styles.friendsListContainer}
               contentContainerStyle={{ minHeight: 200 }}
             >
               {isLoadingFriends ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-                  <Text style={[styles.loadingText, { color: currentTheme.colors.text }]}>
+                  <ActivityIndicator
+                    size="large"
+                    color={currentTheme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.loadingText,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
                     Loading friends...
                   </Text>
                 </View>
               ) : friends.length === 0 ? (
                 <View style={styles.friendsEmptyStateContainer}>
-                  <Text style={[styles.friendsEmptyStateText, { color: currentTheme.colors.text }]}>
+                  <Text
+                    style={[
+                      styles.friendsEmptyStateText,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
                     You don't have any friends yet.
                   </Text>
-                  <Text style={[styles.friendsEmptyStateSubtext, { color: currentTheme.colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.friendsEmptyStateSubtext,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
                     Start connecting with people in the community!
                   </Text>
                 </View>
               ) : (
                 friends.map((friend) => (
-                  <View key={friend.id} style={[styles.friendItemContainer, { backgroundColor: currentTheme.colors.background }]}>
+                  <View
+                    key={friend.id}
+                    style={[
+                      styles.friendItemContainer,
+                      { backgroundColor: currentTheme.colors.background },
+                    ]}
+                  >
                     <View style={styles.friendInfoContainer}>
                       {friend.profile_image_url ? (
-                        <Image 
-                          source={{ uri: friend.profile_image_url }} 
+                        <Image
+                          source={{ uri: friend.profile_image_url }}
                           style={styles.friendAvatarImage}
                         />
                       ) : (
@@ -2799,10 +2889,20 @@ export default function CommunityScreen() {
                         </View>
                       )}
                       <View style={styles.friendDetailsContainer}>
-                        <Text style={[styles.friendDisplayName, { color: currentTheme.colors.text }]}>
+                        <Text
+                          style={[
+                            styles.friendDisplayName,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
                           {friend.name}
                         </Text>
-                        <Text style={[styles.friendDisplayDescription, { color: currentTheme.colors.textSecondary }]}>
+                        <Text
+                          style={[
+                            styles.friendDisplayDescription,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
                           {friend.description || "No description"}
                         </Text>
                       </View>

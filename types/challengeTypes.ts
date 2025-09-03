@@ -17,7 +17,7 @@ export interface Challenge {
 export interface ChallengeGoal {
   id: string;
   target: number;
-  unit: 'km' | 'hours' | 'sessions' | 'minutes';
+  unit: 'km' | 'mi' | 'hours' | 'sessions' | 'minutes';
   label: string;
   difficulty: 'easy' | 'medium' | 'hard' | 'extreme';
   badge?: string;
