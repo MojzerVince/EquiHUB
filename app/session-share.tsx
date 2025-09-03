@@ -881,11 +881,21 @@ export default function SessionShareScreen() {
                 </View>
               </View>
               
-              {/* Center - Horse Name */}
+              {/* Top Right - Horse Info */}
+              <View style={styles.mapTopRight}>
+                <View style={styles.mapHorseContainer}>
+                  <Image
+                    source={horse?.image_url ? { uri: horse.image_url } : require("../assets/images/horses/pony.jpg")}
+                    style={styles.mapHorseImage}
+                  />
+                  <Text style={styles.mapHorseName}>
+                    {session.horseName}
+                  </Text>
+                </View>
+              </View>
+              
+              {/* Center - Training Session Text */}
               <View style={styles.mapCenter}>
-                <Text style={styles.mapTitle}>
-                  🐴 {session.horseName}
-                </Text>
                 <Text style={styles.mapSubtitle}>
                   Training Session
                 </Text>
@@ -1465,16 +1475,47 @@ const styles = StyleSheet.create({
     top: 16,
     left: 16,
   },
+  mapTopRight: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+  },
   mapBrandingContainer: {
     backgroundColor: 'rgba(128, 128, 128, 0.5)',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
+  mapHorseContainer: {
+    backgroundColor: 'rgba(128, 128, 128, 0.5)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  mapHorseImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginBottom: 4,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  mapHorseName: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
   mapCenter: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 100, // Add padding to avoid overlap with top corners
   },
   mapBottom: {
     position: 'absolute',
@@ -1501,10 +1542,12 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   mapSubtitle: {
-    fontSize: 16,
+    fontSize: 24,
     textAlign: 'center',
     marginTop: 4,
     color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontFamily: 'Inder',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
