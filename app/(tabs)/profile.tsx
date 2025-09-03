@@ -2,16 +2,16 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SimpleStableSelection from "../../components/SimpleStableSelection";
@@ -23,7 +23,7 @@ import API_CONFIG from "../../lib/apiConfig";
 import * as HorseAPI from "../../lib/horseAPI";
 import { ImageCompression } from "../../lib/imageCompression";
 import { SimpleStable, SimpleStableAPI } from "../../lib/simpleStableAPI";
-import { UserBadgeWithDetails } from "../../lib/supabase";
+import { getSupabase, UserBadgeWithDetails } from "../../lib/supabase";
 
 const ProfileScreen = () => {
   const router = useRouter();
@@ -525,7 +525,63 @@ const ProfileScreen = () => {
       setUserExperience(loadedExperience.toString());
       setIsProMember(finalProStatus);
       setUserStableRanch(loadedStableRanch);
-      setSelectedStable(null); // TODO: Load actual stable if stored in future
+      
+      // Load user's stable information from stable_members table
+      try {
+        const supabase = getSupabase();
+        console.log('Loading stable for user ID:', USER_ID);
+        
+        const { data: stableMemberships, error: stableError } = await supabase
+          .from('stable_members')
+          .select(`
+            stable_id,
+            stables!inner (
+              id,
+              name,
+              location,
+              city,
+              state_province,
+              country,
+              is_verified
+            )
+          `)
+          .eq('user_id', USER_ID);
+
+        console.log('Stable query result:', { stableMemberships, stableError });
+
+        if (stableError) {
+          console.error('Stable query error:', stableError);
+          setSelectedStable(null);
+          setSavedSelectedStable(null);
+        } else if (stableMemberships && stableMemberships.length > 0) {
+          // Use the first stable if user is member of multiple stables
+          const firstMembership = stableMemberships[0];
+          const userStable: SimpleStable = {
+            id: firstMembership.stables.id,
+            name: firstMembership.stables.name,
+            location: firstMembership.stables.location,
+            city: firstMembership.stables.city,
+            state_province: firstMembership.stables.state_province,
+            country: firstMembership.stables.country,
+            is_verified: firstMembership.stables.is_verified
+          };
+          setSelectedStable(userStable);
+          setSavedSelectedStable(userStable);
+          console.log('Successfully loaded user stable:', userStable.name);
+          if (stableMemberships.length > 1) {
+            console.log(`User is member of ${stableMemberships.length} stables, using first one`);
+          }
+        } else {
+          console.log('No stable membership found for user');
+          setSelectedStable(null);
+          setSavedSelectedStable(null);
+        }
+      } catch (stableError) {
+        console.error('Exception loading user stable:', stableError);
+        setSelectedStable(null);
+        setSavedSelectedStable(null);
+      }
+      
       setNewStableData(null);
       setSavedUserName(profile.name);
       setSavedUserAge(profile.age.toString());
@@ -533,7 +589,6 @@ const ProfileScreen = () => {
       setSavedUserExperience(loadedExperience.toString());
       setSavedIsProMember(finalProStatus);
       setSavedUserStableRanch(loadedStableRanch);
-      setSavedSelectedStable(null);
       setSavedNewStableData(null);
 
       if (profile.profile_image_url) {
@@ -584,7 +639,55 @@ const ProfileScreen = () => {
         setUserExperience(loadedExperience.toString());
         setIsProMember(finalProStatus);
         setUserStableRanch(loadedStableRanch);
-        setSelectedStable(null); // TODO: Load actual stable if stored in future
+        
+        // Load user's stable information from stable_members table
+        try {
+          const supabase = getSupabase();
+          const { data: stableMemberships, error: stableError } = await supabase
+            .from('stable_members')
+            .select(`
+              stable_id,
+              stables!inner (
+                id,
+                name,
+                location,
+                city,
+                state_province,
+                country,
+                is_verified
+              )
+            `)
+            .eq('user_id', USER_ID);
+
+          if (stableError) {
+            console.error('Stable refresh error:', stableError);
+            setSelectedStable(null);
+            setSavedSelectedStable(null);
+          } else if (stableMemberships && stableMemberships.length > 0) {
+            const firstMembership = stableMemberships[0];
+            const userStable: SimpleStable = {
+              id: firstMembership.stables.id,
+              name: firstMembership.stables.name,
+              location: firstMembership.stables.location,
+              city: firstMembership.stables.city,
+              state_province: firstMembership.stables.state_province,
+              country: firstMembership.stables.country,
+              is_verified: firstMembership.stables.is_verified
+            };
+            setSelectedStable(userStable);
+            setSavedSelectedStable(userStable);
+            console.log('Refreshed user stable:', userStable.name);
+          } else {
+            setSelectedStable(null);
+            setSavedSelectedStable(null);
+            console.log('User is not a member of any stable (refresh)');
+          }
+        } catch (stableError) {
+          console.error('Error refreshing user stable:', stableError);
+          setSelectedStable(null);
+          setSavedSelectedStable(null);
+        }
+        
         setNewStableData(null);
         setSavedUserName(profile.name);
         setSavedUserAge(profile.age.toString());
@@ -592,7 +695,6 @@ const ProfileScreen = () => {
         setSavedUserExperience(loadedExperience.toString());
         setSavedIsProMember(finalProStatus);
         setSavedUserStableRanch(loadedStableRanch);
-        setSavedSelectedStable(null);
         setSavedNewStableData(null);
 
         if (profile.profile_image_url) {
@@ -1285,18 +1387,55 @@ const ProfileScreen = () => {
                   >
                     Stable/Ranch
                   </Text>
-                  <Text
-                    style={[
-                      styles.stableRanchValue,
-                      {
-                        color: userStableRanch
-                          ? currentTheme.colors.text
-                          : currentTheme.colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    {userStableRanch || "Not specified"}
-                  </Text>
+                  {savedSelectedStable ? (
+                    <View style={styles.viewStableContainer}>
+                      <View style={styles.viewStableNameContainer}>
+                        <Text
+                          style={[
+                            styles.stableRanchValue,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          {savedSelectedStable.name}
+                        </Text>
+                      </View>
+                      {savedSelectedStable.location && (
+                        <Text
+                          style={[
+                            styles.viewStableLocation,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          {savedSelectedStable.location}
+                        </Text>
+                      )}
+                      {(savedSelectedStable.city || savedSelectedStable.state_province) && (
+                        <Text
+                          style={[
+                            styles.viewStableLocation,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          {[savedSelectedStable.city, savedSelectedStable.state_province]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </Text>
+                      )}
+                    </View>
+                  ) : (
+                    <Text
+                      style={[
+                        styles.stableRanchValue,
+                        {
+                          color: userStableRanch
+                            ? currentTheme.colors.text
+                            : currentTheme.colors.textSecondary,
+                        },
+                      ]}
+                    >
+                      {userStableRanch || "Not specified"}
+                    </Text>
+                  )}
                 </View>
 
                 {/* Counters Container */}
@@ -1463,25 +1602,7 @@ const ProfileScreen = () => {
                       ]}
                     >
                       <View style={styles.selectedStableInfo}>
-                        <View style={styles.selectedStableNameContainer}>
-                          <Text
-                            style={[
-                              styles.selectedStableName,
-                              { color: currentTheme.colors.text },
-                            ]}
-                          >
-                            {selectedStable?.name || newStableData?.name}
-                          </Text>
-                          {selectedStable?.is_verified && (
-                            <View style={styles.selectedStableVerifiedBadge}>
-                              <Text
-                                style={styles.selectedStableVerifiedBadgeText}
-                              >
-                                ✓ Verified
-                              </Text>
-                            </View>
-                          )}
-                        </View>
+                        {/* Stable name removed as requested */}
                         {selectedStable && (
                           <>
                             {selectedStable.location && (
@@ -2046,16 +2167,18 @@ const styles = StyleSheet.create({
   selectedStableContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "transparent",
     borderWidth: 1,
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
+    minHeight: 50,
   },
   selectedStableInfo: {
     flex: 1,
+    marginRight: 12,
   },
   selectedStableName: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: "Inder",
     fontWeight: "600",
     marginBottom: 4,
@@ -2063,7 +2186,6 @@ const styles = StyleSheet.create({
   selectedStableNameContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: 4,
   },
   selectedStableVerifiedBadge: {
@@ -2087,6 +2209,33 @@ const styles = StyleSheet.create({
   selectedStableMembers: {
     fontSize: 12,
     fontFamily: "Inder",
+  },
+  // View mode stable styles
+  viewStableContainer: {
+    marginTop: 4,
+  },
+  viewStableNameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  viewStableVerifiedBadge: {
+    backgroundColor: "#4CAF50",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    marginLeft: 6,
+  },
+  viewStableVerifiedBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  viewStableLocation: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    marginBottom: 1,
   },
   stableButtonsContainer: {
     flexDirection: "row",
