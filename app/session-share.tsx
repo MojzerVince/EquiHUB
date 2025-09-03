@@ -20,6 +20,7 @@ import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import { useAuth } from "../contexts/AuthContext";
+import { useMetric } from "../contexts/MetricContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { CommunityAPI } from "../lib/communityAPI";
 import { HorseAPI } from "../lib/horseAPI";
@@ -77,6 +78,7 @@ export default function SessionShareScreen() {
   const params = useLocalSearchParams();
   const { user } = useAuth();
   const { currentTheme } = useTheme();
+  const { formatDistance, formatSpeed } = useMetric();
   const theme = currentTheme.colors;
 
   // Add initialization guard to prevent multiple renders
@@ -202,18 +204,18 @@ export default function SessionShareScreen() {
     const points = session.path;
     const latitudes = points.map((p: TrackingPoint) => p.latitude);
     const longitudes = points.map((p: TrackingPoint) => p.longitude);
-    
+
     const minLat = Math.min(...latitudes);
     const maxLat = Math.max(...latitudes);
     const minLng = Math.min(...longitudes);
     const maxLng = Math.max(...longitudes);
-    
+
     const centerLat = (minLat + maxLat) / 2;
     const centerLng = (minLng + maxLng) / 2;
-    
+
     const latDelta = Math.max(maxLat - minLat, 0.01) * 1.3; // Add padding
     const lngDelta = Math.max(maxLng - minLng, 0.01) * 1.3; // Add padding
-    
+
     return {
       latitude: centerLat,
       longitude: centerLng,
@@ -426,80 +428,102 @@ export default function SessionShareScreen() {
         return;
       }
 
-      console.log('Creating map view for Instagram sharing...');
-      
+      console.log("Creating map view for Instagram sharing...");
+
       // Check if map view ref is available
       if (!mapViewRef.current) {
-        Alert.alert("Error", "Map view not ready. Please try again in a moment.");
+        Alert.alert(
+          "Error",
+          "Map view not ready. Please try again in a moment."
+        );
         return;
       }
 
       // Wait a moment for the view to be fully rendered
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       try {
-        console.log('Attempting to capture map view...');
-        
+        console.log("Attempting to capture map view...");
+
         // Capture the map view as an image with explicit options
         const imageUri = await captureRef(mapViewRef.current, {
-          format: 'jpg',
+          format: "jpg",
           quality: 0.9,
-          result: 'tmpfile',
+          result: "tmpfile",
           height: width, // Square aspect ratio
           width: width,
         });
 
-        console.log('Map view captured successfully:', imageUri);
+        console.log("Map view captured successfully:", imageUri);
 
         // Share the captured image
         await Sharing.shareAsync(imageUri, {
-          mimeType: 'image/jpeg',
-          dialogTitle: 'Share to Instagram Story',
-          UTI: 'public.jpeg',
+          mimeType: "image/jpeg",
+          dialogTitle: "Share to Instagram Story",
+          UTI: "public.jpeg",
         });
 
         // Show success message with copyable stats
-        const sessionStats = `🐴 ${session?.horseName || 'Training Session'}\n` +
-          `⏱️ ${session?.duration ? formatDuration(session.duration) : 'Unknown'}\n` +
-          `📍 ${session?.distance ? `${(session.distance / 1000).toFixed(1)} km` : 'Unknown'}\n` +
-          `🏃 ${session?.averageSpeed ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h` : 'Unknown'}`;
+        const sessionStats =
+          `🐴 ${session?.horseName || "Training Session"}\n` +
+          `⏱️ ${
+            session?.duration ? formatDuration(session.duration) : "Unknown"
+          }\n` +
+          `📍 ${
+            session?.distance
+              ? `${(session.distance / 1000).toFixed(1)} km`
+              : "Unknown"
+          }\n` +
+          `🏃 ${
+            session?.averageSpeed
+              ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h`
+              : "Unknown"
+          }`;
 
         Alert.alert(
           "Shared Successfully! 📱",
           `Map shared to Instagram! You can copy these stats to add to your story:\n\n${sessionStats}`,
-          [
-            { text: "OK", style: "default" }
-          ]
+          [{ text: "OK", style: "default" }]
         );
 
         // Clean up the temporary file
         try {
           await FileSystem.deleteAsync(imageUri, { idempotent: true });
-          console.log('Temporary map image cleaned up');
+          console.log("Temporary map image cleaned up");
         } catch (cleanupError) {
-          console.warn('Failed to clean up temporary map file:', cleanupError);
+          console.warn("Failed to clean up temporary map file:", cleanupError);
         }
-
       } catch (captureError) {
-        console.error('Error capturing map view:', captureError);
-        
+        console.error("Error capturing map view:", captureError);
+
         // Provide more specific error message
-        const errorMessage = captureError instanceof Error ? captureError.message : 'Unknown error';
-        
-        if (errorMessage.includes('reactTag') || errorMessage.includes('No view found')) {
+        const errorMessage =
+          captureError instanceof Error
+            ? captureError.message
+            : "Unknown error";
+
+        if (
+          errorMessage.includes("reactTag") ||
+          errorMessage.includes("No view found")
+        ) {
           Alert.alert(
-            "Capture Failed", 
+            "Capture Failed",
             "The map view is not ready for capture. Please scroll down to see the map preview, then try again."
           );
         } else {
-          Alert.alert("Capture Failed", "Failed to create map image. Please try again.");
+          Alert.alert(
+            "Capture Failed",
+            "Failed to create map image. Please try again."
+          );
         }
         return;
       }
-
     } catch (error) {
       console.error("Error sharing to Instagram Story:", error);
-      Alert.alert("Error", "Failed to share to Instagram Story. Please try again.");
+      Alert.alert(
+        "Error",
+        "Failed to share to Instagram Story. Please try again."
+      );
     } finally {
       setIsSharing(false);
     }
@@ -510,18 +534,22 @@ export default function SessionShareScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.primary }]}>
         <SafeAreaView
-          style={[
-            styles.safeArea,
-            { backgroundColor: theme.primary },
-          ]}
+          style={[styles.safeArea, { backgroundColor: theme.primary }]}
         >
           <View style={styles.headerContainer}>
             <Text style={styles.header}>Share Session</Text>
           </View>
         </SafeAreaView>
-        <View style={[styles.loadingScreenContainer, { backgroundColor: theme.background }]}>
+        <View
+          style={[
+            styles.loadingScreenContainer,
+            { backgroundColor: theme.background },
+          ]}
+        >
           <ActivityIndicator size="large" color={theme.accent} />
-          <Text style={[styles.loadingScreenText, { color: theme.text }]}>Loading session data...</Text>
+          <Text style={[styles.loadingScreenText, { color: theme.text }]}>
+            Loading session data...
+          </Text>
         </View>
       </View>
     );
@@ -532,10 +560,7 @@ export default function SessionShareScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.primary }]}>
         <SafeAreaView
-          style={[
-            styles.safeArea,
-            { backgroundColor: theme.primary },
-          ]}
+          style={[styles.safeArea, { backgroundColor: theme.primary }]}
         >
           <View style={styles.headerContainer}>
             <TouchableOpacity
@@ -548,13 +573,30 @@ export default function SessionShareScreen() {
             <View style={styles.backButton} /> {/* Spacer for centering */}
           </View>
         </SafeAreaView>
-        <View style={[styles.errorScreenContainer, { backgroundColor: theme.background }]}>
-          <Text style={[styles.errorText, { color: theme.error }]}>Session not found</Text>
+        <View
+          style={[
+            styles.errorScreenContainer,
+            { backgroundColor: theme.background },
+          ]}
+        >
+          <Text style={[styles.errorText, { color: theme.error }]}>
+            Session not found
+          </Text>
           <TouchableOpacity
             onPress={() => router.back()}
-            style={[styles.backToSessionButton, { backgroundColor: theme.accent }]}
+            style={[
+              styles.backToSessionButton,
+              { backgroundColor: theme.accent },
+            ]}
           >
-            <Text style={[styles.backToSessionButtonText, { color: theme.background }]}>Go Back</Text>
+            <Text
+              style={[
+                styles.backToSessionButtonText,
+                { color: theme.background },
+              ]}
+            >
+              Go Back
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -564,17 +606,17 @@ export default function SessionShareScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.primary }]}>
       <SafeAreaView
-        style={[
-          styles.safeArea,
-          { backgroundColor: theme.primary },
-        ]}
+        style={[styles.safeArea, { backgroundColor: theme.primary }]}
       >
         <View style={styles.headerContainer}>
           <TouchableOpacity
             onPress={() => {
               router.back();
             }}
-            style={styles.backButton}
+            style={[
+              styles.backButton,
+              { backgroundColor: "rgba(255, 255, 255, 0.1)", borderRadius: 25 },
+            ]}
             disabled={isSharing}
           >
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
@@ -585,46 +627,82 @@ export default function SessionShareScreen() {
       </SafeAreaView>
 
       <ScrollView
-        style={[styles.viewPort, { backgroundColor: theme.background }, isSharing && styles.disabledContent]}
+        style={[
+          styles.viewPort,
+          { backgroundColor: theme.background },
+          isSharing && styles.disabledContent,
+        ]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!isSharing}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Session Summary */}
-        <View style={[styles.sessionSummary, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <View style={styles.summaryRow}>
-            <Ionicons name="person" size={16} color={theme.primary} />
-            <Text style={[styles.summaryText, { color: theme.text }]}>{session.horseName}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Ionicons name="time" size={16} color={theme.primary} />
-            <Text style={[styles.summaryText, { color: theme.text }]}>
+        {/* Session Stats Cards */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <View style={styles.statIconContainer}>
+              <Ionicons name="time-outline" size={24} color="#007AFF" />
+            </View>
+            <Text style={styles.statValue}>
               {session.duration ? formatDuration(session.duration) : "Unknown"}
             </Text>
+            <Text style={styles.statLabel}>Duration</Text>
           </View>
-          <View style={styles.summaryRow}>
-            <Ionicons name="location" size={16} color={theme.primary} />
-            <Text style={[styles.summaryText, { color: theme.text }]}>
-              {session.distance
-                ? `${(session.distance / 1000).toFixed(1)} km`
-                : "Unknown"}
+
+          <View style={styles.statCard}>
+            <View style={styles.statIconContainer}>
+              <Ionicons name="navigate-outline" size={24} color="#007AFF" />
+            </View>
+            <Text style={styles.statValue}>
+              {session.distance ? formatDistance(session.distance) : "Unknown"}
             </Text>
+            <Text style={styles.statLabel}>Distance</Text>
           </View>
-          <View style={styles.summaryRow}>
-            <Ionicons name="speedometer" size={16} color={theme.primary} />
-            <Text style={[styles.summaryText, { color: theme.text }]}>
+
+          <View style={styles.statCard}>
+            <View style={styles.statIconContainer}>
+              <Ionicons name="speedometer-outline" size={24} color="#007AFF" />
+            </View>
+            <Text style={styles.statValue}>
               {session.averageSpeed
-                ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h`
+                ? formatSpeed(session.averageSpeed)
                 : "Unknown"}
             </Text>
+            <Text style={styles.statLabel}>Avg Speed</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <View style={styles.statIconContainer}>
+              <Ionicons name="person-outline" size={24} color="#007AFF" />
+            </View>
+            <Text style={styles.statValue}>{session.horseName}</Text>
+            <Text style={styles.statLabel}>Horse</Text>
           </View>
         </View>
 
-        {/* Text Input */}
-        <View style={styles.textInputContainer}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Post Content</Text>
+        {/* Post Content Card */}
+        <View
+          style={[
+            styles.postContentCard,
+            { backgroundColor: theme.surface, borderColor: theme.border },
+          ]}
+        >
+          <View style={styles.postContentHeader}>
+            <View style={styles.postIconContainer}>
+              <Ionicons name="create-outline" size={24} color="#007AFF" />
+            </View>
+            <Text style={[styles.postContentTitle, { color: theme.text }]}>
+              Post Content
+            </Text>
+          </View>
           <TextInput
-            style={[styles.textInput, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
+            style={[
+              styles.postTextInput,
+              {
+                backgroundColor: "transparent",
+                color: theme.text,
+                borderWidth: 0,
+              },
+            ]}
             value={postText}
             onChangeText={(text) => {
               setPostText(text);
@@ -636,19 +714,46 @@ export default function SessionShareScreen() {
             maxLength={500}
             editable={!isSharing}
           />
-          <Text style={[styles.characterCount, { color: theme.textSecondary }]}>{postText.length}/500</Text>
+          <View style={styles.postContentFooter}>
+            <Text
+              style={[
+                styles.postCharacterCount,
+                { color: theme.textSecondary },
+              ]}
+            >
+              {postText.length}/500
+            </Text>
+          </View>
         </View>
 
         {/* Media Gallery - Enhanced styling */}
         {mediaItems.length > 0 && (
-          <View style={[styles.mediaCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View
+            style={[
+              styles.mediaCard,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+          >
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
               Session Media ({mediaItems.length})
             </Text>
             {selectedMedia && (
-              <View style={[styles.selectedCountContainer, { backgroundColor: theme.accent + '20' }]}>
-                <Ionicons name="checkmark-circle" size={16} color={theme.accent} />
-                <Text style={[styles.selectedCountText, { color: theme.accent }]}>1 photo selected</Text>
+              <View
+                style={[
+                  styles.selectedCountContainer,
+                  { backgroundColor: theme.accent + "20" },
+                ]}
+              >
+                <Ionicons
+                  name="checkmark-circle"
+                  size={16}
+                  color={theme.accent}
+                />
+                <Text
+                  style={[styles.selectedCountText, { color: theme.accent }]}
+                >
+                  1 photo selected
+                </Text>
               </View>
             )}
             <ScrollView
@@ -695,24 +800,55 @@ export default function SessionShareScreen() {
                     <View
                       style={[
                         styles.selectionIndicator,
-                        selectedMedia === item.id && [styles.selectedIndicator, { backgroundColor: theme.accent, borderColor: theme.accent }],
+                        selectedMedia === item.id && [
+                          styles.selectedIndicator,
+                          {
+                            backgroundColor: theme.accent,
+                            borderColor: theme.accent,
+                          },
+                        ],
                       ]}
                     >
                       {selectedMedia === item.id ? (
-                        <Ionicons name="checkmark" size={16} color={theme.background} />
+                        <Ionicons
+                          name="checkmark"
+                          size={16}
+                          color={theme.background}
+                        />
                       ) : (
-                        <View style={[styles.unselectedCircle, { borderColor: theme.textSecondary }]} />
+                        <View
+                          style={[
+                            styles.unselectedCircle,
+                            { borderColor: theme.textSecondary },
+                          ]}
+                        />
                       )}
                     </View>
 
                     {/* Selected Overlay */}
                     {selectedMedia === item.id && (
-                      <View style={[styles.selectedOverlayNew, { borderColor: theme.accent, backgroundColor: theme.accent + '33' }]} />
+                      <View
+                        style={[
+                          styles.selectedOverlayNew,
+                          {
+                            borderColor: theme.accent,
+                            backgroundColor: theme.accent + "33",
+                          },
+                        ]}
+                      />
                     )}
                   </View>
 
                   {/* Timestamp */}
-                  <Text style={[styles.mediaTimeNew, { color: theme.textSecondary, backgroundColor: theme.surface }]}>
+                  <Text
+                    style={[
+                      styles.mediaTimeNew,
+                      {
+                        color: theme.textSecondary,
+                        backgroundColor: theme.surface,
+                      },
+                    ]}
+                  >
                     {new Date(item.timestamp).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -724,15 +860,29 @@ export default function SessionShareScreen() {
 
             {/* Selection Hint */}
             {!selectedMedia && (
-              <View style={[styles.selectionHint, { backgroundColor: theme.surface }]}>
-                <Ionicons name="information-circle" size={16} color={theme.textSecondary} />
+              <View
+                style={[
+                  styles.selectionHint,
+                  { backgroundColor: theme.surface },
+                ]}
+              >
+                <Ionicons
+                  name="information-circle"
+                  size={16}
+                  color={theme.textSecondary}
+                />
                 <Text style={[styles.hintText, { color: theme.textSecondary }]}>
                   Tap a photo to include it in your post (photos only)
                 </Text>
               </View>
             )}
             {selectedMedia && (
-              <View style={[styles.selectionHint, { backgroundColor: theme.surface }]}>
+              <View
+                style={[
+                  styles.selectionHint,
+                  { backgroundColor: theme.surface },
+                ]}
+              >
                 <Ionicons name="image" size={16} color={theme.success} />
                 <Text style={[styles.hintText, { color: theme.textSecondary }]}>
                   This photo will be shown as the main image in your post
@@ -742,35 +892,28 @@ export default function SessionShareScreen() {
           </View>
         )}
 
-        {/* Horse Image Preview */}
-        <View style={styles.horseImageSection}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Horse Image</Text>
-          {horse?.image_url ? (
-            <Image
-              source={{ uri: horse.image_url }}
-              style={styles.horseImage}
-            />
-          ) : (
-            <Image
-              source={require("../assets/images/horses/pony.jpg")}
-              style={styles.horseImage}
-            />
-          )}
-        </View>
-
         {/* Map View for Instagram Story Capture */}
         <View style={styles.mapContainer}>
           <View style={styles.mapTitleContainer}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Instagram Story Preview</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              Instagram Story Preview
+            </Text>
             {mapReady && (
-              <View style={[styles.readyIndicator, { backgroundColor: theme.success }]}>
+              <View
+                style={[
+                  styles.readyIndicator,
+                  { backgroundColor: theme.success },
+                ]}
+              >
                 <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
-                <Text style={[styles.readyText, { color: "#FFFFFF" }]}>Ready</Text>
+                <Text style={[styles.readyText, { color: "#FFFFFF" }]}>
+                  Ready
+                </Text>
               </View>
             )}
           </View>
-          <View 
-            ref={mapViewRef} 
+          <View
+            ref={mapViewRef}
             style={styles.instagramMapView}
             collapsable={false}
             renderToHardwareTextureAndroid={true}
@@ -795,11 +938,11 @@ export default function SessionShareScreen() {
                 showsPointsOfInterest={false}
                 loadingEnabled={false}
                 onMapReady={() => {
-                  console.log('Map is ready for capture');
+                  console.log("Map is ready for capture");
                   setMapReady(true);
                 }}
                 onLayout={() => {
-                  console.log('Map layout complete');
+                  console.log("Map layout complete");
                 }}
               >
                 {/* Route Polyline */}
@@ -813,7 +956,7 @@ export default function SessionShareScreen() {
                   lineJoin="round"
                   lineCap="round"
                 />
-                
+
                 {/* Start Point Marker */}
                 {session.path.length > 0 && (
                   <Marker
@@ -828,79 +971,103 @@ export default function SessionShareScreen() {
                     </View>
                   </Marker>
                 )}
-                
+
                 {/* End Point Marker */}
                 {session.path.length > 1 && (
                   <Marker
                     coordinate={{
                       latitude: session.path[session.path.length - 1].latitude,
-                      longitude: session.path[session.path.length - 1].longitude,
+                      longitude:
+                        session.path[session.path.length - 1].longitude,
                     }}
                     anchor={{ x: 0.5, y: 0.5 }}
                   >
                     <View style={styles.endMarker}>
-                      <Ionicons name="checkmark-circle" size={24} color="#FF4444" />
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={24}
+                        color="#FF4444"
+                      />
                     </View>
                   </Marker>
                 )}
               </MapView>
             ) : (
-              <View style={[styles.mapBackground, styles.fallbackBackground]}
+              <View
+                style={[styles.mapBackground, styles.fallbackBackground]}
                 onLayout={() => {
-                  console.log('Placeholder view layout complete');
+                  console.log("Placeholder view layout complete");
                   setMapReady(true);
                 }}
               >
                 {/* Gradient-like background using overlapping colored views */}
-                <View style={[styles.gradientLayer, { backgroundColor: theme.primary + '40' }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: theme.accent + '20' }]} />
-                
+                <View
+                  style={[
+                    styles.gradientLayer,
+                    { backgroundColor: theme.primary + "40" },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.gradientLayer,
+                    { backgroundColor: theme.accent + "20" },
+                  ]}
+                />
+
                 {/* Central content */}
                 <View style={styles.fallbackContent}>
-                  <View style={[styles.iconContainer, { backgroundColor: theme.accent + '20' }]}>
+                  <View
+                    style={[
+                      styles.iconContainer,
+                      { backgroundColor: theme.accent + "20" },
+                    ]}
+                  >
                     <Ionicons name="location" size={60} color={theme.accent} />
                   </View>
                   <Text style={[styles.fallbackTitle, { color: theme.accent }]}>
                     Training Session
                   </Text>
-                  <Text style={[styles.fallbackSubtitle, { color: theme.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.fallbackSubtitle,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
                     Session completed without GPS tracking
                   </Text>
                 </View>
               </View>
             )}
-            
+
             {/* Overlay with Session Stats */}
             <View style={styles.mapOverlay}>
               {/* Top Left - App Branding */}
               <View style={styles.mapTopLeft}>
                 <View style={styles.mapBrandingContainer}>
-                  <Text style={styles.mapBrandText}>
-                    EquiHub
-                  </Text>
+                  <Text style={styles.mapBrandText}>EquiHub</Text>
                 </View>
               </View>
-              
+
               {/* Top Right - Horse Info */}
               <View style={styles.mapTopRight}>
                 <View style={styles.mapHorseContainer}>
                   <Image
-                    source={horse?.image_url ? { uri: horse.image_url } : require("../assets/images/horses/pony.jpg")}
+                    source={
+                      horse?.image_url
+                        ? { uri: horse.image_url }
+                        : require("../assets/images/horses/pony.jpg")
+                    }
                     style={styles.mapHorseImage}
                   />
-                  <Text style={styles.mapHorseName}>
-                    {session.horseName}
-                  </Text>
+                  <Text style={styles.mapHorseName}>{session.horseName}</Text>
                 </View>
               </View>
-              
+
               {/* Center - Training Session Text */}
               <View style={styles.mapCenter}>
-                <Text style={styles.mapSubtitle}>
-                  Training Session
-                </Text>
+                <Text style={styles.mapSubtitle}>Training Session</Text>
               </View>
-              
+
               {/* Bottom - Stats Container */}
               <View style={styles.mapBottom}>
                 <View style={styles.mapStatsContainer}>
@@ -909,23 +1076,29 @@ export default function SessionShareScreen() {
                       <Ionicons name="time" size={20} color="#FFFFFF" />
                       <Text style={styles.mapStatLabel}>Duration</Text>
                       <Text style={styles.mapStatValue}>
-                        {session.duration ? formatDuration(session.duration) : "Unknown"}
+                        {session.duration
+                          ? formatDuration(session.duration)
+                          : "Unknown"}
                       </Text>
                     </View>
-                    
+
                     <View style={styles.mapStatItem}>
                       <Ionicons name="location" size={20} color="#FFFFFF" />
                       <Text style={styles.mapStatLabel}>Distance</Text>
                       <Text style={styles.mapStatValue}>
-                        {session.distance ? `${(session.distance / 1000).toFixed(1)} km` : "Unknown"}
+                        {session.distance
+                          ? formatDistance(session.distance)
+                          : "Unknown"}
                       </Text>
                     </View>
-                    
+
                     <View style={styles.mapStatItem}>
                       <Ionicons name="speedometer" size={20} color="#FFFFFF" />
                       <Text style={styles.mapStatLabel}>Avg Speed</Text>
                       <Text style={styles.mapStatValue}>
-                        {session.averageSpeed ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h` : "Unknown"}
+                        {session.averageSpeed
+                          ? formatSpeed(session.averageSpeed)
+                          : "Unknown"}
                       </Text>
                     </View>
                   </View>
@@ -937,10 +1110,19 @@ export default function SessionShareScreen() {
       </ScrollView>
 
       {/* Bottom Share Buttons */}
-      <View style={[styles.bottomButtonsContainer, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
+      <View
+        style={[
+          styles.bottomButtonsContainer,
+          { backgroundColor: theme.surface, borderTopColor: theme.border },
+        ]}
+      >
         <TouchableOpacity
           onPress={shareToInstagramStory}
-          style={[styles.instagramButton, { backgroundColor: "#E1306C" }, isSharing && styles.disabledButton]}
+          style={[
+            styles.instagramButton,
+            { backgroundColor: "#E1306C" },
+            isSharing && styles.disabledButton,
+          ]}
           disabled={isSharing}
         >
           {isSharing ? (
@@ -955,7 +1137,11 @@ export default function SessionShareScreen() {
 
         <TouchableOpacity
           onPress={sharePost}
-          style={[styles.communityButton, { backgroundColor: theme.accent }, isSharing && styles.disabledButton]}
+          style={[
+            styles.communityButton,
+            { backgroundColor: theme.accent },
+            isSharing && styles.disabledButton,
+          ]}
           disabled={isSharing}
         >
           {isSharing ? (
@@ -963,7 +1149,14 @@ export default function SessionShareScreen() {
           ) : (
             <>
               <Ionicons name="people" size={20} color={theme.background} />
-              <Text style={[styles.communityButtonText, { color: theme.background }]}>Share to Community</Text>
+              <Text
+                style={[
+                  styles.communityButtonText,
+                  { color: theme.background },
+                ]}
+              >
+                Share to Community
+              </Text>
             </>
           )}
         </TouchableOpacity>
@@ -973,10 +1166,22 @@ export default function SessionShareScreen() {
       {(() => {
         if (isSharing) {
           return (
-            <View style={[styles.loadingOverlay, { backgroundColor: theme.background + 'CC' }]}>
-              <View style={[styles.loadingContainer, { backgroundColor: theme.surface }]}>
+            <View
+              style={[
+                styles.loadingOverlay,
+                { backgroundColor: theme.background + "CC" },
+              ]}
+            >
+              <View
+                style={[
+                  styles.loadingContainer,
+                  { backgroundColor: theme.surface },
+                ]}
+              >
                 <ActivityIndicator size="large" color={theme.accent} />
-                <Text style={[styles.loadingText, { color: theme.text }]}>Sharing to Community...</Text>
+                <Text style={[styles.loadingText, { color: theme.text }]}>
+                  Sharing to Community...
+                </Text>
               </View>
             </View>
           );
@@ -1032,43 +1237,11 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.6,
   },
-  sessionSummary: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  summaryText: {
-    fontSize: 14,
-    marginLeft: 8,
-    fontWeight: "500",
-  },
-  textInputContainer: {
-    marginBottom: 20,
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 12,
     fontFamily: "Inder",
-  },
-  textInput: {
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    textAlignVertical: "top",
-    minHeight: 100,
-    borderWidth: 1,
-  },
-  characterCount: {
-    fontSize: 12,
-    textAlign: "right",
-    marginTop: 4,
   },
   mediaSection: {
     marginBottom: 20,
@@ -1106,14 +1279,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.2)",
-  },
-  horseImageSection: {
-    marginBottom: 20,
-  },
-  horseImage: {
-    width: "100%",
-    height: 200,
-    borderRadius: 12,
   },
   loadingOverlay: {
     position: "absolute",
@@ -1385,14 +1550,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   mapTitleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   readyIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1400,10 +1565,10 @@ const styles = StyleSheet.create({
   },
   readyText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   hiddenMapContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: -10000, // Hide the map view off-screen
     left: 0,
     width: width,
@@ -1412,86 +1577,86 @@ const styles = StyleSheet.create({
   instagramMapView: {
     width: width,
     height: width, // Square aspect ratio (1:1)
-    position: 'relative',
+    position: "relative",
   },
   mapBackground: {
     flex: 1,
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   fallbackBackground: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    backgroundColor: '#f8f9fa',
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    backgroundColor: "#f8f9fa",
   },
   gradientLayer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
   fallbackContent: {
-    alignItems: 'center',
+    alignItems: "center",
     zIndex: 1,
   },
   iconContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 20,
   },
   fallbackTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
-    textAlign: 'center',
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    textAlign: "center",
     marginBottom: 8,
   },
   fallbackSubtitle: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     opacity: 0.8,
   },
   noMapText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
     marginTop: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   mapOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   mapTopLeft: {
-    position: 'absolute',
+    position: "absolute",
     top: 16,
     left: 16,
   },
   mapTopRight: {
-    position: 'absolute',
+    position: "absolute",
     top: 16,
     right: 16,
   },
   mapBrandingContainer: {
-    backgroundColor: 'rgba(128, 128, 128, 0.5)',
+    backgroundColor: "rgba(128, 128, 128, 0.5)",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   mapHorseContainer: {
-    backgroundColor: 'rgba(128, 128, 128, 0.5)',
+    backgroundColor: "rgba(128, 128, 128, 0.5)",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    alignItems: 'center',
+    alignItems: "center",
     minWidth: 80,
   },
   mapHorseImage: {
@@ -1500,123 +1665,218 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 4,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: "#FFFFFF",
   },
   mapHorseName: {
     fontSize: 12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    textAlign: "center",
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   mapCenter: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 100, // Add padding to avoid overlap with top corners
   },
   mapBottom: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 16,
     left: 16,
     right: 16,
   },
   mapStatsContainer: {
-    backgroundColor: 'rgba(128, 128, 128, 0.5)',
+    backgroundColor: "rgba(128, 128, 128, 0.5)",
     borderRadius: 12,
     padding: 16,
   },
   mapHeader: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   mapTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    fontFamily: 'Inder',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    fontWeight: "bold",
+    textAlign: "center",
+    fontFamily: "Inder",
+    color: "#FFFFFF",
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
   mapSubtitle: {
     fontSize: 24,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 4,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
   mapStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
   },
   mapStatItem: {
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
   },
   mapStatLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     marginTop: 6,
-    textAlign: 'center',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textAlign: "center",
+    color: "#FFFFFF",
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   mapStatValue: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: 2,
-    textAlign: 'center',
-    fontFamily: 'Inder',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textAlign: "center",
+    fontFamily: "Inder",
+    color: "#FFFFFF",
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   mapBranding: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   mapBrandText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    color: "#FFFFFF",
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
   // Start and End Marker Styles
   startMarker: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 20,
     padding: 4,
     borderWidth: 2,
-    borderColor: '#00C851',
-    shadowColor: '#000',
+    borderColor: "#00C851",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
   endMarker: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 20,
     padding: 4,
     borderWidth: 2,
-    borderColor: '#FF4444',
-    shadowColor: '#000',
+    borderColor: "#FF4444",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
+  },
+  // Stats Cards Grid
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    marginVertical: 20,
+    gap: 12,
+  },
+  statCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    width: "48%",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.05)",
+  },
+  statIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(0, 122, 255, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1a1a1a",
+    textAlign: "center",
+    marginBottom: 4,
+    fontFamily: "Inder",
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  // Post Content Card Styles
+  postContentCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+    marginVertical: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.05)",
+  },
+  postContentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  postIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 122, 255, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  postContentTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  postTextInput: {
+    fontSize: 16,
+    textAlignVertical: "top",
+    minHeight: 100,
+    padding: 0,
+  },
+  postContentFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 8,
+  },
+  postCharacterCount: {
+    fontSize: 12,
   },
 });
