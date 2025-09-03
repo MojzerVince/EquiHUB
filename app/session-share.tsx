@@ -705,7 +705,26 @@ export default function SessionShareScreen() {
             ]}
             value={postText}
             onChangeText={(text) => {
-              setPostText(text);
+              // Count lines by splitting on newlines
+              const lines = text.split("\n");
+
+              // Limit to 10 lines and 500 characters
+              if (lines.length <= 10 && text.length <= 500) {
+                setPostText(text);
+              } else if (lines.length > 10) {
+                // If too many lines, take only first 10 lines
+                const limitedText = lines.slice(0, 10).join("\n");
+                if (limitedText.length <= 500) {
+                  setPostText(limitedText);
+                }
+              } else if (text.length > 500) {
+                // If too many characters, truncate but respect line limit
+                const truncatedText = text.substring(0, 500);
+                const truncatedLines = truncatedText.split("\n");
+                if (truncatedLines.length <= 10) {
+                  setPostText(truncatedText);
+                }
+              }
             }}
             placeholder="Share your thoughts about this training session..."
             placeholderTextColor={theme.textSecondary}
@@ -721,22 +740,28 @@ export default function SessionShareScreen() {
                 { color: theme.textSecondary },
               ]}
             >
-              {postText.length}/500
+              {postText.split("\n").length}/10 lines • {postText.length}/500
+              characters
             </Text>
           </View>
         </View>
 
-        {/* Media Gallery - Enhanced styling */}
+        {/* Session Media Card */}
         {mediaItems.length > 0 && (
           <View
             style={[
-              styles.mediaCard,
+              styles.mediaContentCard,
               { backgroundColor: theme.surface, borderColor: theme.border },
             ]}
           >
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Session Media ({mediaItems.length})
-            </Text>
+            <View style={styles.mediaContentHeader}>
+              <View style={styles.mediaIconContainer}>
+                <Ionicons name="images-outline" size={24} color="#007AFF" />
+              </View>
+              <Text style={[styles.mediaContentTitle, { color: theme.text }]}>
+                Session Media ({mediaItems.length})
+              </Text>
+            </View>
             {selectedMedia && (
               <View
                 style={[
@@ -1878,5 +1903,39 @@ const styles = StyleSheet.create({
   },
   postCharacterCount: {
     fontSize: 12,
+  },
+  // Media Content Card Styles
+  mediaContentCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+    marginVertical: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.05)",
+  },
+  mediaContentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  mediaIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 122, 255, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  mediaContentTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    fontFamily: "Inder",
   },
 });
