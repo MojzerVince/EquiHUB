@@ -463,49 +463,13 @@ const ProfileScreen = () => {
       // If profile doesn't exist, create it with default values
       if (!profile) {
         const newProfile = await createProfileDirectAPI(USER_ID, {
-          name: "New User", // Don't use hardcoded values
-          age: 25,
+          name: "Loading User...", // Don't use hardcoded values
+          age: 0,
           description: "Welcome to EquiHub!",
-          experience: 1,
+          experience: 0,
           is_pro_member: false,
           stable_ranch: "",
         });
-
-        if (!newProfile) {
-          // If we can't create a profile, use some default data so the user can at least use the app
-          const fallbackProfile = {
-            id: USER_ID,
-            name: "New User",
-            age: 25,
-            description: "Welcome to EquiHub!",
-            experience: 1,
-            is_pro_member: false,
-            stable_ranch: "",
-            profile_image_url: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-
-          // Update state with fallback data
-          setUserName(fallbackProfile.name);
-          setUserAge(fallbackProfile.age.toString());
-          setUserDescription(fallbackProfile.description);
-          setUserExperience(fallbackProfile.experience.toString());
-          setIsProMember(false);
-          setUserStableRanch(fallbackProfile.stable_ranch);
-          setSelectedStable(null);
-          setNewStableData(null);
-          setSavedUserName(fallbackProfile.name);
-          setSavedUserAge(fallbackProfile.age.toString());
-          setSavedUserDescription(fallbackProfile.description);
-          setSavedUserExperience(fallbackProfile.experience.toString());
-          setSavedIsProMember(false);
-          setSavedUserStableRanch(fallbackProfile.stable_ranch);
-          setSavedSelectedStable(null);
-          setSavedNewStableData(null);
-
-          return; // Exit early with fallback data
-        }
 
         // Use the newly created profile
         profile = newProfile;
@@ -2151,13 +2115,14 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   stableRanchLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "Inder",
     textTransform: "uppercase",
     letterSpacing: 1,
+    marginTop: 5,
   },
   stableRanchValue: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
     fontFamily: "Inder",
     marginTop: 2,
@@ -2194,19 +2159,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 4,
-  },
-  selectedStableVerifiedBadge: {
-    backgroundColor: "#4CAF50",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  selectedStableVerifiedBadgeText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-    fontFamily: "Inder",
   },
   selectedStableLocation: {
     fontSize: 14,
@@ -2289,6 +2241,7 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
+    marginTop: -15,
     borderRadius: 15,
     borderWidth: 1,
     shadowColor: "#000",
@@ -2691,9 +2644,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   counterLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: "Inder",
-    marginBottom: 5,
+    marginBottom: 15,
+    marginTop: -25,
   },
   counterValue: {
     fontSize: 24,
