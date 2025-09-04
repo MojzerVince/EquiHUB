@@ -1,9 +1,12 @@
 import { useDialog } from "@/contexts/DialogContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import PaymentService from "@/lib/paymentService";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
+  Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +19,29 @@ const ProFeaturesPage = () => {
   const router = useRouter();
   const { currentTheme } = useTheme();
   const { showConfirm } = useDialog();
+  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSubscriptionStatus();
+  }, []);
+
+  const loadSubscriptionStatus = async () => {
+    try {
+      // Check current database status for debugging
+      await PaymentService.checkCurrentDatabaseStatus();
+      
+      // Get subscription status
+      const status = await PaymentService.getSubscriptionStatus();
+      setSubscriptionStatus(status);
+      
+      console.log('📱 Pro features page - subscription status loaded:', status);
+    } catch (error) {
+      console.error('Error loading subscription status:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const proFeatures = [
     {
@@ -71,24 +97,48 @@ const ProFeaturesPage = () => {
   ];
 
   const subscriptionInfo = {
-    plan: "EquiHUB Pro",
-    status: "Active",
-    renewalDate: "September 17, 2025",
+    plan: subscriptionStatus?.plan?.id === 'equihub_pro_monthly' ? "EquiHUB Pro" : "EquiHUB Pro",
+    status: subscriptionStatus?.status === 'trial' ? 'Free Trial' : 
+            subscriptionStatus?.isActive ? 'Active' : 'Inactive',
+    renewalDate: subscriptionStatus?.status === 'trial' 
+      ? `Trial ends in ${subscriptionStatus.daysRemaining || 0} days`
+      : "September 17, 2025",
     price: "$9.99/month",
+    platform: Platform.OS === 'ios' ? 'App Store' : Platform.OS === 'android' ? 'Google Play' : 'Web'
   };
 
-  const handleManageSubscription = () => {
-    showConfirm(
-      "Manage Subscription",
-      "This will open your subscription settings. You can change plans, update payment methods, or cancel your subscription.",
-      () => {
-        // In a real app, this would open platform-specific subscription management
-        showConfirm(
-          "Subscription Management",
-          "This would typically open your App Store or Google Play subscription settings."
-        );
-      }
-    );
+  const handleManageSubscription = async () => {
+    const managementURL = PaymentService.getSubscriptionManagementURL();
+    
+    if (managementURL) {
+      showConfirm(
+        "Manage Subscription",
+        `This will open your ${subscriptionInfo.platform} subscription settings where you can change plans, update payment methods, or cancel your subscription.`,
+        async () => {
+          try {
+            const supported = await Linking.canOpenURL(managementURL);
+            if (supported) {
+              await Linking.openURL(managementURL);
+            } else {
+              showConfirm(
+                "Subscription Management",
+                `Please open your ${subscriptionInfo.platform} app and go to your subscription settings to manage your EquiHUB Pro subscription.`
+              );
+            }
+          } catch (error) {
+            showConfirm(
+              "Error",
+              "Unable to open subscription management. Please check your platform's subscription settings manually."
+            );
+          }
+        }
+      );
+    } else {
+      showConfirm(
+        "Subscription Management",
+        "Subscription management will be available once payment integration is complete."
+      );
+    }
   };
 
   const handleContactSupport = () => {
@@ -96,7 +146,6 @@ const ProFeaturesPage = () => {
       "Priority Support",
       "As a Pro member, you have access to priority support. Would you like to contact our support team?",
       () => {
-        // In a real app, this would open support chat or email
         showConfirm(
           "Support Contact",
           "Support contact functionality will be available soon. For now, you can reach us at support@equihub.com"
@@ -104,6 +153,57 @@ const ProFeaturesPage = () => {
       }
     );
   };
+
+  const handleRefreshStatus = async () => {
+    setLoading(true);
+    try {
+      console.log('🔄 Manually refreshing subscription status...');
+      
+      // Force a complete refresh
+      await PaymentService.forceRefreshSubscriptionStatus();
+      
+      // Reload status
+      await loadSubscriptionStatus();
+      
+      showConfirm(
+        "Status Refreshed",
+        "Your subscription status has been refreshed successfully."
+      );
+    } catch (error) {
+      console.error('Error refreshing status:', error);
+      showConfirm(
+        "Refresh Failed",
+        "Failed to refresh subscription status. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    setLoading(true);
+    try {
+      const result = await PaymentService.restorePurchases();
+      if (result.success) {
+        await loadSubscriptionStatus();
+        showConfirm("Success", "Your purchases have been restored!");
+      } else {
+        showConfirm("Restore Purchases", result.error || "Unable to restore purchases at this time.");
+      }
+    } catch (error) {
+      showConfirm("Error", "Failed to restore purchases. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: currentTheme.colors.primary, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={[{ color: currentTheme.colors.surface, fontSize: 18, fontFamily: 'Inder' }]}>Loading subscription info...</Text>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -323,6 +423,46 @@ const ProFeaturesPage = () => {
             </View>
           </View>
 
+          {/* Platform Info Section */}
+          <View
+            style={[
+              styles.platformSection,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <Text
+              style={[
+                styles.platformTitle,
+                { color: currentTheme.colors.text },
+              ]}
+            >
+              Subscription Platform
+            </Text>
+            <View style={styles.platformInfo}>
+              <Text style={styles.platformIcon}>
+                {Platform.OS === 'ios' ? '🍎' : Platform.OS === 'android' ? '🤖' : '🌐'}
+              </Text>
+              <View style={styles.platformDetails}>
+                <Text
+                  style={[
+                    styles.platformText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  {subscriptionInfo.platform}
+                </Text>
+                <Text
+                  style={[
+                    styles.platformSubtext,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Manage your subscription through {subscriptionInfo.platform}
+                </Text>
+              </View>
+            </View>
+          </View>
+
           {/* Action Buttons */}
           <View style={styles.actionsSection}>
             <TouchableOpacity
@@ -346,6 +486,36 @@ const ProFeaturesPage = () => {
             >
               <Text style={styles.actionButtonText}>Manage Subscription</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                styles.restoreButton,
+                { backgroundColor: currentTheme.colors.background, borderWidth: 2, borderColor: currentTheme.colors.accent },
+              ]}
+              onPress={handleRefreshStatus}
+              disabled={loading}
+            >
+              <Text style={[styles.restoreButtonText, { color: currentTheme.colors.accent }]}>
+                {loading ? 'Refreshing...' : 'Refresh Status'}
+              </Text>
+            </TouchableOpacity>
+
+            {(Platform.OS === 'ios' || Platform.OS === 'android') && (
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  styles.restoreButton,
+                  { backgroundColor: currentTheme.colors.background, borderWidth: 2, borderColor: currentTheme.colors.primary },
+                ]}
+                onPress={handleRestorePurchases}
+                disabled={loading}
+              >
+                <Text style={[styles.restoreButtonText, { color: currentTheme.colors.primary }]}>
+                  Restore Purchases
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Footer */}
@@ -612,6 +782,57 @@ const styles = StyleSheet.create({
   },
   supportButton: {
     backgroundColor: "#335C67",
+  },
+  restoreButton: {
+    backgroundColor: "transparent",
+  },
+  restoreButtonText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  platformSection: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 30,
+    padding: 30,
+    marginBottom: 30,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  platformTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginBottom: 15,
+  },
+  platformInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  platformIcon: {
+    fontSize: 32,
+    marginRight: 15,
+  },
+  platformDetails: {
+    flex: 1,
+  },
+  platformText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  platformSubtext: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 18,
   },
   actionButtonText: {
     color: "#FFFFFF",
