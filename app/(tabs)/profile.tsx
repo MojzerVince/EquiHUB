@@ -703,8 +703,11 @@ const ProfileScreen = () => {
   };
 
   const handleDescriptionChange = (text: string) => {
-    // Limit to 150 characters
-    if (text.length <= 150) {
+    // Count the number of lines
+    const lineCount = text.split('\n').length;
+    
+    // Limit to 150 characters AND 5 lines
+    if (text.length <= 150 && lineCount <= 5) {
       setUserDescription(text);
     }
   };
@@ -825,6 +828,10 @@ const ProfileScreen = () => {
     }
     if (userDescription.length > 150) {
       showError("Description must be 150 characters or less");
+      return;
+    }
+    if (userDescription.split('\n').length > 5) {
+      showError("Description must be 5 lines or less");
       return;
     }
 
@@ -1513,10 +1520,10 @@ const ProfileScreen = () => {
                   ]}
                   value={userDescription}
                   onChangeText={handleDescriptionChange}
-                  placeholder="Enter your description"
+                  placeholder="Enter your description (max 150 chars, 5 lines)"
                   placeholderTextColor={currentTheme.colors.textSecondary}
                   multiline
-                  numberOfLines={8}
+                  numberOfLines={5}
                   maxLength={150}
                 />
                 <Text
@@ -1524,13 +1531,13 @@ const ProfileScreen = () => {
                     styles.characterCounter,
                     {
                       color:
-                        userDescription.length > 140
+                        userDescription.length > 140 || userDescription.split('\n').length > 4
                           ? "#FF6B6B"
                           : currentTheme.colors.textSecondary,
                     },
                   ]}
                 >
-                  {userDescription.length}/150 characters
+                  {userDescription.length}/150 characters • {userDescription.split('\n').length}/5 lines
                 </Text>
                 <TextInput
                   style={[
