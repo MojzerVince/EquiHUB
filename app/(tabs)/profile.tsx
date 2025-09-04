@@ -1305,18 +1305,16 @@ const ProfileScreen = () => {
 
             {!isEditing ? (
               <>
-                <View style={styles.nameAgeContainer}>
-                  <Text
-                    style={[styles.userName, { color: currentTheme.colors.text }]}
-                  >
-                    {userName}
-                  </Text>
-                  <Text
-                    style={[styles.userAge, { color: currentTheme.colors.text }]}
-                  >
-                    {userAge}
-                  </Text>
-                </View>
+                <Text
+                  style={[styles.userName, { color: currentTheme.colors.text }]}
+                >
+                  {userName}
+                </Text>
+                <Text
+                  style={[styles.userAge, { color: currentTheme.colors.text }]}
+                >
+                  {userAge}
+                </Text>
                 <Text
                   style={[
                     styles.userDescription,
@@ -2070,24 +2068,21 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     fontWeight: "bold",
   },
-  nameAgeContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "center",
-    marginBottom: 15,
-    gap: 15,
-  },
   userName: {
     fontSize: 24,
     fontWeight: "bold",
     fontFamily: "Inder",
+    marginBottom: 5,
+    textAlign: "center",
   },
   userAge: {
     fontSize: 20,
     fontFamily: "Inder",
+    marginBottom: 15,
+    textAlign: "center",
   },
   userDescription: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 10,
@@ -2096,10 +2091,11 @@ const styles = StyleSheet.create({
   },
   experienceContainer: {
     alignItems: "center",
-    marginBottom: 15,
+    marginTop: 5,
+    marginBottom: 16,
   },
   experienceLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "Inder",
     textTransform: "uppercase",
     letterSpacing: 1,
