@@ -2,7 +2,7 @@
   "expo": {
     "name": "EquiHUB",
     "slug": "EquiHUB",
-    "version": "0.5.1",
+    "version": "0.5.2",
     "orientation": "portrait",
     "icon": "./assets/icons/512x512.png",
     "scheme": "equihub",
@@ -25,7 +25,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
-      "versionCode": 28,
+      "versionCode": 29,
       "permissions": [
         "INTERNET",
         "FOREGROUND_SERVICE",

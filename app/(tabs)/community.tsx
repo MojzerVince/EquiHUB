@@ -24,7 +24,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useMetric } from "../../contexts/MetricContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { ChallengeAPI } from "../../lib/challengeAPI";
+import { ChallengeStorageService } from "../../lib/challengeStorage";
 import { CommunityAPI, PostWithUser } from "../../lib/communityAPI";
 import { HiddenPostsManager } from "../../lib/hiddenPostsManager";
 import { getImageDataUrl } from "../../lib/imageUtils";
@@ -36,6 +39,12 @@ import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { SimpleStableAPI, UserWithStable } from "../../lib/simpleStableAPI";
 import { getSupabase, getSupabaseConfig } from "../../lib/supabase";
 import { UserAPI, UserSearchResult } from "../../lib/userAPI";
+import {
+  ActiveChallenge,
+  Challenge,
+  ChallengeGoal,
+  UserBadge,
+} from "../../types/challengeTypes";
 
 // TypeScript interfaces
 interface FriendRequest {
@@ -74,6 +83,7 @@ interface Post {
 
 export default function CommunityScreen() {
   const { currentTheme } = useTheme();
+  const { formatDistance, formatDistanceUnit } = useMetric();
   const { user } = useAuth();
   const router = useRouter();
   const theme = currentTheme.colors;
@@ -91,6 +101,7 @@ export default function CommunityScreen() {
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showFriendsManagement, setShowFriendsManagement] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [hiddenPostIds, setHiddenPostIds] = useState<string[]>([]);
@@ -99,6 +110,86 @@ export default function CommunityScreen() {
   const [reportReason, setReportReason] = useState("");
   const [forceRender, setForceRender] = useState(0); // Add this to force re-renders
   const [postsLoaded, setPostsLoaded] = useState(false); // Track if posts have been loaded at least once
+
+  // Challenge-related state
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [loadingChallenges, setLoadingChallenges] = useState(false);
+  const [activeChallenge, setActiveChallenge] =
+    useState<ActiveChallenge | null>(null);
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(
+    null
+  );
+  const [showChallengeGoals, setShowChallengeGoals] = useState(false);
+  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
+  const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>(
+    []
+  );
+  const [showGoalSelection, setShowGoalSelection] = useState(false);
+
+  // Goal options for challenge selection - dynamic based on metric system
+  const { metricSystem } = useMetric();
+  const goalOptions: ChallengeGoal[] =
+    metricSystem === "metric"
+      ? [
+          {
+            id: "1",
+            label: "20km Goal",
+            target: 20,
+            unit: "km",
+            difficulty: "easy",
+          },
+          {
+            id: "2",
+            label: "50km Goal",
+            target: 50,
+            unit: "km",
+            difficulty: "medium",
+          },
+          {
+            id: "3",
+            label: "75km Goal",
+            target: 75,
+            unit: "km",
+            difficulty: "hard",
+          },
+          {
+            id: "4",
+            label: "100km Goal",
+            target: 100,
+            unit: "km",
+            difficulty: "extreme",
+          },
+        ]
+      : [
+          {
+            id: "1",
+            label: "12mi Goal",
+            target: 12,
+            unit: "mi",
+            difficulty: "easy",
+          },
+          {
+            id: "2",
+            label: "30mi Goal",
+            target: 30,
+            unit: "mi",
+            difficulty: "medium",
+          },
+          {
+            id: "3",
+            label: "45mi Goal",
+            target: 45,
+            unit: "mi",
+            difficulty: "hard",
+          },
+          {
+            id: "4",
+            label: "60mi Goal",
+            target: 60,
+            unit: "mi",
+            difficulty: "extreme",
+          },
+        ];
 
   // Refs to track loading operations and prevent duplicates
   const isLoadingPostsRef = useRef(false);
@@ -192,8 +283,8 @@ export default function CommunityScreen() {
     },
   ];
 
-  const [stableMates, setStableMates] = useState<UserWithStable[]>([]);
-  const [loadingStableMates, setLoadingStableMates] = useState(false);
+  const [suggestedUsers, setSuggestedUsers] = useState<UserWithStable[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [addingFriends, setAddingFriends] = useState<Set<string>>(new Set());
 
   // Pagination state for stable mates
@@ -205,17 +296,17 @@ export default function CommunityScreen() {
   // Ref for horizontal scroll view
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Load location-based stable mates for friend suggestions
-  const loadStableMates = useCallback(
+  // Load general friend suggestions for the user
+  const loadSuggestions = useCallback(
     async (friendsList?: UserSearchResult[]) => {
       if (!user?.id) {
-        setStableMates([]);
+        setSuggestedUsers([]);
         setTotalPages(0);
         setCurrentPage(0);
         return;
       }
 
-      setLoadingStableMates(true);
+      setLoadingSuggestions(true);
       try {
         // Use new location-based API instead of same-stable API
         const { users, error } =
@@ -223,7 +314,7 @@ export default function CommunityScreen() {
 
         if (error) {
           console.error("Error loading location-based suggestions:", error);
-          setStableMates([]);
+          setSuggestedUsers([]);
           setTotalPages(0);
           setCurrentPage(0);
         } else {
@@ -241,7 +332,7 @@ export default function CommunityScreen() {
             currentFriends.map((f) => f.id) || []
           );
 
-          const unfriendedStableMates = users.filter((mate) => {
+          const unfriendedUsers = users.filter((mate) => {
             const isAlreadyFriend = currentUserFriendIds.has(mate.id);
             if (isAlreadyFriend) {
               console.warn(
@@ -253,24 +344,21 @@ export default function CommunityScreen() {
             return !isAlreadyFriend;
           });
 
-          console.log(
-            "📝 After friend filtering:",
-            unfriendedStableMates.length
-          );
+          console.log("📝 After friend filtering:", unfriendedUsers.length);
 
           // Limit to MAX_USERS (8) and calculate pages
-          const limitedUsers = unfriendedStableMates.slice(0, MAX_USERS);
-          setStableMates(limitedUsers);
+          const limitedUsers = unfriendedUsers.slice(0, MAX_USERS);
+          setSuggestedUsers(limitedUsers);
           setTotalPages(Math.ceil(limitedUsers.length / USERS_PER_PAGE));
           setCurrentPage(0); // Reset to first page when data refreshes
         }
       } catch (error) {
         console.error("Exception loading location-based suggestions:", error);
-        setStableMates([]);
+        setSuggestedUsers([]);
         setTotalPages(0);
         setCurrentPage(0);
       } finally {
-        setLoadingStableMates(false);
+        setLoadingSuggestions(false);
       }
     },
     [user?.id, friends]
@@ -280,7 +368,7 @@ export default function CommunityScreen() {
   const getCurrentPageUsers = () => {
     const startIndex = currentPage * USERS_PER_PAGE;
     const endIndex = startIndex + USERS_PER_PAGE;
-    return stableMates.slice(startIndex, endIndex);
+    return suggestedUsers.slice(startIndex, endIndex);
   };
 
   const goToNextPage = () => {
@@ -333,6 +421,142 @@ export default function CommunityScreen() {
     }
   };
 
+  // Helper function to get challenge details by ID
+  const getChallengeById = (challengeId: string): Challenge | null => {
+    return challenges.find((challenge) => challenge.id === challengeId) || null;
+  };
+
+  // Challenge-related functions
+  const loadChallenges = useCallback(async () => {
+    if (!user?.id) return;
+
+    setLoadingChallenges(true);
+    try {
+      // For now, use mock data. Later you can switch to real API
+      const challengeList = ChallengeAPI.getMockChallenges();
+      setChallenges(challengeList);
+      setAvailableChallenges(challengeList);
+    } catch (error) {
+      console.error("Error loading challenges:", error);
+    } finally {
+      setLoadingChallenges(false);
+    }
+  }, [user?.id]);
+
+  const loadActiveChallenge = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const active = await ChallengeStorageService.getActiveChallenge(user.id);
+      setActiveChallenge(active);
+    } catch (error) {
+      console.error("Error loading active challenge:", error);
+    }
+  }, [user?.id]);
+
+  const loadUserBadges = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const badges = await ChallengeStorageService.getUserBadges(user.id);
+      setUserBadges(badges);
+    } catch (error) {
+      console.error("Error loading user badges:", error);
+    }
+  }, [user?.id]);
+
+  const handleStartChallenge = (challenge: Challenge) => {
+    if (activeChallenge) {
+      Alert.alert(
+        "Active Challenge",
+        "You already have an active challenge. Complete or leave your current challenge before starting a new one.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    setSelectedChallenge(challenge);
+    setShowGoalSelection(true);
+  };
+
+  const handleSelectGoal = async (goal: ChallengeGoal) => {
+    if (!user?.id || !selectedChallenge) return;
+
+    try {
+      const newActiveChallenge: ActiveChallenge = {
+        challengeId: selectedChallenge.id,
+        goalId: goal.id,
+        startDate: new Date().toISOString(),
+        progress: 0,
+        target: goal.target,
+        unit: goal.unit,
+        lastUpdated: new Date().toISOString(),
+        sessions: [],
+        isCompleted: false,
+        earnedRewards: [],
+      };
+
+      const success = await ChallengeStorageService.saveActiveChallenge(
+        user.id,
+        newActiveChallenge
+      );
+
+      if (success) {
+        setActiveChallenge(newActiveChallenge);
+        setShowGoalSelection(false);
+        setSelectedChallenge(null);
+
+        Alert.alert(
+          "Challenge Started!",
+          `Good luck with your ${goal.label} goal!`,
+          [{ text: "Let's Go!" }]
+        );
+      } else {
+        Alert.alert("Error", "Failed to start challenge. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error starting challenge:", error);
+      Alert.alert("Error", "Failed to start challenge. Please try again.");
+    }
+  };
+
+  const handleViewProgress = () => {
+    if (activeChallenge) {
+      // For now, show an alert. Later you can create a dedicated screen
+      Alert.alert(
+        "Challenge Progress",
+        `Progress: ${activeChallenge.progress.toFixed(1)} / ${
+          activeChallenge.target
+        } ${activeChallenge.unit}\n\nCompletion: ${(
+          (activeChallenge.progress / activeChallenge.target) *
+          100
+        ).toFixed(1)}%`,
+        [{ text: "OK" }]
+      );
+    }
+  };
+
+  const handleLeaveChallenge = async () => {
+    if (activeChallenge && user?.id) {
+      Alert.alert(
+        "Leave Challenge",
+        "Are you sure you want to leave this challenge? Your progress will be lost.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Leave",
+            style: "destructive",
+            onPress: async () => {
+              await ChallengeStorageService.removeActiveChallenge(user.id);
+              setActiveChallenge(null);
+              loadChallenges(); // Reload available challenges
+            },
+          },
+        ]
+      );
+    }
+  };
+
   // Load initial data when component mounts and user is available (like horses screen)
   useEffect(() => {
     console.log(
@@ -364,7 +588,10 @@ export default function CommunityScreen() {
               loadFriendRequests(),
               loadHiddenPosts(),
               loadPosts(),
-              loadStableMates(loadedFriends), // Pass fresh friends data directly
+              loadSuggestions(loadedFriends), // Pass fresh friends data directly
+              loadChallenges(), // Load available challenges
+              loadActiveChallenge(), // Load active challenge
+              loadUserBadges(), // Load user badges
             ]);
           } else {
             console.error("Failed to load friends:", error);
@@ -373,7 +600,10 @@ export default function CommunityScreen() {
               loadFriendRequests(),
               loadHiddenPosts(),
               loadPosts(),
-              loadStableMates([]), // Pass empty friends list
+              loadSuggestions([]), // Pass empty friends list
+              loadChallenges(), // Load available challenges
+              loadActiveChallenge(), // Load active challenge
+              loadUserBadges(), // Load user badges
             ]);
           }
 
@@ -661,6 +891,51 @@ export default function CommunityScreen() {
     }
   };
 
+  // Handle removing a friend
+  const handleRemoveFriend = async (friend: UserSearchResult) => {
+    if (!user?.id) return;
+
+    Alert.alert(
+      "Remove Friend",
+      `Are you sure you want to remove ${friend.name} from your friends?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { success, error } = await UserAPI.removeFriend(
+                user.id,
+                friend.id
+              );
+
+              if (error) {
+                Alert.alert("Error", error);
+                return;
+              }
+
+              if (success) {
+                // Remove friend from local state
+                setFriends((prev) => prev.filter((f) => f.id !== friend.id));
+
+                Alert.alert(
+                  "Success",
+                  `${friend.name} has been removed from your friends.`
+                );
+              }
+            } catch (error) {
+              Alert.alert("Error", "Failed to remove friend");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Load hidden posts from storage
   const loadHiddenPosts = useCallback(async () => {
     if (!user?.id) {
@@ -908,7 +1183,7 @@ export default function CommunityScreen() {
           loadFriendRequests(),
           loadHiddenPosts(),
           loadPosts(), // Always refresh posts on manual pull-to-refresh
-          loadStableMates(loadedFriends), // Pass fresh friends data directly
+          loadSuggestions(loadedFriends), // Pass fresh friends data directly
         ]);
       } else {
         console.error("Refresh: Failed to load friends:", error);
@@ -917,7 +1192,7 @@ export default function CommunityScreen() {
           loadFriendRequests(),
           loadHiddenPosts(),
           loadPosts(),
-          loadStableMates([]), // Pass empty friends list
+          loadSuggestions([]), // Pass empty friends list
         ]);
       }
     } catch (error) {
@@ -1459,7 +1734,7 @@ export default function CommunityScreen() {
     </View>
   );
 
-  const renderStableMate = ({ item }: { item: UserWithStable }) => {
+  const renderSuggestedUser = ({ item }: { item: UserWithStable }) => {
     const isAddingFriend = addingFriends.has(item.id);
 
     return (
@@ -1488,18 +1763,12 @@ export default function CommunityScreen() {
           >
             {item.name}
           </Text>
-          <Text
-            style={[styles.gridUserAge, { color: theme.textSecondary }]}
-            numberOfLines={1}
-          >
-            Age {item.age}
-          </Text>
           {item.stable_name && (
             <Text
-              style={[styles.gridStableInfo, { color: theme.primary }]}
+              style={[styles.gridStableName, { color: theme.textSecondary }]}
               numberOfLines={1}
             >
-              🏇 {item.stable_name}
+              {item.stable_name}
             </Text>
           )}
         </View>
@@ -1519,7 +1788,7 @@ export default function CommunityScreen() {
             const userSearchResult: UserSearchResult = {
               id: item.id,
               name: item.name,
-              age: item.age,
+              age: item.age || 0, // Default to 0 if age is not available
               profile_image_url: item.profile_image_url,
               description: item.description || "",
               is_online: item.is_online || false,
@@ -1679,6 +1948,20 @@ export default function CommunityScreen() {
         ]}
       >
         <View style={styles.headerContainer}>
+          {user && (
+            <TouchableOpacity
+              style={styles.friendsButton}
+              onPress={async () => {
+                setShowFriendsManagement(true);
+                // Refresh friends list when opening the modal
+                if (user?.id) {
+                  await loadFriends();
+                }
+              }}
+            >
+              <Text style={{ fontSize: 18, color: "#FFFFFF" }}>👥</Text>
+            </TouchableOpacity>
+          )}
           <Text style={[styles.header, { color: "#FFFFFF" }]}>Community</Text>
           {user && (
             <TouchableOpacity
@@ -1803,16 +2086,16 @@ export default function CommunityScreen() {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Riders from Your Area
               </Text>
-              {loadingStableMates ? (
+              {loadingSuggestions ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="small" color={theme.primary} />
                   <Text
                     style={[styles.loadingText, { color: theme.textSecondary }]}
                   >
-                    Loading location-based suggestions...
+                    Loading friend suggestions...
                   </Text>
                 </View>
-              ) : stableMates.length > 0 ? (
+              ) : suggestedUsers.length > 0 ? (
                 <View style={styles.paginatedContainer}>
                   {/* Swipeable horizontal ScrollView */}
                   <ScrollView
@@ -1836,12 +2119,14 @@ export default function CommunityScreen() {
                         ]}
                       >
                         <View style={styles.usersGrid}>
-                          {stableMates
+                          {suggestedUsers
                             .slice(
                               pageIndex * USERS_PER_PAGE,
                               (pageIndex + 1) * USERS_PER_PAGE
                             )
-                            .map((user) => renderStableMate({ item: user }))}
+                            .map((user: UserWithStable) =>
+                              renderSuggestedUser({ item: user })
+                            )}
                         </View>
                       </View>
                     ))}
@@ -2033,35 +2318,274 @@ export default function CommunityScreen() {
             </View>
           </>
         ) : activeTab === "Challenges" ? (
-          <View style={styles.placeholderContainer}>
-            <View
-              style={[
-                styles.placeholderCard,
-                { backgroundColor: theme.surface },
-              ]}
-            >
-              <Text style={styles.placeholderEmoji}>🏆</Text>
-              <Text style={[styles.placeholderTitle, { color: theme.text }]}>
-                Challenges Coming Soon!
-              </Text>
-              <Text
-                style={[styles.placeholderText, { color: theme.textSecondary }]}
+          <View
+            style={[
+              styles.scrollContainer,
+              { backgroundColor: theme.background },
+            ]}
+          >
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Active Challenge Section */}
+              {activeChallenge ? (
+                <View
+                  style={[
+                    styles.activeChallengeCard,
+                    { backgroundColor: theme.surface },
+                  ]}
+                >
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Active Challenge
+                  </Text>
+                  <View
+                    style={[
+                      styles.challengeCard,
+                      { backgroundColor: theme.surface },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.challengeTitle, { color: theme.text }]}
+                    >
+                      {getChallengeById(activeChallenge.challengeId)?.title ||
+                        "Challenge"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.challengeDescription,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      {getChallengeById(activeChallenge.challengeId)
+                        ?.description || "Challenge description"}
+                    </Text>
+
+                    {/* Progress Bar */}
+                    <View style={styles.progressContainer}>
+                      <View
+                        style={[
+                          styles.progressBar,
+                          { backgroundColor: theme.border },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.progressFill,
+                            {
+                              backgroundColor: theme.primary,
+                              width: `${Math.min(
+                                (activeChallenge.progress /
+                                  activeChallenge.target) *
+                                  100,
+                                100
+                              )}%`,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text
+                        style={[styles.progressText, { color: theme.text }]}
+                      >
+                        {activeChallenge.progress.toFixed(1)} /{" "}
+                        {activeChallenge.target} {activeChallenge.unit}
+                      </Text>
+                    </View>
+
+                    {/* Action Buttons */}
+                    <View style={styles.challengeActions}>
+                      <TouchableOpacity
+                        style={[
+                          styles.challengeActionButton,
+                          styles.challengePrimaryButton,
+                          { backgroundColor: theme.primary },
+                        ]}
+                        onPress={handleViewProgress}
+                      >
+                        <Text
+                          style={[
+                            styles.challengeButtonText,
+                            { color: "white" },
+                          ]}
+                        >
+                          View Progress
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.challengeActionButton,
+                          styles.challengeSecondaryButton,
+                          { borderColor: theme.primary },
+                        ]}
+                        onPress={handleLeaveChallenge}
+                      >
+                        <Text
+                          style={[
+                            styles.challengeButtonText,
+                            styles.challengeSecondaryButtonText,
+                            { color: theme.primary },
+                          ]}
+                        >
+                          Leave Challenge
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                /* Available Challenges Section */
+                <View
+                  style={[
+                    styles.availableChallengesSection,
+                    { backgroundColor: theme.background },
+                  ]}
+                >
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Available Challenges
+                  </Text>
+                  {availableChallenges.map((challenge) => (
+                    <View
+                      key={challenge.id}
+                      style={[
+                        styles.challengeCard,
+                        { backgroundColor: theme.surface },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.challengeTitle, { color: theme.text }]}
+                      >
+                        {challenge.title}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.challengeDescription,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        {challenge.description}
+                      </Text>
+
+                      <View style={styles.challengeDetails}>
+                        <Text
+                          style={[styles.challengeInfo, { color: theme.text }]}
+                        >
+                          Type: {challenge.type}
+                        </Text>
+                        <Text
+                          style={[styles.challengeInfo, { color: theme.text }]}
+                        >
+                          Difficulty: {challenge.difficulty}
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.challengeActionButton,
+                          styles.challengePrimaryButton,
+                          { backgroundColor: theme.primary },
+                        ]}
+                        onPress={() => handleStartChallenge(challenge)}
+                      >
+                        <Text
+                          style={[
+                            styles.challengeButtonText,
+                            { color: "white" },
+                          ]}
+                        >
+                          Start Challenge
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+
+                  {availableChallenges.length === 0 && (
+                    <View style={styles.emptyState}>
+                      <Text
+                        style={[
+                          styles.emptyStateText,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        No challenges available at the moment
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Goal Selection Modal */}
+              <Modal
+                visible={showGoalSelection}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setShowGoalSelection(false)}
               >
-                Compete with friends in exciting equestrian challenges.{"\n\n"}•
-                Weekly riding challenges{"\n"}• Distance competitions{"\n"}•
-                Skill-based contests{"\n"}• Leaderboards and rewards
-              </Text>
-              <View
-                style={[
-                  styles.placeholderBadge,
-                  { backgroundColor: theme.primary },
-                ]}
-              >
-                <Text style={styles.placeholderBadgeText}>
-                  Under Development
-                </Text>
-              </View>
-            </View>
+                <View style={styles.challengeModalOverlay}>
+                  <View
+                    style={[
+                      styles.challengeModalContent,
+                      { backgroundColor: theme.surface },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.challengeModalTitle,
+                        { color: theme.text },
+                      ]}
+                    >
+                      Choose Your Goal
+                    </Text>
+                    <Text
+                      style={[
+                        styles.challengeModalSubtitle,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      Select your target distance for this challenge
+                    </Text>
+
+                    {goalOptions.map((goal) => (
+                      <TouchableOpacity
+                        key={goal.id}
+                        style={[
+                          styles.goalOption,
+                          { backgroundColor: theme.background },
+                        ]}
+                        onPress={() => handleSelectGoal(goal)}
+                      >
+                        <Text style={[styles.goalText, { color: theme.text }]}>
+                          {goal.label}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.goalDescription,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
+                          {goal.target} {goal.unit} - {goal.difficulty} level
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+
+                    <TouchableOpacity
+                      style={[
+                        styles.challengeActionButton,
+                        styles.challengeSecondaryButton,
+                        { borderColor: theme.primary },
+                      ]}
+                      onPress={() => setShowGoalSelection(false)}
+                    >
+                      <Text
+                        style={[
+                          styles.challengeButtonText,
+                          styles.challengeSecondaryButtonText,
+                          { color: theme.primary },
+                        ]}
+                      >
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+            </ScrollView>
           </View>
         ) : (
           <View style={styles.placeholderContainer}>
@@ -2261,6 +2785,138 @@ export default function CommunityScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Friends Management Modal */}
+      <Modal
+        visible={showFriendsManagement}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFriendsManagement(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContainer,
+              {
+                backgroundColor: currentTheme.colors.surface,
+                height: "60%",
+                minHeight: 400,
+              },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text
+                style={[styles.modalTitle, { color: currentTheme.colors.text }]}
+              >
+                Friends Management
+              </Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowFriendsManagement(false)}
+              >
+                <Text
+                  style={[
+                    styles.modalCloseText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.friendsListContainer}
+              contentContainerStyle={{ minHeight: 200 }}
+            >
+              {isLoadingFriends ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator
+                    size="large"
+                    color={currentTheme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.loadingText,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Loading friends...
+                  </Text>
+                </View>
+              ) : friends.length === 0 ? (
+                <View style={styles.friendsEmptyStateContainer}>
+                  <Text
+                    style={[
+                      styles.friendsEmptyStateText,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    You don't have any friends yet.
+                  </Text>
+                  <Text
+                    style={[
+                      styles.friendsEmptyStateSubtext,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Start connecting with people in the community!
+                  </Text>
+                </View>
+              ) : (
+                friends.map((friend) => (
+                  <View
+                    key={friend.id}
+                    style={[
+                      styles.friendItemContainer,
+                      { backgroundColor: currentTheme.colors.background },
+                    ]}
+                  >
+                    <View style={styles.friendInfoContainer}>
+                      {friend.profile_image_url ? (
+                        <Image
+                          source={{ uri: friend.profile_image_url }}
+                          style={styles.friendAvatarImage}
+                        />
+                      ) : (
+                        <View style={styles.defaultFriendAvatar}>
+                          <Text style={styles.defaultFriendAvatarText}>
+                            {friend.name.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={styles.friendDetailsContainer}>
+                        <Text
+                          style={[
+                            styles.friendDisplayName,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          {friend.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.friendDisplayDescription,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          {friend.description || "No description"}
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.removeFriendButton}
+                      onPress={() => handleRemoveFriend(friend)}
+                    >
+                      <Text style={styles.removeFriendButtonText}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -2781,6 +3437,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.1)",
     zIndex: 10,
   },
+  friendsButton: {
+    position: "absolute",
+    left: 20,
+    padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    zIndex: 10,
+  },
   // Modal Styles
   modalOverlay: {
     flex: 1,
@@ -2947,16 +3616,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
-  gridUserAge: {
+  gridStableName: {
     fontSize: 12,
+    fontWeight: "400",
     marginTop: 2,
     textAlign: "center",
-  },
-  gridStableInfo: {
-    fontSize: 11,
-    fontWeight: "500",
-    marginTop: 4,
-    textAlign: "center",
+    fontStyle: "italic",
   },
   gridAddButton: {
     paddingHorizontal: 12,
@@ -2980,5 +3645,226 @@ const styles = StyleSheet.create({
   },
   scrollPage: {
     paddingHorizontal: 4, // Small padding for page separation
+  },
+  // Challenge styles
+  activeChallengeCard: {
+    margin: 15,
+    padding: 15,
+    borderRadius: 15,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  challengeCard: {
+    padding: 15,
+    borderRadius: 12,
+    marginVertical: 8,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  challengeTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  challengeDescription: {
+    fontSize: 14,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  progressContainer: {
+    marginVertical: 12,
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  challengeActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+  challengeActionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    marginHorizontal: 4,
+  },
+  challengePrimaryButton: {
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  challengeSecondaryButton: {
+    borderWidth: 1,
+    backgroundColor: "transparent",
+  },
+  challengeButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  challengeSecondaryButtonText: {
+    // Additional styling for secondary button text
+  },
+  availableChallengesSection: {
+    padding: 15,
+  },
+  challengeDetails: {
+    marginVertical: 8,
+  },
+  challengeInfo: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyStateText: {
+    fontSize: 16,
+    textAlign: "center",
+  },
+  challengeModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  challengeModalContent: {
+    width: "90%",
+    maxWidth: 400,
+    padding: 20,
+    borderRadius: 15,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  challengeModalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  challengeModalSubtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  goalOption: {
+    padding: 15,
+    borderRadius: 10,
+    marginVertical: 5,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  goalText: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  goalDescription: {
+    fontSize: 12,
+  },
+  // Friends Management Modal Styles
+  friendsListContainer: {
+    flex: 1,
+    padding: 15,
+    paddingTop: 10,
+  },
+  friendItemContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 15,
+    marginBottom: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
+  },
+  friendInfoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  friendAvatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 15,
+  },
+  defaultFriendAvatar: {
+    backgroundColor: "#335C67",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 15,
+  },
+  defaultFriendAvatarText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  friendDetailsContainer: {
+    flex: 1,
+  },
+  friendDisplayName: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  friendDisplayDescription: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  removeFriendButton: {
+    backgroundColor: "#FF6B6B",
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  removeFriendButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  friendsEmptyStateContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  friendsEmptyStateText: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  friendsEmptyStateSubtext: {
+    fontSize: 14,
+    textAlign: "center",
+    paddingHorizontal: 40,
   },
 });

@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useDialog } from "@/contexts/DialogContext";
+import { MetricSystem, useMetric } from "@/contexts/MetricContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { AuthAPI } from "@/lib/authAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
@@ -27,6 +28,7 @@ const OptionsScreen = () => {
   const router = useRouter();
   const { signOut, user } = useAuth();
   const { currentTheme, setTheme, availableThemes } = useTheme();
+  const { metricSystem, setMetricSystem } = useMetric();
   const { showLogout, showConfirm, showError } = useDialog();
 
   // Settings state
@@ -129,6 +131,9 @@ const OptionsScreen = () => {
 
   // Theme dropdown state
   const [themeDropdownVisible, setThemeDropdownVisible] = useState(false);
+
+  // Metric system dropdown state
+  const [metricDropdownVisible, setMetricDropdownVisible] = useState(false);
 
   // Hidden posts state
   const [hiddenPosts, setHiddenPosts] = useState<HiddenPost[]>([]);
@@ -515,6 +520,92 @@ const OptionsScreen = () => {
     </Modal>
   );
 
+  // Metric System Dropdown Modal
+  const MetricDropdownModal = () => {
+    const metricOptions = ["Metric", "Imperial"];
+    const currentMetricDisplay =
+      metricSystem === "metric" ? "Metric" : "Imperial";
+
+    return (
+      <Modal
+        transparent={true}
+        visible={metricDropdownVisible}
+        animationType="fade"
+        onRequestClose={() => setMetricDropdownVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          onPress={() => setMetricDropdownVisible(false)}
+        >
+          <View
+            style={[
+              styles.dropdownModal,
+              { backgroundColor: currentTheme.colors.card },
+            ]}
+          >
+            <Text style={[styles.dropdownModalTitle, { color: "#fff" }]}>
+              Select Measurement System
+            </Text>
+            <ScrollView style={styles.dropdownModalContent}>
+              {metricOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.dropdownOption,
+                    {
+                      borderBottomColor: "rgba(255, 255, 255, 0.1)",
+                      backgroundColor:
+                        currentMetricDisplay === option
+                          ? "rgba(255, 255, 255, 0.1)"
+                          : "transparent",
+                    },
+                  ]}
+                  onPress={() => {
+                    setMetricSystem(option.toLowerCase() as MetricSystem);
+                    setMetricDropdownVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownOptionText,
+                      {
+                        color: "#fff",
+                        fontWeight:
+                          currentMetricDisplay === option ? "bold" : "normal",
+                      },
+                    ]}
+                  >
+                    {option}
+                    {option === "Metric" && (
+                      <Text
+                        style={[
+                          styles.dropdownOptionDescription,
+                          { color: "rgba(255, 255, 255, 0.7)" },
+                        ]}
+                      >
+                        {"\n"}km, m/s, °C, kg
+                      </Text>
+                    )}
+                    {option === "Imperial" && (
+                      <Text
+                        style={[
+                          styles.dropdownOptionDescription,
+                          { color: "rgba(255, 255, 255, 0.7)" },
+                        ]}
+                      >
+                        {"\n"}mi, mph, °F, lbs
+                      </Text>
+                    )}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
   return (
     <View
       style={[
@@ -644,6 +735,20 @@ const OptionsScreen = () => {
                 dropdownVisible={themeDropdownVisible}
                 setDropdownVisible={setThemeDropdownVisible}
               />
+              <SettingItem
+                title="Measurement System"
+                subtitle="Choose between metric and imperial units"
+                type="dropdown"
+                dropdownValue={
+                  metricSystem === "metric" ? "Metric" : "Imperial"
+                }
+                dropdownOptions={["Metric", "Imperial"]}
+                onDropdownSelect={(system) =>
+                  setMetricSystem(system.toLowerCase() as MetricSystem)
+                }
+                dropdownVisible={metricDropdownVisible}
+                setDropdownVisible={setMetricDropdownVisible}
+              />
               <ActionButton
                 title="Request All Permissions"
                 onPress={handleRequestAllPermissions}
@@ -729,6 +834,9 @@ const OptionsScreen = () => {
 
       {/* Theme Dropdown Modal */}
       <ThemeDropdownModal />
+
+      {/* Metric System Dropdown Modal */}
+      <MetricDropdownModal />
 
       {/* Hidden Posts Modal */}
       <Modal
@@ -1011,6 +1119,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     fontFamily: "Inder",
+  },
+  dropdownOptionDescription: {
+    fontSize: 12,
+    textAlign: "center",
+    fontFamily: "Inder",
+    fontStyle: "italic",
   },
   actionButton: {
     paddingVertical: 15,

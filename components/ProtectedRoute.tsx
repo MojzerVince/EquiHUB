@@ -1,5 +1,5 @@
 import { useRouter, useSegments } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
 interface ProtectedRouteProps {
@@ -14,6 +14,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, loading, hasUserData } = useAuth();
   const router = useRouter();
   const segments = useSegments();
+  const lastNavigationRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (loading || hasUserData === null) {
@@ -48,26 +49,37 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Show welcome screen only if no user AND no stored user data
     const shouldShowWelcome = !user && !hasUserData;
 
+    // Helper function to navigate only if we haven't already navigated to this path
+    const navigateIfNeeded = (path: string, reason: string) => {
+      if (lastNavigationRef.current !== path) {
+        console.log(`ProtectedRoute: ${reason}`);
+        lastNavigationRef.current = path;
+        // Use setTimeout to avoid state updates during render
+        setTimeout(() => router.replace(path as any), 0);
+      }
+    };
+
     // If user is authenticated and trying to access protected content, allow it
     if (user && inTabsGroup) {
       console.log(
         "ProtectedRoute: User authenticated and in tabs - allowing access"
       );
+      lastNavigationRef.current = null; // Reset navigation tracking
       return;
     }
 
     // If user is NOT authenticated but still in tabs group, redirect to appropriate auth page
     if (!user && inTabsGroup) {
       if (shouldShowWelcome) {
-        console.log(
-          "ProtectedRoute: Not authenticated in tabs - redirecting to welcome"
+        navigateIfNeeded(
+          "/",
+          "Not authenticated in tabs - redirecting to welcome"
         );
-        router.replace("/");
       } else {
-        console.log(
-          "ProtectedRoute: Not authenticated in tabs - redirecting to login"
+        navigateIfNeeded(
+          "/login",
+          "Not authenticated in tabs - redirecting to login"
         );
-        router.replace("/login");
       }
       return;
     }
@@ -76,27 +88,25 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       // User is not authenticated and not in auth group or welcome
       if (shouldShowWelcome) {
         // First time user - redirect to welcome
-        console.log("ProtectedRoute: Redirecting to welcome (first time user)");
-        router.replace("/");
+        navigateIfNeeded("/", "Redirecting to welcome (first time user)");
       } else {
         // Returning user - redirect to login
-        console.log("ProtectedRoute: Redirecting to login (returning user)");
-        router.replace("/login");
+        navigateIfNeeded("/login", "Redirecting to login (returning user)");
       }
     } else if (user && (inAuthGroup || onWelcome)) {
       // User is authenticated and in auth group or welcome, redirect to main app
-      console.log("ProtectedRoute: Redirecting to tabs");
-      router.replace("/(tabs)");
+      navigateIfNeeded("/(tabs)", "Redirecting to tabs");
     } else if (!user && onWelcome && !shouldShowWelcome) {
       // User is on welcome but has stored data - redirect to login
-      console.log(
-        "ProtectedRoute: Redirecting to login (returning user on welcome)"
+      navigateIfNeeded(
+        "/login",
+        "Redirecting to login (returning user on welcome)"
       );
-      router.replace("/login");
     } else {
       console.log("ProtectedRoute: No action taken - staying on current route");
+      lastNavigationRef.current = null; // Reset navigation tracking
     }
-  }, [user, loading, segments, hasUserData]);
+  }, [user, loading, segments, hasUserData, router]);
 
   // Don't show anything while splash is active OR while checking stored data
   if (splashActive || hasUserData === null) {

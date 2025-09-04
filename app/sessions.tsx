@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
+import { useMetric } from "../contexts/MetricContext";
 import { useTheme } from "../contexts/ThemeContext";
 
 // Training session interface to match map.tsx
@@ -61,6 +62,9 @@ const SessionsScreen = () => {
 
   // Get the authenticated user
   const { user } = useAuth();
+
+  // Get metric system utilities
+  const { formatDistance, formatSpeed } = useMetric();
 
   const router = useRouter();
   const [trainingSessions, setTrainingSessions] = useState<TrainingSession[]>(
@@ -428,7 +432,7 @@ const SessionsScreen = () => {
             Distance
           </Text>
           <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
-            {item.distance ? `${(item.distance / 1000).toFixed(2)} km` : "N/A"}
+            {item.distance ? formatDistance(item.distance) : "N/A"}
           </Text>
         </View>
 
@@ -442,9 +446,7 @@ const SessionsScreen = () => {
             Avg Speed
           </Text>
           <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
-            {item.averageSpeed
-              ? `${(item.averageSpeed * 3.6).toFixed(1)} km/h`
-              : "N/A"}
+            {item.averageSpeed ? formatSpeed(item.averageSpeed) : "N/A"}
           </Text>
         </View>
 
@@ -458,7 +460,7 @@ const SessionsScreen = () => {
             Max Speed
           </Text>
           <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
-            {item.maxSpeed ? `${(item.maxSpeed * 3.6).toFixed(1)} km/h` : "N/A"}
+            {item.maxSpeed ? formatSpeed(item.maxSpeed) : "N/A"}
           </Text>
         </View>
       </View>
@@ -606,11 +608,19 @@ const SessionsScreen = () => {
               styles.weekNavButton,
               {
                 backgroundColor: currentTheme.colors.surface,
-                opacity: (earliestSessionDate && currentWeekOffset <= getWeekOffsetFromDate(earliestSessionDate)) ? 0.5 : 1,
+                opacity:
+                  earliestSessionDate &&
+                  currentWeekOffset <=
+                    getWeekOffsetFromDate(earliestSessionDate)
+                    ? 0.5
+                    : 1,
               },
             ]}
             onPress={handlePreviousWeek}
-            disabled={!!earliestSessionDate && currentWeekOffset <= getWeekOffsetFromDate(earliestSessionDate)}
+            disabled={
+              !!earliestSessionDate &&
+              currentWeekOffset <= getWeekOffsetFromDate(earliestSessionDate)
+            }
           >
             <Text
               style={[styles.weekNavText, { color: currentTheme.colors.text }]}

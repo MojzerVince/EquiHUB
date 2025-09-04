@@ -2,18 +2,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
+import { useMetric } from "../contexts/MetricContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { HorseAPI } from "../lib/horseAPI";
 import { Horse } from "../lib/supabase";
@@ -89,6 +90,7 @@ const SessionDetailsScreen = () => {
   const { sessionId } = useLocalSearchParams();
   const router = useRouter();
   const { currentTheme } = useTheme();
+  const { formatDistance, formatSpeed } = useMetric();
   const { user } = useAuth();
   const [session, setSession] = useState<TrainingSession | null>(null);
   const [horse, setHorse] = useState<Horse | null>(null);
@@ -138,7 +140,7 @@ const SessionDetailsScreen = () => {
       pathname: "/session-share",
       params: {
         sessionId: session.id,
-      }
+      },
     });
   };
 
@@ -453,9 +455,7 @@ const SessionDetailsScreen = () => {
                     { color: currentTheme.colors.primary },
                   ]}
                 >
-                  {session.distance
-                    ? `${(session.distance / 1000).toFixed(2)} km`
-                    : "N/A"}
+                  {session.distance ? formatDistance(session.distance) : "N/A"}
                 </Text>
                 <Text
                   style={[
@@ -475,7 +475,7 @@ const SessionDetailsScreen = () => {
                   ]}
                 >
                   {session.averageSpeed
-                    ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h`
+                    ? formatSpeed(session.averageSpeed)
                     : "N/A"}
                 </Text>
                 <Text
@@ -495,9 +495,7 @@ const SessionDetailsScreen = () => {
                     { color: currentTheme.colors.primary },
                   ]}
                 >
-                  {session.maxSpeed
-                    ? `${(session.maxSpeed * 3.6).toFixed(1)} km/h`
-                    : "N/A"}
+                  {session.maxSpeed ? formatSpeed(session.maxSpeed) : "N/A"}
                 </Text>
                 <Text
                   style={[
@@ -739,7 +737,7 @@ const SessionDetailsScreen = () => {
                             { color: currentTheme.colors.textSecondary },
                           ]}
                         >
-                          {(segment.distance / 1000).toFixed(2)} km
+                          {formatDistance(segment.distance)}
                         </Text>
                         <Text
                           style={[
@@ -747,7 +745,7 @@ const SessionDetailsScreen = () => {
                             { color: currentTheme.colors.textSecondary },
                           ]}
                         >
-                          {(segment.averageSpeed * 3.6).toFixed(1)} km/h
+                          {formatSpeed(segment.averageSpeed)}
                         </Text>
                       </View>
                     ))}

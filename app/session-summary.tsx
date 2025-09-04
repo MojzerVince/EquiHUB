@@ -10,17 +10,18 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useMetric } from "../contexts/MetricContext";
 import { useTheme } from "../contexts/ThemeContext";
 
 // Media item interface
 interface MediaItem {
   id: string;
   uri: string;
-  type: 'photo' | 'video';
+  type: "photo" | "video";
   timestamp: number;
   location?: {
     latitude: number;
@@ -53,6 +54,7 @@ interface TrainingSession {
 
 const SessionSummaryScreen = () => {
   const { currentTheme } = useTheme();
+  const { formatDistance, formatSpeed } = useMetric();
   const router = useRouter();
   const [session, setSession] = useState<TrainingSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -148,7 +150,10 @@ const SessionSummaryScreen = () => {
 
   const openInGoogleMaps = () => {
     if (!session || session.path.length === 0) {
-      Alert.alert("No Route", "No route data available to display in Google Maps");
+      Alert.alert(
+        "No Route",
+        "No route data available to display in Google Maps"
+      );
       return;
     }
 
@@ -156,34 +161,40 @@ const SessionSummaryScreen = () => {
       // Get start and end points
       const startPoint = session.path[0];
       const endPoint = session.path[session.path.length - 1];
-      
+
       // Create waypoints string for the route (using a subset of points to avoid URL length limits)
       const maxWaypoints = 8; // Google Maps URL limit
       const step = Math.max(1, Math.floor(session.path.length / maxWaypoints));
       const waypoints = session.path
-        .filter((_, index) => index % step === 0 && index > 0 && index < session.path.length - 1)
+        .filter(
+          (_, index) =>
+            index % step === 0 && index > 0 && index < session.path.length - 1
+        )
         .slice(0, maxWaypoints)
-        .map(point => `${point.latitude},${point.longitude}`)
-        .join('|');
+        .map((point) => `${point.latitude},${point.longitude}`)
+        .join("|");
 
       // Construct Google Maps URL
       let url = `https://www.google.com/maps/dir/?api=1`;
       url += `&origin=${startPoint.latitude},${startPoint.longitude}`;
       url += `&destination=${endPoint.latitude},${endPoint.longitude}`;
-      
+
       if (waypoints) {
         url += `&waypoints=${waypoints}`;
       }
-      
+
       url += `&travelmode=driving`;
 
       // Open in Google Maps
       Linking.openURL(url).catch((err) => {
-        console.error('Error opening Google Maps:', err);
-        Alert.alert("Error", "Could not open Google Maps. Please make sure you have Google Maps installed.");
+        console.error("Error opening Google Maps:", err);
+        Alert.alert(
+          "Error",
+          "Could not open Google Maps. Please make sure you have Google Maps installed."
+        );
       });
     } catch (error) {
-      console.error('Error creating Google Maps URL:', error);
+      console.error("Error creating Google Maps URL:", error);
       Alert.alert("Error", "Failed to open route in Google Maps");
     }
   };
@@ -390,9 +401,7 @@ const SessionSummaryScreen = () => {
                     { color: currentTheme.colors.primary },
                   ]}
                 >
-                  {session.distance
-                    ? `${(session.distance / 1000).toFixed(2)} km`
-                    : "N/A"}
+                  {session.distance ? formatDistance(session.distance) : "N/A"}
                 </Text>
                 <Text
                   style={[
@@ -412,7 +421,7 @@ const SessionSummaryScreen = () => {
                   ]}
                 >
                   {session.averageSpeed
-                    ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h`
+                    ? formatSpeed(session.averageSpeed)
                     : "N/A"}
                 </Text>
                 <Text
@@ -432,9 +441,7 @@ const SessionSummaryScreen = () => {
                     { color: currentTheme.colors.primary },
                   ]}
                 >
-                  {session.maxSpeed
-                    ? `${(session.maxSpeed * 3.6).toFixed(1)} km/h`
-                    : "N/A"}
+                  {session.maxSpeed ? formatSpeed(session.maxSpeed) : "N/A"}
                 </Text>
                 <Text
                   style={[
@@ -506,8 +513,8 @@ const SessionSummaryScreen = () => {
               >
                 Session Media ({session.media.length})
               </Text>
-              <ScrollView 
-                horizontal 
+              <ScrollView
+                horizontal
                 style={styles.mediaScrollView}
                 showsHorizontalScrollIndicator={false}
               >
@@ -518,8 +525,10 @@ const SessionSummaryScreen = () => {
                     onPress={() => {
                       // You can add a full-screen media viewer here if needed
                       Alert.alert(
-                        item.type === 'photo' ? 'Photo' : 'Video',
-                        `Captured at ${new Date(item.timestamp).toLocaleTimeString()}`
+                        item.type === "photo" ? "Photo" : "Video",
+                        `Captured at ${new Date(
+                          item.timestamp
+                        ).toLocaleTimeString()}`
                       );
                     }}
                   >
@@ -530,13 +539,18 @@ const SessionSummaryScreen = () => {
                     />
                     <View style={styles.mediaOverlay}>
                       <Text style={styles.mediaTypeIcon}>
-                        {item.type === 'photo' ? '📸' : '🎥'}
+                        {item.type === "photo" ? "📸" : "🎥"}
                       </Text>
                     </View>
-                    <Text style={[styles.mediaTime, { color: currentTheme.colors.textSecondary }]}>
-                      {new Date(item.timestamp).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                    <Text
+                      style={[
+                        styles.mediaTime,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      {new Date(item.timestamp).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </Text>
                   </TouchableOpacity>
@@ -602,7 +616,7 @@ const SessionSummaryScreen = () => {
                   />
                 </MapView>
               </View>
-              
+
               {/* Google Maps Button */}
               <View style={styles.mapActionContainer}>
                 <TouchableOpacity
@@ -614,7 +628,9 @@ const SessionSummaryScreen = () => {
                   activeOpacity={0.8}
                 >
                   <Text style={styles.googleMapsButtonIcon}>🗺️</Text>
-                  <Text style={styles.googleMapsButtonText}>View Route in Google Maps</Text>
+                  <Text style={styles.googleMapsButtonText}>
+                    View Route in Google Maps
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>

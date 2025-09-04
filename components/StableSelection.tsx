@@ -10,13 +10,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { StableAPI, StableWithMemberInfo } from "../lib/stableAPI";
+import { Stable, StableAPI } from "../lib/stableAPI";
 
 interface StableSelectionProps {
   visible: boolean;
   onClose: () => void;
-  onSelect: (stable: StableWithMemberInfo | null, joinCode?: string) => void;
-  selectedStable?: StableWithMemberInfo | null;
+  onSelect: (stable: Stable | null, joinCode?: string) => void;
+  selectedStable?: Stable | null;
 }
 
 const StableSelection: React.FC<StableSelectionProps> = ({
@@ -27,8 +27,8 @@ const StableSelection: React.FC<StableSelectionProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [joinCode, setJoinCode] = useState("");
-  const [stables, setStables] = useState<StableWithMemberInfo[]>([]);
-  const [popularStables, setPopularStables] = useState<StableWithMemberInfo[]>(
+  const [stables, setStables] = useState<Stable[]>([]);
+  const [popularStables, setPopularStables] = useState<Stable[]>(
     []
   );
   const [loading, setLoading] = useState(false);
@@ -74,7 +74,6 @@ const StableSelection: React.FC<StableSelectionProps> = ({
         undefined,
         undefined,
         undefined,
-        undefined,
         20,
         0
       );
@@ -114,7 +113,7 @@ const StableSelection: React.FC<StableSelectionProps> = ({
     }
   };
 
-  const handleSelectStable = (stable: StableWithMemberInfo) => {
+  const handleSelectStable = (stable: Stable) => {
     onSelect(stable);
     onClose();
   };
@@ -124,7 +123,7 @@ const StableSelection: React.FC<StableSelectionProps> = ({
     onClose();
   };
 
-  const renderStableItem = ({ item }: { item: StableWithMemberInfo }) => (
+  const renderStableItem = ({ item }: { item: Stable }) => (
     <TouchableOpacity
       style={styles.stableItem}
       onPress={() => handleSelectStable(item)}
@@ -137,22 +136,7 @@ const StableSelection: React.FC<StableSelectionProps> = ({
             ? `${item.city}, ${item.state_province}`
             : item.location || "Location not specified"}
         </Text>
-        {item.description && (
-          <Text style={styles.stableDescription} numberOfLines={2}>
-            {item.description}
-          </Text>
-        )}
         <View style={styles.stableStats}>
-          <Text style={styles.statText}>
-            {item.member_count} member
-            {item.member_count !== 1 ? <Text>s</Text> : <Text></Text>}
-          </Text>
-          {item.specialties && item.specialties.length > 0 && (
-            <Text style={styles.statText}>
-              • {item.specialties.slice(0, 2).join(", ")}
-              {item.specialties.length > 2 && <Text>...</Text>}
-            </Text>
-          )}
         </View>
         {item.join_code && (
           <Text style={styles.joinCode}>Code: {item.join_code}</Text>
