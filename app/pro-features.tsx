@@ -28,11 +28,16 @@ const ProFeaturesPage = () => {
 
   const loadSubscriptionStatus = async () => {
     try {
-      // Check current database status for debugging
-      await PaymentService.checkCurrentDatabaseStatus();
+      // Simply check if user is pro member from database
+      const isProMember = await PaymentService.isProMember();
       
-      // Get subscription status
-      const status = await PaymentService.getSubscriptionStatus();
+      // Create status object for compatibility with existing UI
+      const status = {
+        hasSubscription: isProMember,
+        isActive: isProMember,
+        status: isProMember ? 'active' : 'none'
+      };
+      
       setSubscriptionStatus(status);
       
       console.log('📱 Pro features page - subscription status loaded:', status);

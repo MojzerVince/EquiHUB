@@ -1,13 +1,12 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import {
-    endConnection,
-    finishTransaction,
-    getAvailablePurchases,
-    initConnection,
-    purchaseErrorListener,
-    purchaseUpdatedListener,
-    requestPurchase
+  endConnection,
+  finishTransaction,
+  getAvailablePurchases,
+  initConnection,
+  purchaseErrorListener,
+  purchaseUpdatedListener,
+  requestSubscription
 } from 'react-native-iap';
 import { ProfileAPIBase64 } from './profileAPIBase64';
 import { getSupabase } from './supabase';
@@ -40,7 +39,6 @@ export interface PaymentResult {
 
 class PaymentService {
   private static instance: PaymentService;
-  private currentSubscription: UserSubscription | null = null;
   private purchaseUpdateListener: any = null;
   private purchaseErrorListener: any = null;
   private isIAPInitialized: boolean = false;
@@ -116,28 +114,13 @@ class PaymentService {
       // Verify the purchase (you should implement server-side verification)
       // For now, we'll trust the purchase
       
-      // Create subscription from purchase
-      const now = new Date();
-      const endDate = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days
-      
-      const subscription: UserSubscription = {
-        id: purchase.transactionId || `purchase_${Date.now()}`,
-        plan: this.getSubscriptionPlans()[0],
-        status: 'active',
-        startDate: now.toISOString(),
-        endDate: endDate.toISOString(),
-        trialUsed: await this.hasUsedTrial(),
-        platform: Platform.OS as 'ios' | 'android',
-        platformSubscriptionId: purchase.transactionId
-      };
-
-      // Save subscription (this will also update database)
-      await this.saveSubscription(subscription);
+      // Simply update the database to mark user as pro member
+      await this.updateDatabaseProStatus(true);
       
       // Finish the transaction
       await finishTransaction({ purchase, isConsumable: false });
       
-      console.log('✅ Purchase processed successfully');
+      console.log('✅ Purchase processed successfully - user is now pro member');
     } catch (error) {
       console.error('❌ Error processing purchase update:', error);
     }
@@ -169,52 +152,122 @@ class PaymentService {
     ];
   }
 
-  // Check if user has used trial before
+  // Check if user has used trial before by checking database
   public async hasUsedTrial(): Promise<boolean> {
     try {
-      const trialUsed = await AsyncStorage.getItem('trial_used');
-      return trialUsed === 'true';
+      const supabase = getSupabase();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('Cannot check trial status - no authenticated user');
+        return false;
+      }
+
+      // Check if user has trial_used field set to true in profiles table
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('trial_used')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error checking trial status from database:', error);
+        return false;
+      }
+
+      return data?.trial_used === true;
     } catch (error) {
       console.error('Error checking trial status:', error);
       return false;
     }
   }
 
-  // Mark trial as used
+  // Mark trial as used in database
   private async markTrialAsUsed(): Promise<void> {
     try {
-      await AsyncStorage.setItem('trial_used', 'true');
+      const supabase = getSupabase();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('Cannot mark trial as used - no authenticated user');
+        return;
+      }
+
+      // Update trial_used field in profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .update({ trial_used: true })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error marking trial as used in database:', error);
+      } else {
+        console.log('Trial marked as used in database');
+      }
     } catch (error) {
       console.error('Error marking trial as used:', error);
     }
   }
 
-  // Get current subscription
-  public async getCurrentSubscription(): Promise<UserSubscription | null> {
+  // Reset trial status (for testing purposes)
+  public async resetTrialStatus(): Promise<void> {
     try {
-      const subscriptionData = await AsyncStorage.getItem('current_subscription');
-      if (subscriptionData) {
-        this.currentSubscription = JSON.parse(subscriptionData);
-        return this.currentSubscription;
+      const supabase = getSupabase();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('Cannot reset trial status - no authenticated user');
+        return;
       }
-      return null;
+
+      // Reset trial_used field and pro status in profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          trial_used: false,
+          is_pro_member: false 
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error resetting trial status in database:', error);
+      } else {
+        console.log('✅ Trial status reset in database - user can use trial again');
+      }
     } catch (error) {
-      console.error('Error getting current subscription:', error);
-      return null;
+      console.error('Error resetting trial status:', error);
     }
   }
 
-  // Save subscription and update database
-  private async saveSubscription(subscription: UserSubscription): Promise<void> {
+  // Check if user is pro member by checking database directly
+  public async isProMember(): Promise<boolean> {
     try {
-      await AsyncStorage.setItem('current_subscription', JSON.stringify(subscription));
-      this.currentSubscription = subscription;
+      const supabase = getSupabase();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       
-      // Update database pro status based on subscription status
-      const isActive = subscription.status === 'active' || subscription.status === 'trial';
-      await this.updateDatabaseProStatus(isActive);
+      if (authError || !user) {
+        console.error('Cannot check pro status - no authenticated user');
+        return false;
+      }
+
+      // Get is_pro_member status directly from database
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_pro_member')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error checking pro status from database:', error);
+        return false;
+      }
+
+      const isProMember = data?.is_pro_member === true;
+      console.log('📱 Pro status from database:', isProMember);
+      return isProMember;
     } catch (error) {
-      console.error('Error saving subscription:', error);
+      console.error('Error checking pro status:', error);
+      return false;
     }
   }
 
@@ -267,9 +320,6 @@ class PaymentService {
         console.log('✅ Cleared profile cache');
       }
       
-      // Force sync with database
-      await this.syncWithDatabase();
-      
       console.log('✅ App refresh completed');
       
     } catch (error) {
@@ -282,17 +332,8 @@ class PaymentService {
     try {
       console.log('🔄 Force refreshing subscription status...');
       
-      // Check current database status first
+      // Check current database status for debugging
       await this.checkCurrentDatabaseStatus();
-      
-      // Sync with database first
-      await this.syncWithDatabase();
-      
-      // Check database status again after sync
-      await this.checkCurrentDatabaseStatus();
-      
-      // Refresh app context
-      await this.refreshAppAfterSubscriptionChange();
       
       console.log('✅ Subscription status force refresh completed');
     } catch (error) {
@@ -356,31 +397,15 @@ class PaymentService {
         };
       }
 
-      const now = new Date();
-      const endDate = new Date(now.getTime() + (plan.trialPeriod * 24 * 60 * 60 * 1000));
-
-      const subscription: UserSubscription = {
-        id: `trial_${Date.now()}`,
-        plan,
-        status: 'trial',
-        startDate: now.toISOString(),
-        endDate: endDate.toISOString(),
-        trialUsed: true,
-        platform: Platform.OS as 'ios' | 'android'
-      };
-
-      // Save subscription (this will also update the database)
-      await this.saveSubscription(subscription);
+      // Activate trial by setting is_pro_member to true and marking trial as used
+      await this.updateDatabaseProStatus(true);
       await this.markTrialAsUsed();
 
-      // Refresh the app to reflect the new pro status
-      await this.refreshAppAfterSubscriptionChange();
-
-      console.log('✅ Trial started successfully, database updated, app refreshed');
+      console.log('✅ Trial started successfully - user is now pro member');
 
       return {
         success: true,
-        subscriptionId: subscription.id
+        subscriptionId: `trial_${Date.now()}`
       };
     } catch (error) {
       console.error('Error starting trial:', error);
@@ -428,14 +453,10 @@ class PaymentService {
         };
       }
 
-      // For iOS subscriptions, use the new API format
-      await requestPurchase({
-        request: {
-          ios: {
-            sku: planId,
-          },
-        },
-        type: 'subs', // subscription type
+      // For iOS subscriptions, use requestSubscription with correct format
+      await requestSubscription({
+        sku: planId,
+        andDangerouslyFinishTransactionAutomaticallyIOS: false
       });
       
       // The purchase will be handled by the purchase update listener
@@ -488,96 +509,64 @@ class PaymentService {
   // Android Google Play purchase (requires react-native-iap)
   private async purchaseAndroid(planId: string): Promise<PaymentResult> {
     try {
-      console.log('Starting Android subscription purchase for:', planId);
+      console.log('🤖 Starting Android subscription purchase for:', planId);
       
-      // For Android subscriptions, use the Google Play format
-      await requestPurchase({
-        request: {
-          android: {
-            skus: [planId],
-          },
-        },
-        type: 'subs', // subscription type
+      // Initialize IAP if not already done
+      const initialized = await this.initializeIAP();
+      if (!initialized) {
+        return {
+          success: false,
+          error: 'Failed to initialize Google Play connection'
+        };
+      }
+      
+      // For Android subscriptions, use requestSubscription with correct format
+      await requestSubscription({
+        sku: planId
       });
 
       // Purchase success is handled by the purchase listener
-      // Return success since requestPurchase doesn't throw on user cancellation
+      console.log('✅ Android subscription purchase initiated successfully');
+      
       return {
-        success: true
+        success: true,
+        subscriptionId: `pending_${Date.now()}`
       };
-    } catch (error) {
-      console.error('Android purchase failed:', error);
-      return {
-        success: false,
-        error: `Android purchase failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      };
+    } catch (error: any) {
+      console.error('❌ Android purchase error:', error);
+      
+      // Handle specific error cases
+      if (error.code === 'E_USER_CANCELLED') {
+        return {
+          success: false,
+          error: 'Purchase was cancelled by user'
+        };
+      } else if (error.code === 'E_NETWORK_ERROR') {
+        return {
+          success: false,
+          error: 'Network error. Please check your internet connection and try again.'
+        };
+      } else {
+        return {
+          success: false,
+          error: error.message || 'Android purchase failed'
+        };
+      }
+    } finally {
+      // Clean up IAP connection after purchase attempt
+      setTimeout(() => {
+        this.cleanupIAP();
+      }, 5000);
     }
   }
 
-  // Check if subscription is active by combining local storage and database
+  // Check if subscription is active by checking database directly
   public async isSubscriptionActive(): Promise<boolean> {
-    try {
-      // First check local subscription
-      const subscription = await this.getCurrentSubscription();
-      if (subscription) {
-        const now = new Date();
-        const endDate = new Date(subscription.endDate);
-        const locallyActive = subscription.status === 'active' || 
-                             (subscription.status === 'trial' && now < endDate);
-        
-        if (locallyActive) {
-          // Verify with database that user is marked as pro
-          await this.syncWithDatabase();
-          return true;
-        }
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Error checking subscription status:', error);
-      return false;
-    }
+    return await this.isProMember();
   }
 
   // Sync local subscription status with database
-  private async syncWithDatabase(): Promise<void> {
-    try {
-      const supabase = getSupabase();
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        console.error('Cannot sync with database - no authenticated user');
-        return;
-      }
-
-      // Check current database status
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('is_pro_member')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) {
-        console.error('Error fetching profile for sync:', profileError);
-        return;
-      }
-
-      const currentSubscription = await this.getCurrentSubscription();
-      if (currentSubscription) {
-        const shouldBePro = await this.isSubscriptionActive();
-        
-        // If there's a mismatch, update the database
-        if (profile.is_pro_member !== shouldBePro) {
-          console.log(`🔄 Syncing database: is_pro_member should be ${shouldBePro}`);
-          await this.updateDatabaseProStatus(shouldBePro);
-        }
-      }
-    } catch (error) {
-      console.error('Error syncing with database:', error);
-    }
-  }
-
-  // Get subscription status
+  // Get subscription status based on database is_pro_member field
   public async getSubscriptionStatus(): Promise<{
     hasSubscription: boolean;
     isActive: boolean;
@@ -585,42 +574,23 @@ class PaymentService {
     daysRemaining?: number;
     plan?: SubscriptionPlan;
   }> {
-    const subscription = await this.getCurrentSubscription();
+    const isProMember = await this.isProMember();
+    const hasUsedTrial = await this.hasUsedTrial();
     
-    if (!subscription) {
-      return {
-        hasSubscription: false,
-        isActive: false,
-        status: 'none'
-      };
-    }
-
-    const now = new Date();
-    const endDate = new Date(subscription.endDate);
-    const isActive = subscription.status === 'active' || 
-                     (subscription.status === 'trial' && now < endDate);
-    
-    const daysRemaining = isActive ? 
-      Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-
     return {
-      hasSubscription: true,
-      isActive,
-      status: subscription.status,
-      daysRemaining,
-      plan: subscription.plan
+      hasSubscription: isProMember,
+      isActive: isProMember,
+      status: isProMember ? (hasUsedTrial ? 'active' : 'trial') : 'none',
+      plan: isProMember ? this.getSubscriptionPlans()[0] : undefined
     };
   }
 
-  // Cancel subscription
+  // Cancel subscription by removing pro status
   public async cancelSubscription(): Promise<boolean> {
     try {
-      const subscription = await this.getCurrentSubscription();
-      if (!subscription) return false;
-
-      subscription.status = 'cancelled';
-      await this.saveSubscription(subscription);
-      
+      // Simply set is_pro_member to false in database
+      await this.updateDatabaseProStatus(false);
+      console.log('✅ Subscription cancelled - user is no longer pro member');
       return true;
     } catch (error) {
       console.error('Error cancelling subscription:', error);
@@ -631,16 +601,25 @@ class PaymentService {
   // Restore purchases (for iOS/Android)
   public async restorePurchases(): Promise<PaymentResult> {
     try {
-      console.log('Restoring purchases...');
+      console.log('🔄 Restoring purchases...');
+      
+      // Initialize IAP connection first
+      const initialized = await this.initializeIAP();
+      if (!initialized) {
+        return {
+          success: false,
+          error: 'Failed to initialize store connection'
+        };
+      }
       
       if (Platform.OS === 'ios') {
         // For iOS, use getAvailablePurchases to restore
         const availablePurchases = await getAvailablePurchases();
-        console.log('Available purchases found:', availablePurchases.length);
+        console.log(`📱 Found ${availablePurchases.length} available purchases to restore`);
         
         // Process the restored purchases
         for (const purchase of availablePurchases) {
-          console.log('Processing restored purchase:', purchase.productId);
+          console.log('🔄 Processing restored purchase:', purchase.productId);
           await this.handlePurchaseUpdate(purchase);
         }
         
@@ -651,11 +630,11 @@ class PaymentService {
       } else if (Platform.OS === 'android') {
         // For Android, also use getAvailablePurchases
         const availablePurchases = await getAvailablePurchases();
-        console.log('Available purchases found:', availablePurchases.length);
+        console.log(`🤖 Found ${availablePurchases.length} available purchases to restore`);
         
         // Process the restored purchases
         for (const purchase of availablePurchases) {
-          console.log('Processing restored purchase:', purchase.productId);
+          console.log('🔄 Processing restored purchase:', purchase.productId);
           await this.handlePurchaseUpdate(purchase);
         }
         
@@ -670,11 +649,16 @@ class PaymentService {
         error: 'Platform not supported'
       };
     } catch (error) {
-      console.error('Failed to restore purchases:', error);
+      console.error('❌ Failed to restore purchases:', error);
       return {
         success: false,
         error: `Failed to restore purchases: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
+    } finally {
+      // Clean up after restore attempt
+      setTimeout(() => {
+        this.cleanupIAP();
+      }, 3000);
     }
   }
 
