@@ -111,6 +111,19 @@ export default function SessionShareScreen() {
     }
   }, [sessionId]);
 
+  // Debug session state changes
+  useEffect(() => {
+    console.log("🔍 Session state changed:", {
+      hasSession: !!session,
+      sessionId: session?.id,
+      duration: session?.duration,
+      distance: session?.distance,
+      averageSpeed: session?.averageSpeed,
+      horseName: session?.horseName,
+      loading: loading
+    });
+  }, [session, loading]);
+
   const loadSessionData = async () => {
     try {
       setLoading(true);
@@ -135,6 +148,23 @@ export default function SessionShareScreen() {
 
       // Found session - setting state
       setSession(found);
+      
+      // Debug logging for session data
+      console.log("📊 Session data loaded:", {
+        id: found.id,
+        horseName: found.horseName,
+        duration: found.duration,
+        distance: found.distance,
+        averageSpeed: found.averageSpeed,
+        hasPath: found.path?.length > 0,
+        pathLength: found.path?.length,
+        durationCheck: !!found.duration,
+        distanceCheck: !!found.distance,
+        avgSpeedCheck: !!found.averageSpeed,
+        durationType: typeof found.duration,
+        distanceType: typeof found.distance,
+        avgSpeedType: typeof found.averageSpeed
+      });
 
       if (found) {
         // Set default post text with horse name
@@ -643,7 +673,9 @@ export default function SessionShareScreen() {
               <Ionicons name="time-outline" size={24} color="#007AFF" />
             </View>
             <Text style={styles.statValue}>
-              {session.duration ? formatDuration(session.duration) : "Unknown"}
+              {session?.duration !== undefined && session?.duration !== null
+                ? formatDuration(session.duration)
+                : "N/A"}
             </Text>
             <Text style={styles.statLabel}>Duration</Text>
           </View>
@@ -653,7 +685,9 @@ export default function SessionShareScreen() {
               <Ionicons name="navigate-outline" size={24} color="#007AFF" />
             </View>
             <Text style={styles.statValue}>
-              {session.distance ? formatDistance(session.distance) : "Unknown"}
+              {session?.distance !== undefined && session?.distance !== null
+                ? formatDistance(session.distance)
+                : "N/A"}
             </Text>
             <Text style={styles.statLabel}>Distance</Text>
           </View>
@@ -663,9 +697,9 @@ export default function SessionShareScreen() {
               <Ionicons name="speedometer-outline" size={24} color="#007AFF" />
             </View>
             <Text style={styles.statValue}>
-              {session.averageSpeed
+              {session?.averageSpeed !== undefined && session?.averageSpeed !== null
                 ? formatSpeed(session.averageSpeed)
-                : "Unknown"}
+                : "N/A"}
             </Text>
             <Text style={styles.statLabel}>Avg Speed</Text>
           </View>
@@ -674,7 +708,7 @@ export default function SessionShareScreen() {
             <View style={styles.statIconContainer}>
               <Ionicons name="person-outline" size={24} color="#007AFF" />
             </View>
-            <Text style={styles.statValue}>{session.horseName}</Text>
+            <Text style={styles.statValue}>{session?.horseName || "N/A"}</Text>
             <Text style={styles.statLabel}>Horse</Text>
           </View>
         </View>
@@ -1037,7 +1071,7 @@ export default function SessionShareScreen() {
                     <Ionicons name="location" size={60} color={theme.accent} />
                   </View>
                   <Text style={[styles.fallbackTitle, { color: theme.accent }]}>
-                    Training Session
+                    GPS Session
                   </Text>
                   <Text
                     style={[
@@ -1053,125 +1087,172 @@ export default function SessionShareScreen() {
 
             {/* Overlay with Session Stats */}
             <View style={styles.mapOverlay}>
-              {/* Top Left - App Branding */}
+              {/* Top Left - App Branding (Redesigned) */}
               <View style={styles.mapTopLeft}>
-                <View style={styles.mapBrandingContainer}>
-                  <Text style={styles.mapBrandText}>EquiHub</Text>
+                <View style={styles.mapBrandingContainerNew}>
+                  <View style={styles.mapBrandIconContainer}>
+                    <Ionicons name="logo-buffer" size={16} color="#FFFFFF" />
+                  </View>
+                  <Text style={styles.mapBrandTextNew}>EquiHub</Text>
                 </View>
               </View>
 
-              {/* Top Right - Horse Info */}
+              {/* Top Right - Horse Info (Redesigned) */}
               <View style={styles.mapTopRight}>
-                <View style={styles.mapHorseContainer}>
+                <View style={styles.mapHorseContainerNew}>
                   <Image
                     source={
                       horse?.image_url
                         ? { uri: horse.image_url }
                         : require("../assets/images/horses/pony.jpg")
                     }
-                    style={styles.mapHorseImage}
+                    style={styles.mapHorseImageNew}
                   />
-                  <Text style={styles.mapHorseName}>{session.horseName}</Text>
+                  <Text style={styles.mapHorseNameNew}>{session.horseName}</Text>
                 </View>
               </View>
 
-              {/* Center - Training Session Text */}
+              {/* Center - Session Stats Container (Moved from bottom) */}
               <View style={styles.mapCenter}>
-                <Text style={styles.mapSubtitle}>Training Session</Text>
-              </View>
-
-              {/* Bottom - Stats Container */}
-              <View style={styles.mapBottom}>
-                <View style={styles.mapStatsContainer}>
-                  <View style={styles.mapStats}>
-                    <View style={styles.mapStatItem}>
-                      <Ionicons name="time" size={20} color="#FFFFFF" />
-                      <Text style={styles.mapStatLabel}>Duration</Text>
-                      <Text style={styles.mapStatValue}>
-                        {session.duration
+                <View style={styles.mapSessionStatsContainer}>
+                  <View style={styles.mapSessionHeader}>
+                    <Text style={styles.mapSessionTitle}>Training Session</Text>
+                  </View>
+                  <View style={styles.mapSessionStats}>
+                    <View style={styles.mapSessionStatItem}>
+                      <View style={styles.mapStatIconContainer}>
+                        <Ionicons name="time-outline" size={16} color="#FFFFFF" />
+                      </View>
+                      <Text style={styles.mapSessionStatLabel}>Duration</Text>
+                      <Text style={styles.mapSessionStatValue}>
+                        {session?.duration !== undefined && session?.duration !== null
                           ? formatDuration(session.duration)
-                          : "Unknown"}
+                          : "N/A"}
                       </Text>
                     </View>
 
-                    <View style={styles.mapStatItem}>
-                      <Ionicons name="location" size={20} color="#FFFFFF" />
-                      <Text style={styles.mapStatLabel}>Distance</Text>
-                      <Text style={styles.mapStatValue}>
-                        {session.distance
+                    <View style={styles.mapSessionStatItem}>
+                      <View style={styles.mapStatIconContainer}>
+                        <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
+                      </View>
+                      <Text style={styles.mapSessionStatLabel}>Distance</Text>
+                      <Text style={styles.mapSessionStatValue}>
+                        {session?.distance !== undefined && session?.distance !== null
                           ? formatDistance(session.distance)
-                          : "Unknown"}
+                          : "N/A"}
                       </Text>
                     </View>
 
-                    <View style={styles.mapStatItem}>
-                      <Ionicons name="speedometer" size={20} color="#FFFFFF" />
-                      <Text style={styles.mapStatLabel}>Avg Speed</Text>
-                      <Text style={styles.mapStatValue}>
-                        {session.averageSpeed
+                    <View style={styles.mapSessionStatItem}>
+                      <View style={styles.mapStatIconContainer}>
+                        <Ionicons name="speedometer-outline" size={16} color="#FFFFFF" />
+                      </View>
+                      <Text style={styles.mapSessionStatLabel}>Avg Speed</Text>
+                      <Text style={styles.mapSessionStatValue}>
+                        {session?.averageSpeed !== undefined && session?.averageSpeed !== null
                           ? formatSpeed(session.averageSpeed)
-                          : "Unknown"}
+                          : "N/A"}
                       </Text>
                     </View>
                   </View>
                 </View>
+              </View>
+
+              {/* Bottom - Empty space (stats moved to center) */}
+              <View style={styles.mapBottom}>
+                {/* Empty - stats moved to center */}
               </View>
             </View>
           </View>
         </View>
       </ScrollView>
 
-      {/* Bottom Share Buttons */}
+      {/* Bottom Share Buttons - Redesigned */}
       <View
         style={[
-          styles.bottomButtonsContainer,
-          { backgroundColor: theme.surface, borderTopColor: theme.border },
+          styles.bottomContainerNew,
+          { backgroundColor: theme.surface },
         ]}
       >
-        <TouchableOpacity
-          onPress={shareToInstagramStory}
-          style={[
-            styles.instagramButton,
-            { backgroundColor: "#E1306C" },
-            isSharing && styles.disabledButton,
-          ]}
-          disabled={isSharing}
-        >
-          {isSharing ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <>
-              <Ionicons name="logo-instagram" size={20} color="#FFFFFF" />
-              <Text style={styles.instagramButtonText}>Share Map View</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {/* Action Header */}
+        <View style={styles.actionHeader}>
+          <Text style={[styles.actionTitle, { color: theme.text }]}>
+            Share Your Session
+          </Text>
+          <Text style={[styles.actionSubtitle, { color: theme.textSecondary }]}>
+            Choose how you'd like to share your training
+          </Text>
+        </View>
 
-        <TouchableOpacity
-          onPress={sharePost}
-          style={[
-            styles.communityButton,
-            { backgroundColor: theme.accent },
-            isSharing && styles.disabledButton,
-          ]}
-          disabled={isSharing}
-        >
-          {isSharing ? (
-            <ActivityIndicator size="small" color={theme.background} />
-          ) : (
-            <>
-              <Ionicons name="people" size={20} color={theme.background} />
-              <Text
-                style={[
-                  styles.communityButtonText,
-                  { color: theme.background },
-                ]}
-              >
-                Share to Community
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {/* Share Options */}
+        <View style={styles.shareOptionsContainer}>
+          {/* Instagram Story Option */}
+          <TouchableOpacity
+            onPress={shareToInstagramStory}
+            style={[
+              styles.shareOptionCard,
+              { backgroundColor: theme.background, borderColor: theme.border },
+              isSharing && styles.disabledButton,
+            ]}
+            disabled={isSharing}
+          >
+            <View style={styles.shareOptionContent}>
+              <View style={[styles.shareIconContainer, { backgroundColor: "#E1306C20" }]}>
+                <Ionicons name="logo-instagram" size={24} color="#E1306C" />
+              </View>
+              <View style={styles.shareOptionText}>
+                <Text style={[styles.shareOptionTitle, { color: theme.text }]}>
+                  Instagram Story
+                </Text>
+                <Text style={[styles.shareOptionDesc, { color: theme.textSecondary }]}>
+                  Share route map as story
+                </Text>
+              </View>
+              <View style={styles.shareArrow}>
+                <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+              </View>
+            </View>
+            {isSharing && (
+              <View style={styles.loadingOverlayCard}>
+                <ActivityIndicator size="small" color="#E1306C" />
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Community Share Option */}
+          <TouchableOpacity
+            onPress={sharePost}
+            style={[
+              styles.shareOptionCard,
+              styles.primaryShareCard,
+              { backgroundColor: theme.accent, borderColor: theme.accent },
+              isSharing && styles.disabledButton,
+            ]}
+            disabled={isSharing}
+          >
+            <View style={styles.shareOptionContent}>
+              <View style={[styles.shareIconContainer, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+                <Ionicons name="people" size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.shareOptionText}>
+                <Text style={[styles.shareOptionTitle, { color: "#FFFFFF" }]}>
+                  Community Feed
+                </Text>
+                <Text style={[styles.shareOptionDesc, { color: "rgba(255,255,255,0.8)" }]}>
+                  Share with EquiHub riders
+                </Text>
+              </View>
+              <View style={styles.shareArrow}>
+                <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+              </View>
+            </View>
+            {isSharing && (
+              <View style={styles.loadingOverlayCard}>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Full Screen Loading Overlay */}
@@ -1375,6 +1456,111 @@ const styles = StyleSheet.create({
     marginBottom: 35,
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
+  },
+
+  // New Bottom Container Styles
+  bottomContainerNew: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 40,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  actionHeader: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  actionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  actionSubtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    opacity: 0.8,
+  },
+  shareOptionsContainer: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  shareOptionCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+    position: "relative",
+  },
+  primaryShareCard: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  shareOptionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 18,
+  },
+  shareIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  shareOptionText: {
+    flex: 1,
+  },
+  shareOptionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    marginBottom: 2,
+  },
+  shareOptionDesc: {
+    fontSize: 13,
+    opacity: 0.8,
+  },
+  shareArrow: {
+    marginLeft: 8,
+  },
+  loadingOverlayCard: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 16,
+  },
+  quickStatsSummary: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+  },
+  quickStatsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  quickStat: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  quickStatText: {
+    fontSize: 12,
+    fontWeight: "500",
   },
   instagramButton: {
     flex: 1,
@@ -1666,6 +1852,133 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
+  
+  // New Redesigned Map Overlay Styles
+  mapBrandingContainerNew: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  mapBrandIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  mapBrandTextNew: {
+    fontSize: 16,
+    fontWeight: "700",
+    fontFamily: "Inder",
+    color: "#FFFFFF",
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  mapHorseContainerNew: {
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    minWidth: 80,
+  },
+  mapHorseImageNew: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginBottom: 4,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  mapHorseNameNew: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textAlign: "center",
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  mapSessionStatsContainer: {
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  mapSessionHeader: {
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  mapSessionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  mapSessionStats: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  mapSessionStatItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  mapStatIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  mapSessionStatLabel: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginBottom: 2,
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+    opacity: 0.9,
+  },
+  mapSessionStatValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
+    fontFamily: "Inder",
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
   mapHorseContainer: {
     backgroundColor: "rgba(128, 128, 128, 0.5)",
     borderRadius: 8,
@@ -1696,19 +2009,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 100, // Add padding to avoid overlap with top corners
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
   mapBottom: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
+    position: "relative",
+    marginLeft: "auto",
+    marginRight: "auto",
     alignItems: "center",
+    width: "75%", 
   },
   mapStatsContainer: {
     backgroundColor: "rgba(128, 128, 128, 0.5)",
     borderRadius: 12,
-    padding: 16,
+    padding: 2,
   },
   mapHeader: {
     alignItems: "center",
