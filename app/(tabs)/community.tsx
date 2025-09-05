@@ -242,47 +242,6 @@ export default function CommunityScreen() {
     return undefined;
   };
 
-  const mockFriends: User[] = [
-    {
-      id: "friend1",
-      name: "Alex Thompson",
-      avatar: getAvatarUrl(undefined), // Use default avatar
-      isOnline: true,
-      isFriend: true,
-    },
-    {
-      id: "friend2",
-      name: "Jessica Lee",
-      avatar: getAvatarUrl(undefined), // Use default avatar
-      isOnline: false,
-      isFriend: true,
-    },
-    {
-      id: "friend3",
-      name: "David Kim",
-      avatar: getAvatarUrl(undefined), // Use default avatar
-      isOnline: true,
-      isFriend: true,
-    },
-  ];
-
-  const mockSearchUsers: User[] = [
-    {
-      id: "search1",
-      name: "Sophie Miller",
-      avatar: getAvatarUrl(undefined), // Use default avatar
-      isOnline: false,
-      isFriend: false,
-    },
-    {
-      id: "search2",
-      name: "Ryan Taylor",
-      avatar: getAvatarUrl(undefined), // Use default avatar
-      isOnline: true,
-      isFriend: false,
-    },
-  ];
-
   const [suggestedUsers, setSuggestedUsers] = useState<UserWithStable[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [addingFriends, setAddingFriends] = useState<Set<string>>(new Set());
