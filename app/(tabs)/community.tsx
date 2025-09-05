@@ -2853,6 +2853,8 @@ export default function CommunityScreen() {
                             styles.friendDisplayName,
                             { color: currentTheme.colors.text },
                           ]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
                         >
                           {friend.name}
                         </Text>
@@ -2861,14 +2863,21 @@ export default function CommunityScreen() {
                             styles.friendDisplayDescription,
                             { color: currentTheme.colors.textSecondary },
                           ]}
+                          numberOfLines={2}
+                          ellipsizeMode="tail"
                         >
-                          {friend.description || "No description"}
+                          {friend.description && friend.description.trim() 
+                            ? friend.description.length > 60 
+                              ? friend.description.substring(0, 60) + "..."
+                              : friend.description
+                            : "Equestrian enthusiast"}
                         </Text>
                       </View>
                     </View>
                     <TouchableOpacity
                       style={styles.removeFriendButton}
                       onPress={() => handleRemoveFriend(friend)}
+                      activeOpacity={0.8}
                     >
                       <Text style={styles.removeFriendButtonText}>Remove</Text>
                     </TouchableOpacity>
@@ -3755,59 +3764,83 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 15,
-    marginBottom: 15,
-    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.1)",
+    borderColor: "rgba(51, 92, 103, 0.1)",
   },
   friendInfoContainer: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    marginRight: 12,
   },
   friendAvatarImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: "#335C67",
   },
   defaultFriendAvatar: {
     backgroundColor: "#335C67",
     justifyContent: "center",
     alignItems: "center",
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: "#2A4A52",
   },
   defaultFriendAvatarText: {
     color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   friendDetailsContainer: {
     flex: 1,
+    justifyContent: "center",
   },
   friendDisplayName: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 6,
+    color: "#2C3E50",
+    letterSpacing: 0.3,
   },
   friendDisplayDescription: {
     fontSize: 14,
-    opacity: 0.7,
+    color: "#7F8C8D",
+    lineHeight: 18,
   },
   removeFriendButton: {
-    backgroundColor: "#FF6B6B",
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: "#E74C3C",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: "#E74C3C",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    minWidth: 80,
+    alignItems: "center",
   },
   removeFriendButtonText: {
     color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   friendsEmptyStateContainer: {
     flex: 1,
