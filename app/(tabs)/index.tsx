@@ -4,25 +4,24 @@ import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDialog } from "../../contexts/DialogContext";
 import { useMetric } from "../../contexts/MetricContext";
 import { useTheme } from "../../contexts/ThemeContext";
-import { apiCache, CacheKeys } from "../../lib/apiCache";
-import API_CONFIG from "../../lib/apiConfig";
 import { HorseAPI } from "../../lib/horseAPI";
+import PaymentService from "../../lib/paymentService";
 import { Horse } from "../../lib/supabase";
 
 // Dropdown options
@@ -217,49 +216,13 @@ const MyHorsesScreen = () => {
       return;
     }
 
-    const cacheKey = CacheKeys.profile(user.id);
-
-    // Check cache first to prevent excessive API calls
-    const cachedProfile = apiCache.get<{ is_pro_member: boolean }>(cacheKey);
-    if (cachedProfile && typeof cachedProfile.is_pro_member === "boolean") {
-      setIsProMember(cachedProfile.is_pro_member);
-      return;
-    }
-
     setCheckingProStatus(true);
     try {
-      // Use centralized API config
-      const apiUrl = `${API_CONFIG.SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=is_pro_member`;
-
-      try {
-        const response = await fetch(apiUrl, {
-          headers: API_CONFIG.getHeaders(),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.length > 0) {
-            const proStatus = data[0].is_pro_member || false;
-            setIsProMember(proStatus);
-
-            // Cache the result to prevent future calls
-            apiCache.setByType(
-              cacheKey,
-              { is_pro_member: proStatus },
-              "profiles"
-            );
-            return; // Success, exit early
-          } else {
-            setIsProMember(false);
-            return;
-          }
-        } else {
-          setIsProMember(false);
-        }
-      } catch (restError) {
-        setIsProMember(false);
-      }
+      // Use PaymentService to get pro status directly from database
+      const proStatus = await PaymentService.isProMember();
+      setIsProMember(proStatus);
     } catch (error) {
+      console.error('Error checking pro membership:', error);
       // Default to non-Pro if everything fails
       setIsProMember(false);
     } finally {
@@ -444,6 +407,8 @@ const MyHorsesScreen = () => {
       setHorsesLoaded(false); // Reset the loaded flag to allow reloading
       // On refresh, use API to get fresh data
       await loadHorsesFromAPI(user.id);
+      // Also refresh pro membership status
+      await checkProMembership();
       setRefreshing(false);
     }
   };
