@@ -1826,9 +1826,9 @@ const MapScreen = () => {
       // This ensures the service is ready when app goes to background
       await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
         accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: highAccuracyMode ? 1000 : 2000,
-        distanceInterval: 1,
-        deferredUpdatesInterval: 1000,
+        timeInterval: 1000, // Always update every 1 second for consistent tracking
+        distanceInterval: 0, // Set to 0 to get updates even without movement
+        deferredUpdatesInterval: 1000, // Process updates every 1 second
         showsBackgroundLocationIndicator: true,
         foregroundService: {
           notificationTitle: "🐎 EquiHUB GPS Tracking",
