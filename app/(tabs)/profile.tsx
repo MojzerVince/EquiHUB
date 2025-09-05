@@ -944,6 +944,37 @@ const ProfileScreen = () => {
         console.log("Using selected stable:", selectedStable.name);
       }
 
+      // Handle stable membership changes
+      if (actualStableId) {
+        // User has selected or created a stable - join it
+        try {
+          const { success, error: joinError } = await SimpleStableAPI.joinStable(USER_ID, actualStableId);
+          if (!success) {
+            console.error("Failed to join stable:", joinError);
+            showError("Failed to update stable membership. Profile changes will still be saved.");
+          } else {
+            console.log("Successfully updated stable membership");
+          }
+        } catch (stableError) {
+          console.error("Error updating stable membership:", stableError);
+          showError("Failed to update stable membership. Profile changes will still be saved.");
+        }
+      } else if (userStableRanch === "" && savedUserStableRanch !== "") {
+        // User cleared their stable selection - leave all stables
+        try {
+          const { success, error: leaveError } = await SimpleStableAPI.leaveAllStables(USER_ID);
+          if (!success) {
+            console.error("Failed to leave stable:", leaveError);
+            showError("Failed to leave stable. Profile changes will still be saved.");
+          } else {
+            console.log("Successfully left stable");
+          }
+        } catch (stableError) {
+          console.error("Error leaving stable:", stableError);
+          showError("Failed to leave stable. Profile changes will still be saved.");
+        }
+      }
+
       // Update profile data using direct API approach (single update call)
       const success = await updateProfileDirectAPI(USER_ID, updateData);
 

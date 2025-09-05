@@ -38,7 +38,8 @@
         "WAKE_LOCK",
         "POST_NOTIFICATIONS",
         "SCHEDULE_EXACT_ALARM",
-        "USE_EXACT_ALARM"
+        "USE_EXACT_ALARM",
+        "com.android.vending.BILLING"
       ],
       "config": {
         "googleMaps": {
@@ -67,9 +68,7 @@
           "locationWhenInUsePermission": "This app needs location access to track your riding routes and show your position on the map."
         }
       ],
-      [
-        "expo-task-manager"
-      ],
+      ["expo-task-manager"],
       "expo-font",
       [
         "expo-notifications",

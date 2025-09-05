@@ -120,6 +120,67 @@ export class SimpleStableAPI {
     }
   }
 
+  // Join a stable (remove user from current stable first if they have one)
+  static async joinStable(userId: string, stableId: string): Promise<{
+    success: boolean;
+    error: string | null;
+  }> {
+    try {
+      const supabase = getSupabase();
+      
+      // First, remove user from any existing stable memberships
+      await supabase
+        .from('stable_members')
+        .delete()
+        .eq('user_id', userId);
+
+      // Add user to the new stable
+      const { error: insertError } = await supabase
+        .from('stable_members')
+        .insert({
+          stable_id: stableId,
+          user_id: userId,
+          role: 'member',
+          is_active: true
+        });
+
+      if (insertError) {
+        console.error('Error joining stable:', insertError);
+        return { success: false, error: 'Failed to join stable' };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Exception joining stable:', error);
+      return { success: false, error: 'Failed to join stable' };
+    }
+  }
+
+  // Leave all stables (remove user from stable_members)
+  static async leaveAllStables(userId: string): Promise<{
+    success: boolean;
+    error: string | null;
+  }> {
+    try {
+      const supabase = getSupabase();
+      
+      const { error } = await supabase
+        .from('stable_members')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error leaving stables:', error);
+        return { success: false, error: 'Failed to leave stables' };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Exception leaving stables:', error);
+      return { success: false, error: 'Failed to leave stables' };
+    }
+  }
+
   // Get location-based friend suggestions (users from stable_members with same state_province)
   static async getLocationBasedSuggestions(userId: string): Promise<{
     users: UserWithStable[];
@@ -142,12 +203,12 @@ export class SimpleStableAPI {
 
       if (userStablesError) {
         console.error('Error getting user stables from stable_members:', userStablesError);
-        return await this.getFallbackSuggestions(userId);
+        return { users: [], error: 'Failed to get user stable information' };
       }
 
       if (!userStables || userStables.length === 0) {
-        console.log('User is not a member of any stable, using fallback suggestions');
-        return await this.getFallbackSuggestions(userId);
+        console.log('User is not a member of any stable, no location-based suggestions available');
+        return { users: [], error: null };
       }
 
       // Extract unique state_provinces from user's stables
@@ -158,8 +219,8 @@ export class SimpleStableAPI {
       )];
 
       if (userStateProvinces.length === 0) {
-        console.log('User stables have no state_province info, using fallback suggestions');
-        return await this.getFallbackSuggestions(userId);
+        console.log('User stables have no state_province info, no location-based suggestions available');
+        return { users: [], error: null };
       }
 
       console.log('User state_provinces:', userStateProvinces);
@@ -207,12 +268,12 @@ export class SimpleStableAPI {
 
       if (membersError) {
         console.error('Error getting stable members:', membersError);
-        return await this.getFallbackSuggestions(userId);
+        return { users: [], error: 'Failed to get stable members' };
       }
 
       if (!stableMembersData || stableMembersData.length === 0) {
-        console.log('No stable members found in same state_provinces, using fallback');
-        return await this.getFallbackSuggestions(userId);
+        console.log('No stable members found in same state_provinces');
+        return { users: [], error: null };
       }
 
       // Filter out friends and get unique user IDs
@@ -226,8 +287,8 @@ export class SimpleStableAPI {
         .slice(0, 8); // Limit to 8 users
 
       if (potentialUserIds.length === 0) {
-        console.log('No non-friend stable members found, using fallback');
-        return await this.getFallbackSuggestions(userId);
+        console.log('No non-friend stable members found in same state_provinces');
+        return { users: [], error: null };
       }
 
       // Get profiles for these users
@@ -238,7 +299,7 @@ export class SimpleStableAPI {
 
       if (profilesError) {
         console.error('Error getting profiles for stable members:', profilesError);
-        return await this.getFallbackSuggestions(userId);
+        return { users: [], error: 'Failed to get user profiles' };
       }
 
       // Combine profile data with stable information
@@ -258,16 +319,10 @@ export class SimpleStableAPI {
 
       console.log(`Found ${users.length} location-based suggestions from stable_members in same state_province`);
       
-      // If we didn't get enough users from location-based search, supplement with fallback
-      if (users.length === 0) {
-        console.log('No location-based users found, using fallback');
-        return await this.getFallbackSuggestions(userId);
-      }
-
       return { users, error: null };
     } catch (error) {
       console.error('Exception getting location-based suggestions:', error);
-      return await this.getFallbackSuggestions(userId);
+      return { users: [], error: 'Failed to load location-based suggestions' };
     }
   }
 

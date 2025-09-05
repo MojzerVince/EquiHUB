@@ -1,28 +1,203 @@
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
+import PaymentService from "../lib/paymentService";
 
 const SubscriptionScreen = () => {
   const { currentTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const router = useRouter();
+  const [hasUsedTrial, setHasUsedTrial] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
 
-  const handleSubscribe = () => {
-    Alert.alert(
-      "Pro Subscription",
-      "Subscription functionality will be implemented soon! For now, you can access basic features.",
-      [{ text: "OK" }]
-    );
+  useEffect(() => {
+    loadSubscriptionInfo();
+  }, []);
+
+  const loadSubscriptionInfo = async () => {
+    try {
+      const [trialUsed, status] = await Promise.all([
+        PaymentService.hasUsedTrial(),
+        PaymentService.getSubscriptionStatus()
+      ]);
+      
+      setHasUsedTrial(trialUsed);
+      setSubscriptionStatus(status);
+      
+      // If user already has active subscription, redirect to pro features
+      if (status.isActive) {
+        router.replace('/pro-features');
+        return;
+      }
+    } catch (error) {
+      console.error('Error loading subscription info:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartTrial = async () => {
+    if (hasUsedTrial) {
+      Alert.alert(
+        "Trial Already Used",
+        "You have already used your 7-day free trial. Please subscribe to continue enjoying Pro features.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await PaymentService.startTrial('equihub_pro_monthly');
+      
+      if (result.success) {
+        // Force a complete subscription status refresh
+        console.log('🔄 Starting comprehensive refresh after trial activation...');
+        
+        // Use the new force refresh method
+        await PaymentService.forceRefreshSubscriptionStatus();
+        
+        // Refresh user context
+        await refreshUser();
+        
+        // Refresh local subscription info
+        await loadSubscriptionInfo();
+        
+        Alert.alert(
+          "Trial Started!",
+          "Your 7-day free trial has started! Enjoy all Pro features. You can cancel anytime before the trial ends.",
+          [
+            {
+              text: "Continue",
+              onPress: async () => {
+                // Final refresh before navigation
+                await refreshUser();
+                
+                // Navigate to pro features
+                router.replace('/pro-features');
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          "Trial Failed",
+          result.error || "Unable to start trial. Please try again.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      console.error('Error in handleStartTrial:', error);
+      Alert.alert(
+        "Error",
+        "Failed to start trial. Please try again later.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubscribe = async () => {
+    setLoading(true);
+    try {
+      if (Platform.OS === 'ios' || Platform.OS === 'android') {
+        const result = await PaymentService.purchaseSubscription('equihub_pro_monthly');
+        
+        if (result.success) {
+          // Force a complete subscription status refresh
+          console.log('🔄 Starting comprehensive refresh after subscription activation...');
+          
+          // Use the new force refresh method
+          await PaymentService.forceRefreshSubscriptionStatus();
+          
+          // Refresh user context
+          await refreshUser();
+          
+          // Refresh local subscription info
+          await loadSubscriptionInfo();
+          
+          Alert.alert(
+            "Subscription Successful!",
+            "Welcome to EquiHUB Pro! You now have access to all premium features.",
+            [
+              {
+                text: "Continue",
+                onPress: async () => {
+                  // Final refresh before navigation
+                  await refreshUser();
+                  
+                  // Navigate to pro features
+                  router.replace('/pro-features');
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert(
+            "Subscription Failed",
+            result.error || "Unable to complete subscription. Please try again.",
+            [{ text: "OK" }]
+          );
+        }
+      } else {
+        Alert.alert(
+          "Platform Not Supported",
+          "Subscriptions are currently only available on iOS and Android devices through their respective app stores.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        "Failed to process subscription. Please try again later.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    setLoading(true);
+    try {
+      const result = await PaymentService.restorePurchases();
+      
+      if (result.success) {
+        await loadSubscriptionInfo();
+        Alert.alert(
+          "Purchases Restored",
+          "Your previous purchases have been restored successfully!",
+          [{ text: "OK" }]
+        );
+      } else {
+        Alert.alert(
+          "Restore Failed",
+          result.error || "No previous purchases found to restore.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        "Failed to restore purchases. Please try again later.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const features = [
@@ -210,23 +385,102 @@ const SubscriptionScreen = () => {
           ))}
         </View>
 
+        {/* Pricing Section */}
+        <View style={styles.pricingSection}>
+          <View style={[styles.pricingCard, { backgroundColor: currentTheme.colors.background }]}>
+            <Text style={[styles.planTitle, { color: currentTheme.colors.text }]}>
+              EquiHUB Pro
+            </Text>
+            <View style={styles.priceContainer}>
+              <Text style={[styles.priceText, { color: currentTheme.colors.accent }]}>
+                $9.99
+              </Text>
+              <Text style={[styles.priceSubtext, { color: currentTheme.colors.textSecondary }]}>
+                / month
+              </Text>
+            </View>
+            <Text style={[styles.platformText, { color: currentTheme.colors.textSecondary }]}>
+              Billed through {Platform.OS === 'ios' ? 'App Store' : Platform.OS === 'android' ? 'Google Play' : 'Platform Store'}
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.ctaSection}>
+          {!hasUsedTrial && !loading && (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.trialButton,
+                  { backgroundColor: currentTheme.colors.accent },
+                ]}
+                onPress={handleStartTrial}
+                disabled={loading}
+              >
+                <Text style={styles.trialButtonText}>
+                  {loading ? 'Starting Trial...' : 'Start 7-Day Free Trial'}
+                </Text>
+              </TouchableOpacity>
+              <Text
+                style={[
+                  styles.trialText,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                7-day free trial • Then $9.99/month • Cancel anytime
+              </Text>
+              
+              <View style={styles.orDivider}>
+                <View style={[styles.dividerLine, { backgroundColor: currentTheme.colors.textSecondary }]} />
+                <Text style={[styles.orText, { color: currentTheme.colors.textSecondary }]}>OR</Text>
+                <View style={[styles.dividerLine, { backgroundColor: currentTheme.colors.textSecondary }]} />
+              </View>
+            </>
+          )}
+
           <TouchableOpacity
             style={[
               styles.subscribeButton,
-              { backgroundColor: currentTheme.colors.accent },
+              { 
+                backgroundColor: hasUsedTrial ? currentTheme.colors.accent : currentTheme.colors.background,
+                borderWidth: hasUsedTrial ? 0 : 2,
+                borderColor: hasUsedTrial ? 'transparent' : currentTheme.colors.accent
+              },
             ]}
             onPress={handleSubscribe}
+            disabled={loading}
           >
-            <Text style={styles.subscribeButtonText}>Start Free Trial</Text>
+            <Text style={[
+              styles.subscribeButtonText, 
+              { color: hasUsedTrial ? '#FFFFFF' : currentTheme.colors.accent }
+            ]}>
+              {loading ? 'Processing...' : hasUsedTrial ? 'Subscribe Now' : 'Subscribe Without Trial'}
+            </Text>
           </TouchableOpacity>
+
+          {(Platform.OS === 'ios' || Platform.OS === 'android') && (
+            <TouchableOpacity
+              style={styles.restoreButton}
+              onPress={handleRestorePurchases}
+              disabled={loading}
+            >
+              <Text style={[styles.restoreText, { color: currentTheme.colors.textSecondary }]}>
+                Restore Previous Purchases
+              </Text>
+            </TouchableOpacity>
+          )}
+          
           <Text
             style={[
-              styles.trialText,
+              styles.disclaimerText,
               { color: currentTheme.colors.textSecondary },
             ]}
           >
-            7-day free trial • Cancel anytime
+            {Platform.OS === 'ios' 
+              ? 'Subscription will be charged to your iTunes account. Auto-renewal may be turned off in Account Settings.'
+              : Platform.OS === 'android'
+              ? 'Subscription will be charged to your Google Play account. Manage your subscription in Google Play.'
+              : 'Subscription functionality is available on mobile devices.'
+            }
           </Text>
         </View>
       </ScrollView>
@@ -309,16 +563,37 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
+  planTitle: {
+    fontSize: 22,
+    fontFamily: "Inder",
+    fontWeight: "bold",
+    marginBottom: 15,
+  },
+  priceContainer: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: 10,
+  },
+  priceText: {
+    fontSize: 42,
+    fontFamily: "Inder",
+    fontWeight: "bold",
+  },
+  priceSubtext: {
+    fontSize: 18,
+    fontFamily: "Inder",
+    marginLeft: 5,
+  },
+  platformText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    textAlign: "center",
+  },
   planName: {
     fontSize: 18,
     fontFamily: "Inder",
     fontWeight: "600",
     marginBottom: 10,
-  },
-  priceContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    marginBottom: 5,
   },
   currency: {
     fontSize: 24,
@@ -425,6 +700,62 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inder",
     textAlign: "center",
+  },
+  trialButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    borderRadius: 25,
+    marginBottom: 10,
+    minWidth: 200,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  trialButtonText: {
+    fontSize: 18,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  orDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+    width: "100%",
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#E0E0E0",
+  },
+  orText: {
+    marginHorizontal: 20,
+    fontSize: 14,
+    fontFamily: "Inder",
+    fontWeight: "500",
+  },
+  restoreButton: {
+    marginTop: 15,
+    paddingVertical: 10,
+  },
+  restoreText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    textDecorationLine: "underline",
+  },
+  disclaimerText: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginTop: 15,
+    paddingHorizontal: 20,
+    lineHeight: 16,
   },
 });
 
