@@ -120,6 +120,67 @@ export class SimpleStableAPI {
     }
   }
 
+  // Join a stable (remove user from current stable first if they have one)
+  static async joinStable(userId: string, stableId: string): Promise<{
+    success: boolean;
+    error: string | null;
+  }> {
+    try {
+      const supabase = getSupabase();
+      
+      // First, remove user from any existing stable memberships
+      await supabase
+        .from('stable_members')
+        .delete()
+        .eq('user_id', userId);
+
+      // Add user to the new stable
+      const { error: insertError } = await supabase
+        .from('stable_members')
+        .insert({
+          stable_id: stableId,
+          user_id: userId,
+          role: 'member',
+          is_active: true
+        });
+
+      if (insertError) {
+        console.error('Error joining stable:', insertError);
+        return { success: false, error: 'Failed to join stable' };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Exception joining stable:', error);
+      return { success: false, error: 'Failed to join stable' };
+    }
+  }
+
+  // Leave all stables (remove user from stable_members)
+  static async leaveAllStables(userId: string): Promise<{
+    success: boolean;
+    error: string | null;
+  }> {
+    try {
+      const supabase = getSupabase();
+      
+      const { error } = await supabase
+        .from('stable_members')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error leaving stables:', error);
+        return { success: false, error: 'Failed to leave stables' };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Exception leaving stables:', error);
+      return { success: false, error: 'Failed to leave stables' };
+    }
+  }
+
   // Get location-based friend suggestions (users from stable_members with same state_province)
   static async getLocationBasedSuggestions(userId: string): Promise<{
     users: UserWithStable[];
