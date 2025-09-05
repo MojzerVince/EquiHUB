@@ -1611,43 +1611,27 @@ const MapScreen = () => {
         console.log("⏹️ Stopped foreground location watcher");
       }
 
-      // Start background location tracking if not already running
+      // Check if background location is already running
       const isAlreadyRunning = await Location.hasStartedLocationUpdatesAsync(
         LOCATION_TASK_NAME
       );
-      if (!isAlreadyRunning) {
-        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-          accuracy: Location.Accuracy.BestForNavigation,
-          timeInterval: highAccuracyMode ? 1000 : 2000, // Increased from 250ms to 1-2s for better battery
-          distanceInterval: 1, // Update every 1 meter
-          deferredUpdatesInterval: 1000, // Batch updates every 1 second
-          showsBackgroundLocationIndicator: true, // Show location indicator for better user awareness
-          foregroundService: {
-            notificationTitle: "🐎 EquiHUB GPS Tracking",
-            notificationBody: "Recording your ride in the background",
-            notificationColor: "#4A90E2",
-            // Add notification icon for Android
-            killServiceOnDestroy: false,
-          },
-          // Additional options for better background tracking
-          pausesUpdatesAutomatically: false, // Don't pause location updates automatically
-          activityType: Location.LocationActivityType.Fitness, // Optimize for fitness tracking
-        });
-        console.log(
-          "🚀 Started background location tracking with enhanced settings"
-        );
+      
+      if (isAlreadyRunning) {
+        console.log("✅ Background location service already running, switching mode");
+      } else {
+        console.log("⚠️ Background location service not running, app may have killed it");
+        // If somehow the background service was stopped, log it but don't try to restart
+        // as we can't start foreground services from background state
       }
 
       setIsUsingBackgroundLocation(true);
+      console.log("� Switched to background location mode");
     } catch (error) {
       console.error("❌ Error switching to background location:", error);
 
-      // Show user-friendly error message
-      Alert.alert(
-        "Background Tracking Issue",
-        "Unable to start background GPS tracking. Please check your location permissions and try again.",
-        [{ text: "OK" }]
-      );
+      // Don't show alert as this is less critical - just log the error
+      console.log("🔄 Continuing with whatever location tracking is available");
+      setIsUsingBackgroundLocation(true);
     }
   };
 
@@ -1698,14 +1682,9 @@ const MapScreen = () => {
       // Sync any background data first
       await syncBackgroundData();
 
-      // Stop background location tracking
-      const isRunning = await Location.hasStartedLocationUpdatesAsync(
-        LOCATION_TASK_NAME
-      );
-      if (isRunning) {
-        await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-        console.log("⏹️ Stopped background location tracking");
-      }
+      // Keep background location service running for seamless transitions
+      // Don't stop it since we'll need it again when app goes back to background
+      console.log("✅ Keeping background location service running for seamless transitions");
 
       // Start foreground location watcher
       await restartLocationWatcherForTracking();
@@ -1835,13 +1814,34 @@ const MapScreen = () => {
         await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
       }
 
-      // Start with foreground location tracking (background will be activated when app goes to background)
+      // Start both foreground and background location tracking from the beginning
       console.log(
-        `🚀 Starting foreground tracking with highAccuracyMode: ${highAccuracyMode}`
+        `🚀 Starting both foreground and background tracking with highAccuracyMode: ${highAccuracyMode}`
       );
+      
+      // Start foreground location tracking
       await restartLocationWatcherForTracking();
 
-      // Set state to indicate we're using foreground tracking
+      // Start background location tracking immediately (while app is still in foreground)
+      // This ensures the service is ready when app goes to background
+      await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: highAccuracyMode ? 1000 : 2000,
+        distanceInterval: 1,
+        deferredUpdatesInterval: 1000,
+        showsBackgroundLocationIndicator: true,
+        foregroundService: {
+          notificationTitle: "🐎 EquiHUB GPS Tracking",
+          notificationBody: "Recording your ride in the background",
+          notificationColor: "#4A90E2",
+          killServiceOnDestroy: false,
+        },
+        pausesUpdatesAutomatically: false,
+        activityType: Location.LocationActivityType.Fitness,
+      });
+      console.log("🚀 Started background location service (ready for background mode)");
+
+      // Set state to indicate we're using foreground tracking (background is ready but not active)
       setIsUsingBackgroundLocation(false);
 
       // Start tracking notification
