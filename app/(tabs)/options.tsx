@@ -3,7 +3,9 @@ import { useDialog } from "@/contexts/DialogContext";
 import { MetricSystem, useMetric } from "@/contexts/MetricContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { AuthAPI } from "@/lib/authAPI";
+import { EmergencyContact, EmergencyContactsAPI } from "@/lib/emergencyContactsAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
+import * as Contacts from "expo-contacts";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
@@ -12,6 +14,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Image,
   Linking,
   Modal,
@@ -19,6 +22,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -39,6 +43,8 @@ const OptionsScreen = () => {
   // Load hidden posts when component mounts
   useEffect(() => {
     loadHiddenPosts();
+    loadEmergencyContacts();
+    checkContactsPermission();
   }, [user?.id]);
 
   // Reload hidden posts when screen is focused
@@ -46,9 +52,141 @@ const OptionsScreen = () => {
     useCallback(() => {
       if (user?.id) {
         loadHiddenPosts();
+        loadEmergencyContacts();
       }
     }, [user?.id])
   );
+
+  // Load emergency contacts from storage
+  const loadEmergencyContacts = useCallback(async () => {
+    if (!user?.id) {
+      setEmergencyContacts([]);
+      return;
+    }
+
+    setLoadingEmergencyContacts(true);
+    try {
+      const contacts = await EmergencyContactsAPI.getEmergencyContacts(user.id);
+      setEmergencyContacts(contacts);
+    } catch (error) {
+      console.error("Error loading emergency contacts:", error);
+      setEmergencyContacts([]);
+    } finally {
+      setLoadingEmergencyContacts(false);
+    }
+  }, [user?.id]);
+
+  // Check contacts permission status
+  const checkContactsPermission = useCallback(async () => {
+    try {
+      const status = await EmergencyContactsAPI.getContactsPermissionStatus();
+      setContactsPermissionStatus(status);
+    } catch (error) {
+      console.error("Error checking contacts permission:", error);
+      setContactsPermissionStatus({ granted: false, canAskAgain: true });
+    }
+  }, []);
+
+  // Request contacts permission
+  const requestContactsPermission = async () => {
+    try {
+      const status = await EmergencyContactsAPI.requestContactsPermission();
+      setContactsPermissionStatus(status);
+      
+      if (status.granted) {
+        await loadDeviceContacts();
+        Alert.alert("Permission Granted", "You can now access your contacts to add emergency contacts.");
+      } else {
+        Alert.alert(
+          "Permission Denied",
+          "To add emergency contacts from your phone, please grant contacts permission in your device settings."
+        );
+      }
+    } catch (error) {
+      console.error("Error requesting contacts permission:", error);
+      Alert.alert("Error", "Failed to request contacts permission. Please try again.");
+    }
+  };
+
+  // Load device contacts
+  const loadDeviceContacts = async () => {
+    try {
+      const contacts = await EmergencyContactsAPI.getDeviceContacts();
+      setDeviceContacts(contacts);
+    } catch (error) {
+      console.error("Error loading device contacts:", error);
+      Alert.alert("Error", "Failed to load contacts. Please check your permissions.");
+    }
+  };
+
+  // Add emergency contact
+  const handleAddEmergencyContact = async (contact: Omit<EmergencyContact, "id" | "addedAt">) => {
+    if (!user?.id) return;
+
+    try {
+      const result = await EmergencyContactsAPI.addEmergencyContact(user.id, contact);
+      
+      if (result.success) {
+        await loadEmergencyContacts();
+        setShowAddContact(false);
+        setSearchQuery("");
+        Alert.alert("Success", "Emergency contact added successfully.");
+      } else {
+        Alert.alert("Error", result.error || "Failed to add emergency contact.");
+      }
+    } catch (error) {
+      console.error("Error adding emergency contact:", error);
+      Alert.alert("Error", "Failed to add emergency contact. Please try again.");
+    }
+  };
+
+  // Remove emergency contact
+  const handleRemoveEmergencyContact = async (contactId: string) => {
+    if (!user?.id) return;
+
+    Alert.alert(
+      "Remove Emergency Contact",
+      "Are you sure you want to remove this emergency contact?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const success = await EmergencyContactsAPI.removeEmergencyContact(user.id, contactId);
+              if (success) {
+                await loadEmergencyContacts();
+                Alert.alert("Success", "Emergency contact removed successfully.");
+              } else {
+                Alert.alert("Error", "Failed to remove emergency contact. Please try again.");
+              }
+            } catch (error) {
+              console.error("Error removing emergency contact:", error);
+              Alert.alert("Error", "Failed to remove emergency contact. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Toggle emergency contact enabled status
+  const handleToggleEmergencyContact = async (contactId: string, isEnabled: boolean) => {
+    if (!user?.id) return;
+
+    try {
+      const success = await EmergencyContactsAPI.toggleEmergencyContact(user.id, contactId, isEnabled);
+      if (success) {
+        await loadEmergencyContacts();
+      } else {
+        Alert.alert("Error", "Failed to update emergency contact. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error toggling emergency contact:", error);
+      Alert.alert("Error", "Failed to update emergency contact. Please try again.");
+    }
+  };
 
   // Load hidden posts from storage
   const loadHiddenPosts = useCallback(async () => {
@@ -139,6 +277,15 @@ const OptionsScreen = () => {
   const [hiddenPosts, setHiddenPosts] = useState<HiddenPost[]>([]);
   const [showHiddenPosts, setShowHiddenPosts] = useState(false);
   const [loadingHiddenPosts, setLoadingHiddenPosts] = useState(false);
+
+  // Emergency contacts state
+  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
+  const [showEmergencyContacts, setShowEmergencyContacts] = useState(false);
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [loadingEmergencyContacts, setLoadingEmergencyContacts] = useState(false);
+  const [deviceContacts, setDeviceContacts] = useState<Contacts.Contact[]>([]);
+  const [contactsPermissionStatus, setContactsPermissionStatus] = useState({ granted: false, canAskAgain: true });
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleLogout = () => {
     showLogout(async () => {
@@ -250,7 +397,7 @@ const OptionsScreen = () => {
   const handleRequestAllPermissions = async () => {
     try {
       let permissionsGranted = 0;
-      let totalPermissions = 3;
+      let totalPermissions = 5; // Updated to include contacts
       let permissionResults = [];
 
       // Request Camera permission
@@ -294,6 +441,21 @@ const OptionsScreen = () => {
         permissionResults.push("❌ Location permission failed");
       }
 
+      // Request Contacts permission
+      try {
+        const contactsResult = await EmergencyContactsAPI.requestContactsPermission();
+        if (contactsResult.granted) {
+          permissionsGranted++;
+          permissionResults.push("✅ Contacts access granted");
+          // Update local state
+          setContactsPermissionStatus(contactsResult);
+        } else {
+          permissionResults.push("❌ Contacts access denied");
+        }
+      } catch (error) {
+        permissionResults.push("❌ Contacts permission failed");
+      }
+
       // Request Notification permission
       try {
         const notificationResult =
@@ -304,10 +466,8 @@ const OptionsScreen = () => {
         } else {
           permissionResults.push("❌ Notification access denied");
         }
-        totalPermissions = 4; // Update total since notifications were requested
       } catch (error) {
         permissionResults.push("❌ Notification permission failed");
-        totalPermissions = 4;
       }
 
       // Show results
@@ -660,6 +820,10 @@ const OptionsScreen = () => {
                 value={autoSync}
                 onValueChange={setAutoSync}
               />
+              <ActionButton
+                title={`Emergency Contacts (${emergencyContacts.length}/5)`}
+                onPress={() => setShowEmergencyContacts(true)}
+              />
             </View>
           </View>
 
@@ -837,6 +1001,330 @@ const OptionsScreen = () => {
 
       {/* Metric System Dropdown Modal */}
       <MetricDropdownModal />
+
+      {/* Emergency Contacts Modal */}
+      <Modal
+        visible={showEmergencyContacts}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowEmergencyContacts(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.emergencyContactsModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View
+              style={[
+                styles.emergencyContactsHeader,
+                { borderBottomColor: currentTheme.colors.accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.emergencyContactsTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Emergency Contacts
+              </Text>
+              <TouchableOpacity
+                style={styles.emergencyContactsCloseButton}
+                onPress={() => setShowEmergencyContacts(false)}
+              >
+                <Text
+                  style={[
+                    styles.emergencyContactsCloseText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.emergencyContactsContent}>
+              {/* Permission Status */}
+              {!contactsPermissionStatus.granted && (
+                <View style={styles.permissionBanner}>
+                  <Text
+                    style={[
+                      styles.permissionBannerText,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    📞 Grant contacts access to easily add emergency contacts from your phone
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.permissionBannerButton,
+                      { backgroundColor: currentTheme.colors.primary },
+                    ]}
+                    onPress={requestContactsPermission}
+                  >
+                    <Text style={styles.permissionBannerButtonText}>
+                      Grant Access
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Add Contact Button */}
+              <TouchableOpacity
+                style={[
+                  styles.addContactButton,
+                  { backgroundColor: currentTheme.colors.primary },
+                ]}
+                onPress={() => {
+                  if (contactsPermissionStatus.granted) {
+                    loadDeviceContacts();
+                  }
+                  setShowAddContact(true);
+                }}
+              >
+                <Text style={styles.addContactButtonText}>+ Add Emergency Contact</Text>
+              </TouchableOpacity>
+
+              {/* Emergency Contacts List */}
+              {loadingEmergencyContacts ? (
+                <View style={styles.emergencyContactsLoading}>
+                  <ActivityIndicator
+                    color={currentTheme.colors.primary}
+                    size="small"
+                  />
+                  <Text
+                    style={[
+                      styles.emergencyContactsLoadingText,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Loading emergency contacts...
+                  </Text>
+                </View>
+              ) : emergencyContacts.length > 0 ? (
+                emergencyContacts.map((contact) => (
+                  <View
+                    key={contact.id}
+                    style={[
+                      styles.emergencyContactItem,
+                      { backgroundColor: currentTheme.colors.surface },
+                    ]}
+                  >
+                    <View style={styles.emergencyContactInfo}>
+                      <Text
+                        style={[
+                          styles.emergencyContactName,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        {contact.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.emergencyContactPhone,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        {EmergencyContactsAPI.formatPhoneNumber(contact.phoneNumber)}
+                      </Text>
+                    </View>
+                    <View style={styles.emergencyContactControls}>
+                      <Switch
+                        value={contact.isEnabled}
+                        onValueChange={(value) => handleToggleEmergencyContact(contact.id, value)}
+                        trackColor={{
+                          false: currentTheme.colors.accent,
+                          true: currentTheme.colors.primary,
+                        }}
+                        thumbColor={contact.isEnabled ? "#fff" : "#f4f3f4"}
+                      />
+                      <TouchableOpacity
+                        style={[
+                          styles.removeContactButton,
+                          { backgroundColor: currentTheme.colors.error },
+                        ]}
+                        onPress={() => handleRemoveEmergencyContact(contact.id)}
+                      >
+                        <Text style={styles.removeContactButtonText}>Remove</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emergencyContactsEmpty}>
+                  <Text
+                    style={[
+                      styles.emergencyContactsEmptyTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    No Emergency Contacts
+                  </Text>
+                  <Text
+                    style={[
+                      styles.emergencyContactsEmptyText,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Add emergency contacts who will receive alerts with your location in case of emergency during rides.
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Contact Modal */}
+      <Modal
+        visible={showAddContact}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowAddContact(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.addContactModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View
+              style={[
+                styles.addContactHeader,
+                { borderBottomColor: currentTheme.colors.accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.addContactTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Add Emergency Contact
+              </Text>
+              <TouchableOpacity
+                style={styles.addContactCloseButton}
+                onPress={() => {
+                  setShowAddContact(false);
+                  setSearchQuery("");
+                }}
+              >
+                <Text
+                  style={[
+                    styles.addContactCloseText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {contactsPermissionStatus.granted ? (
+              <View style={styles.addContactContent}>
+                {/* Search Bar */}
+                <TextInput
+                  style={[
+                    styles.searchInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      color: currentTheme.colors.text,
+                      borderColor: currentTheme.colors.accent,
+                    },
+                  ]}
+                  placeholder="Search contacts..."
+                  placeholderTextColor={currentTheme.colors.textSecondary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+
+                {/* Contacts List */}
+                <FlatList
+                  data={deviceContacts.filter(
+                    (contact) =>
+                      contact.name &&
+                      contact.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  )}
+                  keyExtractor={(item) => item.id || Math.random().toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.deviceContactItem,
+                        { backgroundColor: currentTheme.colors.surface },
+                      ]}
+                      onPress={() => {
+                        if (item.phoneNumbers && item.phoneNumbers[0]) {
+                          handleAddEmergencyContact({
+                            name: item.name || "Unknown",
+                            phoneNumber: item.phoneNumbers[0].number || "",
+                            isEnabled: true,
+                          });
+                        }
+                      }}
+                    >
+                      <View style={styles.deviceContactInfo}>
+                        <Text
+                          style={[
+                            styles.deviceContactName,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.deviceContactPhone,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          {item.phoneNumbers?.[0]?.number
+                            ? EmergencyContactsAPI.formatPhoneNumber(item.phoneNumbers[0].number)
+                            : "No phone number"}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  style={styles.contactsList}
+                  showsVerticalScrollIndicator={false}
+                />
+              </View>
+            ) : (
+              <View style={styles.addContactNoPermission}>
+                <Text
+                  style={[
+                    styles.addContactNoPermissionTitle,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  Contacts Access Required
+                </Text>
+                <Text
+                  style={[
+                    styles.addContactNoPermissionText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  To add contacts from your phone, please grant contacts permission first.
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.addContactPermissionButton,
+                    { backgroundColor: currentTheme.colors.primary },
+                  ]}
+                  onPress={requestContactsPermission}
+                >
+                  <Text style={styles.addContactPermissionButtonText}>
+                    Grant Contacts Access
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Hidden Posts Modal */}
       <Modal
@@ -1275,6 +1763,248 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
+    fontFamily: "Inder",
+  },
+
+  // Emergency Contacts Modal Styles
+  emergencyContactsModal: {
+    maxHeight: "85%",
+    minHeight: "60%",
+    borderRadius: 20,
+    padding: 0,
+    margin: 0,
+    width: "95%",
+  },
+  emergencyContactsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+  },
+  emergencyContactsTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  emergencyContactsCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  emergencyContactsCloseText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  emergencyContactsContent: {
+    padding: 20,
+    maxHeight: 500,
+  },
+  emergencyContactsLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  emergencyContactsLoadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontFamily: "Inder",
+  },
+  permissionBanner: {
+    backgroundColor: "rgba(74, 144, 226, 0.1)",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(74, 144, 226, 0.3)",
+  },
+  permissionBannerText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  permissionBannerButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  permissionBannerButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  addContactButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  addContactButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  emergencyContactItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  emergencyContactInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  emergencyContactName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  emergencyContactPhone: {
+    fontSize: 14,
+    fontFamily: "Inder",
+  },
+  emergencyContactControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  removeContactButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  removeContactButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  emergencyContactsEmpty: {
+    alignItems: "center",
+    padding: 40,
+  },
+  emergencyContactsEmptyTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8,
+    fontFamily: "Inder",
+  },
+  emergencyContactsEmptyText: {
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    fontFamily: "Inder",
+  },
+
+  // Add Contact Modal Styles
+  addContactModal: {
+    maxHeight: "85%",
+    minHeight: "60%",
+    borderRadius: 20,
+    padding: 0,
+    margin: 0,
+    width: "95%",
+  },
+  addContactHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+  },
+  addContactTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  addContactCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  addContactCloseText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  addContactContent: {
+    flex: 1,
+    padding: 20,
+  },
+  searchInput: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 16,
+    fontSize: 16,
+    fontFamily: "Inder",
+  },
+  contactsList: {
+    flex: 1,
+  },
+  deviceContactItem: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+  },
+  deviceContactInfo: {
+    flex: 1,
+  },
+  deviceContactName: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  deviceContactPhone: {
+    fontSize: 14,
+    fontFamily: "Inder",
+  },
+  addContactNoPermission: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 40,
+  },
+  addContactNoPermissionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+    fontFamily: "Inder",
+    textAlign: "center",
+  },
+  addContactNoPermissionText: {
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 20,
+    fontFamily: "Inder",
+  },
+  addContactPermissionButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  addContactPermissionButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
     fontFamily: "Inder",
   },
 });
