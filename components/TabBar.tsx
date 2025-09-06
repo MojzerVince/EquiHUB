@@ -47,8 +47,8 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
       Animated.spring(slideAnim, {
         toValue: indicatorLeft,
         useNativeDriver: false,
-        tension: 120,
-        friction: 8,
+        tension: 200, // Increased from 120 for faster animation
+        friction: 10, // Increased from 8 for less bounce
       }).start();
     }
   }, [state.index, tabWidth, slideAnim, filteredRoutes]);
@@ -140,7 +140,15 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                 testID={options.tabBarButtonTestID}
                 onPress={onPress}
                 onLongPress={onLongPress}
-                style={[styles.tabBarItem, { width: tabWidth }]}
+                style={[
+                  styles.tabBarItem, 
+                  { 
+                    width: tabWidth,
+                    backgroundColor: 'transparent', // Always transparent to prevent gray background
+                  }
+                ]}
+                android_ripple={{ color: 'transparent' }} // Disable ripple on Android
+                pressRetentionOffset={{ top: 0, left: 0, right: 0, bottom: 0 }} // Disable press retention
               >
                 <Animated.View 
                   style={[
@@ -219,6 +227,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flex: 1, // Ensure equal distribution
+    backgroundColor: 'transparent', // Ensure no background color
   },
   tabBarItemContent: {
     alignItems: "center",
