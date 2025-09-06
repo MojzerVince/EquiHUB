@@ -37,7 +37,6 @@ const OptionsScreen = () => {
 
   // Settings state
   const [notifications, setNotifications] = useState(true);
-  const [autoSync, setAutoSync] = useState(true);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   // Load hidden posts when component mounts
@@ -814,12 +813,6 @@ const OptionsScreen = () => {
                 { backgroundColor: currentTheme.colors.surface },
               ]}
             >
-              <SettingItem
-                title="Auto Sync"
-                subtitle="Automatically sync your data"
-                value={autoSync}
-                onValueChange={setAutoSync}
-              />
               <ActionButton
                 title={`Emergency Contacts (${emergencyContacts.length}/5)`}
                 onPress={() => setShowEmergencyContacts(true)}
