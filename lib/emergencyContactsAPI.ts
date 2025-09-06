@@ -19,7 +19,7 @@ export interface ContactPermissionStatus {
 
 export class EmergencyContactsAPI {
   private static readonly STORAGE_KEY = "emergency_contacts";
-  private static readonly MAX_CONTACTS = 5;
+  private static readonly MAX_CONTACTS = 3;
 
   // Request contacts permission
   static async requestContactsPermission(): Promise<ContactPermissionStatus> {

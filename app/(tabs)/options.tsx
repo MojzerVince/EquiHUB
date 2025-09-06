@@ -840,7 +840,7 @@ const OptionsScreen = () => {
               ]}
             >
               <ActionButton
-                title={`Emergency Contacts (${emergencyContacts.length}/5)`}
+                title={`Emergency Contacts (${emergencyContacts.length}/3)`}
                 onPress={() => setShowEmergencyContacts(true)}
               />
             </View>
