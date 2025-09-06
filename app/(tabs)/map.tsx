@@ -2723,6 +2723,51 @@ const MapScreen = () => {
             </MapView>
           </View>
 
+          {/* Start/Stop Tracking Button */}
+          <View style={styles.trackingControls}>
+            <TouchableOpacity
+              style={[
+                styles.startTrackingButton,
+                {
+                  backgroundColor: isTracking
+                    ? "#DC3545" // Red color for stop
+                    : selectedHorse &&
+                      selectedTrainingType &&
+                      userLocation &&
+                      !horsesLoading &&
+                      userHorses.length > 0
+                    ? currentTheme.colors.primary
+                    : currentTheme.colors.border,
+                },
+              ]}
+              onPress={isTracking ? stopTracking : startTracking}
+              disabled={
+                !isTracking &&
+                (!selectedHorse ||
+                  !selectedTrainingType ||
+                  !userLocation ||
+                  horsesLoading ||
+                  userHorses.length === 0)
+              }
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.startTrackingButtonText,
+                  {
+                    color: isTracking
+                      ? "#FFFFFF"
+                      : selectedHorse && selectedTrainingType && userLocation
+                      ? "#FFFFFF"
+                      : currentTheme.colors.textSecondary,
+                  },
+                ]}
+              >
+                {isTracking ? "Stop Tracking" : "Start Tracking"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.trackingControls}>
             {/* Horse Selection - Hidden during tracking */}
             {!isTracking && (
@@ -3261,49 +3306,6 @@ const MapScreen = () => {
                 </Text>
               )}
             </View>
-
-            {/* Start/Stop Tracking Button */}
-            <TouchableOpacity
-              style={[
-                styles.startTrackingButton,
-                {
-                  backgroundColor: isTracking
-                    ? "#DC3545" // Red color for stop
-                    : selectedHorse &&
-                      selectedTrainingType &&
-                      userLocation &&
-                      !horsesLoading &&
-                      userHorses.length > 0
-                    ? currentTheme.colors.primary
-                    : currentTheme.colors.border,
-                },
-              ]}
-              onPress={isTracking ? stopTracking : startTracking}
-              disabled={
-                !isTracking &&
-                (!selectedHorse ||
-                  !selectedTrainingType ||
-                  !userLocation ||
-                  horsesLoading ||
-                  userHorses.length === 0)
-              }
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.startTrackingButtonText,
-                  {
-                    color: isTracking
-                      ? "#FFFFFF"
-                      : selectedHorse && selectedTrainingType && userLocation
-                      ? "#FFFFFF"
-                      : currentTheme.colors.textSecondary,
-                  },
-                ]}
-              >
-                {isTracking ? "Stop Tracking" : "Start Tracking"}
-              </Text>
-            </TouchableOpacity>
 
             {/* Tracking Status Display */}
             {isTracking && sessionStartTime && (
@@ -3988,7 +3990,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 32,
     alignItems: "center",
-    marginTop: 25,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -3997,7 +3998,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 6,
-    marginBottom: 0,
+    marginTop: 15,
+    marginBottom: -20,
   },
   startTrackingButtonText: {
     fontSize: 18,
