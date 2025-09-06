@@ -7,10 +7,10 @@ interface IconProps {
 export const icons = {
   community: ({ focused }: IconProps) => (
     <Image
-      source={require("../assets/UI_resources/UI_white/club_white.png")}
-      style={{ 
-        width: focused ? 28 : 26, 
-        height: focused ? 28 : 26,
+      source={require("../assets/in_app_icons/community.png")}
+      style={{
+        width: focused ? 40 : 34,
+        height: focused ? 40 : 34,
         opacity: focused ? 1 : 0.8,
       }}
     />
@@ -18,49 +18,49 @@ export const icons = {
   coach: ({ focused }: IconProps) => (
     <Image
       source={require("../assets/UI_resources/UI_white/coach_white.png")}
-      style={{ 
-        width: focused ? 28 : 26, 
-        height: focused ? 28 : 26,
+      style={{
+        width: focused ? 40 : 34,
+        height: focused ? 40 : 34,
         opacity: focused ? 1 : 0.8,
       }}
     />
   ),
   map: ({ focused }: IconProps) => (
     <Image
-      source={require("../assets/UI_resources/UI_white/map_white.png")}
-      style={{ 
-        width: focused ? 28 : 26, 
-        height: focused ? 28 : 26,
+      source={require("../assets/in_app_icons/map.png")}
+      style={{
+        width: focused ? 40 : 34,
+        height: focused ? 40 : 34,
         opacity: focused ? 1 : 0.8,
       }}
     />
   ),
   index: ({ focused }: IconProps) => (
     <Image
-      source={require("../assets/UI_resources/UI_white/horse_white.png")}
-      style={{ 
-        width: focused ? 28 : 26, 
-        height: focused ? 28 : 26,
+      source={require("../assets/in_app_icons/horse.png")}
+      style={{
+        width: focused ? 40 : 34,
+        height: focused ? 40 : 34,
         opacity: focused ? 1 : 0.8,
       }}
     />
   ),
   profile: ({ focused }: IconProps) => (
     <Image
-      source={require("../assets/UI_resources/UI_white/user_white.png")}
-      style={{ 
-        width: focused ? 28 : 26, 
-        height: focused ? 28 : 26,
+      source={require("../assets/in_app_icons/profile.png")}
+      style={{
+        width: focused ? 40 : 34,
+        height: focused ? 40 : 34,
         opacity: focused ? 1 : 0.8,
       }}
     />
   ),
   settings: ({ focused }: IconProps) => (
     <Image
-      source={require("../assets/UI_resources/UI_white/settings_white.png")}
-      style={{ 
-        width: focused ? 28 : 26, 
-        height: focused ? 28 : 26,
+      source={require("../assets/in_app_icons/settings.png")}
+      style={{
+        width: focused ? 40 : 34,
+        height: focused ? 40 : 34,
         opacity: focused ? 1 : 0.8,
       }}
     />
