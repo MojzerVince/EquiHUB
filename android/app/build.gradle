@@ -92,9 +92,11 @@ android {
         applicationId 'com.mojzi1969.EquiHUB'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 30
+        versionCode 31
         versionName "0.6.0"
+        missingDimensionStrategy 'store', 'play'
     }
+    
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -115,6 +117,13 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             crunchPngs (findProperty('android.enablePngCrunchInReleaseBuilds')?.toBoolean() ?: true)
+        }
+    }
+    
+    // Explicitly resolve react-native-iap variant conflicts
+    configurations.all {
+        resolutionStrategy {
+            force 'com.android.support:support-annotations:28.0.0'
         }
     }
     packagingOptions {
