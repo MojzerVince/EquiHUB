@@ -61,8 +61,8 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           style={[
             styles.tabBar,
             {
-              backgroundColor: "#34495E", // Lighter blue-gray background
-              shadowColor: "#000000",
+              backgroundColor: currentTheme.colors.card,
+              shadowColor: currentTheme.colors.text,
             },
           ]}
         >
@@ -73,7 +73,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               {
                 left: slideAnim,
                 width: tabWidth * 0.8, // 80% of tab width for better appearance
-                backgroundColor: "#5DADE2", // Bright blue color for visibility
+                backgroundColor: currentTheme.colors.primary,
               },
             ]}
           />
@@ -169,8 +169,8 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                       styles.tabBarLabel,
                       {
                         color: isFocused
-                          ? "#FFFFFF" // White for focused tabs
-                          : "#B0B0B0", // Light gray for unfocused tabs
+                          ? currentTheme.colors.surface // Light color for focused tabs
+                          : currentTheme.colors.textSecondary, // Secondary text for unfocused tabs
                         fontWeight: isFocused ? "600" : "500",
                       },
                     ]}
@@ -200,7 +200,6 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: "row",
     borderRadius: 25,
-    paddingVertical: 2, // Increased from 15 to 20 for more height
     paddingHorizontal: 0, // Remove horizontal padding from tabBar
     position: "relative",
     minHeight: 50, // Add minimum height to ensure icons fit
@@ -215,7 +214,7 @@ const styles = StyleSheet.create({
   slideIndicator: {
     position: "absolute",
     top: 8, // Better positioning within the tab bar
-    height: "72%", // Larger height for better visibility
+    height: "73%", // Larger height for better visibility
     borderRadius: 20,
     opacity: 0.8, // Much more visible
     marginHorizontal: 0, // Remove margin for better alignment
@@ -237,9 +236,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  tabBarLabel: {
+  /*tabBarLabel: {
     fontSize: 11,
     textAlign: "center",
-    color: "#FFFFFF", // White text for dark background
-  },
+    // Color will be set dynamically based on theme
+  },*/
 });
