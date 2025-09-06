@@ -3546,7 +3546,7 @@ const MapScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.batteryInfoContent}>
+            <View>
               <Text
                 style={[
                   styles.batteryInfoText,
@@ -3617,22 +3617,12 @@ const MapScreen = () => {
                   ))}
                 </>
               )}
-            </ScrollView>
+            </View>
 
             <TouchableOpacity
               style={[
                 styles.batteryInfoButton,
-                { backgroundColor: currentTheme.colors.warning },
-              ]}
-              onPress={testFallDetection}
-            >
-              <Text style={styles.batteryInfoButtonText}>🧪 Test Fall Detection</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.batteryInfoButton,
-                { backgroundColor: currentTheme.colors.primary, marginTop: 12 },
+                { backgroundColor: currentTheme.colors.primary, marginTop: 20 },
               ]}
               onPress={() => setShowFallDetectionModal(false)}
             >
