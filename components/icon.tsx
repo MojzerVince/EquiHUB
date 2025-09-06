@@ -9,8 +9,8 @@ export const icons = {
     <Image
       source={require("../assets/in_app_icons/community.png")}
       style={{
-        width: focused ? 40 : 34,
-        height: focused ? 40 : 34,
+        width: focused ? 44 : 38,
+        height: focused ? 44 : 38,
         opacity: focused ? 1 : 0.8,
       }}
     />
@@ -19,8 +19,8 @@ export const icons = {
     <Image
       source={require("../assets/UI_resources/UI_white/coach_white.png")}
       style={{
-        width: focused ? 40 : 34,
-        height: focused ? 40 : 34,
+        width: focused ? 44 : 38,
+        height: focused ? 44 : 38,
         opacity: focused ? 1 : 0.8,
       }}
     />
@@ -29,8 +29,8 @@ export const icons = {
     <Image
       source={require("../assets/in_app_icons/map.png")}
       style={{
-        width: focused ? 40 : 34,
-        height: focused ? 40 : 34,
+        width: focused ? 44 : 38,
+        height: focused ? 44 : 38,
         opacity: focused ? 1 : 0.8,
       }}
     />
@@ -39,8 +39,8 @@ export const icons = {
     <Image
       source={require("../assets/in_app_icons/horse.png")}
       style={{
-        width: focused ? 40 : 34,
-        height: focused ? 40 : 34,
+        width: focused ? 44 : 38,
+        height: focused ? 44 : 38,
         opacity: focused ? 1 : 0.8,
       }}
     />
@@ -49,8 +49,8 @@ export const icons = {
     <Image
       source={require("../assets/in_app_icons/profile.png")}
       style={{
-        width: focused ? 40 : 34,
-        height: focused ? 40 : 34,
+        width: focused ? 44 : 38,
+        height: focused ? 44 : 38,
         opacity: focused ? 1 : 0.8,
       }}
     />
@@ -59,8 +59,8 @@ export const icons = {
     <Image
       source={require("../assets/in_app_icons/settings.png")}
       style={{
-        width: focused ? 40 : 34,
-        height: focused ? 40 : 34,
+        width: focused ? 44 : 38,
+        height: focused ? 44 : 38,
         opacity: focused ? 1 : 0.8,
       }}
     />

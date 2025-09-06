@@ -4,16 +4,16 @@ import { PlatformPressable } from "@react-navigation/elements";
 import { useLinkBuilder } from "@react-navigation/native";
 import type { JSX } from "react";
 import { useEffect, useRef } from "react";
-import { Animated, Dimensions, StyleSheet, Text, View } from "react-native";
+import { Animated, Dimensions, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get("window");
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { currentTheme } = useTheme();
   const { buildHref } = useLinkBuilder();
-  
+
   // Animation values for each tab
   const animationValues = useRef(
     state.routes.map(() => new Animated.Value(0))
@@ -24,7 +24,8 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
   const filteredRoutes = state.routes.filter((route) => {
     return (
-      (icons as Record<string, (props: any) => JSX.Element>)[route.name] !== undefined
+      (icons as Record<string, (props: any) => JSX.Element>)[route.name] !==
+      undefined
     );
   });
 
@@ -37,13 +38,13 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     const focusedIndex = filteredRoutes.findIndex(
       (route) => route.key === state.routes[state.index]?.key
     );
-    
+
     if (focusedIndex !== -1) {
       // Calculate the center position of the focused tab
-      const tabCenter = focusedIndex * tabWidth + (tabWidth / 2);
+      const tabCenter = focusedIndex * tabWidth + tabWidth / 2;
       const indicatorWidth = tabWidth * 0.8; // 80% of tab width for better appearance
-      const indicatorLeft = tabCenter - (indicatorWidth / 2);
-      
+      const indicatorLeft = tabCenter - indicatorWidth / 2;
+
       Animated.spring(slideAnim, {
         toValue: indicatorLeft,
         useNativeDriver: false,
@@ -54,18 +55,15 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   }, [state.index, tabWidth, slideAnim, filteredRoutes]);
 
   return (
-    <SafeAreaView
-      edges={["bottom"]}
-      style={styles.safeArea}
-    >
+    <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
       <View style={styles.container}>
         <View
           style={[
             styles.tabBar,
             {
-              backgroundColor: '#34495E', // Lighter blue-gray background
-              shadowColor: '#000000',
-            }
+              backgroundColor: "#34495E", // Lighter blue-gray background
+              shadowColor: "#000000",
+            },
           ]}
         >
           {/* Animated slide indicator */}
@@ -75,8 +73,8 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               {
                 left: slideAnim,
                 width: tabWidth * 0.8, // 80% of tab width for better appearance
-                backgroundColor: '#5DADE2', // Bright blue color for visibility
-              }
+                backgroundColor: "#5DADE2", // Bright blue color for visibility
+              },
             ]}
           />
 
@@ -141,21 +139,21 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                 onPress={onPress}
                 onLongPress={onLongPress}
                 style={[
-                  styles.tabBarItem, 
-                  { 
+                  styles.tabBarItem,
+                  {
                     width: tabWidth,
-                    backgroundColor: 'transparent', // Always transparent to prevent gray background
-                  }
+                    backgroundColor: "transparent", // Always transparent to prevent gray background
+                  },
                 ]}
-                android_ripple={{ color: 'transparent' }} // Disable ripple on Android
+                android_ripple={{ color: "transparent" }} // Disable ripple on Android
                 pressRetentionOffset={{ top: 0, left: 0, right: 0, bottom: 0 }} // Disable press retention
               >
-                <Animated.View 
+                <Animated.View
                   style={[
                     styles.tabBarItemContent,
                     {
                       transform: [{ scale: scaleValue }],
-                    }
+                    },
                   ]}
                 >
                   {/* Icon */}
@@ -164,22 +162,22 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                       route.name
                     ]?.({ focused: isFocused })}
                   </View>
-                  
+
                   {/* Label */}
-                  <Text 
+                  {/*<Text
                     style={[
                       styles.tabBarLabel,
-                      { 
-                        color: isFocused 
-                          ? '#FFFFFF' // White for focused tabs
-                          : '#B0B0B0', // Light gray for unfocused tabs
-                        fontWeight: isFocused ? '600' : '500',
-                      }
+                      {
+                        color: isFocused
+                          ? "#FFFFFF" // White for focused tabs
+                          : "#B0B0B0", // Light gray for unfocused tabs
+                        fontWeight: isFocused ? "600" : "500",
+                      },
                     ]}
                     numberOfLines={1}
                   >
                     {label}
-                  </Text>
+                  </Text>*/}
                 </Animated.View>
               </PlatformPressable>
             );
@@ -198,15 +196,14 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: 20,
-    paddingBottom: 10,
   },
   tabBar: {
     flexDirection: "row",
     borderRadius: 25,
-    paddingVertical: 20, // Increased from 15 to 20 for more height
+    paddingVertical: 2, // Increased from 15 to 20 for more height
     paddingHorizontal: 0, // Remove horizontal padding from tabBar
     position: "relative",
-    minHeight: 80, // Add minimum height to ensure icons fit
+    minHeight: 50, // Add minimum height to ensure icons fit
     shadowOffset: {
       width: 0,
       height: 4,
@@ -217,8 +214,8 @@ const styles = StyleSheet.create({
   },
   slideIndicator: {
     position: "absolute",
-    top: 10, // Better positioning within the tab bar
-    height: "75%", // Larger height for better visibility
+    top: 8, // Better positioning within the tab bar
+    height: "72%", // Larger height for better visibility
     borderRadius: 20,
     opacity: 0.8, // Much more visible
     marginHorizontal: 0, // Remove margin for better alignment
@@ -227,7 +224,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flex: 1, // Ensure equal distribution
-    backgroundColor: 'transparent', // Ensure no background color
+    backgroundColor: "transparent", // Ensure no background color
   },
   tabBarItemContent: {
     alignItems: "center",
@@ -236,13 +233,13 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginBottom: 6, // Increased margin for better spacing
-    minHeight: 28, // Ensure consistent height for all icons
+    minHeight: 34, // Ensure consistent height for all icons
     justifyContent: "center",
     alignItems: "center",
   },
   tabBarLabel: {
     fontSize: 11,
     textAlign: "center",
-    color: '#FFFFFF', // White text for dark background
+    color: "#FFFFFF", // White text for dark background
   },
 });
