@@ -12,7 +12,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs location access to track your riding routes and show your position on the map.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access to track your riding routes even when the app is in the background."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access to track your riding routes even when the app is in the background.",
+        "NSContactsUsageDescription": "This app needs access to your contacts to add emergency contacts who can receive alerts during rides."
       },
       "config": {
         "googleMapsApiKey": "AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg"
@@ -39,6 +40,8 @@
         "POST_NOTIFICATIONS",
         "SCHEDULE_EXACT_ALARM",
         "USE_EXACT_ALARM",
+        "READ_CONTACTS",
+        "SEND_SMS",
         "com.android.vending.BILLING"
       ],
       "config": {

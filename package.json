@@ -22,6 +22,7 @@
     "expo": "^53.0.20",
     "expo-blur": "^14.1.5",
     "expo-constants": "^17.1.7",
+    "expo-contacts": "^14.2.5",
     "expo-dev-client": "~5.2.4",
     "expo-device": "~7.1.4",
     "expo-file-system": "^18.1.11",
@@ -36,7 +37,9 @@
     "expo-media-library": "~17.1.7",
     "expo-notifications": "^0.31.4",
     "expo-router": "^5.1.4",
+    "expo-sensors": "^14.1.4",
     "expo-sharing": "^13.1.5",
+    "expo-sms": "^13.1.4",
     "expo-splash-screen": "^0.30.10",
     "expo-status-bar": "~2.2.3",
     "expo-symbols": "^0.4.5",
@@ -50,7 +53,7 @@
     "react-native": "^0.79.5",
     "react-native-geolocation": "^1.0.0",
     "react-native-gesture-handler": "~2.24.0",
-    "react-native-iap": "^14.0.1",
+    "react-native-iap": "^12.15.2",
     "react-native-maps": "1.20.1",
     "react-native-pager-view": "^6.7.1",
     "react-native-reanimated": "~3.17.4",
@@ -58,7 +61,8 @@
     "react-native-screens": "~4.11.1",
     "react-native-view-shot": "^4.0.3",
     "react-native-web": "~0.20.0",
-    "react-native-webview": "13.13.5"
+    "react-native-webview": "13.13.5",
+    "supabase": "^2.39.2"
   },
   "devDependencies": {
     "@babel/cli": "^7.27.2",
