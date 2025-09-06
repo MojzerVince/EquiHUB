@@ -8,6 +8,7 @@ const TabLayout = () => {
       tabBar={(props) => <TabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        animation: 'none',
       }}
     >
       <Tabs.Screen name="community" options={{ title: "Community" }} />

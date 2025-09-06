@@ -114,7 +114,7 @@ const AppContent = () => {
               value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
             >
               <ProtectedRoute splashActive={false}>
-                <Stack>
+                <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
                   <Stack.Screen name="index" options={{ headerShown: false }} />
                   <Stack.Screen
                     name="(tabs)"
