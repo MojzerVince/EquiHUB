@@ -16,7 +16,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import MapView, {
   Marker,
@@ -30,6 +30,7 @@ import { useDialog } from "../../contexts/DialogContext";
 import { useMetric } from "../../contexts/MetricContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { ChallengeStorageService } from "../../lib/challengeStorage";
+import { FallDetectionAPI, FallDetectionConfig, FallEvent } from "../../lib/fallDetectionAPI";
 import { HorseAPI } from "../../lib/horseAPI";
 import { Horse } from "../../lib/supabase";
 import { ChallengeSession } from "../../types/challengeTypes";
@@ -276,6 +277,18 @@ const MapScreen = () => {
   const [isUsingBackgroundLocation, setIsUsingBackgroundLocation] =
     useState(false);
 
+  // Fall detection state
+  const [fallDetectionEnabled, setFallDetectionEnabled] = useState(true);
+  const [fallDetectionConfig, setFallDetectionConfig] = useState<FallDetectionConfig>({
+    accelerationThreshold: 2.5,
+    gyroscopeThreshold: 5.0,
+    impactDuration: 500,
+    recoveryTimeout: 10000,
+    isEnabled: true,
+  });
+  const [recentFallEvents, setRecentFallEvents] = useState<FallEvent[]>([]);
+  const [showFallDetectionModal, setShowFallDetectionModal] = useState(false);
+
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
   );
@@ -289,6 +302,8 @@ const MapScreen = () => {
     startLocationWatcher();
     // Request camera and media library permissions
     requestCameraPermissions();
+    // Initialize fall detection
+    initializeFallDetection();
   }, []);
 
   // App state change handler for coordinating foreground/background location tracking
@@ -327,6 +342,29 @@ const MapScreen = () => {
       subscription?.remove();
     };
   }, [appState, isTracking]);
+
+  // Fall detection effect - start/stop monitoring based on tracking state
+  useEffect(() => {
+    const handleFallDetection = async () => {
+      if (isTracking && fallDetectionEnabled && user?.id) {
+        console.log("🔍 Starting fall detection monitoring");
+        const started = await FallDetectionAPI.startMonitoring(user.id);
+        if (!started) {
+          console.warn("⚠️ Failed to start fall detection - sensors not available");
+        }
+      } else {
+        console.log("🔍 Stopping fall detection monitoring");
+        FallDetectionAPI.stopMonitoring();
+      }
+    };
+
+    handleFallDetection();
+
+    return () => {
+      // Cleanup fall detection when component unmounts
+      FallDetectionAPI.stopMonitoring();
+    };
+  }, [isTracking, fallDetectionEnabled, user?.id]);
 
   // Background data sync effect - only when using background location
   useEffect(() => {
@@ -367,6 +405,80 @@ const MapScreen = () => {
       setCameraPermission(false);
       setMediaLibraryPermission(false);
     }
+  };
+
+  // Initialize fall detection system
+  const initializeFallDetection = async () => {
+    try {
+      // Set up fall event listener
+      const handleFallEvent = (fallEvent: FallEvent) => {
+        console.log("🚨 Fall event detected:", fallEvent);
+        
+        // Add to recent fall events
+        setRecentFallEvents(prev => [fallEvent, ...prev.slice(0, 9)]); // Keep last 10 events
+        
+        // Show immediate alert to user
+        Alert.alert(
+          "🚨 Fall Detected!",
+          `Emergency alert has been sent to your emergency contacts.\n\nTime: ${new Date(fallEvent.timestamp).toLocaleTimeString()}\nImpact: ${fallEvent.accelerationMagnitude.toFixed(1)}g`,
+          [
+            {
+              text: "I'm OK",
+              style: "cancel",
+              onPress: () => {
+                console.log("User confirmed they are OK after fall detection");
+              }
+            },
+            {
+              text: "View Details",
+              onPress: () => setShowFallDetectionModal(true)
+            }
+          ]
+        );
+      };
+
+      FallDetectionAPI.addFallEventListener(handleFallEvent);
+      
+      // Update configuration
+      FallDetectionAPI.updateConfig(fallDetectionConfig);
+      
+      console.log("✅ Fall detection initialized");
+    } catch (error) {
+      console.error("❌ Error initializing fall detection:", error);
+    }
+  };
+
+  // Update fall detection configuration
+  const updateFallDetectionConfig = (newConfig: Partial<FallDetectionConfig>) => {
+    const updatedConfig = { ...fallDetectionConfig, ...newConfig };
+    setFallDetectionConfig(updatedConfig);
+    FallDetectionAPI.updateConfig(updatedConfig);
+  };
+
+  // Test fall detection (for debugging)
+  const testFallDetection = async () => {
+    if (!user?.id) return;
+    
+    Alert.alert(
+      "Test Fall Detection",
+      "This will trigger a test fall alert to your emergency contacts. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Send Test Alert",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await FallDetectionAPI.triggerTestFall(user.id);
+              Alert.alert("Test Alert Sent", "A test fall detection alert has been sent to your emergency contacts.");
+            } catch (error) {
+              console.error("Error sending test fall alert:", error);
+              showError("Failed to send test alert. Please check your emergency contacts configuration.");
+            }
+          }
+        }
+      ]
+    );
   };
 
   // Add location watcher for continuous updates
@@ -3083,6 +3195,73 @@ const MapScreen = () => {
               </View>
             )}
 
+            {/* Fall Detection Toggle */}
+            <View
+              style={[
+                styles.highAccuracyContainer,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
+              <View style={styles.highAccuracyRow}>
+                <Text
+                  style={[
+                    styles.highAccuracyLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  🚨 Fall Detection
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowFallDetectionModal(true)}
+                  style={styles.infoButton}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.infoButtonText,
+                      { color: currentTheme.colors.primary },
+                    ]}
+                  >
+                    ⚙️
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleSwitch,
+                    {
+                      backgroundColor: fallDetectionEnabled
+                        ? currentTheme.colors.primary
+                        : currentTheme.colors.border,
+                    },
+                  ]}
+                  onPress={() => setFallDetectionEnabled(!fallDetectionEnabled)}
+                  activeOpacity={0.8}
+                >
+                  <View
+                    style={[
+                      styles.toggleKnob,
+                      {
+                        backgroundColor: "#FFFFFF",
+                        transform: [
+                          { translateX: fallDetectionEnabled ? 20 : 0 },
+                        ],
+                      },
+                    ]}
+                  />
+                </TouchableOpacity>
+              </View>
+              {fallDetectionEnabled && (
+                <Text
+                  style={[
+                    styles.batteryRecommendationText,
+                    { color: currentTheme.colors.textSecondary, marginTop: 8 },
+                  ]}
+                >
+                  Monitors sensors to detect falls and automatically alerts emergency contacts
+                </Text>
+              )}
+            </View>
+
             {/* Start/Stop Tracking Button */}
             <TouchableOpacity
               style={[
@@ -3209,6 +3388,29 @@ const MapScreen = () => {
                         { color: currentTheme.colors.textSecondary },
                       ]}
                     >
+                      Safety
+                    </Text>
+                    <View style={styles.gaitDisplayContainer}>
+                      <Text style={styles.gaitDisplayEmoji}>
+                        {fallDetectionEnabled ? "🛡️" : "⚠️"}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.trackingStatValue,
+                          { color: fallDetectionEnabled ? currentTheme.colors.primary : currentTheme.colors.warning },
+                        ]}
+                      >
+                        {fallDetectionEnabled ? "Active" : "Off"}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.trackingStatItem}>
+                    <Text
+                      style={[
+                        styles.trackingStatLabel,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
                       Points
                     </Text>
                     <Text
@@ -3302,6 +3504,143 @@ const MapScreen = () => {
           </View>
         </View>
       )}
+
+      {/* Fall Detection Configuration Modal */}
+      <Modal
+        visible={showFallDetectionModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFallDetectionModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.batteryInfoModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View style={styles.batteryInfoHeader}>
+              <Text
+                style={[
+                  styles.batteryInfoTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                🚨 Fall Detection
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.closeModalButton,
+                  { backgroundColor: currentTheme.colors.accent },
+                ]}
+                onPress={() => setShowFallDetectionModal(false)}
+              >
+                <Text
+                  style={[
+                    styles.closeModalText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.batteryInfoContent}>
+              <Text
+                style={[
+                  styles.batteryInfoText,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Fall detection uses your device's sensors to automatically detect potential falls during rides and send emergency alerts to your contacts.
+              </Text>
+
+              <Text
+                style={[
+                  styles.batteryWarningText,
+                  { color: currentTheme.colors.warning },
+                ]}
+              >
+                How it works:
+              </Text>
+              <Text
+                style={[
+                  styles.batteryRecommendationText,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                • Monitors accelerometer for sudden impacts ({fallDetectionConfig.accelerationThreshold}g threshold)
+                {'\n'}• Detects rotational motion with gyroscope ({fallDetectionConfig.gyroscopeThreshold} rad/s threshold)
+                {'\n'}• Waits {fallDetectionConfig.recoveryTimeout/1000} seconds for recovery before alerting
+                {'\n'}• Automatically sends SMS with location to emergency contacts
+              </Text>
+
+              {recentFallEvents.length > 0 && (
+                <>
+                  <Text
+                    style={[
+                      styles.batteryWarningText,
+                      { color: currentTheme.colors.text, marginTop: 16 },
+                    ]}
+                  >
+                    Recent Fall Events:
+                  </Text>
+                  {recentFallEvents.slice(0, 3).map((event) => (
+                    <View
+                      key={event.id}
+                      style={{
+                        backgroundColor: currentTheme.colors.surface,
+                        padding: 12,
+                        borderRadius: 8,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.batteryRecommendationText,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        {new Date(event.timestamp).toLocaleString()}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.batteryRecommendationText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Impact: {event.accelerationMagnitude.toFixed(1)}g
+                        {event.alertSent ? " • Alert sent ✅" : " • Alert failed ❌"}
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              )}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[
+                styles.batteryInfoButton,
+                { backgroundColor: currentTheme.colors.warning },
+              ]}
+              onPress={testFallDetection}
+            >
+              <Text style={styles.batteryInfoButtonText}>🧪 Test Fall Detection</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.batteryInfoButton,
+                { backgroundColor: currentTheme.colors.primary, marginTop: 12 },
+              ]}
+              onPress={() => setShowFallDetectionModal(false)}
+            >
+              <Text style={styles.batteryInfoButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
