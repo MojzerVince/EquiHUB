@@ -45,7 +45,7 @@
     "expo-web-browser": "^14.2.0",
     "express": "^5.1.0",
     "feather-icons": "^4.29.2",
-    "react": "19.0.0",
+    "react": "^19.1.1",
     "react-dom": "19.0.0",
     "react-native": "^0.79.5",
     "react-native-geolocation": "^1.0.0",
