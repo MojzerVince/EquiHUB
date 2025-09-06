@@ -347,14 +347,14 @@ const MapScreen = () => {
   useEffect(() => {
     const handleFallDetection = async () => {
       if (isTracking && fallDetectionEnabled && user?.id) {
-        console.log("🔍 Starting fall detection monitoring");
-        const started = await FallDetectionAPI.startMonitoring(user.id);
+        console.log("🔍 Starting fall detection monitoring (foreground + background)");
+        const started = await FallDetectionAPI.startMonitoring(user.id, true); // Enable background
         if (!started) {
           console.warn("⚠️ Failed to start fall detection - sensors not available");
         }
       } else {
         console.log("🔍 Stopping fall detection monitoring");
-        FallDetectionAPI.stopMonitoring();
+        await FallDetectionAPI.stopMonitoring(); // Now async to handle background cleanup
       }
     };
 
@@ -410,6 +410,10 @@ const MapScreen = () => {
   // Initialize fall detection system
   const initializeFallDetection = async () => {
     try {
+      // Load existing fall events (including background ones)
+      const allFallEvents = await FallDetectionAPI.getAllFallEvents();
+      setRecentFallEvents(allFallEvents.slice(0, 10)); // Keep last 10 events
+
       // Set up fall event listener
       const handleFallEvent = (fallEvent: FallEvent) => {
         console.log("🚨 Fall event detected:", fallEvent);
@@ -3576,6 +3580,8 @@ const MapScreen = () => {
                 {'\n'}• Detects rotational motion with gyroscope ({fallDetectionConfig.gyroscopeThreshold} rad/s threshold)
                 {'\n'}• Waits {fallDetectionConfig.recoveryTimeout/1000} seconds for recovery before alerting
                 {'\n'}• Automatically sends SMS with location to emergency contacts
+                {'\n'}• ✅ Background monitoring: Works when screen is off or app is backgrounded
+                {'\n'}• 🔋 Optimized for battery efficiency during background operation
               </Text>
 
               {recentFallEvents.length > 0 && (
@@ -3614,6 +3620,7 @@ const MapScreen = () => {
                       >
                         Impact: {event.accelerationMagnitude.toFixed(1)}g
                         {event.alertSent ? " • Alert sent ✅" : " • Alert failed ❌"}
+                        {event.detectedInBackground ? " • Background detection 🌙" : " • Foreground detection 📱"}
                       </Text>
                     </View>
                   ))}

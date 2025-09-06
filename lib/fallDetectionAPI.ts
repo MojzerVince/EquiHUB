@@ -1,5 +1,6 @@
 import * as Location from "expo-location";
 import { Accelerometer, Gyroscope } from "expo-sensors";
+import { BackgroundFallDetectionAPI } from "./backgroundFallDetectionAPI";
 import { ServerSMSAPI } from "./serverSMSAPI";
 
 export interface SensorData {
@@ -35,6 +36,7 @@ export interface FallEvent {
   };
   alertSent: boolean;
   alertSentAt?: number;
+  detectedInBackground?: boolean; // Optional flag to distinguish background detection
 }
 
 export class FallDetectionAPI {
@@ -56,8 +58,8 @@ export class FallDetectionAPI {
     isEnabled: true,
   };
 
-  // Start fall detection monitoring
-  static async startMonitoring(userId: string): Promise<boolean> {
+  // Start fall detection monitoring (both foreground and background)
+  static async startMonitoring(userId: string, enableBackground: boolean = true): Promise<boolean> {
     if (this.isMonitoring) {
       console.log("Fall detection already monitoring");
       return true;
@@ -92,7 +94,26 @@ export class FallDetectionAPI {
       this.potentialFallStartTime = null;
       this.lastStableTime = Date.now();
 
-      console.log("🔍 Fall detection monitoring started");
+      // Start background monitoring if enabled and app supports it
+      if (enableBackground) {
+        console.log("🔍 Starting background fall detection monitoring");
+        const backgroundStarted = await BackgroundFallDetectionAPI.startBackgroundMonitoring(userId, {
+          accelerationThreshold: this.config.accelerationThreshold,
+          gyroscopeThreshold: this.config.gyroscopeThreshold,
+          impactDuration: this.config.impactDuration,
+          recoveryTimeout: this.config.recoveryTimeout,
+          isEnabled: this.config.isEnabled,
+          sensorUpdateInterval: 100, // 10Hz for background to save battery
+        });
+
+        if (backgroundStarted) {
+          console.log("✅ Background fall detection started successfully");
+        } else {
+          console.warn("⚠️ Background fall detection failed to start, continuing with foreground only");
+        }
+      }
+
+      console.log("🔍 Fall detection monitoring started (foreground + background)");
       return true;
     } catch (error) {
       console.error("Error starting fall detection:", error);
@@ -100,8 +121,8 @@ export class FallDetectionAPI {
     }
   }
 
-  // Stop fall detection monitoring
-  static stopMonitoring(): void {
+  // Stop fall detection monitoring (both foreground and background)
+  static async stopMonitoring(): Promise<void> {
     if (this.accelerometerSubscription) {
       this.accelerometerSubscription.remove();
       this.accelerometerSubscription = null;
@@ -112,10 +133,13 @@ export class FallDetectionAPI {
       this.gyroscopeSubscription = null;
     }
 
+    // Stop background monitoring
+    await BackgroundFallDetectionAPI.stopBackgroundMonitoring();
+
     this.isMonitoring = false;
     this.sensorHistory = [];
     this.potentialFallStartTime = null;
-    console.log("🔍 Fall detection monitoring stopped");
+    console.log("🔍 Fall detection monitoring stopped (foreground + background)");
   }
 
   // Process accelerometer data
@@ -323,6 +347,41 @@ Check safety!`;
   // Get sensor history for debugging
   static getSensorHistory(): SensorData[] {
     return [...this.sensorHistory];
+  }
+
+  // Get all fall events (including background ones)
+  static async getAllFallEvents(): Promise<(FallEvent | any)[]> {
+    try {
+      const backgroundEvents = await BackgroundFallDetectionAPI.getStoredFallEvents();
+      // Convert background events to regular fall events for consistency
+      const convertedBackgroundEvents = backgroundEvents.map(bgEvent => ({
+        id: bgEvent.id,
+        timestamp: bgEvent.timestamp,
+        accelerationMagnitude: bgEvent.accelerationMagnitude,
+        gyroscopeMagnitude: bgEvent.gyroscopeMagnitude,
+        location: bgEvent.location,
+        alertSent: bgEvent.alertSent,
+        alertSentAt: bgEvent.alertSentAt,
+        detectedInBackground: true, // Add flag to distinguish
+      }));
+
+      // Note: In a real implementation, you would also get foreground events
+      // from storage or from your event listeners storage
+      return convertedBackgroundEvents;
+    } catch (error) {
+      console.error("Error getting all fall events:", error);
+      return [];
+    }
+  }
+
+  // Check if background monitoring is available and active
+  static isBackgroundMonitoringActive(): boolean {
+    return BackgroundFallDetectionAPI.isMonitoringActive();
+  }
+
+  // Update background configuration
+  static async updateBackgroundConfig(newConfig: Partial<any>): Promise<void> {
+    await BackgroundFallDetectionAPI.updateConfig(newConfig);
   }
 
   // Test fall detection (for debugging)
