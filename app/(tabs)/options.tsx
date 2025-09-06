@@ -5,6 +5,7 @@ import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { AuthAPI } from "@/lib/authAPI";
 import { EmergencyContact, EmergencyContactsAPI } from "@/lib/emergencyContactsAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
+import { SMSTestUtility } from "@/lib/smsTestUtility";
 import * as Contacts from "expo-contacts";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
@@ -185,6 +186,31 @@ const OptionsScreen = () => {
       console.error("Error toggling emergency contact:", error);
       Alert.alert("Error", "Failed to update emergency contact. Please try again.");
     }
+  };
+
+  // Sync emergency contacts to database
+  const syncContactsToDatabase = async () => {
+    if (!user?.id) return;
+
+    Alert.alert(
+      "Sync Contacts to Database",
+      "This will sync your emergency contacts to the database for server SMS functionality. This is required for reliable emergency alerts.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sync Now",
+          onPress: async () => {
+            try {
+              await SMSTestUtility.syncContactsToDatabase(user.id);
+              Alert.alert("✅ Sync Complete", "Emergency contacts have been synced to the database. Server SMS alerts are now fully configured.");
+            } catch (error) {
+              console.error("Error syncing contacts:", error);
+              Alert.alert("Error", "Failed to sync contacts. Please try again.");
+            }
+          }
+        }
+      ]
+    );
   };
 
   // Load hidden posts from storage
@@ -1080,6 +1106,20 @@ const OptionsScreen = () => {
                 <Text style={styles.addContactButtonText}>+ Add Emergency Contact</Text>
               </TouchableOpacity>
 
+              {/* Sync Contacts Button */}
+              <TouchableOpacity
+                style={[
+                  styles.addContactButton,
+                  { 
+                    backgroundColor: currentTheme.colors.secondary,
+                    marginTop: 10,
+                  },
+                ]}
+                onPress={syncContactsToDatabase}
+              >
+                <Text style={styles.addContactButtonText}>🔄 Sync Contacts to Server</Text>
+              </TouchableOpacity>
+
               {/* Emergency Contacts List */}
               {loadingEmergencyContacts ? (
                 <View style={styles.emergencyContactsLoading}>
@@ -1833,7 +1873,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    marginBottom: 20,
     alignItems: "center",
   },
   addContactButtonText: {
@@ -1848,6 +1887,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 16,
     borderRadius: 12,
+    marginTop: 10,
     marginBottom: 12,
     elevation: 2,
     shadowColor: "#000",

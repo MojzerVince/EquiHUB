@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import { Accelerometer, Gyroscope } from "expo-sensors";
-import { EmergencyContactsAPI } from "./emergencyContactsAPI";
+import { ServerSMSAPI } from "./serverSMSAPI";
 
 export interface SensorData {
   accelerometer: {
@@ -256,18 +256,15 @@ export class FallDetectionAPI {
   private static async sendFallAlert(userId: string, fallEvent: FallEvent): Promise<void> {
     try {
       const alertMessage = `🚨 FALL DETECTED 🚨
+EquiHUB: Fall during ride
+Time: ${new Date(fallEvent.timestamp).toLocaleTimeString()}
+Impact: ${fallEvent.accelerationMagnitude.toFixed(1)}g
+Check safety!`;
 
-Emergency Alert: A potential fall has been detected during horse riding.
-
-Time: ${new Date(fallEvent.timestamp).toLocaleString()}
-Impact Force: ${fallEvent.accelerationMagnitude.toFixed(1)}g
-${fallEvent.gyroscopeMagnitude > 0 ? `Rotation: ${fallEvent.gyroscopeMagnitude.toFixed(1)} rad/s` : ""}
-
-This is an automated alert from EquiHUB. Please check on the rider's safety immediately.`;
-
-      const alertResult = await EmergencyContactsAPI.sendEmergencyAlert(
+      const alertResult = await ServerSMSAPI.sendFallAlert(
         userId,
-        alertMessage,
+        fallEvent.accelerationMagnitude,
+        fallEvent.gyroscopeMagnitude,
         fallEvent.location
       );
 
