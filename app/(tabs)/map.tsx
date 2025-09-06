@@ -3531,14 +3531,14 @@ const MapScreen = () => {
               <TouchableOpacity
                 style={[
                   styles.closeModalButton,
-                  { backgroundColor: currentTheme.colors.accent },
+                  { backgroundColor: 'rgba(0, 0, 0, 0.1)' },
                 ]}
                 onPress={() => setShowFallDetectionModal(false)}
               >
                 <Text
                   style={[
                     styles.closeModalText,
-                    { color: currentTheme.colors.text },
+                    { color: currentTheme.colors.textSecondary },
                   ]}
                 >
                   ✕
