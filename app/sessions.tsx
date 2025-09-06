@@ -579,7 +579,7 @@ const SessionsScreen = () => {
             activeOpacity={0.7}
           >
             <Image
-              source={require("../assets/UI_resources/UI_white/arrow_white.png")}
+              source={require("../assets/in_app_icons/back.png")}
               style={styles.backIcon}
             />
           </TouchableOpacity>
@@ -869,13 +869,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     zIndex: 10,
   },
   backIcon: {
-    width: 24,
-    height: 24,
-    tintColor: "#fff",
+    width: 26,
+    height: 26,
   },
   header: {
     fontSize: 30,

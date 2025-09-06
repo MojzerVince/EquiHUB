@@ -3,7 +3,10 @@ import { useDialog } from "@/contexts/DialogContext";
 import { MetricSystem, useMetric } from "@/contexts/MetricContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { AuthAPI } from "@/lib/authAPI";
-import { EmergencyContact, EmergencyContactsAPI } from "@/lib/emergencyContactsAPI";
+import {
+  EmergencyContact,
+  EmergencyContactsAPI,
+} from "@/lib/emergencyContactsAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
 import { SMSTestUtility } from "@/lib/smsTestUtility";
 import * as Contacts from "expo-contacts";
@@ -92,10 +95,13 @@ const OptionsScreen = () => {
     try {
       const status = await EmergencyContactsAPI.requestContactsPermission();
       setContactsPermissionStatus(status);
-      
+
       if (status.granted) {
         await loadDeviceContacts();
-        Alert.alert("Permission Granted", "You can now access your contacts to add emergency contacts.");
+        Alert.alert(
+          "Permission Granted",
+          "You can now access your contacts to add emergency contacts."
+        );
       } else {
         Alert.alert(
           "Permission Denied",
@@ -104,7 +110,10 @@ const OptionsScreen = () => {
       }
     } catch (error) {
       console.error("Error requesting contacts permission:", error);
-      Alert.alert("Error", "Failed to request contacts permission. Please try again.");
+      Alert.alert(
+        "Error",
+        "Failed to request contacts permission. Please try again."
+      );
     }
   };
 
@@ -115,28 +124,42 @@ const OptionsScreen = () => {
       setDeviceContacts(contacts);
     } catch (error) {
       console.error("Error loading device contacts:", error);
-      Alert.alert("Error", "Failed to load contacts. Please check your permissions.");
+      Alert.alert(
+        "Error",
+        "Failed to load contacts. Please check your permissions."
+      );
     }
   };
 
   // Add emergency contact
-  const handleAddEmergencyContact = async (contact: Omit<EmergencyContact, "id" | "addedAt">) => {
+  const handleAddEmergencyContact = async (
+    contact: Omit<EmergencyContact, "id" | "addedAt">
+  ) => {
     if (!user?.id) return;
 
     try {
-      const result = await EmergencyContactsAPI.addEmergencyContact(user.id, contact);
-      
+      const result = await EmergencyContactsAPI.addEmergencyContact(
+        user.id,
+        contact
+      );
+
       if (result.success) {
         await loadEmergencyContacts();
         setShowAddContact(false);
         setSearchQuery("");
         Alert.alert("Success", "Emergency contact added successfully.");
       } else {
-        Alert.alert("Error", result.error || "Failed to add emergency contact.");
+        Alert.alert(
+          "Error",
+          result.error || "Failed to add emergency contact."
+        );
       }
     } catch (error) {
       console.error("Error adding emergency contact:", error);
-      Alert.alert("Error", "Failed to add emergency contact. Please try again.");
+      Alert.alert(
+        "Error",
+        "Failed to add emergency contact. Please try again."
+      );
     }
   };
 
@@ -154,16 +177,28 @@ const OptionsScreen = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              const success = await EmergencyContactsAPI.removeEmergencyContact(user.id, contactId);
+              const success = await EmergencyContactsAPI.removeEmergencyContact(
+                user.id,
+                contactId
+              );
               if (success) {
                 await loadEmergencyContacts();
-                Alert.alert("Success", "Emergency contact removed successfully.");
+                Alert.alert(
+                  "Success",
+                  "Emergency contact removed successfully."
+                );
               } else {
-                Alert.alert("Error", "Failed to remove emergency contact. Please try again.");
+                Alert.alert(
+                  "Error",
+                  "Failed to remove emergency contact. Please try again."
+                );
               }
             } catch (error) {
               console.error("Error removing emergency contact:", error);
-              Alert.alert("Error", "Failed to remove emergency contact. Please try again.");
+              Alert.alert(
+                "Error",
+                "Failed to remove emergency contact. Please try again."
+              );
             }
           },
         },
@@ -172,19 +207,32 @@ const OptionsScreen = () => {
   };
 
   // Toggle emergency contact enabled status
-  const handleToggleEmergencyContact = async (contactId: string, isEnabled: boolean) => {
+  const handleToggleEmergencyContact = async (
+    contactId: string,
+    isEnabled: boolean
+  ) => {
     if (!user?.id) return;
 
     try {
-      const success = await EmergencyContactsAPI.toggleEmergencyContact(user.id, contactId, isEnabled);
+      const success = await EmergencyContactsAPI.toggleEmergencyContact(
+        user.id,
+        contactId,
+        isEnabled
+      );
       if (success) {
         await loadEmergencyContacts();
       } else {
-        Alert.alert("Error", "Failed to update emergency contact. Please try again.");
+        Alert.alert(
+          "Error",
+          "Failed to update emergency contact. Please try again."
+        );
       }
     } catch (error) {
       console.error("Error toggling emergency contact:", error);
-      Alert.alert("Error", "Failed to update emergency contact. Please try again.");
+      Alert.alert(
+        "Error",
+        "Failed to update emergency contact. Please try again."
+      );
     }
   };
 
@@ -202,13 +250,19 @@ const OptionsScreen = () => {
           onPress: async () => {
             try {
               await SMSTestUtility.syncContactsToDatabase(user.id);
-              Alert.alert("✅ Sync Complete", "Emergency contacts have been synced to the database. Server SMS alerts are now fully configured.");
+              Alert.alert(
+                "✅ Sync Complete",
+                "Emergency contacts have been synced to the database. Server SMS alerts are now fully configured."
+              );
             } catch (error) {
               console.error("Error syncing contacts:", error);
-              Alert.alert("Error", "Failed to sync contacts. Please try again.");
+              Alert.alert(
+                "Error",
+                "Failed to sync contacts. Please try again."
+              );
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -304,12 +358,18 @@ const OptionsScreen = () => {
   const [loadingHiddenPosts, setLoadingHiddenPosts] = useState(false);
 
   // Emergency contacts state
-  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
+  const [emergencyContacts, setEmergencyContacts] = useState<
+    EmergencyContact[]
+  >([]);
   const [showEmergencyContacts, setShowEmergencyContacts] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
-  const [loadingEmergencyContacts, setLoadingEmergencyContacts] = useState(false);
+  const [loadingEmergencyContacts, setLoadingEmergencyContacts] =
+    useState(false);
   const [deviceContacts, setDeviceContacts] = useState<Contacts.Contact[]>([]);
-  const [contactsPermissionStatus, setContactsPermissionStatus] = useState({ granted: false, canAskAgain: true });
+  const [contactsPermissionStatus, setContactsPermissionStatus] = useState({
+    granted: false,
+    canAskAgain: true,
+  });
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleLogout = () => {
@@ -468,7 +528,8 @@ const OptionsScreen = () => {
 
       // Request Contacts permission
       try {
-        const contactsResult = await EmergencyContactsAPI.requestContactsPermission();
+        const contactsResult =
+          await EmergencyContactsAPI.requestContactsPermission();
         if (contactsResult.granted) {
           permissionsGranted++;
           permissionResults.push("✅ Contacts access granted");
@@ -811,7 +872,7 @@ const OptionsScreen = () => {
             activeOpacity={0.7}
           >
             <Image
-              source={require("../../assets/UI_resources/UI_white/arrow_white.png")}
+              source={require("../../assets/in_app_icons/back.png")}
               style={styles.backIcon}
             />
           </TouchableOpacity>
@@ -1074,7 +1135,8 @@ const OptionsScreen = () => {
                       { color: currentTheme.colors.text },
                     ]}
                   >
-                    📞 Grant contacts access to easily add emergency contacts from your phone
+                    📞 Grant contacts access to easily add emergency contacts
+                    from your phone
                   </Text>
                   <TouchableOpacity
                     style={[
@@ -1103,21 +1165,25 @@ const OptionsScreen = () => {
                   setShowAddContact(true);
                 }}
               >
-                <Text style={styles.addContactButtonText}>+ Add Emergency Contact</Text>
+                <Text style={styles.addContactButtonText}>
+                  + Add Emergency Contact
+                </Text>
               </TouchableOpacity>
 
               {/* Sync Contacts Button */}
               <TouchableOpacity
                 style={[
                   styles.addContactButton,
-                  { 
+                  {
                     backgroundColor: currentTheme.colors.secondary,
                     marginTop: 10,
                   },
                 ]}
                 onPress={syncContactsToDatabase}
               >
-                <Text style={styles.addContactButtonText}>🔄 Sync Contacts to Server</Text>
+                <Text style={styles.addContactButtonText}>
+                  🔄 Sync Contacts to Server
+                </Text>
               </TouchableOpacity>
 
               {/* Emergency Contacts List */}
@@ -1160,13 +1226,17 @@ const OptionsScreen = () => {
                           { color: currentTheme.colors.textSecondary },
                         ]}
                       >
-                        {EmergencyContactsAPI.formatPhoneNumber(contact.phoneNumber)}
+                        {EmergencyContactsAPI.formatPhoneNumber(
+                          contact.phoneNumber
+                        )}
                       </Text>
                     </View>
                     <View style={styles.emergencyContactControls}>
                       <Switch
                         value={contact.isEnabled}
-                        onValueChange={(value) => handleToggleEmergencyContact(contact.id, value)}
+                        onValueChange={(value) =>
+                          handleToggleEmergencyContact(contact.id, value)
+                        }
                         trackColor={{
                           false: currentTheme.colors.accent,
                           true: currentTheme.colors.primary,
@@ -1180,7 +1250,9 @@ const OptionsScreen = () => {
                         ]}
                         onPress={() => handleRemoveEmergencyContact(contact.id)}
                       >
-                        <Text style={styles.removeContactButtonText}>Remove</Text>
+                        <Text style={styles.removeContactButtonText}>
+                          Remove
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1201,7 +1273,8 @@ const OptionsScreen = () => {
                       { color: currentTheme.colors.textSecondary },
                     ]}
                   >
-                    Add emergency contacts who will receive alerts with your location in case of emergency during rides.
+                    Add emergency contacts who will receive alerts with your
+                    location in case of emergency during rides.
                   </Text>
                 </View>
               )}
@@ -1279,7 +1352,9 @@ const OptionsScreen = () => {
                   data={deviceContacts.filter(
                     (contact) =>
                       contact.name &&
-                      contact.name.toLowerCase().includes(searchQuery.toLowerCase())
+                      contact.name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase())
                   )}
                   keyExtractor={(item) => item.id || Math.random().toString()}
                   renderItem={({ item }) => (
@@ -1314,7 +1389,9 @@ const OptionsScreen = () => {
                           ]}
                         >
                           {item.phoneNumbers?.[0]?.number
-                            ? EmergencyContactsAPI.formatPhoneNumber(item.phoneNumbers[0].number)
+                            ? EmergencyContactsAPI.formatPhoneNumber(
+                                item.phoneNumbers[0].number
+                              )
                             : "No phone number"}
                         </Text>
                       </View>
@@ -1340,7 +1417,8 @@ const OptionsScreen = () => {
                     { color: currentTheme.colors.textSecondary },
                   ]}
                 >
-                  To add contacts from your phone, please grant contacts permission first.
+                  To add contacts from your phone, please grant contacts
+                  permission first.
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -1527,12 +1605,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     zIndex: 10,
   },
   backIcon: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
     tintColor: "#fff",
   },
   viewPort: {

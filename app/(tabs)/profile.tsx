@@ -489,15 +489,16 @@ const ProfileScreen = () => {
       setUserExperience(loadedExperience.toString());
       setIsProMember(finalProStatus);
       setUserStableRanch(loadedStableRanch);
-      
+
       // Load user's stable information from stable_members table
       try {
         const supabase = getSupabase();
-        console.log('Loading stable for user ID:', USER_ID);
-        
+        console.log("Loading stable for user ID:", USER_ID);
+
         const { data: stableMemberships, error: stableError } = await supabase
-          .from('stable_members')
-          .select(`
+          .from("stable_members")
+          .select(
+            `
             stable_id,
             stables!inner (
               id,
@@ -508,13 +509,14 @@ const ProfileScreen = () => {
               country,
               is_verified
             )
-          `)
-          .eq('user_id', USER_ID);
+          `
+          )
+          .eq("user_id", USER_ID);
 
-        console.log('Stable query result:', { stableMemberships, stableError });
+        console.log("Stable query result:", { stableMemberships, stableError });
 
         if (stableError) {
-          console.error('Stable query error:', stableError);
+          console.error("Stable query error:", stableError);
           setSelectedStable(null);
           setSavedSelectedStable(null);
         } else if (stableMemberships && stableMemberships.length > 0) {
@@ -527,25 +529,27 @@ const ProfileScreen = () => {
             city: firstMembership.stables.city,
             state_province: firstMembership.stables.state_province,
             country: firstMembership.stables.country,
-            is_verified: firstMembership.stables.is_verified
+            is_verified: firstMembership.stables.is_verified,
           };
           setSelectedStable(userStable);
           setSavedSelectedStable(userStable);
-          console.log('Successfully loaded user stable:', userStable.name);
+          console.log("Successfully loaded user stable:", userStable.name);
           if (stableMemberships.length > 1) {
-            console.log(`User is member of ${stableMemberships.length} stables, using first one`);
+            console.log(
+              `User is member of ${stableMemberships.length} stables, using first one`
+            );
           }
         } else {
-          console.log('No stable membership found for user');
+          console.log("No stable membership found for user");
           setSelectedStable(null);
           setSavedSelectedStable(null);
         }
       } catch (stableError) {
-        console.error('Exception loading user stable:', stableError);
+        console.error("Exception loading user stable:", stableError);
         setSelectedStable(null);
         setSavedSelectedStable(null);
       }
-      
+
       setNewStableData(null);
       setSavedUserName(profile.name);
       setSavedUserAge(profile.age.toString());
@@ -603,13 +607,14 @@ const ProfileScreen = () => {
         setUserExperience(loadedExperience.toString());
         setIsProMember(finalProStatus);
         setUserStableRanch(loadedStableRanch);
-        
+
         // Load user's stable information from stable_members table
         try {
           const supabase = getSupabase();
           const { data: stableMemberships, error: stableError } = await supabase
-            .from('stable_members')
-            .select(`
+            .from("stable_members")
+            .select(
+              `
               stable_id,
               stables!inner (
                 id,
@@ -620,11 +625,12 @@ const ProfileScreen = () => {
                 country,
                 is_verified
               )
-            `)
-            .eq('user_id', USER_ID);
+            `
+            )
+            .eq("user_id", USER_ID);
 
           if (stableError) {
-            console.error('Stable refresh error:', stableError);
+            console.error("Stable refresh error:", stableError);
             setSelectedStable(null);
             setSavedSelectedStable(null);
           } else if (stableMemberships && stableMemberships.length > 0) {
@@ -636,22 +642,22 @@ const ProfileScreen = () => {
               city: firstMembership.stables.city,
               state_province: firstMembership.stables.state_province,
               country: firstMembership.stables.country,
-              is_verified: firstMembership.stables.is_verified
+              is_verified: firstMembership.stables.is_verified,
             };
             setSelectedStable(userStable);
             setSavedSelectedStable(userStable);
-            console.log('Refreshed user stable:', userStable.name);
+            console.log("Refreshed user stable:", userStable.name);
           } else {
             setSelectedStable(null);
             setSavedSelectedStable(null);
-            console.log('User is not a member of any stable (refresh)');
+            console.log("User is not a member of any stable (refresh)");
           }
         } catch (stableError) {
-          console.error('Error refreshing user stable:', stableError);
+          console.error("Error refreshing user stable:", stableError);
           setSelectedStable(null);
           setSavedSelectedStable(null);
         }
-        
+
         setNewStableData(null);
         setSavedUserName(profile.name);
         setSavedUserAge(profile.age.toString());
@@ -704,8 +710,8 @@ const ProfileScreen = () => {
 
   const handleDescriptionChange = (text: string) => {
     // Count the number of lines
-    const lineCount = text.split('\n').length;
-    
+    const lineCount = text.split("\n").length;
+
     // Limit to 150 characters AND 5 lines
     if (text.length <= 150 && lineCount <= 5) {
       setUserDescription(text);
@@ -830,7 +836,7 @@ const ProfileScreen = () => {
       showError("Description must be 150 characters or less");
       return;
     }
-    if (userDescription.split('\n').length > 5) {
+    if (userDescription.split("\n").length > 5) {
       showError("Description must be 5 lines or less");
       return;
     }
@@ -948,30 +954,40 @@ const ProfileScreen = () => {
       if (actualStableId) {
         // User has selected or created a stable - join it
         try {
-          const { success, error: joinError } = await SimpleStableAPI.joinStable(USER_ID, actualStableId);
+          const { success, error: joinError } =
+            await SimpleStableAPI.joinStable(USER_ID, actualStableId);
           if (!success) {
             console.error("Failed to join stable:", joinError);
-            showError("Failed to update stable membership. Profile changes will still be saved.");
+            showError(
+              "Failed to update stable membership. Profile changes will still be saved."
+            );
           } else {
             console.log("Successfully updated stable membership");
           }
         } catch (stableError) {
           console.error("Error updating stable membership:", stableError);
-          showError("Failed to update stable membership. Profile changes will still be saved.");
+          showError(
+            "Failed to update stable membership. Profile changes will still be saved."
+          );
         }
       } else if (userStableRanch === "" && savedUserStableRanch !== "") {
         // User cleared their stable selection - leave all stables
         try {
-          const { success, error: leaveError } = await SimpleStableAPI.leaveAllStables(USER_ID);
+          const { success, error: leaveError } =
+            await SimpleStableAPI.leaveAllStables(USER_ID);
           if (!success) {
             console.error("Failed to leave stable:", leaveError);
-            showError("Failed to leave stable. Profile changes will still be saved.");
+            showError(
+              "Failed to leave stable. Profile changes will still be saved."
+            );
           } else {
             console.log("Successfully left stable");
           }
         } catch (stableError) {
           console.error("Error leaving stable:", stableError);
-          showError("Failed to leave stable. Profile changes will still be saved.");
+          showError(
+            "Failed to leave stable. Profile changes will still be saved."
+          );
         }
       }
 
@@ -1240,7 +1256,7 @@ const ProfileScreen = () => {
             onPress={() => router.push("/options")}
           >
             <Image
-              source={require("../../assets/UI_resources/UI_white/settings_white.png")}
+              source={require("../../assets/in_app_icons/settings.png")}
               style={styles.optionsIcon}
             />
           </TouchableOpacity>
@@ -1411,16 +1427,20 @@ const ProfileScreen = () => {
                           {savedSelectedStable.location}
                         </Text>
                       )}
-                      {(savedSelectedStable.city || savedSelectedStable.state_province) && (
+                      {(savedSelectedStable.city ||
+                        savedSelectedStable.state_province) && (
                         <Text
                           style={[
                             styles.viewStableLocation,
                             { color: currentTheme.colors.textSecondary },
                           ]}
                         >
-                          {[savedSelectedStable.city, savedSelectedStable.state_province]
+                          {[
+                            savedSelectedStable.city,
+                            savedSelectedStable.state_province,
+                          ]
                             .filter(Boolean)
-                            .join(', ')}
+                            .join(", ")}
                         </Text>
                       )}
                     </View>
@@ -1562,13 +1582,15 @@ const ProfileScreen = () => {
                     styles.characterCounter,
                     {
                       color:
-                        userDescription.length > 140 || userDescription.split('\n').length > 4
+                        userDescription.length > 140 ||
+                        userDescription.split("\n").length > 4
                           ? "#FF6B6B"
                           : currentTheme.colors.textSecondary,
                     },
                   ]}
                 >
-                  {userDescription.length}/150 characters • {userDescription.split('\n').length}/5 lines
+                  {userDescription.length}/150 characters •{" "}
+                  {userDescription.split("\n").length}/5 lines
                 </Text>
                 <TextInput
                   style={[
@@ -1912,12 +1934,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     zIndex: 10,
   },
   optionsIcon: {
-    width: 24,
-    height: 24,
+    width: 36,
+    height: 36,
     tintColor: "#fff",
   },
   backButton: {
