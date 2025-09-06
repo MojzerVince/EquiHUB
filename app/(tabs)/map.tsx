@@ -3244,72 +3244,74 @@ const MapScreen = () => {
               </View>
             )}
 
-            {/* Fall Detection Toggle */}
-            <View
-              style={[
-                styles.highAccuracyContainer,
-                { backgroundColor: currentTheme.colors.surface },
-              ]}
-            >
-              <View style={styles.highAccuracyRow}>
-                <Text
-                  style={[
-                    styles.highAccuracyLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  🚨 Fall Detection
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setShowFallDetectionModal(true)}
-                  style={styles.infoButton}
-                  activeOpacity={0.7}
-                >
+            {/* Fall Detection Toggle - Hidden during tracking */}
+            {!isTracking && (
+              <View
+                style={[
+                  styles.highAccuracyContainer,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <View style={styles.highAccuracyRow}>
                   <Text
                     style={[
-                      styles.infoButtonText,
-                      { color: currentTheme.colors.primary },
+                      styles.highAccuracyLabel,
+                      { color: currentTheme.colors.text },
                     ]}
                   >
-                    ⚙️
+                    🚨 Fall Detection
                   </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.toggleSwitch,
-                    {
-                      backgroundColor: fallDetectionEnabled
-                        ? currentTheme.colors.primary
-                        : currentTheme.colors.border,
-                    },
-                  ]}
-                  onPress={() => setFallDetectionEnabled(!fallDetectionEnabled)}
-                  activeOpacity={0.8}
-                >
-                  <View
+                  <TouchableOpacity
+                    onPress={() => setShowFallDetectionModal(true)}
+                    style={styles.infoButton}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.infoButtonText,
+                        { color: currentTheme.colors.primary },
+                      ]}
+                    >
+                      ⚙️
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[
-                      styles.toggleKnob,
+                      styles.toggleSwitch,
                       {
-                        backgroundColor: "#FFFFFF",
-                        transform: [
-                          { translateX: fallDetectionEnabled ? 20 : 0 },
-                        ],
+                        backgroundColor: fallDetectionEnabled
+                          ? currentTheme.colors.primary
+                          : currentTheme.colors.border,
                       },
                     ]}
-                  />
-                </TouchableOpacity>
+                    onPress={() => setFallDetectionEnabled(!fallDetectionEnabled)}
+                    activeOpacity={0.8}
+                  >
+                    <View
+                      style={[
+                        styles.toggleKnob,
+                        {
+                          backgroundColor: "#FFFFFF",
+                          transform: [
+                            { translateX: fallDetectionEnabled ? 20 : 0 },
+                          ],
+                        },
+                      ]}
+                    />
+                  </TouchableOpacity>
+                </View>
+                {fallDetectionEnabled && (
+                  <Text
+                    style={[
+                      styles.batteryRecommendationText,
+                      { color: currentTheme.colors.textSecondary, marginTop: 8 },
+                    ]}
+                  >
+                    Monitors sensors to detect falls and automatically alerts emergency contacts
+                  </Text>
+                )}
               </View>
-              {fallDetectionEnabled && (
-                <Text
-                  style={[
-                    styles.batteryRecommendationText,
-                    { color: currentTheme.colors.textSecondary, marginTop: 8 },
-                  ]}
-                >
-                  Monitors sensors to detect falls and automatically alerts emergency contacts
-                </Text>
-              )}
-            </View>
+            )}
 
             {/* Tracking Status Display */}
             {isTracking && sessionStartTime && (
