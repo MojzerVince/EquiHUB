@@ -460,7 +460,7 @@ const MapScreen = () => {
     };
   }, [isTracking, isUsingBackgroundLocation, highAccuracyMode]);
 
-  // Request camera and media library permissions
+  // Request camera, media library, and notification permissions
   const requestCameraPermissions = async () => {
     try {
       // Request camera permission
@@ -472,8 +472,17 @@ const MapScreen = () => {
       const { status: mediaStatus } =
         await MediaLibrary.requestPermissionsAsync();
       setMediaLibraryPermission(mediaStatus === "granted");
+
+      // Request notification permissions for fall detection alerts
+      const { status: notificationStatus } =
+        await Notifications.requestPermissionsAsync();
+      if (notificationStatus !== "granted") {
+        console.warn("Notification permissions not granted");
+      } else {
+        console.log("✅ Notification permissions granted");
+      }
     } catch (error) {
-      console.error("Error requesting camera permissions:", error);
+      console.error("Error requesting permissions:", error);
       setCameraPermission(false);
       setMediaLibraryPermission(false);
     }
@@ -486,6 +495,7 @@ const MapScreen = () => {
     isTimeout: boolean = false
   ) => {
     try {
+      // Clear timeout if it exists
       if (fallConfirmationTimeoutRef.current) {
         clearTimeout(fallConfirmationTimeoutRef.current);
         fallConfirmationTimeoutRef.current = null;
@@ -512,6 +522,18 @@ const MapScreen = () => {
             fallEvent,
             userProfile?.name
           );
+
+          // Send notification AFTER SMS is sent
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: "Emergency Alert Sent",
+              body: `SMS sent to emergency contacts for fall at ${new Date(
+                fallEvent.timestamp
+              ).toLocaleTimeString()}`,
+              sound: true,
+            },
+            trigger: null, // Send immediately
+          });
         }
 
         Alert.alert(
@@ -528,16 +550,23 @@ const MapScreen = () => {
         ]);
       }
 
-      // Clear pending confirmation
+      // Clear pending confirmation and reset fall detection state
       setPendingFallConfirmation(null);
+      FallDetectionAPI.resetFallDetectionState();
+
+      console.log("🔄 Fall detection state reset - ready for new detections");
     } catch (error) {
       console.error("❌ Error handling fall confirmation:", error);
       setPendingFallConfirmation(null);
+      FallDetectionAPI.resetFallDetectionState();
     }
   };
 
   const initializeFallDetection = async () => {
     try {
+      // Reset fall detection state on initialization
+      FallDetectionAPI.resetFallDetectionState();
+
       // Load existing fall events (including background ones)
       const allFallEvents = await FallDetectionAPI.getAllFallEvents();
       setRecentFallEvents(allFallEvents.slice(0, 10)); // Keep last 10 events

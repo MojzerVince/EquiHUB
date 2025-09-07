@@ -48,6 +48,7 @@ export class FallDetectionAPI {
   private static potentialFallStartTime: number | null = null;
   private static lastStableTime: number = Date.now();
   private static fallEventListeners: ((fallEvent: FallEvent) => void)[] = [];
+  private static hasPendingAlert: boolean = false; // Track if there's already a pending alert
 
   // Default configuration
   private static config: FallDetectionConfig = {
@@ -274,6 +275,12 @@ export class FallDetectionAPI {
       return;
     }
 
+    // Check if there's already a pending alert
+    if (this.hasPendingAlert) {
+      console.log("⚠️ Fall alert already pending - ignoring new detection");
+      return;
+    }
+
     const timeSinceStable = timestamp - this.lastStableTime;
     const isSevereImpact = Math.abs(magnitude - 1.0) > (this.config.accelerationThreshold * 1.5);
     
@@ -294,6 +301,9 @@ export class FallDetectionAPI {
 
     if (shouldTrigger) {
       console.log("🚨 FALL CONFIRMED - TRIGGERING EMERGENCY ALERT");
+
+      // Set pending alert flag to prevent multiple triggers
+      this.hasPendingAlert = true;
 
       // Get current location
       let location: { latitude: number; longitude: number } | undefined;
@@ -462,5 +472,18 @@ Check safety!`;
   static async sendConfirmedFallAlert(userId: string, fallEvent: FallEvent, riderName?: string): Promise<void> {
     console.log("📱 Sending confirmed fall alert");
     await this.sendFallAlert(userId, fallEvent, riderName);
+  }
+
+  // Reset the fall detection state (public method)
+  static resetFallDetectionState(): void {
+    console.log("🔄 Resetting fall detection state");
+    this.hasPendingAlert = false;
+    this.potentialFallStartTime = null;
+    this.lastStableTime = Date.now();
+  }
+
+  // Check if there's a pending alert
+  static hasPendingFallAlert(): boolean {
+    return this.hasPendingAlert;
   }
 }
