@@ -82,15 +82,22 @@ export class ServerSMSAPI {
   static async sendFallAlert(
     userId: string,
     magnitude: number,
-    gyroscopeMagnitude: number,
     location?: { latitude: number; longitude: number },
     riderName?: string
   ): Promise<SMSResponse> {
     const riderNameText = riderName || "Rider";
+    
+    // Create Google Maps link if location is available
+    let locationText = "";
+    if (location && location.latitude !== 0 && location.longitude !== 0) {
+      const mapsLink = `https://maps.google.com/?q=${location.latitude},${location.longitude}`;
+      locationText = `\nLocation: ${mapsLink}`;
+    }
+    
     const alertMessage = `FALL DETECTED
-Automated sms from EquiHUB: ${riderNameText} might have fallen during ride
+Automated SMS from EquiHUB: ${riderNameText} might have fallen during ride
 Time: ${new Date().toLocaleTimeString()}
-Impact: ${magnitude.toFixed(1)}g
+Impact: ${magnitude.toFixed(1)}g${locationText}
 Check rider's safety!`;
 
     return this.sendEmergencyAlert({
@@ -107,9 +114,16 @@ Check rider's safety!`;
     customMessage?: string,
     location?: { latitude: number; longitude: number }
   ): Promise<SMSResponse> {
-    const alertMessage = customMessage || `🚨 EMERGENCY 🚨
+    // Create Google Maps link if location is available
+    let locationText = "";
+    if (location && location.latitude !== 0 && location.longitude !== 0) {
+      const mapsLink = `https://maps.google.com/?q=${location.latitude},${location.longitude}`;
+      locationText = `\nLocation: ${mapsLink}`;
+    }
+    
+    const alertMessage = customMessage || `EMERGENCY
 EquiHUB rider needs help
-Time: ${new Date().toLocaleTimeString()}
+Time: ${new Date().toLocaleTimeString()}${locationText}
 Check safety now!`;
 
     return this.sendEmergencyAlert({
@@ -117,24 +131,6 @@ Check safety now!`;
       message: alertMessage,
       location,
       emergencyType: "manual_emergency",
-    });
-  }
-
-  // Send test alert
-  static async sendTestAlert(
-    userId: string,
-    location?: { latitude: number; longitude: number }
-  ): Promise<SMSResponse> {
-    const testMessage = `🧪 TEST 🧪
-EquiHUB emergency test
-Time: ${new Date().toLocaleTimeString()}
-System working!`;
-
-    return this.sendEmergencyAlert({
-      userId,
-      message: testMessage,
-      location,
-      emergencyType: "test",
     });
   }
 

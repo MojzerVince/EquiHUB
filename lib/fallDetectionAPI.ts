@@ -347,7 +347,6 @@ Check safety!`;
       const alertResult = await ServerSMSAPI.sendFallAlert(
         userId,
         fallEvent.accelerationMagnitude,
-        fallEvent.gyroscopeMagnitude,
         fallEvent.location,
         riderName
       );
