@@ -288,16 +288,23 @@ const MapScreen = () => {
   const [fallDetectionEnabled, setFallDetectionEnabled] = useState(false);
   const [fallDetectionConfig, setFallDetectionConfig] =
     useState<FallDetectionConfig>({
-      accelerationThreshold: 3.0,
-      gyroscopeThreshold: 4.0,
-      impactDuration: 800,
-      recoveryTimeout: 15000,
+      accelerationThreshold: 3.0, // Lowered from 3.0 to 2.0 for more sensitivity
+      gyroscopeThreshold: 3.0, // Lowered from 4.0 to 3.0 for more sensitivity
+      impactDuration: 500, // Reduced from 800 to 500ms for quicker detection
+      recoveryTimeout: 20000, // Set to 20000ms (20 seconds)
       isEnabled: true,
     });
   const [recentFallEvents, setRecentFallEvents] = useState<FallEvent[]>([]);
   const [showFallDetectionModal, setShowFallDetectionModal] = useState(false);
   const [showFallDetectionDisclaimer, setShowFallDetectionDisclaimer] =
     useState(false);
+  const [pendingFallConfirmation, setPendingFallConfirmation] = useState<{
+    event: FallEvent;
+    timestamp: number;
+  } | null>(null);
+  const fallConfirmationTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
@@ -314,6 +321,16 @@ const MapScreen = () => {
     requestCameraPermissions();
     // Initialize fall detection
     initializeFallDetection();
+  }, []);
+
+  // Cleanup fall confirmation timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (fallConfirmationTimeoutRef.current) {
+        clearTimeout(fallConfirmationTimeoutRef.current);
+        fallConfirmationTimeoutRef.current = null;
+      }
+    };
   }, []);
 
   // App state change handler for coordinating foreground/background location tracking
@@ -356,14 +373,39 @@ const MapScreen = () => {
   // Fall detection effect - start/stop monitoring based on tracking state
   useEffect(() => {
     const handleFallDetection = async () => {
+      console.log(
+        `🔍 Fall Detection Effect - Tracking: ${isTracking}, Enabled: ${fallDetectionEnabled}, User: ${user?.id}`
+      );
+
       if (isTracking && fallDetectionEnabled && user?.id) {
         console.log(
           "🔍 Starting fall detection monitoring (foreground + background)"
         );
+        console.log("📊 Fall detection config:", fallDetectionConfig);
+
         const started = await FallDetectionAPI.startMonitoring(user.id, true); // Enable background
         if (!started) {
           console.warn(
             "⚠️ Failed to start fall detection - sensors not available"
+          );
+          showError("Fall detection failed to start - sensors not available");
+        } else {
+          console.log("✅ Fall detection monitoring started successfully");
+        }
+      } else if (fallDetectionEnabled && user?.id && !isTracking) {
+        // Allow fall detection even when not tracking (for testing)
+        console.log("🔍 Starting fall detection monitoring (testing mode)");
+        console.log("📊 Fall detection config:", fallDetectionConfig);
+
+        const started = await FallDetectionAPI.startMonitoring(user.id, false); // No background when not tracking
+        if (!started) {
+          console.warn(
+            "⚠️ Failed to start fall detection - sensors not available"
+          );
+          showError("Fall detection failed to start - sensors not available");
+        } else {
+          console.log(
+            "✅ Fall detection monitoring started successfully (testing mode)"
           );
         }
       } else {
@@ -378,7 +420,7 @@ const MapScreen = () => {
       // Cleanup fall detection when component unmounts
       FallDetectionAPI.stopMonitoring();
     };
-  }, [isTracking, fallDetectionEnabled, user?.id]);
+  }, [isTracking, fallDetectionEnabled, user?.id, fallDetectionConfig]);
 
   // Background data sync effect - only when using background location
   useEffect(() => {
@@ -422,6 +464,58 @@ const MapScreen = () => {
   };
 
   // Initialize fall detection system
+  // Handle fall confirmation response
+  const handleFallConfirmation = async (
+    sendSMS: boolean,
+    isTimeout: boolean = false
+  ) => {
+    try {
+      if (fallConfirmationTimeoutRef.current) {
+        clearTimeout(fallConfirmationTimeoutRef.current);
+        fallConfirmationTimeoutRef.current = null;
+      }
+
+      if (!pendingFallConfirmation) return;
+
+      const { event: fallEvent } = pendingFallConfirmation;
+
+      if (sendSMS) {
+        console.log(
+          isTimeout
+            ? "⏰ Auto-sending SMS due to timeout"
+            : "📱 Sending SMS per user confirmation"
+        );
+
+        // Add to recent events
+        setRecentFallEvents((prev) => [fallEvent, ...prev.slice(0, 9)]);
+
+        // Send alert using the new confirmed fall alert method
+        if (user?.id) {
+          await FallDetectionAPI.sendConfirmedFallAlert(user.id, fallEvent);
+        }
+
+        Alert.alert(
+          "Emergency Alert Sent",
+          isTimeout
+            ? "No response detected. Emergency contact has been notified automatically."
+            : "Emergency contact has been notified.",
+          [{ text: "OK" }]
+        );
+      } else {
+        console.log("✅ User confirmed they are okay - no SMS sent");
+        Alert.alert("Good to hear!", "No emergency alert will be sent.", [
+          { text: "OK" },
+        ]);
+      }
+
+      // Clear pending confirmation
+      setPendingFallConfirmation(null);
+    } catch (error) {
+      console.error("❌ Error handling fall confirmation:", error);
+      setPendingFallConfirmation(null);
+    }
+  };
+
   const initializeFallDetection = async () => {
     try {
       // Load existing fall events (including background ones)
@@ -432,31 +526,50 @@ const MapScreen = () => {
       const handleFallEvent = (fallEvent: FallEvent) => {
         console.log("🚨 Fall event detected:", fallEvent);
 
-        // Add to recent fall events
-        setRecentFallEvents((prev) => [fallEvent, ...prev.slice(0, 9)]); // Keep last 10 events
+        // Prevent multiple fall confirmations
+        if (pendingFallConfirmation) {
+          console.log(
+            "⚠️ Fall confirmation already pending, ignoring new event"
+          );
+          return;
+        }
 
-        // Show immediate alert to user
+        // Set pending fall confirmation
+        setPendingFallConfirmation({
+          event: fallEvent,
+          timestamp: Date.now(),
+        });
+
+        // Show confirmation dialog
         Alert.alert(
-          "🚨 Fall Detected!",
-          `Emergency alert has been sent to your emergency contacts.\n\nTime: ${new Date(
+          "Fall Detected",
+          `Are you okay? SMS will be sent to your emergency contact if you don't respond within 20 seconds.\n\nTime: ${new Date(
             fallEvent.timestamp
           ).toLocaleTimeString()}\nImpact: ${fallEvent.accelerationMagnitude.toFixed(
             1
           )}g`,
           [
             {
-              text: "I'm OK",
-              style: "cancel",
-              onPress: () => {
-                console.log("User confirmed they are OK after fall detection");
-              },
+              text: "I'm Okay",
+              onPress: () => handleFallConfirmation(false),
+              style: "default",
             },
             {
-              text: "View Details",
-              onPress: () => setShowFallDetectionModal(true),
+              text: "I Fell - Send SMS",
+              onPress: () => handleFallConfirmation(true),
+              style: "destructive",
             },
-          ]
+          ],
+          {
+            cancelable: false, // User must choose an option
+          }
         );
+
+        // Set timeout to auto-send SMS if no response
+        fallConfirmationTimeoutRef.current = setTimeout(() => {
+          console.log("⏰ Fall confirmation timeout - auto-sending SMS");
+          handleFallConfirmation(true, true); // true for auto-send due to timeout
+        }, 20000); // 20 seconds
       };
 
       FallDetectionAPI.addFallEventListener(handleFallEvent);
@@ -485,18 +598,18 @@ const MapScreen = () => {
 
     Alert.alert(
       "Test Fall Detection",
-      "This will trigger a test fall alert to your emergency contacts. Continue?",
+      "Choose a test method:\n\n• Sensor Test: Simulates fall with sensor data\n• Real Test: Use actual device motion (drop carefully!)",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Send Test Alert",
-          style: "destructive",
+          text: "Sensor Test",
           onPress: async () => {
             try {
+              console.log("🧪 Triggering sensor-based test fall");
               await FallDetectionAPI.triggerTestFall(user.id);
               Alert.alert(
                 "Test Alert Sent",
-                "A test fall detection alert has been sent to your emergency contacts."
+                "A simulated fall detection alert has been sent to your emergency contacts."
               );
             } catch (error) {
               console.error("Error sending test fall alert:", error);
@@ -504,6 +617,39 @@ const MapScreen = () => {
                 "Failed to send test alert. Please check your emergency contacts configuration."
               );
             }
+          },
+        },
+        {
+          text: "Real Test",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Real Motion Test",
+              "Instructions for testing:\n\n1. Enable fall detection first\n2. Hold phone firmly\n3. Make a sudden downward motion (like dropping but catch it)\n4. Or simulate a tumbling motion\n\n⚠️ Be careful not to drop your device!",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Start Real Test",
+                  onPress: () => {
+                    // Enable fall detection temporarily for testing
+                    setFallDetectionEnabled(true);
+                    Alert.alert(
+                      "Test Active",
+                      "Fall detection is now active. Perform the motion test within 30 seconds.\n\nFall detection will automatically disable after 30 seconds."
+                    );
+
+                    // Auto-disable after 30 seconds to prevent accidental triggers
+                    setTimeout(() => {
+                      setFallDetectionEnabled(false);
+                      Alert.alert(
+                        "Test Ended",
+                        "Fall detection test has ended."
+                      );
+                    }, 30000);
+                  },
+                },
+              ]
+            );
           },
         },
       ]
@@ -3555,6 +3701,103 @@ const MapScreen = () => {
                     emergency contacts
                   </Text>
                 )}
+              </View>
+            )}
+
+            {/* Fall Detection Status Indicator - Always visible when enabled */}
+            {fallDetectionEnabled && (
+              <View
+                style={[
+                  styles.highAccuracyContainer,
+                  {
+                    backgroundColor: currentTheme.colors.surface,
+                    marginTop: isTracking ? 10 : 0,
+                  },
+                ]}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.highAccuracyLabel,
+                      {
+                        color: currentTheme.colors.text,
+                        fontSize: 14,
+                      },
+                    ]}
+                  >
+                    🚨 Fall Detection Status
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: 6,
+                      backgroundColor: pendingFallConfirmation
+                        ? "rgba(255, 193, 7, 0.1)" // Yellow for pending
+                        : FallDetectionAPI.isActivelyMonitoring()
+                        ? "rgba(76, 175, 80, 0.1)"
+                        : "rgba(255, 107, 107, 0.1)",
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: pendingFallConfirmation
+                        ? "#FFC107" // Yellow for pending
+                        : FallDetectionAPI.isActivelyMonitoring()
+                        ? "#4CAF50"
+                        : "#FF6B6B",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: pendingFallConfirmation
+                          ? "#FFC107" // Yellow for pending
+                          : FallDetectionAPI.isActivelyMonitoring()
+                          ? "#4CAF50"
+                          : "#FF6B6B",
+                        fontWeight: "700",
+                        marginRight: 4,
+                      }}
+                    >
+                      ●
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: pendingFallConfirmation
+                          ? "#FFC107" // Yellow for pending
+                          : FallDetectionAPI.isActivelyMonitoring()
+                          ? "#4CAF50"
+                          : "#FF6B6B",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {pendingFallConfirmation
+                        ? "FALL DETECTED - WAITING"
+                        : FallDetectionAPI.isActivelyMonitoring()
+                        ? "MONITORING"
+                        : "INACTIVE"}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text
+                  style={{
+                    fontSize: 10,
+                    color: currentTheme.colors.textSecondary,
+                    marginTop: 6,
+                    fontFamily: "monospace",
+                  }}
+                >
+                  Threshold: {fallDetectionConfig.accelerationThreshold}g |
+                  Gyro: {fallDetectionConfig.gyroscopeThreshold} rad/s |
+                  Recovery: {fallDetectionConfig.recoveryTimeout / 1000}s
+                </Text>
               </View>
             )}
 

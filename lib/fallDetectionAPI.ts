@@ -189,23 +189,43 @@ export class FallDetectionAPI {
   private static analyzeForFall(magnitude: number, timestamp: number, userId: string): void {
     // Normal gravity is around 1g, significant deviations indicate impact or free fall
     const gravityDeviation = Math.abs(magnitude - 1.0);
+    
+    // Debug: Log all readings (throttled)
+    if (timestamp % 1000 < 50) { // Log roughly every second
+      console.log(`📊 Accel: ${magnitude.toFixed(2)}g (deviation: ${gravityDeviation.toFixed(2)}g, threshold: ${this.config.accelerationThreshold}g)`);
+    }
 
-    if (gravityDeviation > this.config.accelerationThreshold) {
+    // Check for sudden acceleration/deceleration (fall indicators)
+    // This includes both high G impacts AND low G free fall scenarios
+    const isHighImpact = gravityDeviation > this.config.accelerationThreshold;
+    const isFreeFall = magnitude < 0.5; // Very low gravity indicates free fall
+    const isShaking = magnitude > 2.0; // High motion indicating impact/tumbling
+    
+    if (isHighImpact || isFreeFall || isShaking) {
       // Potential fall detected
       if (this.potentialFallStartTime === null) {
         this.potentialFallStartTime = timestamp;
-        console.log(`⚠️ Potential fall detected: ${gravityDeviation.toFixed(2)}g deviation`);
+        console.log(`⚠️ POTENTIAL FALL DETECTED!`);
+        console.log(`   - Magnitude: ${magnitude.toFixed(2)}g`);
+        console.log(`   - Deviation: ${gravityDeviation.toFixed(2)}g`);
+        console.log(`   - High Impact: ${isHighImpact}`);
+        console.log(`   - Free Fall: ${isFreeFall}`);
+        console.log(`   - Shaking: ${isShaking}`);
       }
 
-      // Check if impact has been sustained long enough
+      // Check if impact has been sustained long enough OR immediate trigger for severe impacts
       const impactDuration = timestamp - this.potentialFallStartTime;
-      if (impactDuration >= this.config.impactDuration) {
+      const isSevereImpact = gravityDeviation > (this.config.accelerationThreshold * 2); // 2x threshold
+      
+      if (impactDuration >= this.config.impactDuration || isSevereImpact) {
+        console.log(`🚨 TRIGGERING FALL ALERT! Duration: ${impactDuration}ms, Severe: ${isSevereImpact}`);
         this.handlePotentialFall(userId, magnitude, timestamp);
       }
     } else {
       // Stable readings - reset potential fall detection
       if (this.potentialFallStartTime !== null) {
-        console.log("📊 Sensor readings stabilized - canceling fall detection");
+        const detectionDuration = timestamp - this.potentialFallStartTime;
+        console.log(`📊 Sensor readings stabilized after ${detectionDuration}ms - canceling fall detection`);
         this.potentialFallStartTime = null;
       }
       this.lastStableTime = timestamp;
@@ -214,13 +234,30 @@ export class FallDetectionAPI {
 
   // Analyze gyroscope data for rotational movement
   private static analyzeRotationalMovement(magnitude: number, userId: string): void {
+    // Debug: Log gyroscope readings periodically
+    if (Date.now() % 1000 < 50) { // Log roughly every second
+      console.log(`🌀 Gyro: ${magnitude.toFixed(2)} rad/s (threshold: ${this.config.gyroscopeThreshold} rad/s)`);
+    }
+    
     if (magnitude > this.config.gyroscopeThreshold) {
       const timestamp = Date.now();
-      console.log(`🌀 High rotational velocity detected: ${magnitude.toFixed(2)} rad/s`);
+      console.log(`🌀 HIGH ROTATIONAL VELOCITY DETECTED: ${magnitude.toFixed(2)} rad/s`);
       
       // If we already have a potential fall and now detect rotation, this strengthens the fall hypothesis
       if (this.potentialFallStartTime !== null) {
+        console.log(`🚨 Rotation + existing potential fall = TRIGGERING FALL ALERT`);
         this.handlePotentialFall(userId, magnitude, timestamp, true);
+      } else {
+        // High rotation alone can indicate a fall (tumbling)
+        console.log(`🚨 High rotation detected - starting fall detection`);
+        this.potentialFallStartTime = timestamp;
+        // Give it a shorter timeout for rotation-based detection
+        setTimeout(() => {
+          if (this.potentialFallStartTime === timestamp) {
+            console.log(`🚨 Rotation-based fall timeout reached - triggering alert`);
+            this.handlePotentialFall(userId, magnitude, timestamp, true);
+          }
+        }, Math.min(this.config.impactDuration, 1000)); // Max 1 second for rotation
       }
     }
   }
@@ -232,13 +269,31 @@ export class FallDetectionAPI {
     timestamp: number,
     hasRotation: boolean = false
   ): Promise<void> {
-    if (!this.config.isEnabled) return;
+    if (!this.config.isEnabled) {
+      console.log("🚫 Fall detection disabled - ignoring potential fall");
+      return;
+    }
 
     const timeSinceStable = timestamp - this.lastStableTime;
+    const isSevereImpact = Math.abs(magnitude - 1.0) > (this.config.accelerationThreshold * 1.5);
+    
+    console.log(`🔍 Evaluating potential fall:`);
+    console.log(`   - Time since stable: ${timeSinceStable}ms (timeout: ${this.config.recoveryTimeout}ms)`);
+    console.log(`   - Has rotation: ${hasRotation}`);
+    console.log(`   - Severe impact: ${isSevereImpact}`);
+    console.log(`   - Magnitude: ${magnitude.toFixed(2)}g`);
 
-    // Check if enough time has passed without recovery
-    if (timeSinceStable >= this.config.recoveryTimeout) {
-      console.log("🚨 Fall detected - triggering emergency alert");
+    // Trigger alert if:
+    // 1. Recovery timeout has passed, OR
+    // 2. Severe impact detected, OR  
+    // 3. Rotation detected (indicates tumbling)
+    const shouldTrigger = 
+      timeSinceStable >= this.config.recoveryTimeout || 
+      isSevereImpact || 
+      hasRotation;
+
+    if (shouldTrigger) {
+      console.log("🚨 FALL CONFIRMED - TRIGGERING EMERGENCY ALERT");
 
       // Get current location
       let location: { latitude: number; longitude: number } | undefined;
@@ -250,8 +305,9 @@ export class FallDetectionAPI {
           latitude: currentLocation.coords.latitude,
           longitude: currentLocation.coords.longitude,
         };
+        console.log(`📍 Location obtained: ${location.latitude}, ${location.longitude}`);
       } catch (error) {
-        console.error("Could not get location for fall alert:", error);
+        console.error("❌ Could not get location for fall alert:", error);
       }
 
       // Create fall event
@@ -264,15 +320,18 @@ export class FallDetectionAPI {
         alertSent: false,
       };
 
-      // Send emergency alert
-      await this.sendFallAlert(userId, fallEvent);
+      console.log(`📝 Fall event created:`, fallEvent);
 
-      // Notify listeners
+      // Don't send SMS immediately - notify listeners for confirmation
       this.notifyFallEventListeners(fallEvent);
 
       // Reset detection state
       this.potentialFallStartTime = null;
       this.lastStableTime = Date.now();
+      
+      console.log("✅ Fall detection state reset");
+    } else {
+      console.log("⏳ Fall not confirmed yet - continuing monitoring");
     }
   }
 
@@ -397,5 +456,11 @@ Check safety!`;
 
     await this.sendFallAlert(userId, testFallEvent);
     this.notifyFallEventListeners(testFallEvent);
+  }
+
+  // Send fall alert for confirmed falls (public method)
+  static async sendConfirmedFallAlert(userId: string, fallEvent: FallEvent): Promise<void> {
+    console.log("📱 Sending confirmed fall alert");
+    await this.sendFallAlert(userId, fallEvent);
   }
 }
