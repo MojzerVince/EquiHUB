@@ -16,7 +16,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import MapView, {
   Marker,
@@ -30,7 +30,11 @@ import { useDialog } from "../../contexts/DialogContext";
 import { useMetric } from "../../contexts/MetricContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { ChallengeStorageService } from "../../lib/challengeStorage";
-import { FallDetectionAPI, FallDetectionConfig, FallEvent } from "../../lib/fallDetectionAPI";
+import {
+  FallDetectionAPI,
+  FallDetectionConfig,
+  FallEvent,
+} from "../../lib/fallDetectionAPI";
 import { HorseAPI } from "../../lib/horseAPI";
 import { Horse } from "../../lib/supabase";
 import { ChallengeSession } from "../../types/challengeTypes";
@@ -279,13 +283,14 @@ const MapScreen = () => {
 
   // Fall detection state
   const [fallDetectionEnabled, setFallDetectionEnabled] = useState(true);
-  const [fallDetectionConfig, setFallDetectionConfig] = useState<FallDetectionConfig>({
-    accelerationThreshold: 2.5,
-    gyroscopeThreshold: 5.0,
-    impactDuration: 500,
-    recoveryTimeout: 10000,
-    isEnabled: true,
-  });
+  const [fallDetectionConfig, setFallDetectionConfig] =
+    useState<FallDetectionConfig>({
+      accelerationThreshold: 2.5,
+      gyroscopeThreshold: 5.0,
+      impactDuration: 500,
+      recoveryTimeout: 10000,
+      isEnabled: true,
+    });
   const [recentFallEvents, setRecentFallEvents] = useState<FallEvent[]>([]);
   const [showFallDetectionModal, setShowFallDetectionModal] = useState(false);
 
@@ -347,10 +352,14 @@ const MapScreen = () => {
   useEffect(() => {
     const handleFallDetection = async () => {
       if (isTracking && fallDetectionEnabled && user?.id) {
-        console.log("🔍 Starting fall detection monitoring (foreground + background)");
+        console.log(
+          "🔍 Starting fall detection monitoring (foreground + background)"
+        );
         const started = await FallDetectionAPI.startMonitoring(user.id, true); // Enable background
         if (!started) {
-          console.warn("⚠️ Failed to start fall detection - sensors not available");
+          console.warn(
+            "⚠️ Failed to start fall detection - sensors not available"
+          );
         }
       } else {
         console.log("🔍 Stopping fall detection monitoring");
@@ -417,35 +426,39 @@ const MapScreen = () => {
       // Set up fall event listener
       const handleFallEvent = (fallEvent: FallEvent) => {
         console.log("🚨 Fall event detected:", fallEvent);
-        
+
         // Add to recent fall events
-        setRecentFallEvents(prev => [fallEvent, ...prev.slice(0, 9)]); // Keep last 10 events
-        
+        setRecentFallEvents((prev) => [fallEvent, ...prev.slice(0, 9)]); // Keep last 10 events
+
         // Show immediate alert to user
         Alert.alert(
           "🚨 Fall Detected!",
-          `Emergency alert has been sent to your emergency contacts.\n\nTime: ${new Date(fallEvent.timestamp).toLocaleTimeString()}\nImpact: ${fallEvent.accelerationMagnitude.toFixed(1)}g`,
+          `Emergency alert has been sent to your emergency contacts.\n\nTime: ${new Date(
+            fallEvent.timestamp
+          ).toLocaleTimeString()}\nImpact: ${fallEvent.accelerationMagnitude.toFixed(
+            1
+          )}g`,
           [
             {
               text: "I'm OK",
               style: "cancel",
               onPress: () => {
                 console.log("User confirmed they are OK after fall detection");
-              }
+              },
             },
             {
               text: "View Details",
-              onPress: () => setShowFallDetectionModal(true)
-            }
+              onPress: () => setShowFallDetectionModal(true),
+            },
           ]
         );
       };
 
       FallDetectionAPI.addFallEventListener(handleFallEvent);
-      
+
       // Update configuration
       FallDetectionAPI.updateConfig(fallDetectionConfig);
-      
+
       console.log("✅ Fall detection initialized");
     } catch (error) {
       console.error("❌ Error initializing fall detection:", error);
@@ -453,7 +466,9 @@ const MapScreen = () => {
   };
 
   // Update fall detection configuration
-  const updateFallDetectionConfig = (newConfig: Partial<FallDetectionConfig>) => {
+  const updateFallDetectionConfig = (
+    newConfig: Partial<FallDetectionConfig>
+  ) => {
     const updatedConfig = { ...fallDetectionConfig, ...newConfig };
     setFallDetectionConfig(updatedConfig);
     FallDetectionAPI.updateConfig(updatedConfig);
@@ -462,7 +477,7 @@ const MapScreen = () => {
   // Test fall detection (for debugging)
   const testFallDetection = async () => {
     if (!user?.id) return;
-    
+
     Alert.alert(
       "Test Fall Detection",
       "This will trigger a test fall alert to your emergency contacts. Continue?",
@@ -474,13 +489,18 @@ const MapScreen = () => {
           onPress: async () => {
             try {
               await FallDetectionAPI.triggerTestFall(user.id);
-              Alert.alert("Test Alert Sent", "A test fall detection alert has been sent to your emergency contacts.");
+              Alert.alert(
+                "Test Alert Sent",
+                "A test fall detection alert has been sent to your emergency contacts."
+              );
             } catch (error) {
               console.error("Error sending test fall alert:", error);
-              showError("Failed to send test alert. Please check your emergency contacts configuration.");
+              showError(
+                "Failed to send test alert. Please check your emergency contacts configuration."
+              );
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -1731,11 +1751,15 @@ const MapScreen = () => {
       const isAlreadyRunning = await Location.hasStartedLocationUpdatesAsync(
         LOCATION_TASK_NAME
       );
-      
+
       if (isAlreadyRunning) {
-        console.log("✅ Background location service already running, switching mode");
+        console.log(
+          "✅ Background location service already running, switching mode"
+        );
       } else {
-        console.log("⚠️ Background location service not running, app may have killed it");
+        console.log(
+          "⚠️ Background location service not running, app may have killed it"
+        );
         // If somehow the background service was stopped, log it but don't try to restart
         // as we can't start foreground services from background state
       }
@@ -1800,7 +1824,9 @@ const MapScreen = () => {
 
       // Keep background location service running for seamless transitions
       // Don't stop it since we'll need it again when app goes back to background
-      console.log("✅ Keeping background location service running for seamless transitions");
+      console.log(
+        "✅ Keeping background location service running for seamless transitions"
+      );
 
       // Start foreground location watcher
       await restartLocationWatcherForTracking();
@@ -1934,7 +1960,7 @@ const MapScreen = () => {
       console.log(
         `🚀 Starting both foreground and background tracking with highAccuracyMode: ${highAccuracyMode}`
       );
-      
+
       // Start foreground location tracking
       await restartLocationWatcherForTracking();
 
@@ -1955,7 +1981,9 @@ const MapScreen = () => {
         pausesUpdatesAutomatically: false,
         activityType: Location.LocationActivityType.Fitness,
       });
-      console.log("🚀 Started background location service (ready for background mode)");
+      console.log(
+        "🚀 Started background location service (ready for background mode)"
+      );
 
       // Set state to indicate we're using foreground tracking (background is ready but not active)
       setIsUsingBackgroundLocation(false);
@@ -2479,6 +2507,12 @@ const MapScreen = () => {
           ]}
         >
           <View style={styles.headerContainer}>
+            <TouchableOpacity
+              style={styles.statisticsButton}
+              onPress={() => router.push("/statistics")}
+            >
+              <Text style={styles.statisticsButtonText}>📊</Text>
+            </TouchableOpacity>
             <Text style={styles.header}>Map</Text>
             <TouchableOpacity
               style={styles.historyButton}
@@ -2524,6 +2558,12 @@ const MapScreen = () => {
         ]}
       >
         <View style={styles.headerContainer}>
+          <TouchableOpacity
+            style={styles.statisticsButton}
+            onPress={() => router.push("/statistics")}
+          >
+            <Text style={styles.statisticsButtonText}>📊</Text>
+          </TouchableOpacity>
           <Text style={styles.header}>Map</Text>
           <TouchableOpacity
             style={styles.historyButton}
@@ -3284,7 +3324,9 @@ const MapScreen = () => {
                           : currentTheme.colors.border,
                       },
                     ]}
-                    onPress={() => setFallDetectionEnabled(!fallDetectionEnabled)}
+                    onPress={() =>
+                      setFallDetectionEnabled(!fallDetectionEnabled)
+                    }
                     activeOpacity={0.8}
                   >
                     <View
@@ -3304,10 +3346,14 @@ const MapScreen = () => {
                   <Text
                     style={[
                       styles.batteryRecommendationText,
-                      { color: currentTheme.colors.textSecondary, marginTop: 8 },
+                      {
+                        color: currentTheme.colors.textSecondary,
+                        marginTop: 8,
+                      },
                     ]}
                   >
-                    Monitors sensors to detect falls and automatically alerts emergency contacts
+                    Monitors sensors to detect falls and automatically alerts
+                    emergency contacts
                   </Text>
                 )}
               </View>
@@ -3405,7 +3451,11 @@ const MapScreen = () => {
                       <Text
                         style={[
                           styles.trackingStatValue,
-                          { color: fallDetectionEnabled ? currentTheme.colors.primary : currentTheme.colors.warning },
+                          {
+                            color: fallDetectionEnabled
+                              ? currentTheme.colors.primary
+                              : currentTheme.colors.warning,
+                          },
                         ]}
                       >
                         {fallDetectionEnabled ? "Active" : "Off"}
@@ -3539,7 +3589,7 @@ const MapScreen = () => {
               <TouchableOpacity
                 style={[
                   styles.closeModalButton,
-                  { backgroundColor: 'rgba(0, 0, 0, 0.1)' },
+                  { backgroundColor: "rgba(0, 0, 0, 0.1)" },
                 ]}
                 onPress={() => setShowFallDetectionModal(false)}
               >
@@ -3561,7 +3611,9 @@ const MapScreen = () => {
                   { color: currentTheme.colors.text },
                 ]}
               >
-                Fall detection uses your device's sensors to automatically detect potential falls during rides and send emergency alerts to your contacts.
+                Fall detection uses your device's sensors to automatically
+                detect potential falls during rides and send emergency alerts to
+                your contacts.
               </Text>
 
               <Text
@@ -3578,12 +3630,18 @@ const MapScreen = () => {
                   { color: currentTheme.colors.textSecondary },
                 ]}
               >
-                • Monitors accelerometer for sudden impacts ({fallDetectionConfig.accelerationThreshold}g threshold)
-                {'\n'}• Detects rotational motion with gyroscope ({fallDetectionConfig.gyroscopeThreshold} rad/s threshold)
-                {'\n'}• Waits {fallDetectionConfig.recoveryTimeout/1000} seconds for recovery before alerting
-                {'\n'}• Automatically sends SMS with location to emergency contacts
-                {'\n'}• ✅ Background monitoring: Works when screen is off or app is backgrounded
-                {'\n'}• 🔋 Optimized for battery efficiency during background operation
+                • Monitors accelerometer for sudden impacts (
+                {fallDetectionConfig.accelerationThreshold}g threshold)
+                {"\n"}• Detects rotational motion with gyroscope (
+                {fallDetectionConfig.gyroscopeThreshold} rad/s threshold)
+                {"\n"}• Waits {fallDetectionConfig.recoveryTimeout / 1000}{" "}
+                seconds for recovery before alerting
+                {"\n"}• Automatically sends SMS with location to emergency
+                contacts
+                {"\n"}• ✅ Background monitoring: Works when screen is off or
+                app is backgrounded
+                {"\n"}• 🔋 Optimized for battery efficiency during background
+                operation
               </Text>
 
               {recentFallEvents.length > 0 && (
@@ -3621,8 +3679,12 @@ const MapScreen = () => {
                         ]}
                       >
                         Impact: {event.accelerationMagnitude.toFixed(1)}g
-                        {event.alertSent ? " • Alert sent ✅" : " • Alert failed ❌"}
-                        {event.detectedInBackground ? " • Background detection 🌙" : " • Foreground detection 📱"}
+                        {event.alertSent
+                          ? " • Alert sent ✅"
+                          : " • Alert failed ❌"}
+                        {event.detectedInBackground
+                          ? " • Background detection 🌙"
+                          : " • Foreground detection 📱"}
                       </Text>
                     </View>
                   ))}
@@ -3659,9 +3721,9 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
-    position: "relative",
+    paddingHorizontal: 20,
     marginBottom: -45,
     marginTop: -5,
   },
@@ -3829,9 +3891,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
-  historyButton: {
-    position: "absolute",
-    right: 20,
+  statisticsButton: {
     padding: 10,
     borderRadius: 20,
     minWidth: 40,
@@ -3840,7 +3900,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(255, 255, 255, 0.1)",
-    zIndex: 10,
+  },
+  statisticsButtonText: {
+    fontSize: 18,
+    color: "#FFFFFF",
+  },
+  historyButton: {
+    padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   historyButtonText: {
     fontSize: 18,
