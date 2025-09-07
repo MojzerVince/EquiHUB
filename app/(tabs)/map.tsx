@@ -282,17 +282,19 @@ const MapScreen = () => {
     useState(false);
 
   // Fall detection state
-  const [fallDetectionEnabled, setFallDetectionEnabled] = useState(true);
+  const [fallDetectionEnabled, setFallDetectionEnabled] = useState(false);
   const [fallDetectionConfig, setFallDetectionConfig] =
     useState<FallDetectionConfig>({
-      accelerationThreshold: 2.5,
-      gyroscopeThreshold: 5.0,
-      impactDuration: 500,
-      recoveryTimeout: 10000,
+      accelerationThreshold: 3.0,
+      gyroscopeThreshold: 4.0,
+      impactDuration: 800,
+      recoveryTimeout: 15000,
       isEnabled: true,
     });
   const [recentFallEvents, setRecentFallEvents] = useState<FallEvent[]>([]);
   const [showFallDetectionModal, setShowFallDetectionModal] = useState(false);
+  const [showFallDetectionDisclaimer, setShowFallDetectionDisclaimer] =
+    useState(false);
 
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
@@ -3222,6 +3224,146 @@ const MapScreen = () => {
                     </TouchableOpacity>
                   </TouchableOpacity>
                 </Modal>
+
+                {/* Fall Detection Disclaimer Modal */}
+                <Modal
+                  visible={showFallDetectionDisclaimer}
+                  transparent={true}
+                  animationType="slide"
+                  onRequestClose={() => setShowFallDetectionDisclaimer(false)}
+                >
+                  <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowFallDetectionDisclaimer(false)}
+                  >
+                    <TouchableOpacity
+                      style={[
+                        styles.batteryInfoModal,
+                        { backgroundColor: currentTheme.colors.surface },
+                      ]}
+                      activeOpacity={1}
+                      onPress={() => {}}
+                    >
+                      <Text
+                        style={[
+                          styles.batteryInfoTitle,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        ⚠️ Fall Detection Disclaimer
+                      </Text>
+
+                      <Text
+                        style={[
+                          styles.batteryInfoText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Important: This fall detection feature is designed to
+                        assist in emergency situations but has important
+                        limitations:
+                      </Text>
+
+                      <Text
+                        style={[
+                          styles.batteryInfoText,
+                          {
+                            color: currentTheme.colors.textSecondary,
+                            fontWeight: "600",
+                            marginTop: 10,
+                          },
+                        ]}
+                      >
+                        • This function is NOT replacing official emergency
+                        services
+                      </Text>
+
+                      <Text
+                        style={[
+                          styles.batteryInfoText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        • False positives and missed detections can occur
+                      </Text>
+
+                      <Text
+                        style={[
+                          styles.batteryInfoText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        • Always carry proper emergency communication devices
+                      </Text>
+
+                      <Text
+                        style={[
+                          styles.batteryInfoText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        • Inform others of your riding plans and expected return
+                      </Text>
+
+                      <Text
+                        style={[
+                          styles.batteryInfoText,
+                          {
+                            color: currentTheme.colors.textSecondary,
+                            marginTop: 10,
+                            fontStyle: "italic",
+                          },
+                        ]}
+                      >
+                        By enabling this feature, you acknowledge these
+                        limitations and understand that fall detection is a
+                        supplementary safety tool only.
+                      </Text>
+
+                      <View style={styles.modalButtonContainer}>
+                        <TouchableOpacity
+                          onPress={() => setShowFallDetectionDisclaimer(false)}
+                          style={[
+                            styles.modalButton,
+                            styles.cancelButton,
+                            { borderColor: currentTheme.colors.border },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.modalButtonText,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            Cancel
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            setFallDetectionEnabled(true);
+                            setShowFallDetectionDisclaimer(false);
+                          }}
+                          style={[
+                            styles.modalButton,
+                            styles.confirmButton,
+                            { backgroundColor: currentTheme.colors.primary },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.modalButtonText,
+                              { color: currentTheme.colors.surface },
+                            ]}
+                          >
+                            I Understand
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                </Modal>
               </View>
             )}
 
@@ -3324,9 +3466,15 @@ const MapScreen = () => {
                           : currentTheme.colors.border,
                       },
                     ]}
-                    onPress={() =>
-                      setFallDetectionEnabled(!fallDetectionEnabled)
-                    }
+                    onPress={() => {
+                      if (!fallDetectionEnabled) {
+                        // Show disclaimer when enabling fall detection
+                        setShowFallDetectionDisclaimer(true);
+                      } else {
+                        // Directly disable if turning off
+                        setFallDetectionEnabled(false);
+                      }
+                    }}
                     activeOpacity={0.8}
                   >
                     <View
@@ -4400,6 +4548,32 @@ const styles = StyleSheet.create({
   },
   batteryInfoButtonText: {
     color: "#FFFFFF",
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  modalButtonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+    gap: 15,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+  },
+  confirmButton: {
+    // backgroundColor will be set dynamically
+  },
+  modalButtonText: {
     fontSize: 16,
     fontFamily: "Inder",
     fontWeight: "600",
