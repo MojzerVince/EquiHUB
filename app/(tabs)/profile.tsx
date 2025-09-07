@@ -65,6 +65,9 @@ const ProfileScreen = () => {
   // State for custom image picker modal
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
 
+  // State for timeout modal
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false);
+
   // State for profile image
   const [profileImage, setProfileImage] = useState(
     require("../../assets/images/horses/falko.png")
@@ -386,7 +389,13 @@ const ProfileScreen = () => {
       }
     } catch (error) {
       console.error("Error during profile initialization:", error);
-      setError("Failed to load profile. Please try refreshing.");
+
+      // Check if it's a timeout error
+      if (error instanceof Error && error.message.includes("timeout")) {
+        setShowTimeoutModal(true);
+      } else {
+        setError("Failed to load profile. Please try refreshing.");
+      }
     }
   };
 
@@ -687,8 +696,14 @@ const ProfileScreen = () => {
         setError("Failed to refresh profile data");
       }
     } catch (err) {
-      setError("Failed to refresh profile");
       console.error("Error refreshing profile:", err);
+
+      // Check if it's a timeout error
+      if (err instanceof Error && err.message.includes("timeout")) {
+        setShowTimeoutModal(true);
+      } else {
+        setError("Failed to refresh profile");
+      }
     } finally {
       setRefreshing(false);
     }
@@ -1064,6 +1079,20 @@ const ProfileScreen = () => {
     setIsEditing(false);
   };
 
+  const handleTimeoutRetry = () => {
+    setShowTimeoutModal(false);
+    // If we're currently refreshing, call onRefresh, otherwise initialize profile
+    if (refreshing) {
+      onRefresh();
+    } else {
+      initializeProfile();
+    }
+  };
+
+  const handleTimeoutOk = () => {
+    setShowTimeoutModal(false);
+  };
+
   const SuccessModal = () => (
     <Modal
       animationType="fade"
@@ -1145,6 +1174,50 @@ const ProfileScreen = () => {
           >
             <Text style={styles.cancelModalButtonText}>Cancel</Text>
           </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const TimeoutModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={showTimeoutModal}
+      onRequestClose={() => setShowTimeoutModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.timeoutIcon}>
+            <Text style={styles.timeoutIconText}>⏰</Text>
+          </View>
+          <Text
+            style={[styles.modalTitle, { color: currentTheme.colors.text }]}
+          >
+            Timeout
+          </Text>
+          <Text
+            style={[
+              styles.modalMessage,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            The request timed out. Please check your connection and try again.
+          </Text>
+          <View style={styles.timeoutButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.timeoutButton]}
+              onPress={handleTimeoutOk}
+            >
+              <Text style={styles.modalButtonText}>Ok</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.timeoutRetryButton]}
+              onPress={handleTimeoutRetry}
+            >
+              <Text style={styles.modalButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -1863,6 +1936,9 @@ const ProfileScreen = () => {
 
       {/* Custom Image Picker Modal */}
       <ImagePickerModal />
+
+      {/* Timeout Modal */}
+      <TimeoutModal />
 
       {/* Loading Overlay */}
       {isLoading ? (
@@ -2708,6 +2784,33 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     fontFamily: "Inder",
+  },
+  // Timeout modal styles
+  timeoutIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#FF6B6B",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  timeoutIconText: {
+    fontSize: 40,
+    color: "#fff",
+  },
+  timeoutButtons: {
+    flexDirection: "row",
+    gap: 15,
+    marginBottom: 0,
+  },
+  timeoutButton: {
+    backgroundColor: "#666",
+    flex: 1,
+  },
+  timeoutRetryButton: {
+    backgroundColor: "#335C67",
+    flex: 1,
   },
 });
 
