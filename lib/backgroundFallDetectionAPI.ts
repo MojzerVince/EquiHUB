@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
+import * as Notifications from "expo-notifications";
 import { Accelerometer, Gyroscope } from "expo-sensors";
 import * as TaskManager from "expo-task-manager";
 import { ServerSMSAPI } from "./serverSMSAPI";
@@ -127,6 +128,9 @@ export class BackgroundFallDetectionAPI {
         lastStableTime: Date.now(),
         hasPendingAlert: false,
       }));
+
+      // Request notification permissions
+      await this.requestNotificationPermissions();
 
       // Check if sensors are available
       const accelAvailable = await Accelerometer.isAvailableAsync();
@@ -399,11 +403,46 @@ Check rider safety immediately!`;
         fallEvent.alertSent = true;
         fallEvent.alertSentAt = Date.now();
         console.log(`✅ Background fall alert sent to ${alertResult.sentCount} emergency contacts`);
+        
+        // Send local notification to inform user about the fall detection
+        await this.sendBackgroundFallNotification(fallEvent, alertResult.sentCount);
       } else {
         console.error("❌ Failed to send background fall alert:", alertResult.error);
+        
+        // Send notification about failed SMS sending
+        await this.sendBackgroundFallNotification(fallEvent, 0, true);
       }
     } catch (error) {
       console.error("Error sending background fall alert:", error);
+    }
+  }
+
+  // Send local notification for background fall detection
+  private static async sendBackgroundFallNotification(
+    fallEvent: BackgroundFallEvent, 
+    sentCount: number, 
+    isFailed: boolean = false
+  ): Promise<void> {
+    try {
+      const title = isFailed ? "⚠️ Fall Detected - SMS Failed" : "🚨 Fall Detected";
+      const body = isFailed 
+        ? `Fall detected at ${new Date(fallEvent.timestamp).toLocaleTimeString()}. Failed to send SMS alerts. Please check your emergency contacts manually.`
+        : `Fall detected at ${new Date(fallEvent.timestamp).toLocaleTimeString()}. Emergency SMS sent to ${sentCount} contacts.`;
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+          categoryIdentifier: "fall-detection",
+        },
+        trigger: null, // Show immediately
+      });
+
+      console.log(`📱 Background fall notification sent: ${title}`);
+    } catch (error) {
+      console.error("Error sending background fall notification:", error);
     }
   }
 
@@ -479,6 +518,39 @@ Check rider safety immediately!`;
       console.log("🔄 Background fall detection state reset - pending alerts cleared");
     } catch (error) {
       console.error("Error resetting background fall detection state:", error);
+    }
+  }
+
+  // Request notification permissions for background fall detection
+  private static async requestNotificationPermissions(): Promise<void> {
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        console.warn("⚠️ Notification permissions not granted for background fall detection");
+        return;
+      }
+
+      // Configure notification behavior
+      await Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+
+      console.log("✅ Notification permissions granted for background fall detection");
+    } catch (error) {
+      console.error("Error requesting notification permissions:", error);
     }
   }
 }
