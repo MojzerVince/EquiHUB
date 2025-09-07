@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -523,6 +524,59 @@ const StatisticsScreen = () => {
 
   if (loading) {
     return (
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
+        <SafeAreaView
+          style={[
+            styles.safeArea,
+            { backgroundColor: currentTheme.colors.primary },
+          ]}
+        >
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Image
+                source={require("../assets/in_app_icons/back.png")}
+                style={styles.backIcon}
+              />
+            </TouchableOpacity>
+            <Text style={styles.header}>Statistics</Text>
+            <View style={styles.placeholder} />
+          </View>
+          <View
+            style={[
+              styles.loadingContainer,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <ActivityIndicator
+              size="large"
+              color={currentTheme.colors.primary}
+            />
+            <Text
+              style={[styles.loadingText, { color: currentTheme.colors.text }]}
+            >
+              Loading statistics...
+            </Text>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.colors.primary },
+      ]}
+    >
       <SafeAreaView
         style={[
           styles.container,
@@ -534,255 +588,178 @@ const StatisticsScreen = () => {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.backButtonText}>←</Text>
+            <Image
+              source={require("../assets/in_app_icons/back.png")}
+              style={styles.backIcon}
+            />
           </TouchableOpacity>
           <Text style={styles.header}>Statistics</Text>
           <View style={styles.placeholder} />
         </View>
-        <View
+
+        <ScrollView
           style={[
-            styles.loadingContainer,
+            styles.content,
             { backgroundColor: currentTheme.colors.background },
           ]}
         >
-          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-          <Text
-            style={[styles.loadingText, { color: currentTheme.colors.text }]}
-          >
-            Loading statistics...
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        { backgroundColor: currentTheme.colors.primary },
-      ]}
-    >
-      <View style={styles.headerContainer}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.header}>Statistics</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <ScrollView
-        style={[
-          styles.content,
-          { backgroundColor: currentTheme.colors.background },
-        ]}
-      >
-        {/* View Type Selector */}
-        <View style={styles.selectorContainer}>
-          <TouchableOpacity
-            style={[
-              styles.selectorButton,
-              viewType === "rider" && {
-                backgroundColor: currentTheme.colors.primary,
-              },
-              { borderColor: currentTheme.colors.border },
-            ]}
-            onPress={() => setViewType("rider")}
-          >
-            <Text
-              style={[
-                styles.selectorText,
-                {
-                  color:
-                    viewType === "rider"
-                      ? currentTheme.colors.surface
-                      : currentTheme.colors.text,
-                },
-              ]}
-            >
-              Rider Stats
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.selectorButton,
-              viewType === "horse" && {
-                backgroundColor: currentTheme.colors.primary,
-              },
-              { borderColor: currentTheme.colors.border },
-            ]}
-            onPress={() => setViewType("horse")}
-          >
-            <Text
-              style={[
-                styles.selectorText,
-                {
-                  color:
-                    viewType === "horse"
-                      ? currentTheme.colors.surface
-                      : currentTheme.colors.text,
-                },
-              ]}
-            >
-              Horse Stats
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Time Range Selector */}
-        <View style={styles.selectorContainer}>
-          {(["weekly", "monthly", "yearly"] as TimeRange[]).map((range) => (
+          {/* View Type Selector */}
+          <View style={styles.selectorContainer}>
             <TouchableOpacity
-              key={range}
               style={[
-                styles.timeRangeButton,
-                timeRange === range && {
-                  backgroundColor: currentTheme.colors.secondary,
+                styles.selectorButton,
+                viewType === "rider" && {
+                  backgroundColor: currentTheme.colors.primary,
                 },
                 { borderColor: currentTheme.colors.border },
               ]}
-              onPress={() => setTimeRange(range)}
+              onPress={() => setViewType("rider")}
             >
               <Text
                 style={[
-                  styles.timeRangeText,
+                  styles.selectorText,
                   {
                     color:
-                      timeRange === range
+                      viewType === "rider"
                         ? currentTheme.colors.surface
                         : currentTheme.colors.text,
                   },
                 ]}
               >
-                {range.charAt(0).toUpperCase() + range.slice(1)}
+                Rider Stats
               </Text>
             </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Horse Selector (if viewing horse stats) */}
-        {viewType === "horse" && availableHorses.length > 0 && (
-          <View style={styles.horseSelectorContainer}>
-            <Text
+            <TouchableOpacity
               style={[
-                styles.horseSelectorTitle,
-                { color: currentTheme.colors.text },
+                styles.selectorButton,
+                viewType === "horse" && {
+                  backgroundColor: currentTheme.colors.primary,
+                },
+                { borderColor: currentTheme.colors.border },
               ]}
-            >
-              Select Horse:
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {availableHorses.map((horseId) => {
-                const horseName =
-                  sessions.find((s) => s.horseId === horseId)?.horseName ||
-                  horseId;
-                return (
-                  <TouchableOpacity
-                    key={horseId}
-                    style={[
-                      styles.horseSelectButton,
-                      selectedHorseId === horseId && {
-                        backgroundColor: currentTheme.colors.accent,
-                      },
-                      { borderColor: currentTheme.colors.border },
-                    ]}
-                    onPress={() => setSelectedHorseId(horseId)}
-                  >
-                    <Text
-                      style={[
-                        styles.horseSelectText,
-                        {
-                          color:
-                            selectedHorseId === horseId
-                              ? currentTheme.colors.surface
-                              : currentTheme.colors.text,
-                        },
-                      ]}
-                    >
-                      {horseName}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Statistics Display */}
-        {currentStats ? (
-          <>
-            {/* Main Stats Cards */}
-            <View style={styles.statsGrid}>
-              {renderStatCard(
-                "Sessions",
-                currentStats.sessionCount.toString(),
-                `${timeRange} total`
-              )}
-              {renderStatCard(
-                "Time Tracked",
-                formatDuration(currentStats.totalDuration),
-                `Avg: ${formatDuration(currentStats.averageSessionDuration)}`
-              )}
-              {renderStatCard(
-                "Distance",
-                formatDistance(currentStats.totalDistance),
-                `Avg: ${formatDistance(currentStats.averageDistance)}`
-              )}
-            </View>
-
-            {/* Gait Analysis */}
-            <View
-              style={[
-                styles.gaitSection,
-                { backgroundColor: currentTheme.colors.surface },
-              ]}
+              onPress={() => setViewType("horse")}
             >
               <Text
                 style={[
-                  styles.sectionTitle,
+                  styles.selectorText,
+                  {
+                    color:
+                      viewType === "horse"
+                        ? currentTheme.colors.surface
+                        : currentTheme.colors.text,
+                  },
+                ]}
+              >
+                Horse Stats
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Time Range Selector */}
+          <View style={styles.selectorContainer}>
+            {(["weekly", "monthly", "yearly"] as TimeRange[]).map((range) => (
+              <TouchableOpacity
+                key={range}
+                style={[
+                  styles.timeRangeButton,
+                  timeRange === range && {
+                    backgroundColor: currentTheme.colors.secondary,
+                  },
+                  { borderColor: currentTheme.colors.border },
+                ]}
+                onPress={() => setTimeRange(range)}
+              >
+                <Text
+                  style={[
+                    styles.timeRangeText,
+                    {
+                      color:
+                        timeRange === range
+                          ? currentTheme.colors.surface
+                          : currentTheme.colors.text,
+                    },
+                  ]}
+                >
+                  {range.charAt(0).toUpperCase() + range.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Horse Selector (if viewing horse stats) */}
+          {viewType === "horse" && availableHorses.length > 0 && (
+            <View style={styles.horseSelectorContainer}>
+              <Text
+                style={[
+                  styles.horseSelectorTitle,
                   { color: currentTheme.colors.text },
                 ]}
               >
-                Gait Distribution
+                Select Horse:
               </Text>
-              {renderGaitBar(currentStats.gaitPercentages)}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {availableHorses.map((horseId) => {
+                  const horseName =
+                    sessions.find((s) => s.horseId === horseId)?.horseName ||
+                    horseId;
+                  return (
+                    <TouchableOpacity
+                      key={horseId}
+                      style={[
+                        styles.horseSelectButton,
+                        selectedHorseId === horseId && {
+                          backgroundColor: currentTheme.colors.accent,
+                        },
+                        { borderColor: currentTheme.colors.border },
+                      ]}
+                      onPress={() => setSelectedHorseId(horseId)}
+                    >
+                      <Text
+                        style={[
+                          styles.horseSelectText,
+                          {
+                            color:
+                              selectedHorseId === horseId
+                                ? currentTheme.colors.surface
+                                : currentTheme.colors.text,
+                          },
+                        ]}
+                      >
+                        {horseName}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
-              {/* Gait Duration Details */}
-              <View style={styles.gaitDetailsContainer}>
-                {Object.entries(currentStats.gaitDurations).map(
-                  ([gait, duration]) =>
-                    duration > 0 && (
-                      <View key={gait} style={styles.gaitDetailItem}>
-                        <Text
-                          style={[
-                            styles.gaitDetailLabel,
-                            { color: currentTheme.colors.textSecondary },
-                          ]}
-                        >
-                          {gait.charAt(0).toUpperCase() + gait.slice(1)}:
-                        </Text>
-                        <Text
-                          style={[
-                            styles.gaitDetailValue,
-                            { color: currentTheme.colors.text },
-                          ]}
-                        >
-                          {formatDuration(duration)}
-                        </Text>
-                      </View>
-                    )
+          {/* Statistics Display */}
+          {currentStats ? (
+            <>
+              {/* Main Stats Cards */}
+              <View style={styles.statsGrid}>
+                {renderStatCard(
+                  "Sessions",
+                  currentStats.sessionCount.toString(),
+                  `${timeRange} total`
+                )}
+                {renderStatCard(
+                  "Time Tracked",
+                  formatDuration(currentStats.totalDuration),
+                  `Avg: ${formatDuration(currentStats.averageSessionDuration)}`
+                )}
+                {renderStatCard(
+                  "Distance",
+                  formatDistance(currentStats.totalDistance),
+                  `Avg: ${formatDistance(currentStats.averageDistance)}`
                 )}
               </View>
-            </View>
 
-            {/* Additional Stats */}
-            {currentStats.favoriteTrainingType && (
+              {/* Gait Analysis */}
               <View
                 style={[
-                  styles.additionalStatsCard,
+                  styles.gaitSection,
                   { backgroundColor: currentTheme.colors.surface },
                 ]}
               >
@@ -792,75 +769,144 @@ const StatisticsScreen = () => {
                     { color: currentTheme.colors.text },
                   ]}
                 >
-                  Favorite Training Type
+                  Gait Distribution
                 </Text>
-                <Text
+                {renderGaitBar(currentStats.gaitPercentages)}
+
+                {/* Gait Duration Details */}
+                <View style={styles.gaitDetailsContainer}>
+                  {Object.entries(currentStats.gaitDurations).map(
+                    ([gait, duration]) =>
+                      duration > 0 && (
+                        <View key={gait} style={styles.gaitDetailItem}>
+                          <Text
+                            style={[
+                              styles.gaitDetailLabel,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            {gait.charAt(0).toUpperCase() + gait.slice(1)}:
+                          </Text>
+                          <Text
+                            style={[
+                              styles.gaitDetailValue,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            {formatDuration(duration)}
+                          </Text>
+                        </View>
+                      )
+                  )}
+                </View>
+              </View>
+
+              {/* Additional Stats */}
+              {currentStats.favoriteTrainingType && (
+                <View
                   style={[
-                    styles.favoriteTrainingType,
-                    { color: currentTheme.colors.primary },
+                    styles.additionalStatsCard,
+                    { backgroundColor: currentTheme.colors.surface },
                   ]}
                 >
-                  {currentStats.favoriteTrainingType}
-                </Text>
-              </View>
-            )}
-          </>
-        ) : (
-          <View style={styles.noDataContainer}>
-            <Text
-              style={[
-                styles.noDataText,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              No data available for the selected {timeRange} period
-            </Text>
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Favorite Training Type
+                  </Text>
+                  <Text
+                    style={[
+                      styles.favoriteTrainingType,
+                      { color: currentTheme.colors.primary },
+                    ]}
+                  >
+                    {currentStats.favoriteTrainingType}
+                  </Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={styles.noDataContainer}>
+              <Text
+                style={[
+                  styles.noDataText,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                No data available for the selected {timeRange} period
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#335C67",
+  },
+  safeArea: {
+    backgroundColor: "#335C67",
   },
   headerContainer: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    marginBottom: -30,
+    marginTop: -10,
   },
   backButton: {
-    padding: 5,
+    padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
   },
-  backButtonText: {
-    fontSize: 24,
-    color: "#FFFFFF",
-    fontWeight: "bold",
+  backIcon: {
+    width: 26,
+    height: 26,
   },
   header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFFFFF",
+    fontSize: 30,
+    fontFamily: "Inder",
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: 600,
+    flex: 1,
   },
   placeholder: {
-    width: 34, // Same width as back button for centering
+    width: 40,
+    height: 40,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    marginTop: 5,
+    paddingHorizontal: 30,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 40,
   },
   loadingText: {
-    marginTop: 10,
     fontSize: 16,
+    fontFamily: "Inder",
+    marginTop: 15,
+    textAlign: "center",
   },
   selectorContainer: {
     flexDirection: "row",
