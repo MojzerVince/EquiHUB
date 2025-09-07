@@ -37,7 +37,8 @@ import {
   FallEvent,
 } from "../../lib/fallDetectionAPI";
 import { HorseAPI } from "../../lib/horseAPI";
-import { Horse } from "../../lib/supabase";
+import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
+import { Horse, Profile } from "../../lib/supabase";
 import { ChallengeSession } from "../../types/challengeTypes";
 
 // Types for tracking sessions
@@ -213,6 +214,7 @@ const MapScreen = () => {
   const { showError, showDialog } = useDialog();
   const { user } = useAuth();
   const router = useRouter();
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [region, setRegion] = useState<Region>({
     latitude: 0, // Start at center of world map
     longitude: 0,
@@ -313,6 +315,18 @@ const MapScreen = () => {
     null
   );
 
+  // Load user profile
+  const loadUserProfile = async () => {
+    if (user?.id) {
+      try {
+        const profile = await ProfileAPIBase64.getProfile(user.id);
+        setUserProfile(profile);
+      } catch (error) {
+        console.error("Error loading user profile:", error);
+      }
+    }
+  };
+
   useEffect(() => {
     requestLocationPermission();
     // Start watching for location immediately when component mounts
@@ -321,6 +335,8 @@ const MapScreen = () => {
     requestCameraPermissions();
     // Initialize fall detection
     initializeFallDetection();
+    // Load user profile
+    loadUserProfile();
   }, []);
 
   // Cleanup fall confirmation timeout on unmount
@@ -491,7 +507,11 @@ const MapScreen = () => {
 
         // Send alert using the new confirmed fall alert method
         if (user?.id) {
-          await FallDetectionAPI.sendConfirmedFallAlert(user.id, fallEvent);
+          await FallDetectionAPI.sendConfirmedFallAlert(
+            user.id,
+            fallEvent,
+            userProfile?.name
+          );
         }
 
         Alert.alert(
@@ -606,7 +626,10 @@ const MapScreen = () => {
           onPress: async () => {
             try {
               console.log("🧪 Triggering sensor-based test fall");
-              await FallDetectionAPI.triggerTestFall(user.id);
+              await FallDetectionAPI.triggerTestFall(
+                user.id,
+                userProfile?.name
+              );
               Alert.alert(
                 "Test Alert Sent",
                 "A simulated fall detection alert has been sent to your emergency contacts."

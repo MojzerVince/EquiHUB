@@ -83,13 +83,15 @@ export class ServerSMSAPI {
     userId: string,
     magnitude: number,
     gyroscopeMagnitude: number,
-    location?: { latitude: number; longitude: number }
+    location?: { latitude: number; longitude: number },
+    riderName?: string
   ): Promise<SMSResponse> {
-    const alertMessage = `🚨 FALL DETECTED 🚨
-EquiHUB: Fall during ride
+    const riderNameText = riderName || "Rider";
+    const alertMessage = `FALL DETECTED
+Automated sms from EquiHUB: ${riderNameText} might have fallen during ride
 Time: ${new Date().toLocaleTimeString()}
 Impact: ${magnitude.toFixed(1)}g
-Check safety!`;
+Check rider's safety!`;
 
     return this.sendEmergencyAlert({
       userId,

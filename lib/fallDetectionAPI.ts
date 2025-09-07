@@ -336,7 +336,7 @@ export class FallDetectionAPI {
   }
 
   // Send emergency alert for fall detection
-  private static async sendFallAlert(userId: string, fallEvent: FallEvent): Promise<void> {
+  private static async sendFallAlert(userId: string, fallEvent: FallEvent, riderName?: string): Promise<void> {
     try {
       const alertMessage = `🚨 FALL DETECTED 🚨
 EquiHUB: Fall during ride
@@ -348,7 +348,8 @@ Check safety!`;
         userId,
         fallEvent.accelerationMagnitude,
         fallEvent.gyroscopeMagnitude,
-        fallEvent.location
+        fallEvent.location,
+        riderName
       );
 
       if (alertResult.success) {
@@ -444,7 +445,7 @@ Check safety!`;
   }
 
   // Test fall detection (for debugging)
-  static async triggerTestFall(userId: string): Promise<void> {
+  static async triggerTestFall(userId: string, riderName?: string): Promise<void> {
     console.log("🧪 Triggering test fall detection");
     const testFallEvent: FallEvent = {
       id: `test_fall_${Date.now()}`,
@@ -454,13 +455,13 @@ Check safety!`;
       alertSent: false,
     };
 
-    await this.sendFallAlert(userId, testFallEvent);
+    await this.sendFallAlert(userId, testFallEvent, riderName);
     this.notifyFallEventListeners(testFallEvent);
   }
 
   // Send fall alert for confirmed falls (public method)
-  static async sendConfirmedFallAlert(userId: string, fallEvent: FallEvent): Promise<void> {
+  static async sendConfirmedFallAlert(userId: string, fallEvent: FallEvent, riderName?: string): Promise<void> {
     console.log("📱 Sending confirmed fall alert");
-    await this.sendFallAlert(userId, fallEvent);
+    await this.sendFallAlert(userId, fallEvent, riderName);
   }
 }
