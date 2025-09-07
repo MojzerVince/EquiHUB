@@ -44,18 +44,18 @@ export class SMSTestUtility {
   }
 
   // Test fall detection SMS
-  static async testFallDetectionSMS(userId: string): Promise<void> {
+  static async testFallDetectionSMS(userId: string, riderName?: string): Promise<void> {
     console.log("🚨 Testing fall detection SMS...");
 
     try {
       const result = await ServerSMSAPI.sendFallAlert(
         userId,
         3.2, // acceleration magnitude
-        5.8, // gyroscope magnitude
         {
           latitude: 37.7749,
           longitude: -122.4194,
-        }
+        },
+        riderName || "Test Rider"
       );
 
       if (result.success) {
@@ -97,7 +97,7 @@ export class SMSTestUtility {
   }
 
   // Run all tests
-  static async runAllTests(userId: string): Promise<void> {
+  static async runAllTests(userId: string, riderName?: string): Promise<void> {
     console.log("🔍 Running all SMS tests...");
     
     await this.testServerSMS(userId);
@@ -105,7 +105,7 @@ export class SMSTestUtility {
     // Wait between tests
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    await this.testFallDetectionSMS(userId);
+    await this.testFallDetectionSMS(userId, riderName);
     
     // Wait between tests
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -171,6 +171,33 @@ export class SMSTestUtility {
     } catch (error) {
       console.error("❌ Failed to sync emergency contacts to database:", error);
       throw error;
+    }
+  }
+
+  // Quick test - just test basic SMS functionality
+  static async quickSMSTest(userId: string, riderName?: string): Promise<boolean> {
+    console.log("⚡ Running quick SMS test...");
+    
+    try {
+      const result = await ServerSMSAPI.sendTestAlert(userId, {
+        latitude: 37.7749,
+        longitude: -122.4194,
+      });
+
+      const success = result.success && result.sentCount > 0;
+      
+      if (success) {
+        console.log("✅ Quick SMS test PASSED");
+        console.log(`📊 Sent to ${result.sentCount} contacts`);
+      } else {
+        console.log("❌ Quick SMS test FAILED");
+        console.log(`💬 Error: ${result.error || 'No SMS sent'}`);
+      }
+      
+      return success;
+    } catch (error) {
+      console.log("❌ Quick SMS test FAILED with exception", error);
+      return false;
     }
   }
 }

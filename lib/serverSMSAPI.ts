@@ -134,6 +134,31 @@ Check safety now!`;
     });
   }
 
+  // Send test alert
+  static async sendTestAlert(
+    userId: string,
+    location?: { latitude: number; longitude: number }
+  ): Promise<SMSResponse> {
+    // Create Google Maps link if location is available
+    let locationText = "";
+    if (location && location.latitude !== 0 && location.longitude !== 0) {
+      const mapsLink = `https://maps.google.com/?q=${location.latitude},${location.longitude}`;
+      locationText = `\nLocation: ${mapsLink}`;
+    }
+    
+    const testMessage = `TEST
+EquiHUB emergency test
+Time: ${new Date().toLocaleTimeString()}${locationText}
+System working!`;
+
+    return this.sendEmergencyAlert({
+      userId,
+      message: testMessage,
+      location,
+      emergencyType: "test",
+    });
+  }
+
   // Get SMS delivery status (if supported by SMS provider)
   static async getSMSStatus(messageId: string): Promise<{
     status: "pending" | "sent" | "delivered" | "failed";

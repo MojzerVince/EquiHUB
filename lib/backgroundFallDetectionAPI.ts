@@ -378,8 +378,8 @@ Check rider safety immediately!`;
       const alertResult = await ServerSMSAPI.sendFallAlert(
         userId,
         fallEvent.accelerationMagnitude,
-        fallEvent.gyroscopeMagnitude,
-        fallEvent.location
+        fallEvent.location,
+        "Background Rider" // Default name for background detections
       );
 
       if (alertResult.success) {
