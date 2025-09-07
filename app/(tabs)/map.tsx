@@ -3291,81 +3291,86 @@ const MapScreen = () => {
                       activeOpacity={1}
                       onPress={() => {}}
                     >
-                      <Text
-                        style={[
-                          styles.batteryInfoTitle,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        ⚠️ Fall Detection Disclaimer
-                      </Text>
+                      <View style={styles.batteryInfoHeader}>
+                        <Text
+                          style={[
+                            styles.batteryInfoTitle,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          ⚠️ Fall Detection Disclaimer
+                        </Text>
+                      </View>
 
-                      <Text
-                        style={[
-                          styles.batteryInfoText,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        Important: This fall detection feature is designed to
-                        assist in emergency situations but has important
-                        limitations:
-                      </Text>
+                      <View style={styles.batteryInfoContent}>
+                        <Text
+                          style={[
+                            styles.batteryInfoText,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          Important: This fall detection feature is designed to
+                          assist in emergency situations but has important
+                          limitations:
+                        </Text>
 
-                      <Text
-                        style={[
-                          styles.batteryInfoText,
-                          {
-                            color: currentTheme.colors.textSecondary,
-                            fontWeight: "600",
-                            marginTop: 10,
-                          },
-                        ]}
-                      >
-                        • This function is NOT replacing official emergency
-                        services
-                      </Text>
+                        <Text
+                          style={[
+                            styles.batteryInfoText,
+                            {
+                              color: currentTheme.colors.textSecondary,
+                              fontWeight: "600",
+                              marginTop: 10,
+                            },
+                          ]}
+                        >
+                          • This function is NOT replacing official emergency
+                          services
+                        </Text>
 
-                      <Text
-                        style={[
-                          styles.batteryInfoText,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        • False positives and missed detections can occur
-                      </Text>
+                        <Text
+                          style={[
+                            styles.batteryInfoText,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          • False positives and missed detections can occur
+                        </Text>
 
-                      <Text
-                        style={[
-                          styles.batteryInfoText,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        • Always carry proper emergency communication devices
-                      </Text>
+                        <Text
+                          style={[
+                            styles.batteryInfoText,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          • Always carry proper emergency communication devices
+                        </Text>
 
-                      <Text
-                        style={[
-                          styles.batteryInfoText,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        • Inform others of your riding plans and expected return
-                      </Text>
+                        <Text
+                          style={[
+                            styles.batteryInfoText,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          • Inform others of your riding plans and expected
+                          return
+                        </Text>
 
-                      <Text
-                        style={[
-                          styles.batteryInfoText,
-                          {
-                            color: currentTheme.colors.textSecondary,
-                            marginTop: 10,
-                            fontStyle: "italic",
-                          },
-                        ]}
-                      >
-                        By enabling this feature, you acknowledge these
-                        limitations and understand that fall detection is a
-                        supplementary safety tool only.
-                      </Text>
+                        <Text
+                          style={[
+                            styles.batteryInfoText,
+                            {
+                              color: currentTheme.colors.textSecondary,
+                              marginTop: 10,
+                              fontStyle: "italic",
+                            },
+                          ]}
+                        >
+                          By enabling this feature, you acknowledge these
+                          limitations and understand that fall detection is a
+                          supplementary safety tool only.
+                        </Text>
+                      </View>
 
                       <View style={styles.modalButtonContainer}>
                         <TouchableOpacity
