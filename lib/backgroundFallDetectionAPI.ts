@@ -125,6 +125,7 @@ export class BackgroundFallDetectionAPI {
       await AsyncStorage.setItem("background_fall_state", JSON.stringify({
         potentialFallStartTime: null,
         lastStableTime: Date.now(),
+        hasPendingAlert: false,
       }));
 
       // Check if sensors are available
@@ -275,6 +276,7 @@ export class BackgroundFallDetectionAPI {
       const state = stateData ? JSON.parse(stateData) : {
         potentialFallStartTime: null,
         lastStableTime: Date.now(),
+        hasPendingAlert: false,
       };
 
       const { magnitude, rotationalMagnitude, timestamp } = sensorData;
@@ -320,11 +322,21 @@ export class BackgroundFallDetectionAPI {
     state: any
   ): Promise<void> {
     try {
+      // Check if we already have a pending alert to prevent multiple SMS sends
+      if (state.hasPendingAlert) {
+        console.log("🚫 Background fall detection: SMS already sent, skipping duplicate alert");
+        return;
+      }
+
       const timeSinceStable = sensorData.timestamp - state.lastStableTime;
 
       // Check if enough time has passed without recovery
       if (timeSinceStable >= config.recoveryTimeout) {
         console.log("🚨 Background fall confirmed - triggering emergency alert");
+
+        // Set pending alert flag to prevent multiple SMS sends
+        state.hasPendingAlert = true;
+        await AsyncStorage.setItem("background_fall_state", JSON.stringify(state));
 
         // Get current location
         let location: { latitude: number; longitude: number } | undefined;
@@ -357,9 +369,10 @@ export class BackgroundFallDetectionAPI {
         // Store fall event for later review
         await this.storeFallEvent(fallEvent);
 
-        // Reset detection state
+        // Reset detection state but keep pending alert flag
         state.potentialFallStartTime = null;
         state.lastStableTime = Date.now();
+        // Note: hasPendingAlert remains true until manually reset
       }
     } catch (error) {
       console.error("Error handling background fall event:", error);
@@ -450,6 +463,22 @@ Check rider safety immediately!`;
     } catch (error) {
       console.error("Error getting background fall detection config:", error);
       return this.defaultConfig;
+    }
+  }
+
+  // Reset background fall detection state (clears pending alert flag)
+  static async resetBackgroundFallDetectionState(): Promise<void> {
+    try {
+      const resetState = {
+        potentialFallStartTime: null,
+        lastStableTime: Date.now(),
+        hasPendingAlert: false,
+      };
+      
+      await AsyncStorage.setItem("background_fall_state", JSON.stringify(resetState));
+      console.log("🔄 Background fall detection state reset - pending alerts cleared");
+    } catch (error) {
+      console.error("Error resetting background fall detection state:", error);
     }
   }
 }
