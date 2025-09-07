@@ -604,86 +604,87 @@ const StatisticsScreen = () => {
           ]}
         >
           {/* View Type Selector */}
-          <View style={styles.selectorContainer}>
-            <TouchableOpacity
-              style={[
-                styles.selectorButton,
-                viewType === "rider" && {
-                  backgroundColor: currentTheme.colors.primary,
-                },
-                { borderColor: currentTheme.colors.border },
-              ]}
-              onPress={() => setViewType("rider")}
-            >
-              <Text
-                style={[
-                  styles.selectorText,
-                  {
-                    color:
-                      viewType === "rider"
-                        ? currentTheme.colors.surface
-                        : currentTheme.colors.text,
-                  },
-                ]}
-              >
-                Rider Stats
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.selectorButton,
-                viewType === "horse" && {
-                  backgroundColor: currentTheme.colors.primary,
-                },
-                { borderColor: currentTheme.colors.border },
-              ]}
-              onPress={() => setViewType("horse")}
-            >
-              <Text
-                style={[
-                  styles.selectorText,
-                  {
-                    color:
-                      viewType === "horse"
-                        ? currentTheme.colors.surface
-                        : currentTheme.colors.text,
-                  },
-                ]}
-              >
-                Horse Stats
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Time Range Selector */}
-          <View style={styles.selectorContainer}>
-            {(["weekly", "monthly", "yearly"] as TimeRange[]).map((range) => (
+          <View style={styles.tabWrapper}>
+            <View style={styles.tabContainer}>
               <TouchableOpacity
-                key={range}
                 style={[
-                  styles.timeRangeButton,
-                  timeRange === range && {
-                    backgroundColor: currentTheme.colors.secondary,
+                  styles.tabButton,
+                  viewType === "rider" && {
+                    backgroundColor: currentTheme.colors.primary,
                   },
-                  { borderColor: currentTheme.colors.border },
                 ]}
-                onPress={() => setTimeRange(range)}
+                onPress={() => setViewType("rider")}
               >
                 <Text
                   style={[
-                    styles.timeRangeText,
+                    styles.tabText,
                     {
                       color:
-                        timeRange === range
+                        viewType === "rider"
                           ? currentTheme.colors.surface
-                          : currentTheme.colors.text,
+                          : currentTheme.colors.textSecondary,
                     },
                   ]}
                 >
-                  {range.charAt(0).toUpperCase() + range.slice(1)}
+                  Rider Stats
                 </Text>
               </TouchableOpacity>
-            ))}
+              <TouchableOpacity
+                style={[
+                  styles.tabButton,
+                  viewType === "horse" && {
+                    backgroundColor: currentTheme.colors.primary,
+                  },
+                ]}
+                onPress={() => setViewType("horse")}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    {
+                      color:
+                        viewType === "horse"
+                          ? currentTheme.colors.surface
+                          : currentTheme.colors.textSecondary,
+                    },
+                  ]}
+                >
+                  Horse Stats
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Time Range Selector */}
+          <View style={styles.tabWrapper}>
+            <View style={styles.tabContainer}>
+              {(["weekly", "monthly", "yearly"] as TimeRange[]).map((range) => (
+                <TouchableOpacity
+                  key={range}
+                  style={[
+                    styles.tabButton,
+                    timeRange === range && {
+                      backgroundColor: currentTheme.colors.primary,
+                    },
+                  ]}
+                  onPress={() => setTimeRange(range)}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      {
+                        color:
+                          timeRange === range
+                            ? currentTheme.colors.surface
+                            : currentTheme.colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    {range.charAt(0).toUpperCase() + range.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           {/* Horse Selector (if viewing horse stats) */}
@@ -908,33 +909,31 @@ const styles = StyleSheet.create({
     marginTop: 15,
     textAlign: "center",
   },
-  selectorContainer: {
+  tabWrapper: {
+    paddingTop: 0,
+    zIndex: 10,
+    marginVertical: 8,
+  },
+  tabContainer: {
     flexDirection: "row",
-    marginVertical: 15,
-    borderRadius: 8,
-    overflow: "hidden",
+    backgroundColor: "#F8F9FA",
+    borderRadius: 25,
+    width: "92%",
+    alignSelf: "center",
+    padding: 5,
   },
-  selectorButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  selectorText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  timeRangeButton: {
+  tabButton: {
     flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderWidth: 1,
+    paddingHorizontal: 12,
+    borderRadius: 20,
     alignItems: "center",
+    justifyContent: "center",
   },
-  timeRangeText: {
-    fontSize: 14,
-    fontWeight: "500",
+  tabText: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
   },
   horseSelectorContainer: {
     marginVertical: 15,
