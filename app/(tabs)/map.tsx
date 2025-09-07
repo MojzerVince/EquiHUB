@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import * as MediaLibrary from "expo-media-library";
@@ -232,6 +233,8 @@ const MapScreen = () => {
   const [selectedTrainingType, setSelectedTrainingType] = useState<string>("");
   const [userHorses, setUserHorses] = useState<Horse[]>([]);
   const [horsesLoading, setHorsesLoading] = useState<boolean>(false);
+  const [lastHorsesRefreshTimestamp, setLastHorsesRefreshTimestamp] =
+    useState<string>("");
   const [favoriteTrainingTypes, setFavoriteTrainingTypes] = useState<string[]>(
     []
   );
@@ -881,6 +884,49 @@ const MapScreen = () => {
     };
     loadFavorites();
   }, []);
+
+  // Check for horse data refresh when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkForHorseRefresh = async () => {
+        try {
+          const refreshTimestamp = await AsyncStorage.getItem(
+            "horses_refresh_timestamp"
+          );
+          if (
+            refreshTimestamp &&
+            refreshTimestamp !== lastHorsesRefreshTimestamp &&
+            user?.id
+          ) {
+            console.log(
+              "🔄 Horses were refreshed on another screen, updating map horses..."
+            );
+            setLastHorsesRefreshTimestamp(refreshTimestamp);
+
+            // Reload horses from API to get fresh data
+            setHorsesLoading(true);
+            try {
+              await loadHorsesFromAPI();
+              console.log(
+                "✅ Map horses updated after refresh from another screen"
+              );
+            } catch (error) {
+              console.error(
+                "❌ Error updating map horses after refresh:",
+                error
+              );
+            } finally {
+              setHorsesLoading(false);
+            }
+          }
+        } catch (error) {
+          console.error("Error checking for horse refresh:", error);
+        }
+      };
+
+      checkForHorseRefresh();
+    }, [lastHorsesRefreshTimestamp, user?.id])
+  );
 
   // Save favorite training types to storage
   const saveFavoritesToStorage = async (favorites: string[]) => {

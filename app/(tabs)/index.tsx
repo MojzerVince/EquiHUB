@@ -4,16 +4,16 @@ import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -222,7 +222,7 @@ const MyHorsesScreen = () => {
       const proStatus = await PaymentService.isProMember();
       setIsProMember(proStatus);
     } catch (error) {
-      console.error('Error checking pro membership:', error);
+      console.error("Error checking pro membership:", error);
       // Default to non-Pro if everything fails
       setIsProMember(false);
     } finally {
@@ -405,11 +405,36 @@ const MyHorsesScreen = () => {
     if (user?.id) {
       setRefreshing(true);
       setHorsesLoaded(false); // Reset the loaded flag to allow reloading
-      // On refresh, use API to get fresh data
-      await loadHorsesFromAPI(user.id);
-      // Also refresh pro membership status
-      await checkProMembership();
-      setRefreshing(false);
+
+      try {
+        // Clear cached horses to force fresh API data on all screens
+        await AsyncStorage.removeItem(`user_horses_${user.id}`);
+
+        // Clear individual horse image caches
+        const allKeys = await AsyncStorage.getAllKeys();
+        const horseImageKeys = allKeys.filter((key) =>
+          key.startsWith("horse_image_")
+        );
+        if (horseImageKeys.length > 0) {
+          await AsyncStorage.multiRemove(horseImageKeys);
+        }
+
+        // Set a refresh timestamp to notify other screens
+        await AsyncStorage.setItem(
+          "horses_refresh_timestamp",
+          Date.now().toString()
+        );
+
+        // On refresh, use API to get fresh data
+        await loadHorsesFromAPI(user.id);
+
+        // Also refresh pro membership status
+        await checkProMembership();
+      } catch (error) {
+        console.error("Error during horses refresh:", error);
+      } finally {
+        setRefreshing(false);
+      }
     }
   };
 
@@ -596,6 +621,12 @@ const MyHorsesScreen = () => {
         await loadHorsesFromAPI(user?.id); // Refresh from API after update
         closeEditModal();
 
+        // Notify other screens about the horse update
+        await AsyncStorage.setItem(
+          "horses_refresh_timestamp",
+          Date.now().toString()
+        );
+
         // Check if image was provided but not saved
         if (
           editImage &&
@@ -707,6 +738,12 @@ const MyHorsesScreen = () => {
         await loadHorsesFromAPI(user?.id); // Refresh from API after add
         closeAddModal();
 
+        // Notify other screens about the horse addition
+        await AsyncStorage.setItem(
+          "horses_refresh_timestamp",
+          Date.now().toString()
+        );
+
         // Check if image was provided but not saved
         if (addImage && !newHorse.image_url) {
           setSuccessMessage(
@@ -771,6 +808,12 @@ const MyHorsesScreen = () => {
           // Then reload to ensure data consistency
           setHorsesLoaded(false); // Reset flag to allow reloading
           await loadHorsesFromAPI(user?.id); // Refresh from API after delete
+
+          // Notify other screens about the horse deletion
+          await AsyncStorage.setItem(
+            "horses_refresh_timestamp",
+            Date.now().toString()
+          );
 
           setSuccessMessage(`${horse.name} has been deleted`);
           setShowSuccessModal(true);
