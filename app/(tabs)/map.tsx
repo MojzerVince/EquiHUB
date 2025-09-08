@@ -303,6 +303,7 @@ const MapScreen = () => {
   const [showFallDetectionModal, setShowFallDetectionModal] = useState(false);
   const [showFallDetectionDisclaimer, setShowFallDetectionDisclaimer] =
     useState(false);
+  const [fallDisclaimerAccepted, setFallDisclaimerAccepted] = useState(false);
   const [pendingFallConfirmation, setPendingFallConfirmation] = useState<{
     event: FallEvent;
     timestamp: number;
@@ -340,7 +341,45 @@ const MapScreen = () => {
     initializeFallDetection();
     // Load user profile
     loadUserProfile();
+    // Load fall detection disclaimer acceptance status
+    loadFallDisclaimerStatus();
   }, []);
+
+  // Load fall detection disclaimer acceptance status
+  const loadFallDisclaimerStatus = async () => {
+    try {
+      const accepted = await AsyncStorage.getItem("fall_disclaimer_accepted");
+      setFallDisclaimerAccepted(accepted === "true");
+    } catch (error) {
+      console.error("Error loading fall disclaimer status:", error);
+    }
+  };
+
+  // Save fall detection disclaimer acceptance
+  const saveFallDisclaimerAcceptance = async () => {
+    try {
+      await AsyncStorage.setItem("fall_disclaimer_accepted", "true");
+      setFallDisclaimerAccepted(true);
+      setFallDetectionEnabled(true);
+      setShowFallDetectionDisclaimer(false);
+    } catch (error) {
+      console.error("Error saving fall disclaimer acceptance:", error);
+      // Still proceed with enabling fall detection even if save fails
+      setFallDetectionEnabled(true);
+      setShowFallDetectionDisclaimer(false);
+    }
+  };
+
+  // Utility function to reset disclaimer acceptance (for testing/debugging)
+  // const resetFallDisclaimerAcceptance = async () => {
+  //   try {
+  //     await AsyncStorage.removeItem("fall_disclaimer_accepted");
+  //     setFallDisclaimerAccepted(false);
+  //     console.log("Fall disclaimer acceptance reset");
+  //   } catch (error) {
+  //     console.error("Error resetting fall disclaimer acceptance:", error);
+  //   }
+  // };
 
   // Cleanup fall confirmation timeout on unmount
   useEffect(() => {
@@ -3593,10 +3632,7 @@ const MapScreen = () => {
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          onPress={() => {
-                            setFallDetectionEnabled(true);
-                            setShowFallDetectionDisclaimer(false);
-                          }}
+                          onPress={saveFallDisclaimerAcceptance}
                           style={[
                             styles.modalButton,
                             styles.confirmButton,
@@ -3720,8 +3756,14 @@ const MapScreen = () => {
                     ]}
                     onPress={() => {
                       if (!fallDetectionEnabled) {
-                        // Show disclaimer when enabling fall detection
-                        setShowFallDetectionDisclaimer(true);
+                        // Check if disclaimer has been accepted before
+                        if (fallDisclaimerAccepted) {
+                          // Directly enable fall detection if disclaimer already accepted
+                          setFallDetectionEnabled(true);
+                        } else {
+                          // Show disclaimer when enabling fall detection for the first time
+                          setShowFallDetectionDisclaimer(true);
+                        }
                       } else {
                         // Directly disable if turning off
                         setFallDetectionEnabled(false);
