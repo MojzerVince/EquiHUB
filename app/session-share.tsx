@@ -16,8 +16,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { captureRef } from "react-native-view-shot";
+import ViewShot from "react-native-view-shot";
 import { useAuth } from "../contexts/AuthContext";
 import { useMetric } from "../contexts/MetricContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -83,8 +84,8 @@ export default function SessionShareScreen() {
   // Add initialization guard to prevent multiple renders
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Ref for capturing map view
-  const mapViewRef = useRef<View>(null);
+  // Ref for capturing Instagram story view with ViewShot
+  const instagramViewRef = useRef<ViewShot>(null);
   const [mapReady, setMapReady] = useState(false);
 
   // Get sessionId from params - this is the key piece of data we need
@@ -457,94 +458,67 @@ export default function SessionShareScreen() {
         return;
       }
 
-      console.log("Creating map view for Instagram sharing...");
+      console.log("Creating Instagram story image using ViewShot...");
 
-      // Check if map view ref is available
-      if (!mapViewRef.current) {
+      // Check if ViewShot ref is available
+      if (!instagramViewRef.current) {
         Alert.alert(
           "Error",
-          "Map view not ready. Please try again in a moment."
+          "Instagram view not ready. Please try again in a moment."
         );
         return;
       }
 
       // Wait a moment for the view to be fully rendered
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       try {
-        console.log("Attempting to capture map view...");
+        console.log("Attempting to capture Instagram view...");
 
-        // Capture the map view as an image with explicit options
-        const imageUri = await captureRef(mapViewRef.current, {
-          format: "jpg",
-          quality: 0.9,
-          result: "tmpfile",
-          height: width, // Square aspect ratio
-          width: width,
-        });
+        // Capture the entire view using ViewShot's capture method
+        if (!instagramViewRef.current?.capture) {
+          throw new Error("ViewShot capture method not available");
+        }
 
-        console.log("Map view captured successfully:", imageUri);
+        const imageUri = await instagramViewRef.current.capture();
 
-        // Share the captured image
+        console.log("Instagram view captured successfully:", imageUri);
+
+        // Share the captured image to Instagram
         await Sharing.shareAsync(imageUri, {
           mimeType: "image/jpeg",
           dialogTitle: "Share to Instagram Story",
           UTI: "public.jpeg",
         });
 
-        // Show success message with copyable stats
-        const sessionStats =
-          `🐴 ${session?.horseName || "Training Session"}\n` +
-          `⏱️ ${
-            session?.duration ? formatDuration(session.duration) : "Unknown"
-          }\n` +
-          `📍 ${
-            session?.distance
-              ? `${(session.distance / 1000).toFixed(1)} km`
-              : "Unknown"
-          }\n` +
-          `🏃 ${
-            session?.averageSpeed
-              ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h`
-              : "Unknown"
-          }`;
-
         Alert.alert(
-          "Shared Successfully! 📱",
-          `Map shared to Instagram! You can copy these stats to add to your story:\n\n${sessionStats}`,
+          "Shared Successfully! �",
+          "Your training session has been shared to Instagram Story!",
           [{ text: "OK", style: "default" }]
         );
 
         // Clean up the temporary file
         try {
           await FileSystem.deleteAsync(imageUri, { idempotent: true });
-          console.log("Temporary map image cleaned up");
+          console.log("Temporary Instagram image cleaned up");
         } catch (cleanupError) {
-          console.warn("Failed to clean up temporary map file:", cleanupError);
+          console.warn(
+            "Failed to clean up temporary Instagram file:",
+            cleanupError
+          );
         }
       } catch (captureError) {
-        console.error("Error capturing map view:", captureError);
+        console.error("Error capturing Instagram view:", captureError);
 
-        // Provide more specific error message
         const errorMessage =
           captureError instanceof Error
             ? captureError.message
             : "Unknown error";
 
-        if (
-          errorMessage.includes("reactTag") ||
-          errorMessage.includes("No view found")
-        ) {
-          Alert.alert(
-            "Capture Failed",
-            "The map view is not ready for capture. Please scroll down to see the map preview, then try again."
-          );
-        } else {
-          Alert.alert(
-            "Capture Failed",
-            "Failed to create map image. Please try again."
-          );
-        }
+        Alert.alert(
+          "Capture Failed",
+          `Failed to create Instagram story image: ${errorMessage}`
+        );
         return;
       }
     } catch (error) {
@@ -951,120 +925,197 @@ export default function SessionShareScreen() {
           </View>
         )}
 
-        {/* Instagram Story View - Simple Flat Design */}
+        {/* Instagram Story View - Map + Data Hybrid */}
         <View style={styles.mapContainer}>
           <View style={styles.mapTitleContainer}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
               Instagram Story Preview
             </Text>
           </View>
-          <View
-            ref={mapViewRef}
+          <ViewShot
+            ref={instagramViewRef}
             style={styles.instagramMapView}
-            collapsable={false}
-            renderToHardwareTextureAndroid={true}
+            options={{
+              format: "jpg",
+              quality: 0.9,
+              result: "tmpfile",
+            }}
           >
-            {/* Simple Gradient Background */}
-            <View
-              style={[
-                styles.simpleBackgroundGradient,
-                { backgroundColor: theme.primary },
-              ]}
-            >
+            {/* Map Background */}
+            {session?.path && session.path.length > 0 ? (
+              <MapView
+                style={styles.hybridMapBackground}
+                provider={PROVIDER_GOOGLE}
+                initialRegion={getMapRegion()}
+                scrollEnabled={false}
+                zoomEnabled={false}
+                rotateEnabled={false}
+                pitchEnabled={false}
+                showsUserLocation={false}
+                showsMyLocationButton={false}
+                showsCompass={false}
+                showsScale={false}
+                showsBuildings={true}
+                showsTraffic={false}
+                showsIndoors={false}
+                showsPointsOfInterest={false}
+                loadingEnabled={false}
+                onMapReady={() => {
+                  setMapReady(true);
+                }}
+              >
+                {/* Route Polyline */}
+                <Polyline
+                  coordinates={session.path.map((point: TrackingPoint) => ({
+                    latitude: point.latitude,
+                    longitude: point.longitude,
+                  }))}
+                  strokeColor="#FFD700"
+                  strokeWidth={4}
+                  lineJoin="round"
+                  lineCap="round"
+                />
+
+                {/* Start Point Marker */}
+                {session.path.length > 0 && (
+                  <Marker
+                    coordinate={{
+                      latitude: session.path[0].latitude,
+                      longitude: session.path[0].longitude,
+                    }}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                  >
+                    <View style={styles.startMarker}>
+                      <Ionicons name="play-circle" size={20} color="#00C851" />
+                    </View>
+                  </Marker>
+                )}
+
+                {/* End Point Marker */}
+                {session.path.length > 1 && (
+                  <Marker
+                    coordinate={{
+                      latitude: session.path[session.path.length - 1].latitude,
+                      longitude:
+                        session.path[session.path.length - 1].longitude,
+                    }}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                  >
+                    <View style={styles.endMarker}>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color="#FF4444"
+                      />
+                    </View>
+                  </Marker>
+                )}
+              </MapView>
+            ) : (
               <View
                 style={[
-                  styles.simpleBackgroundOverlay,
-                  { backgroundColor: theme.accent + "20" },
+                  styles.hybridMapBackground,
+                  styles.hybridFallbackBackground,
+                  { backgroundColor: theme.primary },
                 ]}
-              />
-            </View>
-
-            {/* Header Section */}
-            <View style={styles.simpleHeader}>
-              <View style={styles.simpleBrandContainer}>
-                <Ionicons name="logo-buffer" size={20} color="#FFFFFF" />
-                <Text style={styles.simpleBrandText}>EquiHub</Text>
-              </View>
-              <Text style={styles.simpleTitle}>Training Session</Text>
-            </View>
-
-            {/* Horse Section */}
-            <View style={styles.simpleHorseSection}>
-              <Image
-                source={
-                  horse?.image_url
-                    ? { uri: horse.image_url }
-                    : require("../assets/images/horses/pony.jpg")
-                }
-                style={styles.simpleHorseImage}
-              />
-              <Text style={styles.simpleHorseName}>
-                {session.horseName || "Unknown Horse"}
-              </Text>
-            </View>
-
-            {/* Stats Section */}
-            <View style={styles.simpleStatsSection}>
-              <View style={styles.simpleStatCard}>
-                <Ionicons name="time-outline" size={32} color="#FFFFFF" />
-                <Text style={styles.simpleStatValue}>
-                  {session?.duration !== undefined && session?.duration !== null
-                    ? formatDuration(session.duration)
-                    : "N/A"}
-                </Text>
-                <Text style={styles.simpleStatLabel}>Duration</Text>
-              </View>
-
-              <View style={styles.simpleStatCard}>
-                <Ionicons name="navigate-outline" size={32} color="#FFFFFF" />
-                <Text style={styles.simpleStatValue}>
-                  {session?.distance !== undefined && session?.distance !== null
-                    ? formatDistance(session.distance)
-                    : "N/A"}
-                </Text>
-                <Text style={styles.simpleStatLabel}>Distance</Text>
-              </View>
-
-              <View style={styles.simpleStatCard}>
-                <Ionicons
-                  name="speedometer-outline"
-                  size={32}
-                  color="#FFFFFF"
+              >
+                <View
+                  style={[
+                    styles.hybridGradientOverlay,
+                    { backgroundColor: theme.accent + "30" },
+                  ]}
                 />
-                <Text style={styles.simpleStatValue}>
-                  {session?.averageSpeed !== undefined &&
-                  session?.averageSpeed !== null
-                    ? formatSpeed(session.averageSpeed)
-                    : "N/A"}
+              </View>
+            )}
+
+            {/* Content Overlay - Part of Main View */}
+            <View style={styles.hybridContentOverlay}>
+              {/* Header Section */}
+              <View style={styles.hybridHeader}>
+                <View style={styles.hybridBrandContainer}>
+                  <Ionicons name="logo-buffer" size={18} color="#FFFFFF" />
+                  <Text style={styles.hybridBrandText}>EquiHub</Text>
+                </View>
+                <Text style={styles.hybridTitle}>Training Session</Text>
+              </View>
+
+              {/* Horse Section */}
+              <View style={styles.hybridHorseSection}>
+                <Image
+                  source={
+                    horse?.image_url
+                      ? { uri: horse.image_url }
+                      : require("../assets/images/horses/pony.jpg")
+                  }
+                  style={styles.hybridHorseImage}
+                />
+                <Text style={styles.hybridHorseName}>
+                  {session.horseName || "Unknown Horse"}
                 </Text>
-                <Text style={styles.simpleStatLabel}>Avg Speed</Text>
+              </View>
+
+              {/* Spacer to push stats to bottom */}
+              <View style={styles.hybridSpacer} />
+
+              {/* Stats Section - Compact Layout */}
+              <View style={styles.hybridStatsContainer}>
+                <View style={styles.hybridStatsGrid}>
+                  <View style={styles.hybridStatItem}>
+                    <Ionicons name="time-outline" size={24} color="#FFFFFF" />
+                    <Text style={styles.hybridStatValue}>
+                      {session?.duration !== undefined &&
+                      session?.duration !== null
+                        ? formatDuration(session.duration)
+                        : "N/A"}
+                    </Text>
+                    <Text style={styles.hybridStatLabel}>Duration</Text>
+                  </View>
+
+                  <View style={styles.hybridStatItem}>
+                    <Ionicons
+                      name="navigate-outline"
+                      size={24}
+                      color="#FFFFFF"
+                    />
+                    <Text style={styles.hybridStatValue}>
+                      {session?.distance !== undefined &&
+                      session?.distance !== null
+                        ? formatDistance(session.distance)
+                        : "N/A"}
+                    </Text>
+                    <Text style={styles.hybridStatLabel}>Distance</Text>
+                  </View>
+
+                  <View style={styles.hybridStatItem}>
+                    <Ionicons
+                      name="speedometer-outline"
+                      size={24}
+                      color="#FFFFFF"
+                    />
+                    <Text style={styles.hybridStatValue}>
+                      {session?.averageSpeed !== undefined &&
+                      session?.averageSpeed !== null
+                        ? formatSpeed(session.averageSpeed)
+                        : "N/A"}
+                    </Text>
+                    <Text style={styles.hybridStatLabel}>Avg Speed</Text>
+                  </View>
+                </View>
+
+                {/* Date Footer */}
+                <View style={styles.hybridDateFooter}>
+                  <Text style={styles.hybridDateText}>
+                    {new Date().toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </Text>
+                </View>
               </View>
             </View>
-
-            {/* Route Summary Section */}
-            <View style={styles.simpleRouteSection}>
-              <View style={styles.simpleRouteIcon}>
-                <Ionicons name="location" size={40} color={theme.accent} />
-              </View>
-              <Text style={styles.simpleRouteText}>
-                {session?.path && session.path.length > 0
-                  ? `GPS route tracked with ${session.path.length} points`
-                  : "Session completed"}
-              </Text>
-            </View>
-
-            {/* Date Section */}
-            <View style={styles.simpleDateSection}>
-              <Text style={styles.simpleDateText}>
-                {new Date().toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </Text>
-            </View>
-          </View>
+          </ViewShot>
         </View>
       </ScrollView>
 
@@ -2285,6 +2336,137 @@ const styles = StyleSheet.create({
   },
   simpleDateText: {
     fontSize: 14,
+    fontWeight: "500",
+    color: "#FFFFFF",
+    textAlign: "center",
+    opacity: 0.8,
+  },
+
+  // Hybrid Instagram View Styles - Map + Data Combined
+  hybridMapBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  hybridFallbackBackground: {
+    position: "relative",
+  },
+  hybridGradientOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  hybridContentOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "space-between",
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  hybridHeader: {
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  hybridBrandContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  hybridBrandText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginLeft: 6,
+    fontFamily: "Inder",
+  },
+  hybridTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
+    fontFamily: "Inder",
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  hybridHorseSection: {
+    alignItems: "center",
+    marginTop: 10,
+  },
+  hybridHorseImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    marginBottom: 8,
+  },
+  hybridHorseName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textAlign: "center",
+    fontFamily: "Inder",
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  hybridSpacer: {
+    flex: 1,
+  },
+  hybridStatsContainer: {
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    borderRadius: 16,
+    padding: 16,
+  },
+  hybridStatsGrid: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: 12,
+  },
+  hybridStatItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  hybridStatValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginTop: 6,
+    fontFamily: "Inder",
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  hybridStatLabel: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginTop: 2,
+    opacity: 0.9,
+  },
+  hybridDateFooter: {
+    alignItems: "center",
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.2)",
+  },
+  hybridDateText: {
+    fontSize: 12,
     fontWeight: "500",
     color: "#FFFFFF",
     textAlign: "center",
