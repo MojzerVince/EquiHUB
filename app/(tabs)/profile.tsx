@@ -157,7 +157,7 @@ const ProfileScreen = () => {
         new Promise<never>((_, reject) =>
           setTimeout(
             () => reject(new Error("Profile API request timeout")),
-            10000
+            15000
           )
         ),
       ])) as Response;
@@ -298,7 +298,7 @@ const ProfileScreen = () => {
         new Promise<never>((_, reject) =>
           setTimeout(
             () => reject(new Error("Badges API request timeout")),
-            10000
+            15000
           )
         ),
       ])) as Response;
@@ -407,8 +407,8 @@ const ProfileScreen = () => {
         getUserBadgesDirectAPI(USER_ID),
         new Promise<any[]>((_, reject) =>
           setTimeout(
-            () => reject(new Error("Badge loading timeout after 10 seconds")),
-            10000
+            () => reject(new Error("Badge loading timeout after 15 seconds")),
+            15000
           )
         ),
       ]);
@@ -458,7 +458,7 @@ const ProfileScreen = () => {
     clearError();
 
     try {
-      // Try direct REST API approach with timeout like in refresh
+      // Try direct REST API approach with 15-second timeout
       let profile = await Promise.race([
         getProfileDirectAPI(USER_ID),
         new Promise<null>((_, reject) =>
@@ -577,8 +577,17 @@ const ProfileScreen = () => {
         setSavedProfileImage(require("../../assets/images/horses/falko.png"));
       }
     } catch (err) {
-      setError("Failed to load profile");
       console.error("Error loading profile:", err);
+
+      // Check if it's a timeout error
+      if (err instanceof Error && err.message.includes("timeout")) {
+        console.log("Profile loading timed out, showing timeout modal");
+        setShowTimeoutModal(true);
+      } else {
+        setError(
+          "Failed to load profile. Please check your internet connection."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -1944,8 +1953,18 @@ const ProfileScreen = () => {
       {isLoading ? (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#335C67" />
-            <Text style={styles.loadingText}>Saving...</Text>
+            <ActivityIndicator
+              size="large"
+              color={currentTheme.colors.primary}
+            />
+            <Text
+              style={[
+                styles.loadingText,
+                { color: currentTheme.colors.primary },
+              ]}
+            >
+              Loading...
+            </Text>
           </View>
         </View>
       ) : null}
