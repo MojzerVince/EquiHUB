@@ -190,11 +190,6 @@ export class FallDetectionAPI {
   private static analyzeForFall(magnitude: number, timestamp: number, userId: string): void {
     // Normal gravity is around 1g, significant deviations indicate impact or free fall
     const gravityDeviation = Math.abs(magnitude - 1.0);
-    
-    // Debug: Log all readings (throttled)
-    if (timestamp % 1000 < 50) { // Log roughly every second
-      console.log(`📊 Accel: ${magnitude.toFixed(2)}g (deviation: ${gravityDeviation.toFixed(2)}g, threshold: ${this.config.accelerationThreshold}g)`);
-    }
 
     // Check for sudden acceleration/deceleration (fall indicators)
     // This includes both high G impacts AND low G free fall scenarios
@@ -207,11 +202,6 @@ export class FallDetectionAPI {
       if (this.potentialFallStartTime === null) {
         this.potentialFallStartTime = timestamp;
         console.log(`⚠️ POTENTIAL FALL DETECTED!`);
-        console.log(`   - Magnitude: ${magnitude.toFixed(2)}g`);
-        console.log(`   - Deviation: ${gravityDeviation.toFixed(2)}g`);
-        console.log(`   - High Impact: ${isHighImpact}`);
-        console.log(`   - Free Fall: ${isFreeFall}`);
-        console.log(`   - Shaking: ${isShaking}`);
       }
 
       // Check if impact has been sustained long enough OR immediate trigger for severe impacts
@@ -225,8 +215,6 @@ export class FallDetectionAPI {
     } else {
       // Stable readings - reset potential fall detection
       if (this.potentialFallStartTime !== null) {
-        const detectionDuration = timestamp - this.potentialFallStartTime;
-        console.log(`📊 Sensor readings stabilized after ${detectionDuration}ms - canceling fall detection`);
         this.potentialFallStartTime = null;
       }
       this.lastStableTime = timestamp;
@@ -235,10 +223,6 @@ export class FallDetectionAPI {
 
   // Analyze gyroscope data for rotational movement
   private static analyzeRotationalMovement(magnitude: number, userId: string): void {
-    // Debug: Log gyroscope readings periodically
-    if (Date.now() % 1000 < 50) { // Log roughly every second
-      console.log(`🌀 Gyro: ${magnitude.toFixed(2)} rad/s (threshold: ${this.config.gyroscopeThreshold} rad/s)`);
-    }
     
     if (magnitude > this.config.gyroscopeThreshold) {
       const timestamp = Date.now();
@@ -480,6 +464,11 @@ Check safety!`;
     this.hasPendingAlert = false;
     this.potentialFallStartTime = null;
     this.lastStableTime = Date.now();
+    
+    // Also reset background fall detection state
+    BackgroundFallDetectionAPI.resetBackgroundFallDetectionState().catch(error => {
+      console.error("Error resetting background fall detection state:", error);
+    });
   }
 
   // Check if there's a pending alert

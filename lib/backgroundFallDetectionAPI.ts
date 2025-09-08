@@ -60,10 +60,10 @@ TaskManager.defineTask(BACKGROUND_FALL_DETECTION_TASK, async ({ data, error }) =
       // Get stored configuration and state
       const configData = await AsyncStorage.getItem("background_fall_detection_config");
       const config: BackgroundFallConfig = configData ? JSON.parse(configData) : {
-        accelerationThreshold: 2.5,
+        accelerationThreshold: 3.0,
         gyroscopeThreshold: 5.0,
         impactDuration: 500,
-        recoveryTimeout: 10000,
+        recoveryTimeout: 20000,
         isEnabled: true,
         sensorUpdateInterval: 100,
       };
@@ -98,10 +98,10 @@ export class BackgroundFallDetectionAPI {
 
   // Default configuration
   private static defaultConfig: BackgroundFallConfig = {
-    accelerationThreshold: 2.5,
+    accelerationThreshold: 3.0,
     gyroscopeThreshold: 5.0,
     impactDuration: 500,
-    recoveryTimeout: 10000,
+    recoveryTimeout: 20000,
     isEnabled: true,
     sensorUpdateInterval: 100, // 10Hz for battery efficiency
   };
@@ -293,7 +293,6 @@ export class BackgroundFallDetectionAPI {
         // Potential fall detected
         if (state.potentialFallStartTime === null) {
           state.potentialFallStartTime = timestamp;
-          console.log(`⚠️ Background fall detected: ${gravityDeviation.toFixed(2)}g deviation, ${rotationalMagnitude.toFixed(2)} rad/s rotation`);
         }
 
         // Check if impact has been sustained long enough
@@ -304,7 +303,6 @@ export class BackgroundFallDetectionAPI {
       } else {
         // Stable readings - reset potential fall detection
         if (state.potentialFallStartTime !== null) {
-          console.log("📊 Background sensor readings stabilized - canceling fall detection");
           state.potentialFallStartTime = null;
         }
         state.lastStableTime = timestamp;
