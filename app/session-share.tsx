@@ -16,7 +16,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import { useAuth } from "../contexts/AuthContext";
@@ -120,7 +119,7 @@ export default function SessionShareScreen() {
       distance: session?.distance,
       averageSpeed: session?.averageSpeed,
       horseName: session?.horseName,
-      loading: loading
+      loading: loading,
     });
   }, [session, loading]);
 
@@ -148,7 +147,7 @@ export default function SessionShareScreen() {
 
       // Found session - setting state
       setSession(found);
-      
+
       // Debug logging for session data
       console.log("📊 Session data loaded:", {
         id: found.id,
@@ -163,7 +162,7 @@ export default function SessionShareScreen() {
         avgSpeedCheck: !!found.averageSpeed,
         durationType: typeof found.duration,
         distanceType: typeof found.distance,
-        avgSpeedType: typeof found.averageSpeed
+        avgSpeedType: typeof found.averageSpeed,
       });
 
       if (found) {
@@ -697,7 +696,8 @@ export default function SessionShareScreen() {
               <Ionicons name="speedometer-outline" size={24} color="#007AFF" />
             </View>
             <Text style={styles.statValue}>
-              {session?.averageSpeed !== undefined && session?.averageSpeed !== null
+              {session?.averageSpeed !== undefined &&
+              session?.averageSpeed !== null
                 ? formatSpeed(session.averageSpeed)
                 : "N/A"}
             </Text>
@@ -951,7 +951,7 @@ export default function SessionShareScreen() {
           </View>
         )}
 
-        {/* Map View for Instagram Story Capture */}
+        {/* Instagram Story View - Simple Flat Design */}
         <View style={styles.mapContainer}>
           <View style={styles.mapTitleContainer}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
@@ -964,204 +964,105 @@ export default function SessionShareScreen() {
             collapsable={false}
             renderToHardwareTextureAndroid={true}
           >
-            {/* Map Background */}
-            {session?.path && session.path.length > 0 ? (
-              <MapView
-                style={styles.mapBackground}
-                provider={PROVIDER_GOOGLE}
-                initialRegion={getMapRegion()}
-                scrollEnabled={false}
-                zoomEnabled={false}
-                rotateEnabled={false}
-                pitchEnabled={false}
-                showsUserLocation={false}
-                showsMyLocationButton={false}
-                showsCompass={false}
-                showsScale={false}
-                showsBuildings={false}
-                showsTraffic={false}
-                showsIndoors={false}
-                showsPointsOfInterest={false}
-                loadingEnabled={false}
-                onMapReady={() => {
-                  console.log("Map is ready for capture");
-                  setMapReady(true);
-                }}
-                onLayout={() => {
-                  console.log("Map layout complete");
-                }}
-              >
-                {/* Route Polyline */}
-                <Polyline
-                  coordinates={session.path.map((point: TrackingPoint) => ({
-                    latitude: point.latitude,
-                    longitude: point.longitude,
-                  }))}
-                  strokeColor="#FFD700"
-                  strokeWidth={4}
-                  lineJoin="round"
-                  lineCap="round"
-                />
-
-                {/* Start Point Marker */}
-                {session.path.length > 0 && (
-                  <Marker
-                    coordinate={{
-                      latitude: session.path[0].latitude,
-                      longitude: session.path[0].longitude,
-                    }}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                  >
-                    <View style={styles.startMarker}>
-                      <Ionicons name="play-circle" size={24} color="#00C851" />
-                    </View>
-                  </Marker>
-                )}
-
-                {/* End Point Marker */}
-                {session.path.length > 1 && (
-                  <Marker
-                    coordinate={{
-                      latitude: session.path[session.path.length - 1].latitude,
-                      longitude:
-                        session.path[session.path.length - 1].longitude,
-                    }}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                  >
-                    <View style={styles.endMarker}>
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={24}
-                        color="#FF4444"
-                      />
-                    </View>
-                  </Marker>
-                )}
-              </MapView>
-            ) : (
+            {/* Simple Gradient Background */}
+            <View
+              style={[
+                styles.simpleBackgroundGradient,
+                { backgroundColor: theme.primary },
+              ]}
+            >
               <View
-                style={[styles.mapBackground, styles.fallbackBackground]}
-                onLayout={() => {
-                  console.log("Placeholder view layout complete");
-                  setMapReady(true);
-                }}
-              >
-                {/* Gradient-like background using overlapping colored views */}
-                <View
-                  style={[
-                    styles.gradientLayer,
-                    { backgroundColor: theme.primary + "40" },
-                  ]}
+                style={[
+                  styles.simpleBackgroundOverlay,
+                  { backgroundColor: theme.accent + "20" },
+                ]}
+              />
+            </View>
+
+            {/* Header Section */}
+            <View style={styles.simpleHeader}>
+              <View style={styles.simpleBrandContainer}>
+                <Ionicons name="logo-buffer" size={20} color="#FFFFFF" />
+                <Text style={styles.simpleBrandText}>EquiHub</Text>
+              </View>
+              <Text style={styles.simpleTitle}>Training Session</Text>
+            </View>
+
+            {/* Horse Section */}
+            <View style={styles.simpleHorseSection}>
+              <Image
+                source={
+                  horse?.image_url
+                    ? { uri: horse.image_url }
+                    : require("../assets/images/horses/pony.jpg")
+                }
+                style={styles.simpleHorseImage}
+              />
+              <Text style={styles.simpleHorseName}>
+                {session.horseName || "Unknown Horse"}
+              </Text>
+            </View>
+
+            {/* Stats Section */}
+            <View style={styles.simpleStatsSection}>
+              <View style={styles.simpleStatCard}>
+                <Ionicons name="time-outline" size={32} color="#FFFFFF" />
+                <Text style={styles.simpleStatValue}>
+                  {session?.duration !== undefined && session?.duration !== null
+                    ? formatDuration(session.duration)
+                    : "N/A"}
+                </Text>
+                <Text style={styles.simpleStatLabel}>Duration</Text>
+              </View>
+
+              <View style={styles.simpleStatCard}>
+                <Ionicons name="navigate-outline" size={32} color="#FFFFFF" />
+                <Text style={styles.simpleStatValue}>
+                  {session?.distance !== undefined && session?.distance !== null
+                    ? formatDistance(session.distance)
+                    : "N/A"}
+                </Text>
+                <Text style={styles.simpleStatLabel}>Distance</Text>
+              </View>
+
+              <View style={styles.simpleStatCard}>
+                <Ionicons
+                  name="speedometer-outline"
+                  size={32}
+                  color="#FFFFFF"
                 />
-                <View
-                  style={[
-                    styles.gradientLayer,
-                    { backgroundColor: theme.accent + "20" },
-                  ]}
-                />
-
-                {/* Central content */}
-                <View style={styles.fallbackContent}>
-                  <View
-                    style={[
-                      styles.iconContainer,
-                      { backgroundColor: theme.accent + "20" },
-                    ]}
-                  >
-                    <Ionicons name="location" size={60} color={theme.accent} />
-                  </View>
-                  <Text style={[styles.fallbackTitle, { color: theme.accent }]}>
-                    GPS Session
-                  </Text>
-                  <Text
-                    style={[
-                      styles.fallbackSubtitle,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    Session completed without GPS tracking
-                  </Text>
-                </View>
+                <Text style={styles.simpleStatValue}>
+                  {session?.averageSpeed !== undefined &&
+                  session?.averageSpeed !== null
+                    ? formatSpeed(session.averageSpeed)
+                    : "N/A"}
+                </Text>
+                <Text style={styles.simpleStatLabel}>Avg Speed</Text>
               </View>
-            )}
+            </View>
 
-            {/* Overlay with Session Stats */}
-            <View style={styles.mapOverlay}>
-              {/* Top Left - App Branding (Redesigned) */}
-              <View style={styles.mapTopLeft}>
-                <View style={styles.mapBrandingContainerNew}>
-                  <View style={styles.mapBrandIconContainer}>
-                    <Ionicons name="logo-buffer" size={16} color="#FFFFFF" />
-                  </View>
-                  <Text style={styles.mapBrandTextNew}>EquiHub</Text>
-                </View>
+            {/* Route Summary Section */}
+            <View style={styles.simpleRouteSection}>
+              <View style={styles.simpleRouteIcon}>
+                <Ionicons name="location" size={40} color={theme.accent} />
               </View>
+              <Text style={styles.simpleRouteText}>
+                {session?.path && session.path.length > 0
+                  ? `GPS route tracked with ${session.path.length} points`
+                  : "Session completed"}
+              </Text>
+            </View>
 
-              {/* Top Right - Horse Info (Redesigned) */}
-              <View style={styles.mapTopRight}>
-                <View style={styles.mapHorseContainerNew}>
-                  <Image
-                    source={
-                      horse?.image_url
-                        ? { uri: horse.image_url }
-                        : require("../assets/images/horses/pony.jpg")
-                    }
-                    style={styles.mapHorseImageNew}
-                  />
-                  <Text style={styles.mapHorseNameNew}>{session.horseName}</Text>
-                </View>
-              </View>
-
-              {/* Center - Session Stats Container (Moved from bottom) */}
-              <View style={styles.mapCenter}>
-                <View style={styles.mapSessionStatsContainer}>
-                  <View style={styles.mapSessionHeader}>
-                    <Text style={styles.mapSessionTitle}>Training Session</Text>
-                  </View>
-                  <View style={styles.mapSessionStats}>
-                    <View style={styles.mapSessionStatItem}>
-                      <View style={styles.mapStatIconContainer}>
-                        <Ionicons name="time-outline" size={16} color="#FFFFFF" />
-                      </View>
-                      <Text style={styles.mapSessionStatLabel}>Duration</Text>
-                      <Text style={styles.mapSessionStatValue}>
-                        {session?.duration !== undefined && session?.duration !== null
-                          ? formatDuration(session.duration)
-                          : "N/A"}
-                      </Text>
-                    </View>
-
-                    <View style={styles.mapSessionStatItem}>
-                      <View style={styles.mapStatIconContainer}>
-                        <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
-                      </View>
-                      <Text style={styles.mapSessionStatLabel}>Distance</Text>
-                      <Text style={styles.mapSessionStatValue}>
-                        {session?.distance !== undefined && session?.distance !== null
-                          ? formatDistance(session.distance)
-                          : "N/A"}
-                      </Text>
-                    </View>
-
-                    <View style={styles.mapSessionStatItem}>
-                      <View style={styles.mapStatIconContainer}>
-                        <Ionicons name="speedometer-outline" size={16} color="#FFFFFF" />
-                      </View>
-                      <Text style={styles.mapSessionStatLabel}>Avg Speed</Text>
-                      <Text style={styles.mapSessionStatValue}>
-                        {session?.averageSpeed !== undefined && session?.averageSpeed !== null
-                          ? formatSpeed(session.averageSpeed)
-                          : "N/A"}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              {/* Bottom - Empty space (stats moved to center) */}
-              <View style={styles.mapBottom}>
-                {/* Empty - stats moved to center */}
-              </View>
+            {/* Date Section */}
+            <View style={styles.simpleDateSection}>
+              <Text style={styles.simpleDateText}>
+                {new Date().toLocaleDateString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </Text>
             </View>
           </View>
         </View>
@@ -1169,10 +1070,7 @@ export default function SessionShareScreen() {
 
       {/* Bottom Share Buttons - Redesigned */}
       <View
-        style={[
-          styles.bottomContainerNew,
-          { backgroundColor: theme.surface },
-        ]}
+        style={[styles.bottomContainerNew, { backgroundColor: theme.surface }]}
       >
         {/* Action Header */}
         <View style={styles.actionHeader}>
@@ -1197,19 +1095,33 @@ export default function SessionShareScreen() {
             disabled={isSharing}
           >
             <View style={styles.shareOptionContent}>
-              <View style={[styles.shareIconContainer, { backgroundColor: "#E1306C20" }]}>
+              <View
+                style={[
+                  styles.shareIconContainer,
+                  { backgroundColor: "#E1306C20" },
+                ]}
+              >
                 <Ionicons name="logo-instagram" size={24} color="#E1306C" />
               </View>
               <View style={styles.shareOptionText}>
                 <Text style={[styles.shareOptionTitle, { color: theme.text }]}>
                   Instagram Story
                 </Text>
-                <Text style={[styles.shareOptionDesc, { color: theme.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.shareOptionDesc,
+                    { color: theme.textSecondary },
+                  ]}
+                >
                   Share route map as story
                 </Text>
               </View>
               <View style={styles.shareArrow}>
-                <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={theme.textSecondary}
+                />
               </View>
             </View>
             {isSharing && (
@@ -1231,19 +1143,33 @@ export default function SessionShareScreen() {
             disabled={isSharing}
           >
             <View style={styles.shareOptionContent}>
-              <View style={[styles.shareIconContainer, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+              <View
+                style={[
+                  styles.shareIconContainer,
+                  { backgroundColor: "rgba(255,255,255,0.2)" },
+                ]}
+              >
                 <Ionicons name="people" size={24} color="#FFFFFF" />
               </View>
               <View style={styles.shareOptionText}>
                 <Text style={[styles.shareOptionTitle, { color: "#FFFFFF" }]}>
                   Community Feed
                 </Text>
-                <Text style={[styles.shareOptionDesc, { color: "rgba(255,255,255,0.8)" }]}>
+                <Text
+                  style={[
+                    styles.shareOptionDesc,
+                    { color: "rgba(255,255,255,0.8)" },
+                  ]}
+                >
                   Share with EquiHub riders
                 </Text>
               </View>
               <View style={styles.shareArrow}>
-                <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color="rgba(255,255,255,0.8)"
+                />
               </View>
             </View>
             {isSharing && (
@@ -1852,7 +1778,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  
+
   // New Redesigned Map Overlay Styles
   mapBrandingContainerNew: {
     flexDirection: "row",
@@ -2017,7 +1943,7 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
     marginRight: "auto",
     alignItems: "center",
-    width: "75%", 
+    width: "75%",
   },
   mapStatsContainer: {
     backgroundColor: "rgba(128, 128, 128, 0.5)",
@@ -2243,5 +2169,125 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     fontFamily: "Inder",
+  },
+
+  // Simple Instagram View Styles - Flat Design
+  simpleBackgroundGradient: {
+    flex: 1,
+    position: "relative",
+  },
+  simpleBackgroundOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  simpleHeader: {
+    paddingTop: 40,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  simpleBrandContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  simpleBrandText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginLeft: 8,
+    fontFamily: "Inder",
+  },
+  simpleTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  simpleHorseSection: {
+    alignItems: "center",
+    marginBottom: 30,
+    paddingHorizontal: 24,
+  },
+  simpleHorseImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
+    marginBottom: 12,
+  },
+  simpleHorseName: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  simpleStatsSection: {
+    paddingHorizontal: 24,
+    marginBottom: 30,
+  },
+  simpleStatCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  simpleStatValue: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginTop: 8,
+    fontFamily: "Inder",
+  },
+  simpleStatLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginTop: 4,
+    opacity: 0.9,
+  },
+  simpleRouteSection: {
+    alignItems: "center",
+    paddingHorizontal: 24,
+    marginBottom: 20,
+  },
+  simpleRouteIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  simpleRouteText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#FFFFFF",
+    textAlign: "center",
+    opacity: 0.9,
+  },
+  simpleDateSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 30,
+    alignItems: "center",
+  },
+  simpleDateText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#FFFFFF",
+    textAlign: "center",
+    opacity: 0.8,
   },
 });
