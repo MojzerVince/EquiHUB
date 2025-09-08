@@ -18,7 +18,10 @@ export interface SensorData {
 }
 
 export interface FallDetectionConfig {
-  accelerationThreshold: number; // g-force threshold for fall detection
+  accelerationThreshold: number; // g-force threshold for fall detection (baseline)
+  highSpeedThreshold: number; // g-force threshold for high-speed impacts (15g)
+  lowSpeedThreshold: number; // g-force threshold for low-speed impacts (5g)
+  speedDetectionThreshold: number; // m/s threshold to determine high vs low speed
   gyroscopeThreshold: number; // angular velocity threshold for fall detection
   impactDuration: number; // minimum duration for sustained impact (ms)
   recoveryTimeout: number; // time to wait for recovery before triggering alert (ms)
@@ -49,10 +52,16 @@ export class FallDetectionAPI {
   private static lastStableTime: number = Date.now();
   private static fallEventListeners: ((fallEvent: FallEvent) => void)[] = [];
   private static hasPendingAlert: boolean = false; // Track if there's already a pending alert
+  private static lastResetTime: number = 0; // Track when the last reset happened
+  private static currentVelocity: number = 0; // Track current estimated velocity (m/s)
+  private static lastAcceleration: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
 
   // Default configuration
   private static config: FallDetectionConfig = {
-    accelerationThreshold: 2.5, // 2.5g sudden acceleration/deceleration
+    accelerationThreshold: 2.5, // 2.5g baseline threshold
+    highSpeedThreshold: 15.0, // 15g for high-speed impacts
+    lowSpeedThreshold: 5.0, // 5g for low-speed impacts
+    speedDetectionThreshold: 3.0, // 3 m/s to determine high vs low speed
     gyroscopeThreshold: 5.0, // 5 rad/s rotational velocity
     impactDuration: 500, // 500ms sustained impact
     recoveryTimeout: 10000, // 10 seconds to recover before alert
@@ -148,6 +157,9 @@ export class FallDetectionAPI {
     const timestamp = Date.now();
     const magnitude = Math.sqrt(data.x * data.x + data.y * data.y + data.z * data.z);
 
+    // Calculate velocity estimation from acceleration
+    this.updateVelocityEstimation(data, timestamp);
+
     // Add to sensor history
     const sensorData: SensorData = {
       accelerometer: { x: data.x, y: data.y, z: data.z },
@@ -157,8 +169,8 @@ export class FallDetectionAPI {
 
     this.addToHistory(sensorData);
 
-    // Check for sudden acceleration/deceleration (fall indicator)
-    this.analyzeForFall(magnitude, timestamp, userId);
+    // Check for sudden acceleration/deceleration (fall indicator) with speed-aware thresholds
+    this.analyzeForFallWithSpeed(magnitude, timestamp, userId);
   }
 
   // Process gyroscope data
@@ -186,6 +198,73 @@ export class FallDetectionAPI {
     }
   }
 
+  // Update velocity estimation from accelerometer data
+  private static updateVelocityEstimation(data: any, timestamp: number): void {
+    // Simple velocity integration from acceleration
+    // Remove gravity component and calculate velocity change
+    const netAcceleration = {
+      x: data.x * 9.81, // Convert from g to m/s²
+      y: data.y * 9.81,
+      z: (data.z - 1.0) * 9.81 // Remove gravity from z-axis
+    };
+
+    // Calculate time delta (assuming ~60Hz sensor rate)
+    const deltaTime = 0.016; // 16ms = 1/60s
+
+    // Simple integration to estimate velocity magnitude
+    const velocityChange = Math.sqrt(
+      netAcceleration.x * netAcceleration.x +
+      netAcceleration.y * netAcceleration.y +
+      netAcceleration.z * netAcceleration.z
+    ) * deltaTime;
+
+    // Update current velocity estimate (with some decay to prevent drift)
+    this.currentVelocity = this.currentVelocity * 0.95 + velocityChange;
+    
+    // Store last acceleration for comparison
+    this.lastAcceleration = { x: data.x, y: data.y, z: data.z };
+  }
+
+  // Analyze accelerometer data with speed-aware thresholds
+  private static analyzeForFallWithSpeed(magnitude: number, timestamp: number, userId: string): void {
+    // Normal gravity is around 1g, significant deviations indicate impact or free fall
+    const gravityDeviation = Math.abs(magnitude - 1.0);
+
+    // Determine if we're in high-speed or low-speed scenario
+    const isHighSpeed = this.currentVelocity > this.config.speedDetectionThreshold;
+    
+    // Use appropriate threshold based on speed
+    const effectiveThreshold = isHighSpeed 
+      ? this.config.highSpeedThreshold 
+      : this.config.lowSpeedThreshold;
+
+    // Check for fall based on speed-appropriate threshold
+    const isHighImpact = gravityDeviation > effectiveThreshold;
+    const isFreeFall = magnitude < 0.5; // Very low gravity indicates free fall
+    const isShaking = magnitude > 2.0; // High motion indicating impact/tumbling
+    
+    if (isHighImpact || isFreeFall || isShaking) {
+      // Potential fall detected
+      if (this.potentialFallStartTime === null) {
+        this.potentialFallStartTime = timestamp;
+      }
+
+      // Check if impact has been sustained long enough OR immediate trigger for severe impacts
+      const impactDuration = timestamp - this.potentialFallStartTime;
+      const isSevereImpact = gravityDeviation > (effectiveThreshold * 2); // 2x effective threshold
+      
+      if (impactDuration >= this.config.impactDuration || isSevereImpact) {
+        this.handlePotentialFall(userId, magnitude, timestamp);
+      }
+    } else {
+      // Stable readings - reset potential fall detection
+      if (this.potentialFallStartTime !== null) {
+        this.potentialFallStartTime = null;
+      }
+      this.lastStableTime = timestamp;
+    }
+  }
+
   // Analyze accelerometer data for potential falls
   private static analyzeForFall(magnitude: number, timestamp: number, userId: string): void {
     // Normal gravity is around 1g, significant deviations indicate impact or free fall
@@ -201,7 +280,6 @@ export class FallDetectionAPI {
       // Potential fall detected
       if (this.potentialFallStartTime === null) {
         this.potentialFallStartTime = timestamp;
-        console.log(`⚠️ POTENTIAL FALL DETECTED!`);
       }
 
       // Check if impact has been sustained long enough OR immediate trigger for severe impacts
@@ -209,7 +287,6 @@ export class FallDetectionAPI {
       const isSevereImpact = gravityDeviation > (this.config.accelerationThreshold * 2); // 2x threshold
       
       if (impactDuration >= this.config.impactDuration || isSevereImpact) {
-        console.log(`🚨 TRIGGERING FALL ALERT! Duration: ${impactDuration}ms, Severe: ${isSevereImpact}`);
         this.handlePotentialFall(userId, magnitude, timestamp);
       }
     } else {
@@ -226,20 +303,16 @@ export class FallDetectionAPI {
     
     if (magnitude > this.config.gyroscopeThreshold) {
       const timestamp = Date.now();
-      console.log(`🌀 HIGH ROTATIONAL VELOCITY DETECTED: ${magnitude.toFixed(2)} rad/s`);
       
       // If we already have a potential fall and now detect rotation, this strengthens the fall hypothesis
       if (this.potentialFallStartTime !== null) {
-        console.log(`🚨 Rotation + existing potential fall = TRIGGERING FALL ALERT`);
         this.handlePotentialFall(userId, magnitude, timestamp, true);
       } else {
         // High rotation alone can indicate a fall (tumbling)
-        console.log(`🚨 High rotation detected - starting fall detection`);
         this.potentialFallStartTime = timestamp;
         // Give it a shorter timeout for rotation-based detection
         setTimeout(() => {
           if (this.potentialFallStartTime === timestamp) {
-            console.log(`🚨 Rotation-based fall timeout reached - triggering alert`);
             this.handlePotentialFall(userId, magnitude, timestamp, true);
           }
         }, Math.min(this.config.impactDuration, 1000)); // Max 1 second for rotation
@@ -255,24 +328,21 @@ export class FallDetectionAPI {
     hasRotation: boolean = false
   ): Promise<void> {
     if (!this.config.isEnabled) {
-      console.log("🚫 Fall detection disabled - ignoring potential fall");
       return;
     }
 
     // Check if there's already a pending alert
     if (this.hasPendingAlert) {
-      console.log("⚠️ Fall alert already pending - ignoring new detection");
+      return;
+    }
+
+    // Ignore detections for 2 seconds after a reset to prevent rapid re-triggering
+    if (timestamp - this.lastResetTime < 2000) {
       return;
     }
 
     const timeSinceStable = timestamp - this.lastStableTime;
     const isSevereImpact = Math.abs(magnitude - 1.0) > (this.config.accelerationThreshold * 1.5);
-    
-    console.log(`🔍 Evaluating potential fall:`);
-    console.log(`   - Time since stable: ${timeSinceStable}ms (timeout: ${this.config.recoveryTimeout}ms)`);
-    console.log(`   - Has rotation: ${hasRotation}`);
-    console.log(`   - Severe impact: ${isSevereImpact}`);
-    console.log(`   - Magnitude: ${magnitude.toFixed(2)}g`);
 
     // Trigger alert if:
     // 1. Recovery timeout has passed, OR
@@ -299,7 +369,6 @@ export class FallDetectionAPI {
           latitude: currentLocation.coords.latitude,
           longitude: currentLocation.coords.longitude,
         };
-        console.log(`📍 Location obtained: ${location.latitude}, ${location.longitude}`);
       } catch (error) {
         console.error("❌ Could not get location for fall alert:", error);
       }
@@ -314,18 +383,14 @@ export class FallDetectionAPI {
         alertSent: false,
       };
 
-      console.log(`📝 Fall event created:`, fallEvent);
-
       // Don't send SMS immediately - notify listeners for confirmation
       this.notifyFallEventListeners(fallEvent);
 
       // Reset detection state
       this.potentialFallStartTime = null;
       this.lastStableTime = Date.now();
-      
-      console.log("✅ Fall detection state reset");
     } else {
-      console.log("⏳ Fall not confirmed yet - continuing monitoring");
+      // Fall not confirmed yet - continuing monitoring
     }
   }
 
@@ -464,6 +529,10 @@ Check safety!`;
     this.hasPendingAlert = false;
     this.potentialFallStartTime = null;
     this.lastStableTime = Date.now();
+    this.lastResetTime = Date.now();
+    this.currentVelocity = 0;
+    this.lastAcceleration = { x: 0, y: 0, z: 0 };
+    console.log("✅ Fall detection state reset - hasPendingAlert:", this.hasPendingAlert);
     
     // Also reset background fall detection state
     BackgroundFallDetectionAPI.resetBackgroundFallDetectionState().catch(error => {

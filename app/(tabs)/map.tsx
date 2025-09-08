@@ -290,7 +290,10 @@ const MapScreen = () => {
   const [fallDetectionEnabled, setFallDetectionEnabled] = useState(false);
   const [fallDetectionConfig, setFallDetectionConfig] =
     useState<FallDetectionConfig>({
-      accelerationThreshold: 3.0, // Lowered from 3.0 to 2.0 for more sensitivity
+      accelerationThreshold: 3.0, // Baseline threshold
+      highSpeedThreshold: 15.0, // 15g for high-speed impacts
+      lowSpeedThreshold: 5.0, // 5g for low-speed impacts
+      speedDetectionThreshold: 3.0, // 3 m/s to determine high vs low speed
       gyroscopeThreshold: 3.0, // Lowered from 4.0 to 3.0 for more sensitivity
       impactDuration: 500, // Reduced from 800 to 500ms for quicker detection
       recoveryTimeout: 20000, // Set to 20000ms (20 seconds)

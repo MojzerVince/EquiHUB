@@ -41,6 +41,9 @@ export interface BackgroundFallEvent {
 
 export interface BackgroundFallConfig {
   accelerationThreshold: number;
+  highSpeedThreshold: number; // g-force threshold for high-speed impacts (15g)
+  lowSpeedThreshold: number; // g-force threshold for low-speed impacts (5g)
+  speedDetectionThreshold: number; // m/s threshold to determine high vs low speed
   gyroscopeThreshold: number;
   impactDuration: number;
   recoveryTimeout: number;
@@ -61,6 +64,9 @@ TaskManager.defineTask(BACKGROUND_FALL_DETECTION_TASK, async ({ data, error }) =
       const configData = await AsyncStorage.getItem("background_fall_detection_config");
       const config: BackgroundFallConfig = configData ? JSON.parse(configData) : {
         accelerationThreshold: 3.0,
+        highSpeedThreshold: 15.0,
+        lowSpeedThreshold: 5.0,
+        speedDetectionThreshold: 3.0,
         gyroscopeThreshold: 5.0,
         impactDuration: 500,
         recoveryTimeout: 20000,
@@ -99,6 +105,9 @@ export class BackgroundFallDetectionAPI {
   // Default configuration
   private static defaultConfig: BackgroundFallConfig = {
     accelerationThreshold: 3.0,
+    highSpeedThreshold: 15.0, // 15g for high-speed impacts
+    lowSpeedThreshold: 5.0, // 5g for low-speed impacts
+    speedDetectionThreshold: 3.0, // 3 m/s to determine high vs low speed
     gyroscopeThreshold: 5.0,
     impactDuration: 500,
     recoveryTimeout: 20000,
@@ -127,6 +136,8 @@ export class BackgroundFallDetectionAPI {
         potentialFallStartTime: null,
         lastStableTime: Date.now(),
         hasPendingAlert: false,
+        currentVelocity: 0,
+        lastAcceleration: { x: 0, y: 0, z: 0 },
       }));
 
       // Request notification permissions
@@ -281,15 +292,42 @@ export class BackgroundFallDetectionAPI {
         potentialFallStartTime: null,
         lastStableTime: Date.now(),
         hasPendingAlert: false,
+        currentVelocity: 0,
+        lastAcceleration: { x: 0, y: 0, z: 0 },
       };
 
       const { magnitude, rotationalMagnitude, timestamp } = sensorData;
 
-      // Analyze for fall (similar logic to foreground detection but optimized for background)
+      // Update velocity estimation for speed-based thresholds
+      const netAcceleration = {
+        x: sensorData.accelerometer.x * 9.81,
+        y: sensorData.accelerometer.y * 9.81,
+        z: (sensorData.accelerometer.z - 1.0) * 9.81
+      };
+
+      const deltaTime = 0.1; // 100ms background sampling rate
+      const velocityChange = Math.sqrt(
+        netAcceleration.x * netAcceleration.x +
+        netAcceleration.y * netAcceleration.y +
+        netAcceleration.z * netAcceleration.z
+      ) * deltaTime;
+
+      state.currentVelocity = state.currentVelocity * 0.95 + velocityChange;
+      state.lastAcceleration = sensorData.accelerometer;
+
+      // Analyze for fall with speed-aware thresholds
       const gravityDeviation = Math.abs(magnitude - 1.0);
       const hasHighRotation = rotationalMagnitude > config.gyroscopeThreshold;
 
-      if (gravityDeviation > config.accelerationThreshold || hasHighRotation) {
+      // Determine if we're in high-speed or low-speed scenario
+      const isHighSpeed = state.currentVelocity > config.speedDetectionThreshold;
+      
+      // Use appropriate threshold based on speed
+      const effectiveThreshold = isHighSpeed 
+        ? config.highSpeedThreshold 
+        : config.lowSpeedThreshold;
+
+      if (gravityDeviation > effectiveThreshold || hasHighRotation) {
         // Potential fall detected
         if (state.potentialFallStartTime === null) {
           state.potentialFallStartTime = timestamp;
@@ -510,6 +548,8 @@ Check rider safety immediately!`;
         potentialFallStartTime: null,
         lastStableTime: Date.now(),
         hasPendingAlert: false,
+        currentVelocity: 0,
+        lastAcceleration: { x: 0, y: 0, z: 0 },
       };
       
       await AsyncStorage.setItem("background_fall_state", JSON.stringify(resetState));
