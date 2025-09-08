@@ -281,6 +281,15 @@ const MapScreen = () => {
     "walk" | "trot" | "canter" | "gallop" | "halt"
   >("halt");
 
+  // Real-time gait segments for path coloring
+  const [realTimeGaitSegments, setRealTimeGaitSegments] = useState<
+    Array<{
+      coordinates: Array<{ latitude: number; longitude: number }>;
+      color: string;
+      gait: string;
+    }>
+  >([]);
+
   // App state tracking for coordinating foreground/background location
   const [appState, setAppState] = useState(AppState.currentState);
   const [isUsingBackgroundLocation, setIsUsingBackgroundLocation] =
@@ -809,12 +818,37 @@ const MapScreen = () => {
 
                   // Only add if enough time has passed (500ms) or significant movement (2m)
                   if (timeDiff >= 500 || distance >= 2) {
-                    return [...prev, trackingPoint];
+                    const newPoints = [...prev, trackingPoint];
+
+                    // Update real-time gait segments with new path
+                    setRealTimeGaitSegments(
+                      generateGaitColoredSegments(newPoints)
+                    );
+
+                    // Update current gait based on speed
+                    if (trackingPoint.speed !== undefined) {
+                      const detectedGait = detectGaitFromSpeed(
+                        trackingPoint.speed
+                      );
+                      setCurrentGait(detectedGait);
+                    }
+
+                    return newPoints;
                   }
                   return prev;
                 } else {
                   // First tracking point
-                  return [trackingPoint];
+                  const newPoints = [trackingPoint];
+                  setRealTimeGaitSegments(
+                    generateGaitColoredSegments(newPoints)
+                  );
+                  if (trackingPoint.speed !== undefined) {
+                    const detectedGait = detectGaitFromSpeed(
+                      trackingPoint.speed
+                    );
+                    setCurrentGait(detectedGait);
+                  }
+                  return newPoints;
                 }
               });
             }
@@ -2162,7 +2196,12 @@ const MapScreen = () => {
               AsyncStorage.removeItem("current_tracking_points");
             }
 
-            return [...prev, ...newPoints];
+            const updatedPoints = [...prev, ...newPoints];
+
+            // Update real-time gait segments with new points
+            setRealTimeGaitSegments(generateGaitColoredSegments(updatedPoints));
+
+            return updatedPoints;
           });
         }
       }
@@ -2230,6 +2269,7 @@ const MapScreen = () => {
       setSessionStartTime(startTime);
       setCurrentTime(startTime); // Initialize currentTime to the same value as startTime
       setTrackingPoints([]);
+      setRealTimeGaitSegments([]); // Reset gait segments
       setSessionMedia([]); // Initialize empty media array for the session
       setCurrentGait("halt"); // Reset gait to halt at session start
 
@@ -2332,7 +2372,13 @@ const MapScreen = () => {
             console.log(
               `📊 Adding ${newPoints.length} final background points`
             );
-            return [...prev, ...newPoints];
+
+            const updatedPoints = [...prev, ...newPoints];
+
+            // Update real-time gait segments with final points
+            setRealTimeGaitSegments(generateGaitColoredSegments(updatedPoints));
+
+            return updatedPoints;
           });
         }
       }
@@ -2446,6 +2492,7 @@ const MapScreen = () => {
       setCurrentSession(null);
       setSessionStartTime(null);
       setTrackingPoints([]);
+      setRealTimeGaitSegments([]); // Reset gait segments
       setSessionMedia([]); // Reset media array
       setCurrentGait("halt"); // Reset gait when tracking stops
 
@@ -2647,6 +2694,161 @@ const MapScreen = () => {
     }
   };
 
+  // Get gait color for path visualization
+  const getGaitColor = (
+    gait: "walk" | "trot" | "canter" | "gallop" | "halt"
+  ): string => {
+    switch (gait) {
+      case "halt":
+        return "#757575"; // Gray - stationary
+      case "walk":
+        return "#4CAF50"; // Green - slow and steady
+      case "trot":
+        return "#2196F3"; // Blue - moderate pace
+      case "canter":
+        return "#FF9800"; // Orange - faster pace
+      case "gallop":
+        return "#F44336"; // Red - high speed
+      default:
+        return "#757575"; // Default gray
+    }
+  };
+
+  // Create gradient color between two colors for smooth transitions
+  const interpolateColor = (
+    color1: string,
+    color2: string,
+    factor: number
+  ): string => {
+    // Convert hex to RGB
+    const hex2rgb = (hex: string) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result
+        ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16),
+          }
+        : { r: 0, g: 0, b: 0 };
+    };
+
+    // Convert RGB to hex
+    const rgb2hex = (r: number, g: number, b: number) => {
+      return (
+        "#" +
+        (
+          (1 << 24) +
+          (Math.round(r) << 16) +
+          (Math.round(g) << 8) +
+          Math.round(b)
+        )
+          .toString(16)
+          .slice(1)
+      );
+    };
+
+    const c1 = hex2rgb(color1);
+    const c2 = hex2rgb(color2);
+
+    const r = c1.r + factor * (c2.r - c1.r);
+    const g = c1.g + factor * (c2.g - c1.g);
+    const b = c1.b + factor * (c2.b - c1.b);
+
+    return rgb2hex(r, g, b);
+  };
+
+  // Generate colored path segments based on gait analysis
+  const generateGaitColoredSegments = (
+    points: TrackingPoint[]
+  ): Array<{
+    coordinates: Array<{ latitude: number; longitude: number }>;
+    color: string;
+    gait: string;
+  }> => {
+    if (points.length < 2) return [];
+
+    const gaitAnalysis = analyzeGaits(points);
+    const segments: Array<{
+      coordinates: Array<{ latitude: number; longitude: number }>;
+      color: string;
+      gait: string;
+    }> = [];
+
+    // If no gait segments found, create a single segment with default color
+    if (gaitAnalysis.segments.length === 0) {
+      return [
+        {
+          coordinates: points.map((p) => ({
+            latitude: p.latitude,
+            longitude: p.longitude,
+          })),
+          color: getGaitColor("halt"),
+          gait: "halt",
+        },
+      ];
+    }
+
+    // Process each gait segment
+    for (let i = 0; i < gaitAnalysis.segments.length; i++) {
+      const segment = gaitAnalysis.segments[i];
+      const segmentPoints = points.slice(
+        segment.startIndex,
+        segment.endIndex + 1
+      );
+
+      if (segmentPoints.length < 2) continue;
+
+      const baseColor = getGaitColor(segment.gait);
+      const segmentCoordinates = segmentPoints.map((p) => ({
+        latitude: p.latitude,
+        longitude: p.longitude,
+      }));
+
+      // For smooth transitions, create gradient at segment boundaries
+      if (i > 0) {
+        const prevSegment = gaitAnalysis.segments[i - 1];
+        const prevColor = getGaitColor(prevSegment.gait);
+
+        // Create transition zone (first 30% of segment for smoother blending)
+        const transitionLength = Math.max(
+          2,
+          Math.floor(segmentCoordinates.length * 0.3)
+        );
+
+        // Split segment into transition and main parts
+        const transitionCoords = segmentCoordinates.slice(0, transitionLength);
+        const mainCoords = segmentCoordinates.slice(transitionLength - 1); // -1 for continuity
+
+        // Add transition segment with interpolated color
+        if (transitionCoords.length >= 2) {
+          segments.push({
+            coordinates: transitionCoords,
+            color: interpolateColor(prevColor, baseColor, 0.6), // More weighted towards new color
+            gait: `${prevSegment.gait} → ${segment.gait}`,
+          });
+        }
+
+        // Add main segment
+        if (mainCoords.length >= 2) {
+          segments.push({
+            coordinates: mainCoords,
+            color: baseColor,
+            gait: segment.gait,
+          });
+        }
+      } else {
+        // First segment, no transition needed
+        segments.push({
+          coordinates: segmentCoordinates,
+          color: baseColor,
+          gait: segment.gait,
+        });
+      }
+    }
+
+    return segments;
+  };
+
   // Update high accuracy mode and restart tracking if active
   const updateHighAccuracyMode = async (newMode: boolean) => {
     const previousMode = highAccuracyMode;
@@ -2763,11 +2965,21 @@ const MapScreen = () => {
                 ) {
                   // Update current gait based on new tracking point
                   updateCurrentGait(trackingPoint);
-                  return [...prev, trackingPoint];
+
+                  const newPoints = [...prev, trackingPoint];
+
+                  // Update real-time gait segments
+                  setRealTimeGaitSegments(
+                    generateGaitColoredSegments(newPoints)
+                  );
+
+                  return newPoints;
                 }
                 return prev;
               } else {
-                return [trackingPoint];
+                const newPoints = [trackingPoint];
+                setRealTimeGaitSegments(generateGaitColoredSegments(newPoints));
+                return newPoints;
               }
             });
           }
@@ -3007,17 +3219,18 @@ const MapScreen = () => {
               rotateEnabled={true}
               mapType={mapType}
             >
-              {/* Show tracking path */}
-              {trackingPoints.length > 1 && (
-                <Polyline
-                  coordinates={trackingPoints.map((point) => ({
-                    latitude: point.latitude,
-                    longitude: point.longitude,
-                  }))}
-                  strokeColor={currentTheme.colors.primary}
-                  strokeWidth={4}
-                />
-              )}
+              {/* Show tracking path with gait-based colors */}
+              {realTimeGaitSegments.length > 0 &&
+                realTimeGaitSegments.map((segment, index) => (
+                  <Polyline
+                    key={`gait-segment-${index}-${trackingPoints.length}`}
+                    coordinates={segment.coordinates}
+                    strokeColor={segment.color}
+                    strokeWidth={4}
+                    lineCap="round"
+                    lineJoin="round"
+                  />
+                ))}
 
               {/* Show published trails */}
               {showPublishedTrails &&
@@ -4018,6 +4231,44 @@ const MapScreen = () => {
                     >
                       {trackingPoints.length}
                     </Text>
+                  </View>
+                </View>
+
+                {/* Gait Color Legend */}
+                <View style={styles.gaitLegendContainer}>
+                  <Text
+                    style={[
+                      styles.gaitLegendTitle,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Path Colors
+                  </Text>
+                  <View style={styles.gaitLegendRow}>
+                    {[
+                      { gait: "halt", label: "Halt" },
+                      { gait: "walk", label: "Walk" },
+                      { gait: "trot", label: "Trot" },
+                      { gait: "canter", label: "Canter" },
+                      { gait: "gallop", label: "Gallop" },
+                    ].map((item) => (
+                      <View key={item.gait} style={styles.gaitLegendItem}>
+                        <View
+                          style={[
+                            styles.gaitColorDot,
+                            { backgroundColor: getGaitColor(item.gait as any) },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.gaitLegendLabel,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          {item.label}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
 
@@ -5031,6 +5282,42 @@ const styles = StyleSheet.create({
   gaitDisplayEmoji: {
     fontSize: 20,
     marginRight: 6,
+  },
+
+  // Gait Legend Styles
+  gaitLegendContainer: {
+    marginVertical: 12,
+    paddingHorizontal: 16,
+  },
+  gaitLegendTitle: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  gaitLegendRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  gaitLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 4,
+    marginVertical: 2,
+  },
+  gaitColorDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 4,
+  },
+  gaitLegendLabel: {
+    fontSize: 10,
+    fontFamily: "Inder",
+    fontWeight: "500",
   },
 });
 
