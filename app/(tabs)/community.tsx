@@ -29,6 +29,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { ChallengeAPI } from "../../lib/challengeAPI";
 import { ChallengeStorageService } from "../../lib/challengeStorage";
 import { CommunityAPI, PostWithUser } from "../../lib/communityAPI";
+import { GlobalChallengeAPI } from "../../lib/globalChallengeAPI";
 import { HiddenPostsManager } from "../../lib/hiddenPostsManager";
 import { getImageDataUrl } from "../../lib/imageUtils";
 import {
@@ -42,9 +43,11 @@ import { getSupabase, getSupabaseConfig } from "../../lib/supabase";
 import { UserAPI, UserSearchResult } from "../../lib/userAPI";
 import {
   ActiveChallenge,
+  ActiveGlobalChallenge,
   ActiveStableChallenge,
   Challenge,
   ChallengeGoal,
+  GlobalChallenge,
   StableChallenge,
   UserBadge,
 } from "../../types/challengeTypes";
@@ -135,6 +138,16 @@ export default function CommunityScreen() {
   const [activeStableChallenge, setActiveStableChallenge] =
     useState<ActiveStableChallenge | null>(null);
   const [loadingStableChallenge, setLoadingStableChallenge] = useState(false);
+  const [leaderboardRefreshing, setLeaderboardRefreshing] = useState(false);
+
+  // Global Challenge state
+  const [globalChallenge, setGlobalChallenge] =
+    useState<GlobalChallenge | null>(null);
+  const [activeGlobalChallenge, setActiveGlobalChallenge] =
+    useState<ActiveGlobalChallenge | null>(null);
+  const [loadingGlobalChallenge, setLoadingGlobalChallenge] = useState(false);
+  const [globalLeaderboardRefreshing, setGlobalLeaderboardRefreshing] =
+    useState(false);
 
   // Goal options for challenge selection - dynamic based on metric system
   const { metricSystem } = useMetric();
@@ -440,14 +453,30 @@ export default function CommunityScreen() {
 
     setLoadingStableChallenge(true);
     try {
-      // For now, use mock data. Later you can fetch user's stable and load real challenge
-      const mockChallenge = StableChallengeAPI.getMockStableChallenge();
-      setStableChallenge(mockChallenge);
+      // Get user's stable ID first
+      const { data: userStable } = await getSupabase()
+        .from("stable_members")
+        .select("stable_id, stables(name)")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .single();
 
-      // Load user's active stable challenge
-      const activeStable =
-        await StableChallengeAPI.getUserActiveStableChallenge(user.id);
-      setActiveStableChallenge(activeStable);
+      if (userStable?.stable_id) {
+        // Load real stable challenge
+        const challenge = await StableChallengeAPI.getCurrentStableChallenge(
+          userStable.stable_id
+        );
+        setStableChallenge(challenge);
+
+        // Load user's active stable challenge
+        const activeStable =
+          await StableChallengeAPI.getUserActiveStableChallenge(user.id);
+        setActiveStableChallenge(activeStable);
+      } else {
+        // User is not in a stable
+        setStableChallenge(null);
+        setActiveStableChallenge(null);
+      }
 
       // Check for monthly reset
       await StableChallengeAPI.checkAndResetMonthlyChallenges();
@@ -476,6 +505,48 @@ export default function CommunityScreen() {
       console.error("Error updating stable challenge contribution:", error);
     }
   };
+
+  // Real-time leaderboard refresh function
+  const refreshStableLeaderboard = useCallback(async () => {
+    if (!stableChallenge?.id) return;
+
+    setLeaderboardRefreshing(true);
+    try {
+      const updatedLeaderboard =
+        await StableChallengeAPI.getStableChallengeLeaderboard(
+          stableChallenge.id
+        );
+
+      // Update the stable challenge with fresh leaderboard data
+      setStableChallenge((prev) =>
+        prev
+          ? {
+              ...prev,
+              leaderboard: updatedLeaderboard,
+              currentProgress: updatedLeaderboard.reduce(
+                (total, participant) => total + participant.contribution,
+                0
+              ),
+            }
+          : null
+      );
+    } catch (error) {
+      console.error("Error refreshing stable leaderboard:", error);
+    } finally {
+      setLeaderboardRefreshing(false);
+    }
+  }, [stableChallenge?.id]);
+
+  // Auto-refresh leaderboard every 30 seconds when stable challenge is active
+  useEffect(() => {
+    if (!stableChallenge?.id) return;
+
+    const intervalId = setInterval(() => {
+      refreshStableLeaderboard();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [stableChallenge?.id, refreshStableLeaderboard]);
 
   const handleStartChallenge = (challenge: Challenge) => {
     if (activeChallenge) {
@@ -569,6 +640,71 @@ export default function CommunityScreen() {
     }
   };
 
+  // Global Challenge functions
+  const loadGlobalChallenge = useCallback(async () => {
+    if (!user?.id) return;
+
+    setLoadingGlobalChallenge(true);
+    try {
+      // Get current monthly global challenge
+      const challenge = await GlobalChallengeAPI.getCurrentMonthlyChallenge();
+      setGlobalChallenge(challenge);
+
+      // Get user's active global challenge
+      const activeGlobal =
+        await GlobalChallengeAPI.getUserActiveGlobalChallenge(user.id);
+      setActiveGlobalChallenge(activeGlobal);
+    } catch (error) {
+      console.error("Error loading global challenge:", error);
+    } finally {
+      setLoadingGlobalChallenge(false);
+    }
+  }, [user?.id]);
+
+  const refreshGlobalLeaderboard = useCallback(async () => {
+    if (!globalChallenge?.id) return;
+
+    setGlobalLeaderboardRefreshing(true);
+    try {
+      // Get updated global leaderboard
+      const updatedLeaderboard = await GlobalChallengeAPI.getGlobalLeaderboard(
+        globalChallenge.id,
+        user?.id
+      );
+
+      setGlobalChallenge((prev) =>
+        prev
+          ? {
+              ...prev,
+              globalLeaderboard: updatedLeaderboard,
+            }
+          : null
+      );
+
+      // Also refresh user's active challenge data
+      if (user?.id) {
+        const activeGlobal =
+          await GlobalChallengeAPI.getUserActiveGlobalChallenge(user.id);
+        setActiveGlobalChallenge(activeGlobal);
+      }
+    } catch (error) {
+      console.error("Error refreshing global leaderboard:", error);
+    } finally {
+      setGlobalLeaderboardRefreshing(false);
+    }
+  }, [globalChallenge?.id, user?.id]);
+
+  // Auto-refresh global leaderboard every 30 seconds when global challenge is active
+  useEffect(() => {
+    if (!globalChallenge?.id) return;
+
+    const intervalId = setInterval(() => {
+      refreshGlobalLeaderboard();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [globalChallenge?.id, refreshGlobalLeaderboard]);
+
   // Load initial data when component mounts and user is available (like horses screen)
   useEffect(() => {
     console.log(
@@ -605,6 +741,7 @@ export default function CommunityScreen() {
               loadActiveChallenge(), // Load active challenge
               loadUserBadges(), // Load user badges
               loadStableChallenge(), // Load stable challenge
+              loadGlobalChallenge(), // Load global challenge
             ]);
           } else {
             console.error("Failed to load friends:", error);
@@ -618,6 +755,7 @@ export default function CommunityScreen() {
               loadActiveChallenge(), // Load active challenge
               loadUserBadges(), // Load user badges
               loadStableChallenge(), // Load stable challenge
+              loadGlobalChallenge(), // Load global challenge
             ]);
           }
 
@@ -2339,7 +2477,273 @@ export default function CommunityScreen() {
             ]}
           >
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Active Challenge Section */}
+              {/* Global Challenge Section */}
+              {globalChallenge ? (
+                <View
+                  style={[
+                    styles.activeChallengeCard,
+                    { backgroundColor: theme.surface },
+                  ]}
+                >
+                  <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                      🌍 Global Stable Challenge
+                    </Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.refreshButton,
+                        { backgroundColor: theme.primary },
+                      ]}
+                      onPress={refreshGlobalLeaderboard}
+                      disabled={globalLeaderboardRefreshing}
+                    >
+                      {globalLeaderboardRefreshing ? (
+                        <ActivityIndicator size="small" color="white" />
+                      ) : (
+                        <Text style={styles.refreshButtonText}>↻</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.challengeCard,
+                      { backgroundColor: theme.surface },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.challengeTitle, { color: theme.text }]}
+                    >
+                      {globalChallenge.title}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.challengeDescription,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      {globalChallenge.description}
+                    </Text>
+
+                    {/* User's Stable Progress */}
+                    {activeGlobalChallenge && (
+                      <View style={styles.progressContainer}>
+                        <Text
+                          style={[styles.progressText, { color: theme.text }]}
+                        >
+                          {activeGlobalChallenge.stableName} - Rank #
+                          {activeGlobalChallenge.stableRank}
+                        </Text>
+                        <View
+                          style={[
+                            styles.progressBar,
+                            { backgroundColor: theme.border },
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.progressFill,
+                              {
+                                backgroundColor: theme.primary,
+                                width: `${Math.min(
+                                  (activeGlobalChallenge.stableProgress /
+                                    globalChallenge.targetDistance) *
+                                    100,
+                                  100
+                                )}%`,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Text
+                          style={[styles.progressText, { color: theme.text }]}
+                        >
+                          Stable:{" "}
+                          {formatDistance(activeGlobalChallenge.stableProgress)}{" "}
+                          / {formatDistance(globalChallenge.targetDistance)}{" "}
+                          {formatDistanceUnit()}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.progressText,
+                            { color: theme.textSecondary, fontSize: 12 },
+                          ]}
+                        >
+                          Your contribution:{" "}
+                          {formatDistance(
+                            activeGlobalChallenge.userContribution
+                          )}{" "}
+                          {formatDistanceUnit()}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Global Leaderboard (Top 5) */}
+                    {globalChallenge.globalLeaderboard.length > 0 && (
+                      <View
+                        style={[
+                          styles.stableLeaderboard,
+                          { backgroundColor: "rgba(0, 0, 0, 0.05)" },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.leaderboardTitle,
+                            { color: theme.text },
+                          ]}
+                        >
+                          🏆 Global Leaderboard (Top 5)
+                        </Text>
+                        {globalChallenge.globalLeaderboard
+                          .slice(0, 5)
+                          .map((stable, index) => (
+                            <View
+                              key={stable.stableId}
+                              style={[
+                                styles.leaderboardItem,
+                                stable.isUserStable && {
+                                  backgroundColor: theme.primary + "20",
+                                },
+                              ]}
+                            >
+                              <View style={styles.leaderboardRank}>
+                                <Text
+                                  style={[
+                                    styles.rankText,
+                                    {
+                                      color:
+                                        index < 3
+                                          ? index === 0
+                                            ? "#FFD700"
+                                            : index === 1
+                                            ? "#C0C0C0"
+                                            : "#CD7F32"
+                                          : theme.text,
+                                    },
+                                  ]}
+                                >
+                                  {index < 3
+                                    ? index === 0
+                                      ? "🥇"
+                                      : index === 1
+                                      ? "🥈"
+                                      : "🥉"
+                                    : `#${stable.rank}`}
+                                </Text>
+                              </View>
+                              <View style={styles.participantInfo}>
+                                <Text
+                                  style={[
+                                    styles.participantName,
+                                    {
+                                      color: stable.isUserStable
+                                        ? theme.primary
+                                        : theme.text,
+                                      fontWeight: stable.isUserStable
+                                        ? "bold"
+                                        : "600",
+                                    },
+                                  ]}
+                                >
+                                  {stable.stableName}{" "}
+                                  {stable.isUserStable ? "(Your Stable)" : ""}
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.participantContribution,
+                                    { color: theme.textSecondary },
+                                  ]}
+                                >
+                                  {formatDistance(stable.progressValue)}{" "}
+                                  {formatDistanceUnit()} • {stable.memberCount}{" "}
+                                  members • Avg:{" "}
+                                  {formatDistance(stable.averageContribution)}{" "}
+                                  {formatDistanceUnit()}
+                                </Text>
+                              </View>
+                            </View>
+                          ))}
+
+                        {globalChallenge.globalLeaderboard.length > 5 && (
+                          <Text
+                            style={[
+                              styles.autoParticipationText,
+                              { color: theme.textSecondary, marginTop: 8 },
+                            ]}
+                          >
+                            + {globalChallenge.globalLeaderboard.length - 5}{" "}
+                            more stables competing
+                          </Text>
+                        )}
+                      </View>
+                    )}
+
+                    {!activeGlobalChallenge && (
+                      <View
+                        style={[
+                          styles.autoParticipationNote,
+                          { borderColor: theme.border },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.autoParticipationText,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
+                          Join a stable to participate in global challenges! All
+                          stable members automatically contribute to their
+                          stable's progress.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ) : loadingGlobalChallenge ? (
+                <View
+                  style={[
+                    styles.activeChallengeCard,
+                    { backgroundColor: theme.surface },
+                  ]}
+                >
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color={theme.primary} />
+                    <Text
+                      style={[
+                        styles.loadingText,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      Loading global challenge...
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.activeChallengeCard,
+                    { backgroundColor: theme.surface },
+                  ]}
+                >
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    🌍 Global Stable Challenge
+                  </Text>
+                  <Text
+                    style={[
+                      styles.autoParticipationText,
+                      {
+                        color: theme.textSecondary,
+                        textAlign: "center",
+                        padding: 20,
+                      },
+                    ]}
+                  >
+                    No active global challenge at the moment. Check back soon!
+                  </Text>
+                </View>
+              )}
+
+              {/* Individual Active Challenge Section */}
               {activeChallenge ? (
                 <View
                   style={[
@@ -2348,7 +2752,7 @@ export default function CommunityScreen() {
                   ]}
                 >
                   <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                    Active Challenge
+                    Individual Active Challenge
                   </Text>
                   <View
                     style={[
@@ -2513,11 +2917,33 @@ export default function CommunityScreen() {
 
                     {/* Stable Leaderboard */}
                     <View style={styles.stableLeaderboard}>
-                      <Text
-                        style={[styles.leaderboardTitle, { color: theme.text }]}
-                      >
-                        Top Contributors
-                      </Text>
+                      <View style={styles.leaderboardHeader}>
+                        <Text
+                          style={[
+                            styles.leaderboardTitle,
+                            { color: theme.text },
+                          ]}
+                        >
+                          Top Contributors
+                        </Text>
+                        <TouchableOpacity
+                          style={[
+                            styles.stableRefreshButton,
+                            { backgroundColor: theme.accent },
+                          ]}
+                          onPress={refreshStableLeaderboard}
+                          disabled={leaderboardRefreshing}
+                        >
+                          <Text
+                            style={[
+                              styles.stableRefreshButtonText,
+                              { color: "white" },
+                            ]}
+                          >
+                            {leaderboardRefreshing ? "🔄" : "↻"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                       {stableChallenge.leaderboard
                         .slice(0, 3)
                         .map((participant, index) => (
@@ -4111,5 +4537,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontStyle: "italic",
     textAlign: "center",
+  },
+  // Real-time leaderboard styles
+  leaderboardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  stableRefreshButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    minWidth: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stableRefreshButtonText: {
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });

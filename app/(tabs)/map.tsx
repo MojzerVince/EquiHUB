@@ -38,6 +38,7 @@ import {
 } from "../../lib/fallDetectionAPI";
 import { HorseAPI } from "../../lib/horseAPI";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
+import { StableChallengeAPI } from "../../lib/stableChallengeAPI";
 import { Horse, Profile } from "../../lib/supabase";
 import { ChallengeSession } from "../../types/challengeTypes";
 
@@ -1615,6 +1616,22 @@ const MapScreen = () => {
 
       sessions.push(session);
       await AsyncStorage.setItem("training_sessions", JSON.stringify(sessions));
+
+      // Automatically contribute to stable challenge if user is in a stable
+      if (user?.id && session.distance && session.distance > 0) {
+        try {
+          // Convert meters to kilometers for stable challenge
+          const distanceInKm = session.distance / 1000;
+          await StableChallengeAPI.addDistanceToStableChallenge(
+            user.id,
+            distanceInKm
+          );
+          console.log(`Added ${distanceInKm.toFixed(2)}km to stable challenge`);
+        } catch (error) {
+          console.error("Error adding distance to stable challenge:", error);
+          // Don't throw error as session saving should still succeed
+        }
+      }
     } catch (error) {
       throw error;
     }

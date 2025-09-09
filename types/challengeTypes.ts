@@ -65,7 +65,73 @@ export interface UserBadge {
   goalId: string;
 }
 
-// Stable Challenge interfaces
+export interface GlobalChallengeReward {
+  id: string;
+  type: 'stable_badge' | 'individual_badge' | 'points' | 'title' | 'leaderboard_position';
+  name: string;
+  description: string;
+  icon: string;
+  threshold: number; // Distance threshold to earn this reward
+  rankRequirement?: number; // For position-based rewards (1st, 2nd, 3rd place, etc.)
+  isStableReward: boolean; // true if reward is for entire stable, false for individual
+}
+
+export interface ActiveGlobalChallenge {
+  challengeId: string;
+  stableId: string;
+  stableName: string;
+  startDate: string;
+  userContribution: number; // User's individual contribution
+  stableProgress: number; // Stable's total progress
+  stableRank: number; // Current rank in global leaderboard
+  lastUpdated: string;
+  isCompleted: boolean;
+  completedDate?: string;
+  earnedRewards: string[]; // Array of reward IDs earned by user
+}
+
+// Global Stable Challenge interfaces
+export interface GlobalChallenge {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  targetDistance: number; // Distance goal for each stable to achieve
+  unit: 'km' | 'mi';
+  challengeType: 'weekly' | 'monthly' | 'special';
+  difficulty: 'easy' | 'medium' | 'hard' | 'extreme';
+  maxParticipants?: number; // Maximum number of stables that can participate
+  globalLeaderboard: GlobalStableRanking[];
+  rewards: GlobalChallengeReward[];
+  totalParticipatingStables: number;
+}
+
+export interface GlobalStableRanking {
+  rank: number;
+  stableId: string;
+  stableName: string;
+  progressValue: number; // Total distance achieved by stable
+  memberCount: number; // Number of active contributing members
+  averageContribution: number; // Average distance per member
+  completedAt?: string; // When they reached the target (if they did)
+  lastUpdated: string;
+  isUserStable: boolean; // True if this is the current user's stable
+}
+
+export interface StableContributor {
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  contribution: number; // Individual distance contributed
+  sessionCount: number; // Number of sessions contributed
+  lastActivityDate: string;
+  joinDate: string;
+}
+
+// Legacy StableChallenge interface (keeping for backward compatibility)
 export interface StableChallenge {
   id: string;
   title: string;
