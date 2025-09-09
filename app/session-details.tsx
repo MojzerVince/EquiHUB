@@ -836,15 +836,41 @@ const SessionDetailsScreen = () => {
                   pitchEnabled={false}
                   rotateEnabled={false}
                 >
-                  {/* Route polyline */}
-                  <Polyline
-                    coordinates={session.path.map((point) => ({
-                      latitude: point.latitude,
-                      longitude: point.longitude,
-                    }))}
-                    strokeColor={currentTheme.colors.primary}
-                    strokeWidth={4}
-                  />
+                  {/* Route polylines with gait-based colors */}
+                  {session.gaitAnalysis &&
+                  session.gaitAnalysis.segments.length > 0 ? (
+                    // Render colored segments based on gait analysis
+                    session.gaitAnalysis.segments.map((segment, index) => {
+                      const segmentPath = session.path.slice(
+                        segment.startIndex,
+                        segment.endIndex + 1
+                      );
+
+                      if (segmentPath.length < 2) return null;
+
+                      return (
+                        <Polyline
+                          key={`gait-segment-${index}`}
+                          coordinates={segmentPath.map((point) => ({
+                            latitude: point.latitude,
+                            longitude: point.longitude,
+                          }))}
+                          strokeColor={getGaitColor(segment.gait)}
+                          strokeWidth={4}
+                        />
+                      );
+                    })
+                  ) : (
+                    // Fallback: single colored polyline if no gait analysis
+                    <Polyline
+                      coordinates={session.path.map((point) => ({
+                        latitude: point.latitude,
+                        longitude: point.longitude,
+                      }))}
+                      strokeColor={currentTheme.colors.primary}
+                      strokeWidth={4}
+                    />
+                  )}
 
                   {/* Start marker */}
                   <Marker
@@ -870,6 +896,43 @@ const SessionDetailsScreen = () => {
                   />
                 </MapView>
               </View>
+
+              {/* Gait Legend */}
+              {session.gaitAnalysis &&
+                session.gaitAnalysis.segments.length > 0 && (
+                  <View style={styles.legendContainer}>
+                    <Text
+                      style={[
+                        styles.legendTitle,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      Path Legend
+                    </Text>
+                    <View style={styles.legendItems}>
+                      {["walk", "trot", "canter", "gallop", "halt"].map(
+                        (gait) => (
+                          <View key={gait} style={styles.legendItem}>
+                            <View
+                              style={[
+                                styles.legendColor,
+                                { backgroundColor: getGaitColor(gait) },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.legendText,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              {gait.charAt(0).toUpperCase() + gait.slice(1)}
+                            </Text>
+                          </View>
+                        )
+                      )}
+                    </View>
+                  </View>
+                )}
             </View>
           )}
 
@@ -1417,6 +1480,41 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inder",
     textAlign: "center",
+  },
+  legendContainer: {
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  legendTitle: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  legendItems: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 6,
+    marginVertical: 2,
+  },
+  legendColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginRight: 6,
+  },
+  legendText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    fontWeight: "500",
   },
 });
 
