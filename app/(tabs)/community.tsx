@@ -38,7 +38,6 @@ import {
 } from "../../lib/notificationService";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { SimpleStableAPI, UserWithStable } from "../../lib/simpleStableAPI";
-import { StableChallengeAPI } from "../../lib/stableChallengeAPI";
 import { getSupabase, getSupabaseConfig } from "../../lib/supabase";
 import { UserAPI, UserSearchResult } from "../../lib/userAPI";
 import {
@@ -447,10 +446,18 @@ export default function CommunityScreen() {
     }
   }, [user?.id]);
 
-  // Stable Challenge functions
+  // Stable Challenge functions (DISABLED - using global challenges instead)
   const loadStableChallenge = useCallback(async () => {
     if (!user?.id) return;
 
+    // Disable stable challenge loading - using global challenges instead
+    console.log("Stable challenge loading disabled - using global challenges");
+    setLoadingStableChallenge(false);
+    setStableChallenge(null);
+    setActiveStableChallenge(null);
+    return;
+
+    /* COMMENTED OUT - Old stable challenge code
     setLoadingStableChallenge(true);
     try {
       // Get user's stable ID first
@@ -485,68 +492,35 @@ export default function CommunityScreen() {
     } finally {
       setLoadingStableChallenge(false);
     }
+    */
   }, [user?.id]);
 
   const updateStableChallengeContribution = async (distance: number) => {
-    if (!user?.id || !activeStableChallenge) return;
-
-    try {
-      const success = await StableChallengeAPI.updateUserContribution(
-        activeStableChallenge.challengeId,
-        user.id,
-        distance
-      );
-
-      if (success) {
-        // Reload stable challenge to show updated progress
-        await loadStableChallenge();
-      }
-    } catch (error) {
-      console.error("Error updating stable challenge contribution:", error);
-    }
+    // Disabled - using global challenges instead
+    console.log(
+      "Stable challenge contribution disabled - using global challenges"
+    );
+    return;
   };
 
-  // Real-time leaderboard refresh function
+  // Real-time leaderboard refresh function (DISABLED)
   const refreshStableLeaderboard = useCallback(async () => {
-    if (!stableChallenge?.id) return;
+    // Disabled - using global challenges instead
+    console.log(
+      "Stable leaderboard refresh disabled - using global challenges"
+    );
+    setLeaderboardRefreshing(false);
+    return;
+  }, []);
 
-    setLeaderboardRefreshing(true);
-    try {
-      const updatedLeaderboard =
-        await StableChallengeAPI.getStableChallengeLeaderboard(
-          stableChallenge.id
-        );
-
-      // Update the stable challenge with fresh leaderboard data
-      setStableChallenge((prev) =>
-        prev
-          ? {
-              ...prev,
-              leaderboard: updatedLeaderboard,
-              currentProgress: updatedLeaderboard.reduce(
-                (total, participant) => total + participant.contribution,
-                0
-              ),
-            }
-          : null
-      );
-    } catch (error) {
-      console.error("Error refreshing stable leaderboard:", error);
-    } finally {
-      setLeaderboardRefreshing(false);
-    }
-  }, [stableChallenge?.id]);
-
-  // Auto-refresh leaderboard every 30 seconds when stable challenge is active
+  // Auto-refresh leaderboard every 30 seconds when stable challenge is active (DISABLED)
   useEffect(() => {
-    if (!stableChallenge?.id) return;
-
-    const intervalId = setInterval(() => {
-      refreshStableLeaderboard();
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(intervalId);
-  }, [stableChallenge?.id, refreshStableLeaderboard]);
+    // Disabled - using global challenges instead
+    console.log(
+      "Stable challenge auto-refresh disabled - using global challenges"
+    );
+    return;
+  }, []);
 
   const handleStartChallenge = (challenge: Challenge) => {
     if (activeChallenge) {
