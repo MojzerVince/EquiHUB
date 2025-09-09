@@ -31,6 +31,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import appConfig from "../../app.json";
 
 const OptionsScreen = () => {
   const router = useRouter();
@@ -1072,6 +1073,18 @@ const OptionsScreen = () => {
                 textStyle={styles.deleteButtonText}
               />
             </View>
+          </View>
+
+          {/* Version Information */}
+          <View style={styles.versionContainer}>
+            <Text
+              style={[
+                styles.versionText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              Version {appConfig.expo.version}
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -2116,6 +2129,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     fontFamily: "Inder",
+  },
+  // Version styles
+  versionContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+  },
+  versionText: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    textAlign: "center",
+    opacity: 0.7,
   },
 });
 
