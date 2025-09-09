@@ -37,12 +37,15 @@ import {
 } from "../../lib/notificationService";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { SimpleStableAPI, UserWithStable } from "../../lib/simpleStableAPI";
+import { StableChallengeAPI } from "../../lib/stableChallengeAPI";
 import { getSupabase, getSupabaseConfig } from "../../lib/supabase";
 import { UserAPI, UserSearchResult } from "../../lib/userAPI";
 import {
   ActiveChallenge,
+  ActiveStableChallenge,
   Challenge,
   ChallengeGoal,
+  StableChallenge,
   UserBadge,
 } from "../../types/challengeTypes";
 
@@ -125,6 +128,13 @@ export default function CommunityScreen() {
     []
   );
   const [showGoalSelection, setShowGoalSelection] = useState(false);
+
+  // Stable Challenge state
+  const [stableChallenge, setStableChallenge] =
+    useState<StableChallenge | null>(null);
+  const [activeStableChallenge, setActiveStableChallenge] =
+    useState<ActiveStableChallenge | null>(null);
+  const [loadingStableChallenge, setLoadingStableChallenge] = useState(false);
 
   // Goal options for challenge selection - dynamic based on metric system
   const { metricSystem } = useMetric();
@@ -424,6 +434,49 @@ export default function CommunityScreen() {
     }
   }, [user?.id]);
 
+  // Stable Challenge functions
+  const loadStableChallenge = useCallback(async () => {
+    if (!user?.id) return;
+
+    setLoadingStableChallenge(true);
+    try {
+      // For now, use mock data. Later you can fetch user's stable and load real challenge
+      const mockChallenge = StableChallengeAPI.getMockStableChallenge();
+      setStableChallenge(mockChallenge);
+
+      // Load user's active stable challenge
+      const activeStable =
+        await StableChallengeAPI.getUserActiveStableChallenge(user.id);
+      setActiveStableChallenge(activeStable);
+
+      // Check for monthly reset
+      await StableChallengeAPI.checkAndResetMonthlyChallenges();
+    } catch (error) {
+      console.error("Error loading stable challenge:", error);
+    } finally {
+      setLoadingStableChallenge(false);
+    }
+  }, [user?.id]);
+
+  const updateStableChallengeContribution = async (distance: number) => {
+    if (!user?.id || !activeStableChallenge) return;
+
+    try {
+      const success = await StableChallengeAPI.updateUserContribution(
+        activeStableChallenge.challengeId,
+        user.id,
+        distance
+      );
+
+      if (success) {
+        // Reload stable challenge to show updated progress
+        await loadStableChallenge();
+      }
+    } catch (error) {
+      console.error("Error updating stable challenge contribution:", error);
+    }
+  };
+
   const handleStartChallenge = (challenge: Challenge) => {
     if (activeChallenge) {
       Alert.alert(
@@ -551,6 +604,7 @@ export default function CommunityScreen() {
               loadChallenges(), // Load available challenges
               loadActiveChallenge(), // Load active challenge
               loadUserBadges(), // Load user badges
+              loadStableChallenge(), // Load stable challenge
             ]);
           } else {
             console.error("Failed to load friends:", error);
@@ -563,6 +617,7 @@ export default function CommunityScreen() {
               loadChallenges(), // Load available challenges
               loadActiveChallenge(), // Load active challenge
               loadUserBadges(), // Load user badges
+              loadStableChallenge(), // Load stable challenge
             ]);
           }
 
@@ -2388,7 +2443,144 @@ export default function CommunityScreen() {
                     </View>
                   </View>
                 </View>
-              ) : (
+              ) : null}
+
+              {/* Stable Challenge Section */}
+              {stableChallenge && (
+                <View
+                  style={[
+                    styles.stableChallengeCard,
+                    { backgroundColor: theme.surface },
+                  ]}
+                >
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    🏇 Stable Challenge
+                  </Text>
+                  <View
+                    style={[
+                      styles.challengeCard,
+                      {
+                        backgroundColor: theme.surface,
+                        borderWidth: 2,
+                        borderColor: theme.accent,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.challengeTitle, { color: theme.text }]}
+                    >
+                      {stableChallenge.title}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.challengeDescription,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      {stableChallenge.description}
+                    </Text>
+
+                    {/* Stable Progress Bar */}
+                    <View style={styles.progressContainer}>
+                      <View
+                        style={[
+                          styles.progressBar,
+                          { backgroundColor: theme.border },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.progressFill,
+                            {
+                              backgroundColor: theme.accent,
+                              width: `${Math.min(
+                                (stableChallenge.currentProgress /
+                                  stableChallenge.targetDistance) *
+                                  100,
+                                100
+                              )}%`,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text
+                        style={[styles.progressText, { color: theme.text }]}
+                      >
+                        {stableChallenge.currentProgress.toFixed(1)} /{" "}
+                        {stableChallenge.targetDistance} {stableChallenge.unit}
+                      </Text>
+                    </View>
+
+                    {/* Stable Leaderboard */}
+                    <View style={styles.stableLeaderboard}>
+                      <Text
+                        style={[styles.leaderboardTitle, { color: theme.text }]}
+                      >
+                        Top Contributors
+                      </Text>
+                      {stableChallenge.leaderboard
+                        .slice(0, 3)
+                        .map((participant, index) => (
+                          <View
+                            key={participant.userId}
+                            style={styles.leaderboardItem}
+                          >
+                            <View style={styles.leaderboardRank}>
+                              <Text
+                                style={[
+                                  styles.rankText,
+                                  { color: theme.textSecondary },
+                                ]}
+                              >
+                                {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                              </Text>
+                            </View>
+                            <View style={styles.participantInfo}>
+                              <Text
+                                style={[
+                                  styles.participantName,
+                                  { color: theme.text },
+                                ]}
+                              >
+                                {participant.userName}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.participantContribution,
+                                  { color: theme.textSecondary },
+                                ]}
+                              >
+                                {participant.contribution.toFixed(1)}{" "}
+                                {stableChallenge.unit}
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+                    </View>
+
+                    {/* Automatic Participation Note */}
+                    <View
+                      style={[
+                        styles.autoParticipationNote,
+                        { backgroundColor: theme.surface },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.autoParticipationText,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        ✨ Your rides automatically contribute to your stable's
+                        monthly challenge!
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Available Individual Challenges Section */}
+              {!activeChallenge && (
                 /* Available Challenges Section */
                 <View
                   style={[
@@ -2866,8 +3058,8 @@ export default function CommunityScreen() {
                           numberOfLines={2}
                           ellipsizeMode="tail"
                         >
-                          {friend.description && friend.description.trim() 
-                            ? friend.description.length > 60 
+                          {friend.description && friend.description.trim()
+                            ? friend.description.length > 60
                               ? friend.description.substring(0, 60) + "..."
                               : friend.description
                             : "Equestrian enthusiast"}
@@ -3858,5 +4050,66 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     paddingHorizontal: 40,
+  },
+  // Stable Challenge Styles
+  stableChallengeCard: {
+    padding: 15,
+    marginBottom: 15,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  stableLeaderboard: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+  },
+  leaderboardTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  leaderboardItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  leaderboardRank: {
+    width: 30,
+    alignItems: "center",
+  },
+  rankText: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  participantInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  participantName: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  participantContribution: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  autoParticipationNote: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  autoParticipationText: {
+    fontSize: 13,
+    fontStyle: "italic",
+    textAlign: "center",
   },
 });
