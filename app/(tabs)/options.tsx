@@ -387,7 +387,28 @@ const OptionsScreen = () => {
   useEffect(() => {
     loadNotificationSettings();
     setupNotificationResponseListener();
+    // Check and reschedule notifications on app load
+    checkAndRescheduleNotifications();
   }, []);
+
+  // Check if we need to reschedule notifications (for maintenance)
+  const checkAndRescheduleNotifications = async () => {
+    try {
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const summaryNotifications = scheduled.filter(
+        (notification) =>
+          notification.content.data?.type === "weekly_summary" ||
+          notification.content.data?.type === "monthly_summary"
+      );
+
+      // If we have fewer than 5 scheduled notifications, reschedule
+      if (summaryNotifications.length < 5) {
+        await schedulePeriodicNotifications();
+      }
+    } catch (error) {
+      console.log("Error checking scheduled notifications:", error);
+    }
+  };
 
   // Setup notification response listener
   const setupNotificationResponseListener = () => {
@@ -471,43 +492,83 @@ const OptionsScreen = () => {
       const saved = await AsyncStorage.getItem("notificationSettings");
       const currentSettings = saved ? JSON.parse(saved) : notificationSettings;
 
-      // Schedule weekly notification if enabled (every Monday at 10 AM)
+      const now = new Date();
+
+      // Schedule weekly notification if enabled (every 7 days from next Monday at 10 AM)
       if (currentSettings.weeklySummary) {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "📊 Weekly Activity Summary",
-            body: "Let's see your weekly activity!",
-            data: { type: "weekly_summary" },
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-            weekday: 2, // Monday (1=Sunday, 2=Monday, etc.)
-            hour: 10,
-            minute: 0,
-            repeats: true,
-          },
-        });
+        // Calculate next Monday at 10 AM
+        const nextMonday = new Date(now);
+        const daysUntilMonday = (1 + 7 - now.getDay()) % 7 || 7; // 1 = Monday
+        nextMonday.setDate(now.getDate() + daysUntilMonday);
+        nextMonday.setHours(10, 0, 0, 0);
+
+        // If the calculated time is in the past, add 7 days
+        if (nextMonday <= now) {
+          nextMonday.setDate(nextMonday.getDate() + 7);
+        }
+
+        // Schedule next few weekly notifications (since repeats don't work reliably cross-platform)
+        for (let i = 0; i < 12; i++) {
+          // Schedule for next 3 months
+          const notificationDate = new Date(nextMonday);
+          notificationDate.setDate(nextMonday.getDate() + i * 7);
+
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: "📊 Weekly Activity Summary",
+              body: "Let's see your weekly activity!",
+              data: { type: "weekly_summary" },
+            },
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: notificationDate,
+            },
+          });
+        }
       }
 
       // Schedule monthly notification if enabled (1st of every month at 10 AM)
       if (currentSettings.monthlySummary) {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "📈 Monthly Activity Summary",
-            body: "Let's see your monthly activity!",
-            data: { type: "monthly_summary" },
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-            day: 1, // First day of month
-            hour: 10,
-            minute: 0,
-            repeats: true,
-          },
-        });
+        // Schedule for next 12 months
+        for (let i = 0; i < 12; i++) {
+          const notificationDate = new Date(now);
+          notificationDate.setMonth(now.getMonth() + i + 1, 1); // 1st day of next months
+          notificationDate.setHours(10, 0, 0, 0);
+
+          // If we're past the 1st of current month and i === 0, use current month
+          if (i === 0) {
+            const firstOfCurrentMonth = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              1,
+              10,
+              0,
+              0,
+              0
+            );
+            if (now < firstOfCurrentMonth) {
+              notificationDate.setMonth(now.getMonth(), 1);
+            }
+          }
+
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: "📈 Monthly Activity Summary",
+              body: "Let's see your monthly activity!",
+              data: { type: "monthly_summary" },
+            },
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: notificationDate,
+            },
+          });
+        }
       }
+
+      console.log("Notifications scheduled successfully");
     } catch (error) {
       console.error("Error scheduling notifications:", error);
+      // Don't show error to user for non-critical feature
     }
   };
 
@@ -693,8 +754,10 @@ const OptionsScreen = () => {
         if (notificationResult.granted) {
           permissionsGranted++;
           permissionResults.push("✅ Notification access granted");
-          // Schedule notifications if settings allow
-          await schedulePeriodicNotifications();
+          // Schedule notifications if settings allow (don't await to avoid blocking)
+          schedulePeriodicNotifications().catch((error) => {
+            console.log("Notification scheduling failed silently:", error);
+          });
         } else {
           permissionResults.push("❌ Notification access denied");
         }
