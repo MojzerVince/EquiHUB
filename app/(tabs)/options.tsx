@@ -9,6 +9,7 @@ import {
 } from "@/lib/emergencyContactsAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
 import { SMSTestUtility } from "@/lib/smsTestUtility";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Contacts from "expo-contacts";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
@@ -41,8 +42,17 @@ const OptionsScreen = () => {
   const { showLogout, showConfirm, showError } = useDialog();
 
   // Settings state
-  const [notifications, setNotifications] = useState(true);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  // Push notification settings state
+  const [showNotificationSettings, setShowNotificationSettings] =
+    useState(false);
+  const [notificationSettings, setNotificationSettings] = useState({
+    vaccinationReminders: true,
+    trackingStatus: true,
+    weeklySummary: true,
+    monthlySummary: true,
+  });
 
   // Load hidden posts when component mounts
   useEffect(() => {
@@ -373,6 +383,134 @@ const OptionsScreen = () => {
   });
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Load notification settings when component mounts
+  useEffect(() => {
+    loadNotificationSettings();
+    setupNotificationResponseListener();
+  }, []);
+
+  // Setup notification response listener
+  const setupNotificationResponseListener = () => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const { type } = response.notification.request.content.data || {};
+
+        if (type === "weekly_summary" || type === "monthly_summary") {
+          // Navigate to statistics page
+          router.push("/statistics");
+        }
+      }
+    );
+
+    // Cleanup listener on unmount
+    return () => subscription.remove();
+  };
+
+  // Load notification settings from storage
+  const loadNotificationSettings = async () => {
+    try {
+      const saved = await AsyncStorage.getItem("notificationSettings");
+      if (saved) {
+        setNotificationSettings(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error("Error loading notification settings:", error);
+    }
+  };
+
+  // Save notification settings to storage
+  const saveNotificationSettings = async (
+    settings: typeof notificationSettings
+  ) => {
+    try {
+      await AsyncStorage.setItem(
+        "notificationSettings",
+        JSON.stringify(settings)
+      );
+      setNotificationSettings(settings);
+    } catch (error) {
+      console.error("Error saving notification settings:", error);
+    }
+  };
+
+  // Handle notification setting toggle
+  const handleNotificationToggle = async (
+    key: keyof typeof notificationSettings
+  ) => {
+    const newSettings = {
+      ...notificationSettings,
+      [key]: !notificationSettings[key],
+    };
+    await saveNotificationSettings(newSettings);
+
+    // Update scheduled notifications for weekly/monthly summaries
+    if (key === "weeklySummary" || key === "monthlySummary") {
+      await schedulePeriodicNotifications();
+    }
+  };
+
+  // Handle weekly summary notification tap
+  const handleWeeklySummaryTap = () => {
+    setShowNotificationSettings(false);
+    router.push("/statistics");
+  };
+
+  // Handle monthly summary notification tap
+  const handleMonthlySummaryTap = () => {
+    setShowNotificationSettings(false);
+    router.push("/statistics");
+  };
+
+  // Schedule periodic notifications
+  const schedulePeriodicNotifications = async () => {
+    try {
+      // Cancel existing scheduled notifications
+      await Notifications.cancelAllScheduledNotificationsAsync();
+
+      // Get current settings
+      const saved = await AsyncStorage.getItem("notificationSettings");
+      const currentSettings = saved ? JSON.parse(saved) : notificationSettings;
+
+      // Schedule weekly notification if enabled (every Monday at 10 AM)
+      if (currentSettings.weeklySummary) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "📊 Weekly Activity Summary",
+            body: "Let's see your weekly activity!",
+            data: { type: "weekly_summary" },
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+            weekday: 2, // Monday (1=Sunday, 2=Monday, etc.)
+            hour: 10,
+            minute: 0,
+            repeats: true,
+          },
+        });
+      }
+
+      // Schedule monthly notification if enabled (1st of every month at 10 AM)
+      if (currentSettings.monthlySummary) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "📈 Monthly Activity Summary",
+            body: "Let's see your monthly activity!",
+            data: { type: "monthly_summary" },
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+            day: 1, // First day of month
+            hour: 10,
+            minute: 0,
+            repeats: true,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Error scheduling notifications:", error);
+    }
+  };
+
   const handleLogout = () => {
     showLogout(async () => {
       try {
@@ -545,11 +683,18 @@ const OptionsScreen = () => {
 
       // Request Notification permission
       try {
-        const notificationResult =
-          await Notifications.requestPermissionsAsync();
+        const notificationResult = await Notifications.requestPermissionsAsync({
+          ios: {
+            allowAlert: true,
+            allowBadge: true,
+            allowSound: true,
+          },
+        });
         if (notificationResult.granted) {
           permissionsGranted++;
           permissionResults.push("✅ Notification access granted");
+          // Schedule notifications if settings allow
+          await schedulePeriodicNotifications();
         } else {
           permissionResults.push("❌ Notification access denied");
         }
@@ -921,11 +1066,9 @@ const OptionsScreen = () => {
                 { backgroundColor: currentTheme.colors.surface },
               ]}
             >
-              <SettingItem
+              <ActionButton
                 title="Push Notifications"
-                subtitle="Receive notifications about activities"
-                value={notifications}
-                onValueChange={setNotifications}
+                onPress={() => setShowNotificationSettings(true)}
               />
             </View>
           </View>
@@ -1094,6 +1237,245 @@ const OptionsScreen = () => {
 
       {/* Metric System Dropdown Modal */}
       <MetricDropdownModal />
+
+      {/* Push Notifications Settings Modal */}
+      <Modal
+        visible={showNotificationSettings}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowNotificationSettings(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.notificationSettingsModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View
+              style={[
+                styles.notificationSettingsHeader,
+                { borderBottomColor: currentTheme.colors.accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.notificationSettingsTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Push Notification Settings
+              </Text>
+              <TouchableOpacity
+                style={styles.notificationSettingsCloseButton}
+                onPress={() => setShowNotificationSettings(false)}
+              >
+                <Text
+                  style={[
+                    styles.notificationSettingsCloseText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.notificationSettingsContent}>
+              <Text
+                style={[
+                  styles.notificationSettingsDescription,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                Choose which notifications you'd like to receive
+              </Text>
+
+              {/* Vaccination Reminders */}
+              <View
+                style={[
+                  styles.notificationSettingItem,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <View style={styles.notificationSettingInfo}>
+                  <Text
+                    style={[
+                      styles.notificationSettingTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    💉 Vaccination Reminders
+                  </Text>
+                  <Text
+                    style={[
+                      styles.notificationSettingSubtitle,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Get notified when your horse's vaccinations are due
+                  </Text>
+                </View>
+                <Switch
+                  value={notificationSettings.vaccinationReminders}
+                  onValueChange={() =>
+                    handleNotificationToggle("vaccinationReminders")
+                  }
+                  trackColor={{
+                    false: currentTheme.colors.accent,
+                    true: currentTheme.colors.primary,
+                  }}
+                  thumbColor={
+                    notificationSettings.vaccinationReminders
+                      ? "#fff"
+                      : "#f4f3f4"
+                  }
+                />
+              </View>
+
+              {/* Tracking Status Notifications */}
+              <View
+                style={[
+                  styles.notificationSettingItem,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <View style={styles.notificationSettingInfo}>
+                  <Text
+                    style={[
+                      styles.notificationSettingTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    📍 Tracking Status
+                  </Text>
+                  <Text
+                    style={[
+                      styles.notificationSettingSubtitle,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Receive updates about your tracking sessions
+                  </Text>
+                </View>
+                <Switch
+                  value={notificationSettings.trackingStatus}
+                  onValueChange={() =>
+                    handleNotificationToggle("trackingStatus")
+                  }
+                  trackColor={{
+                    false: currentTheme.colors.accent,
+                    true: currentTheme.colors.primary,
+                  }}
+                  thumbColor={
+                    notificationSettings.trackingStatus ? "#fff" : "#f4f3f4"
+                  }
+                />
+              </View>
+
+              {/* Weekly Summary */}
+              <View
+                style={[
+                  styles.notificationSettingItem,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.notificationSettingInfo}
+                  onPress={handleWeeklySummaryTap}
+                >
+                  <Text
+                    style={[
+                      styles.notificationSettingTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    📊 Weekly Summary
+                  </Text>
+                  <Text
+                    style={[
+                      styles.notificationSettingSubtitle,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    "Let's see your weekly activity!" - Tap to view weekly
+                    statistics
+                  </Text>
+                </TouchableOpacity>
+                <Switch
+                  value={notificationSettings.weeklySummary}
+                  onValueChange={() =>
+                    handleNotificationToggle("weeklySummary")
+                  }
+                  trackColor={{
+                    false: currentTheme.colors.accent,
+                    true: currentTheme.colors.primary,
+                  }}
+                  thumbColor={
+                    notificationSettings.weeklySummary ? "#fff" : "#f4f3f4"
+                  }
+                />
+              </View>
+
+              {/* Monthly Summary */}
+              <View
+                style={[
+                  styles.notificationSettingItem,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.notificationSettingInfo}
+                  onPress={handleMonthlySummaryTap}
+                >
+                  <Text
+                    style={[
+                      styles.notificationSettingTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    📈 Monthly Summary
+                  </Text>
+                  <Text
+                    style={[
+                      styles.notificationSettingSubtitle,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    "Let's see your monthly activity!" - Tap to view monthly
+                    statistics
+                  </Text>
+                </TouchableOpacity>
+                <Switch
+                  value={notificationSettings.monthlySummary}
+                  onValueChange={() =>
+                    handleNotificationToggle("monthlySummary")
+                  }
+                  trackColor={{
+                    false: currentTheme.colors.accent,
+                    true: currentTheme.colors.primary,
+                  }}
+                  thumbColor={
+                    notificationSettings.monthlySummary ? "#fff" : "#f4f3f4"
+                  }
+                />
+              </View>
+
+              <View style={styles.notificationSettingsFooter}>
+                <Text
+                  style={[
+                    styles.notificationSettingsFooterText,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Summary notifications are sent every week/month to help you
+                  track your progress
+                </Text>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Emergency Contacts Modal */}
       <Modal
@@ -2142,6 +2524,91 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     opacity: 0.7,
+  },
+
+  // Push Notification Settings Modal Styles
+  notificationSettingsModal: {
+    maxHeight: "85%",
+    minHeight: "60%",
+    borderRadius: 20,
+    padding: 0,
+    margin: 0,
+    width: "95%",
+  },
+  notificationSettingsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+  },
+  notificationSettingsTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  notificationSettingsCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  notificationSettingsCloseText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  notificationSettingsContent: {
+    padding: 20,
+    maxHeight: 500,
+  },
+  notificationSettingsDescription: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    marginBottom: 20,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  notificationSettingItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  notificationSettingInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  notificationSettingTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 4,
+    flex: 1,
+  },
+  notificationSettingSubtitle: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 18,
+  },
+  notificationSettingsFooter: {
+    marginTop: 10,
+    marginBottom: 40,
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "rgba(51, 92, 103, 0.1)",
+  },
+  notificationSettingsFooterText: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    textAlign: "center",
+    lineHeight: 16,
+    fontStyle: "italic",
   },
 });
 
