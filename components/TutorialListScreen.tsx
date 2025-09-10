@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Image,
   Modal,
   ScrollView,
@@ -18,6 +17,7 @@ import {
   TutorialProgress,
   TutorialProgressService,
 } from "../lib/tutorialProgressService";
+import CustomLessonDialog from "./CustomLessonDialog";
 import LessonScreen from "./LessonScreen";
 
 interface TutorialListScreenProps {
@@ -40,10 +40,45 @@ export const TutorialListScreen: React.FC<TutorialListScreenProps> = ({
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [showLessonModal, setShowLessonModal] = useState(false);
 
+  // Dialog state
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [dialogConfig, setDialogConfig] = useState({
+    title: "",
+    message: "",
+    type: "info" as "success" | "warning" | "error" | "info",
+    onConfirm: undefined as (() => void) | undefined,
+    confirmText: "OK",
+    cancelText: "Cancel",
+  });
+
   useEffect(() => {
     loadLessons();
     loadProgress();
   }, [tutorialId]);
+
+  // Helper function to show dialog
+  const showDialog = (
+    title: string,
+    message: string,
+    type: "success" | "warning" | "error" | "info" = "info",
+    onConfirm?: () => void,
+    confirmText: string = "OK",
+    cancelText: string = "Cancel"
+  ) => {
+    setDialogConfig({
+      title,
+      message,
+      type,
+      onConfirm,
+      confirmText,
+      cancelText,
+    });
+    setDialogVisible(true);
+  };
+
+  const hideDialog = () => {
+    setDialogVisible(false);
+  };
 
   const loadLessons = () => {
     const tutorialLessons =
@@ -73,10 +108,12 @@ export const TutorialListScreen: React.FC<TutorialListScreenProps> = ({
     // Reload progress to update UI
     await loadProgress();
 
-    Alert.alert(
-      "Lesson Complete! 🎉",
+    showDialog(
+      "Lesson Complete!",
       "Great job! You've successfully completed this lesson.",
-      [{ text: "Continue Learning", style: "default" }]
+      "success",
+      undefined,
+      "Continue Learning"
     );
   };
 
@@ -296,6 +333,18 @@ export const TutorialListScreen: React.FC<TutorialListScreenProps> = ({
           />
         )}
       </Modal>
+
+      {/* Custom Dialog */}
+      <CustomLessonDialog
+        visible={dialogVisible}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        onClose={hideDialog}
+        onConfirm={dialogConfig.onConfirm}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+      />
     </>
   );
 };

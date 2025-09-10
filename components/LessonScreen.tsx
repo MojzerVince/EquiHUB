@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   Dimensions,
   Image,
@@ -21,6 +20,7 @@ import {
   LessonStep,
   TutorialProgressService,
 } from "../lib/tutorialProgressService";
+import CustomLessonDialog from "./CustomLessonDialog";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -53,9 +53,44 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
   const [userNotes, setUserNotes] = useState("");
   const [startTime] = useState(Date.now());
 
+  // Dialog state
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [dialogConfig, setDialogConfig] = useState({
+    title: "",
+    message: "",
+    type: "info" as "success" | "warning" | "error" | "info",
+    onConfirm: undefined as (() => void) | undefined,
+    confirmText: "OK",
+    cancelText: "Cancel",
+  });
+
   // Animations
   const progressAnim = useRef(new Animated.Value(0)).current;
   const stepAnim = useRef(new Animated.Value(0)).current;
+
+  // Helper function to show dialog
+  const showDialog = (
+    title: string,
+    message: string,
+    type: "success" | "warning" | "error" | "info" = "info",
+    onConfirm?: () => void,
+    confirmText: string = "OK",
+    cancelText: string = "Cancel"
+  ) => {
+    setDialogConfig({
+      title,
+      message,
+      type,
+      onConfirm,
+      confirmText,
+      cancelText,
+    });
+    setDialogVisible(true);
+  };
+
+  const hideDialog = () => {
+    setDialogVisible(false);
+  };
 
   useEffect(() => {
     loadLesson();
@@ -141,9 +176,10 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
     if (currentStep.type === "checklist") {
       const allChecked = checklistItems.every((checked) => checked);
       if (!allChecked) {
-        Alert.alert(
+        showDialog(
           "Complete Checklist",
-          "Please check all items before proceeding."
+          "Please check all items before proceeding.",
+          "warning"
         );
         return;
       }
@@ -202,9 +238,10 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
 
   const handleQuizSubmit = () => {
     if (selectedAnswer === null) {
-      Alert.alert(
+      showDialog(
         "Select Answer",
-        "Please select an answer before submitting."
+        "Please select an answer before submitting.",
+        "warning"
       );
       return;
     }
@@ -224,13 +261,13 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
   };
 
   const handleExit = () => {
-    Alert.alert(
+    showDialog(
       "Exit Lesson",
       "Your progress will be saved. Are you sure you want to exit?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Exit", style: "destructive", onPress: onExit },
-      ]
+      "warning",
+      onExit,
+      "Exit",
+      "Cancel"
     );
   };
 
@@ -598,6 +635,18 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Custom Dialog */}
+      <CustomLessonDialog
+        visible={dialogVisible}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        onClose={hideDialog}
+        onConfirm={dialogConfig.onConfirm}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+      />
     </SafeAreaView>
   );
 };
