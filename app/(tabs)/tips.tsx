@@ -418,13 +418,6 @@ const CoachScreen = () => {
               </Text>
             </View>
 
-            <View style={styles.categoriesContainer}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Browse Categories
-              </Text>
-              {tutorialCategories.map(renderCategoryCard)}
-            </View>
-
             <View style={styles.featuredSection}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Featured Tutorials
@@ -433,6 +426,13 @@ const CoachScreen = () => {
                 {tutorialCategories[0]?.tutorials[0] &&
                   renderTutorialCard(tutorialCategories[0].tutorials[0])}
               </View>
+            </View>
+
+            <View style={styles.categoriesContainer}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Browse Categories
+              </Text>
+              {tutorialCategories.map(renderCategoryCard)}
             </View>
           </View>
         )}
