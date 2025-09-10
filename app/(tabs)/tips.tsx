@@ -1,4 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Image,
@@ -12,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import TutorialListScreen from "../../components/TutorialListScreen";
+import { useSubscription } from "../../contexts/SubscriptionContext";
 import { useTheme } from "../../contexts/ThemeContext";
 
 // TypeScript interfaces
@@ -34,10 +36,12 @@ interface Tutorial {
   difficulty: "Beginner" | "Intermediate" | "Advanced";
   category: string;
   isLocked?: boolean;
+  proOnly?: boolean;
 }
 
 const CoachScreen = () => {
   const { currentTheme } = useTheme();
+  const { isProMember } = useSubscription();
   const theme = currentTheme.colors;
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -79,6 +83,7 @@ const CoachScreen = () => {
           duration: "30 min",
           difficulty: "Intermediate",
           category: "first-aid",
+          proOnly: true,
         },
         {
           id: "emergency-assessment",
@@ -91,6 +96,7 @@ const CoachScreen = () => {
           duration: "25 min",
           difficulty: "Beginner",
           category: "first-aid",
+          proOnly: true,
         },
       ],
     },
@@ -124,6 +130,7 @@ const CoachScreen = () => {
           duration: "25 min",
           difficulty: "Beginner",
           category: "grooming",
+          proOnly: true,
         },
         {
           id: "grooming-tools",
@@ -136,6 +143,7 @@ const CoachScreen = () => {
           duration: "20 min",
           difficulty: "Beginner",
           category: "grooming",
+          proOnly: true,
         },
       ],
     },
@@ -182,6 +190,7 @@ const CoachScreen = () => {
           duration: "40 min",
           difficulty: "Intermediate",
           category: "riding",
+          proOnly: true,
         },
       ],
     },
@@ -214,6 +223,7 @@ const CoachScreen = () => {
           duration: "30 min",
           difficulty: "Beginner",
           category: "training",
+          proOnly: true,
         },
       ],
     },
@@ -241,6 +251,18 @@ const CoachScreen = () => {
   };
 
   const handleStartTutorial = (tutorialId: string, tutorialTitle: string) => {
+    // Find the tutorial to check if it's pro only
+    const tutorial = tutorialCategories
+      .flatMap((cat) => cat.tutorials)
+      .find((t) => t.id === tutorialId);
+
+    // Check if tutorial requires Pro membership
+    if (tutorial?.proOnly && !isProMember) {
+      // Navigate to pro features screen
+      router.push("/pro-features");
+      return;
+    }
+
     setSelectedTutorial({ id: tutorialId, title: tutorialTitle });
     setShowTutorialModal(true);
   };
@@ -278,79 +300,121 @@ const CoachScreen = () => {
     </TouchableOpacity>
   );
 
-  const renderTutorialCard = (tutorial: Tutorial) => (
-    <TouchableOpacity
-      key={tutorial.id}
-      style={[styles.tutorialCard, { backgroundColor: theme.surface }]}
-      activeOpacity={0.8}
-      disabled={tutorial.isLocked}
-    >
-      <View style={styles.tutorialImageContainer}>
-        <Image
-          source={{ uri: tutorial.imageUrl }}
-          style={styles.tutorialImage}
-        />
-        {tutorial.isLocked && (
-          <View style={styles.lockedOverlay}>
-            <Text style={styles.lockedIcon}>🔒</Text>
-          </View>
-        )}
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.7)"]}
-          style={styles.imageGradient}
-        >
-          <View style={styles.tutorialBadges}>
-            <View
-              style={[
-                styles.difficultyBadge,
-                { backgroundColor: getDifficultyColor(tutorial.difficulty) },
-              ]}
-            >
-              <Text style={styles.badgeText}>{tutorial.difficulty}</Text>
-            </View>
-            <View
-              style={[
-                styles.durationBadge,
-                { backgroundColor: "rgba(255,255,255,0.9)" },
-              ]}
-            >
-              <Text style={[styles.badgeText, { color: "#333" }]}>
-                {tutorial.duration}
-              </Text>
-            </View>
-          </View>
-        </LinearGradient>
-      </View>
+  const renderTutorialCard = (tutorial: Tutorial) => {
+    const isProOnlyAndNotMember = tutorial.proOnly && !isProMember;
+    const isAccessible =
+      !tutorial.isLocked && !(tutorial.proOnly && !isProMember);
 
-      <View style={styles.tutorialContent}>
-        <Text
-          style={[styles.tutorialTitle, { color: theme.text }]}
-          numberOfLines={2}
-        >
-          {tutorial.title}
-        </Text>
-        <Text
-          style={[styles.tutorialDescription, { color: theme.textSecondary }]}
-          numberOfLines={2}
-        >
-          {tutorial.description}
-        </Text>
-        <View style={styles.tutorialFooter}>
-          <Text style={[styles.lessonCount, { color: theme.primary }]}>
-            {tutorial.lessonCount} lessons
-          </Text>
-          {!tutorial.isLocked && (
-            <TouchableOpacity
-              style={[styles.startButton, { backgroundColor: theme.primary }]}
-              onPress={() => handleStartTutorial(tutorial.id, tutorial.title)}
-            >
-              <Text style={styles.startButtonText}>Start</Text>
-            </TouchableOpacity>
+    return (
+      <TouchableOpacity
+        key={tutorial.id}
+        style={[
+          styles.tutorialCard,
+          { backgroundColor: theme.surface },
+          isProOnlyAndNotMember && { opacity: 0.7 },
+        ]}
+        activeOpacity={0.8}
+        disabled={tutorial.isLocked || isProOnlyAndNotMember}
+      >
+        <View style={styles.tutorialImageContainer}>
+          <Image
+            source={{ uri: tutorial.imageUrl }}
+            style={styles.tutorialImage}
+          />
+          {tutorial.isLocked && (
+            <View style={styles.lockedOverlay}>
+              <Text style={styles.lockedIcon}>🔒</Text>
+            </View>
           )}
+          {isProOnlyAndNotMember && (
+            <View style={styles.proOnlyOverlay}>
+              <View style={styles.proOnlyBadge}>
+                <Text style={styles.proOnlyText}>PRO ONLY</Text>
+              </View>
+            </View>
+          )}
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.7)"]}
+            style={styles.imageGradient}
+          >
+            <View style={styles.tutorialBadges}>
+              <View
+                style={[
+                  styles.difficultyBadge,
+                  { backgroundColor: getDifficultyColor(tutorial.difficulty) },
+                ]}
+              >
+                <Text style={styles.badgeText}>{tutorial.difficulty}</Text>
+              </View>
+              <View
+                style={[
+                  styles.durationBadge,
+                  { backgroundColor: "rgba(255,255,255,0.9)" },
+                ]}
+              >
+                <Text style={[styles.badgeText, { color: "#333" }]}>
+                  {tutorial.duration}
+                </Text>
+              </View>
+            </View>
+          </LinearGradient>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+
+        <View style={styles.tutorialContent}>
+          <View style={styles.tutorialTitleContainer}>
+            <Text
+              style={[styles.tutorialTitle, { color: theme.text }]}
+              numberOfLines={2}
+            >
+              {tutorial.title}
+            </Text>
+            {tutorial.proOnly && (
+              <View
+                style={[
+                  styles.proLabel,
+                  {
+                    backgroundColor: isProMember ? "#FFD700" : "#FF6B35",
+                    opacity: isProMember ? 1 : 0.8,
+                  },
+                ]}
+              >
+                <Text style={styles.proLabelText}>PRO</Text>
+              </View>
+            )}
+          </View>
+          <Text
+            style={[styles.tutorialDescription, { color: theme.textSecondary }]}
+            numberOfLines={2}
+          >
+            {tutorial.description}
+          </Text>
+          <View style={styles.tutorialFooter}>
+            <Text style={[styles.lessonCount, { color: theme.primary }]}>
+              {tutorial.lessonCount} lessons
+            </Text>
+            {isAccessible && (
+              <TouchableOpacity
+                style={[styles.startButton, { backgroundColor: theme.primary }]}
+                onPress={() => handleStartTutorial(tutorial.id, tutorial.title)}
+              >
+                <Text style={styles.startButtonText}>Start</Text>
+              </TouchableOpacity>
+            )}
+            {isProOnlyAndNotMember && (
+              <TouchableOpacity
+                style={[styles.upgradeButton, { borderColor: "#FF6B35" }]}
+                onPress={() => router.push("/pro-features")}
+              >
+                <Text style={[styles.upgradeButtonText, { color: "#FF6B35" }]}>
+                  Upgrade
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const selectedCategoryData = tutorialCategories.find(
     (cat) => cat.id === selectedCategory
@@ -710,8 +774,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     fontFamily: "Inder",
-    marginBottom: 8,
     lineHeight: 24,
+    flex: 1,
   },
   tutorialDescription: {
     fontSize: 14,
@@ -736,6 +800,65 @@ const styles = StyleSheet.create({
   },
   startButtonText: {
     color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  proOnlyOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 2,
+  },
+  proOnlyBadge: {
+    backgroundColor: "#FF6B35",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#FFF",
+  },
+  proOnlyText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    letterSpacing: 1,
+  },
+  tutorialTitleContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  proLabel: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 8,
+    minWidth: 35,
+    alignItems: "center",
+  },
+  proLabelText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    letterSpacing: 0.5,
+  },
+  upgradeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    backgroundColor: "transparent",
+  },
+  upgradeButtonText: {
     fontSize: 14,
     fontWeight: "600",
     fontFamily: "Inder",
