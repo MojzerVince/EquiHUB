@@ -158,7 +158,11 @@ const OptionsScreen = () => {
         await loadEmergencyContacts();
         setShowAddContact(false);
         setSearchQuery("");
-        Alert.alert("Success", "Emergency contact added successfully.");
+        showConfirm(
+          "✅ Success!",
+          "Emergency contact added successfully. They will now be notified in case of emergencies.",
+          () => {}
+        );
       } else {
         Alert.alert(
           "Error",
@@ -261,9 +265,10 @@ const OptionsScreen = () => {
           onPress: async () => {
             try {
               await SMSTestUtility.syncContactsToDatabase(user.id);
-              Alert.alert(
-                "✅ Sync Complete",
-                "Emergency contacts have been synced to the database. Server SMS alerts are now fully configured."
+              showConfirm(
+                "✅ Sync Complete!",
+                "Emergency contacts have been successfully synced to the database. Server SMS alerts are now fully configured and ready to protect you during emergencies.",
+                () => {}
               );
             } catch (error) {
               console.error("Error syncing contacts:", error);
@@ -1110,7 +1115,7 @@ const OptionsScreen = () => {
               ]}
             >
               <ActionButton
-                title={`Emergency Contacts (${emergencyContacts.length}/3)`}
+                title={`Emergency Contacts (${emergencyContacts.length}/1)`}
                 onPress={() => setShowEmergencyContacts(true)}
               />
             </View>
@@ -1610,23 +1615,36 @@ const OptionsScreen = () => {
                 </View>
               )}
 
-              {/* Add Contact Button */}
-              <TouchableOpacity
-                style={[
-                  styles.addContactButton,
-                  { backgroundColor: currentTheme.colors.primary },
-                ]}
-                onPress={() => {
-                  if (contactsPermissionStatus.granted) {
-                    loadDeviceContacts();
-                  }
-                  setShowAddContact(true);
-                }}
-              >
-                <Text style={styles.addContactButtonText}>
-                  + Add Emergency Contact
-                </Text>
-              </TouchableOpacity>
+              {/* Add Contact Button - Only show if under limit */}
+              {emergencyContacts.length < 1 ? (
+                <TouchableOpacity
+                  style={[
+                    styles.addContactButton,
+                    { backgroundColor: currentTheme.colors.primary },
+                  ]}
+                  onPress={() => {
+                    if (contactsPermissionStatus.granted) {
+                      loadDeviceContacts();
+                    }
+                    setShowAddContact(true);
+                  }}
+                >
+                  <Text style={styles.addContactButtonText}>
+                    + Add Emergency Contact
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View
+                  style={[
+                    styles.addContactButton,
+                    { backgroundColor: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  <Text style={[styles.addContactButtonText, { opacity: 0.8 }]}>
+                    ✓ Emergency Contact Limit Reached (1/1)
+                  </Text>
+                </View>
+              )}
 
               {/* Sync Contacts Button */}
               <TouchableOpacity
