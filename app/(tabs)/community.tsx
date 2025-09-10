@@ -4289,6 +4289,7 @@ const styles = StyleSheet.create({
   },
   availableChallengesSection: {
     padding: 15,
+    marginBottom: 120,
   },
   challengeDetails: {
     marginVertical: 8,
@@ -4321,7 +4322,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-    marginBottom: 100,
   },
   challengeModalTitle: {
     fontSize: 20,
