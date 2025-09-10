@@ -358,7 +358,10 @@ const CoachScreen = () => {
                 style={styles.backButton}
                 onPress={() => setSelectedCategory(null)}
               >
-                <Text style={styles.backButtonText}>← Back</Text>
+                <Image
+                  source={require("../../assets/in_app_icons/back.png")}
+                  style={{ width: 26, height: 26 }}
+                />
               </TouchableOpacity>
               <Text style={styles.header}>
                 {selectedCategoryData?.title || "Tutorials"}
@@ -474,9 +477,15 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: "absolute",
-    left: 0,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    left: 20,
+    padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
   },
   backButtonText: {
     fontSize: 16,
@@ -490,13 +499,10 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 50,
     marginTop: -8,
   },
-  scrollView: {
-    flex: 1,
-  },
   contentContainer: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 100,
+    paddingBottom: 130,
   },
   introSection: {
     marginBottom: 30,
@@ -519,7 +525,8 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   featuredSection: {
-    marginTop: 10,
+    marginTop: 0,
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 20,
@@ -566,6 +573,7 @@ const styles = StyleSheet.create({
     height: 32,
     justifyContent: "center",
     alignItems: "center",
+    marginLeft: 5,
   },
   tutorialCountText: {
     color: "#FFFFFF",
@@ -697,17 +705,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     fontFamily: "Inder",
-  },
-  comingSoonText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    fontFamily: "Inder",
-    marginBottom: 10,
-  },
-  comingSoonSubtext: {
-    fontSize: 16,
-    fontFamily: "Inder",
-    textAlign: "center",
   },
 });
 
