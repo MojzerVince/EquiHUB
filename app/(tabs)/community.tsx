@@ -2086,7 +2086,7 @@ export default function CommunityScreen() {
               }}
             >
               <Image
-                style={{ width: 36, height: 36 }}
+                style={{ width: 40, height: 40 }}
                 source={require("../../assets/in_app_icons/friends.png")}
               />
             </TouchableOpacity>
@@ -2098,7 +2098,7 @@ export default function CommunityScreen() {
               onPress={() => setShowNotifications(true)}
             >
               <Image
-                style={{ width: 36, height: 36 }}
+                style={{ width: 34, height: 34 }}
                 source={require("../../assets/in_app_icons/notifications.png")}
               />
               <NotificationBadge count={notificationCount} />
@@ -3520,7 +3520,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
-    marginTop: -4,
+    marginTop: -8,
     paddingTop: 10,
   },
   stickyTabWrapper: {
