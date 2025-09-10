@@ -15,7 +15,7 @@ export const icons = {
       }}
     />
   ),
-  coach: ({ focused }: IconProps) => (
+  tips: ({ focused }: IconProps) => (
     <Image
       source={require("../assets/in_app_icons/tips.png")}
       style={{

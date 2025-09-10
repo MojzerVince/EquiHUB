@@ -8,11 +8,11 @@ const TabLayout = () => {
       tabBar={(props) => <TabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        animation: 'none',
+        animation: "none",
       }}
     >
       <Tabs.Screen name="community" options={{ title: "Community" }} />
-      <Tabs.Screen name="coach" options={{ title: "Coach" }} />
+      <Tabs.Screen name="tips" options={{ title: "Tips & Guides" }} />
       <Tabs.Screen name="map" options={{ title: "Map" }} />
       <Tabs.Screen name="index" options={{ title: "My Horses" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />

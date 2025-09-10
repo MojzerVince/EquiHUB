@@ -20,7 +20,7 @@ const CoachScreen = () => {
         ]}
       >
         <View style={styles.headerContainer}>
-          <Text style={styles.header}>Coach</Text>
+          <Text style={styles.header}>Tips & Guides</Text>
         </View>
       </SafeAreaView>
       <View
