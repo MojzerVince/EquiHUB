@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS public.feedbacks (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   subject TEXT NOT NULL,
   message TEXT NOT NULL,
+  consent_to_share_email BOOLEAN DEFAULT FALSE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'reviewed', 'resolved', 'closed'))

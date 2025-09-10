@@ -393,6 +393,7 @@ const OptionsScreen = () => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackSubject, setFeedbackSubject] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [consentToShareEmail, setConsentToShareEmail] = useState(false);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   // Load notification settings when component mounts
@@ -817,12 +818,14 @@ const OptionsScreen = () => {
       const result = await FeedbackAPI.submitFeedback(user.id, {
         subject: feedbackSubject,
         message: feedbackMessage,
+        consentToShareEmail: consentToShareEmail,
       });
 
       if (result.success) {
         // Clear form
         setFeedbackSubject("");
         setFeedbackMessage("");
+        setConsentToShareEmail(false);
         setShowFeedback(false);
 
         // Show success message
@@ -2228,6 +2231,50 @@ const OptionsScreen = () => {
                 {feedbackMessage.length}/2000
               </Text>
 
+              {/* Consent Checkbox */}
+              <View style={styles.consentContainer}>
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() => setConsentToShareEmail(!consentToShareEmail)}
+                  disabled={isSubmittingFeedback}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      {
+                        borderColor: currentTheme.colors.border,
+                        backgroundColor: consentToShareEmail
+                          ? currentTheme.colors.primary
+                          : currentTheme.colors.surface,
+                      },
+                    ]}
+                  >
+                    {consentToShareEmail && (
+                      <Text style={styles.checkboxCheckmark}>✓</Text>
+                    )}
+                  </View>
+                  <View style={styles.checkboxTextContainer}>
+                    <Text
+                      style={[
+                        styles.consentOptionalText,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      Optional
+                    </Text>
+                    <Text
+                      style={[
+                        styles.consentText,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      I consent to share my email address to receive updates
+                      about my feedback
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
               {/* Submit Button */}
               <TouchableOpacity
                 style={[
@@ -2915,7 +2962,7 @@ const styles = StyleSheet.create({
   // Feedback Modal Styles
   feedbackModal: {
     maxHeight: "90%",
-    minHeight: "70%",
+    minHeight: "80%",
     borderRadius: 20,
     padding: 0,
     margin: 0,
@@ -2926,6 +2973,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
     borderBottomWidth: 1,
   },
   feedbackTitle: {
@@ -2957,7 +3006,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontFamily: "Inder",
     marginBottom: 8,
-    marginTop: 16,
+    marginTop: 8,
   },
   feedbackSubjectInput: {
     padding: 12,
@@ -2991,13 +3040,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     marginTop: 20,
-    marginBottom: 20,
+    marginBottom: 50,
   },
   feedbackSubmitButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
     fontFamily: "Inder",
+  },
+  consentContainer: {
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 8,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderRadius: 4,
+    marginRight: 12,
+    marginTop: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxCheckmark: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "bold",
+    lineHeight: 16,
+  },
+  checkboxTextContainer: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  consentOptionalText: {
+    fontSize: 18,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  consentText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 20,
   },
 });
 

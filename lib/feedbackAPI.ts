@@ -5,6 +5,7 @@ export interface Feedback {
   user_id: string;
   subject: string;
   message: string;
+  consent_to_share_email: boolean;
   status: "pending" | "reviewed" | "resolved" | "closed";
   created_at: string;
   updated_at: string;
@@ -13,6 +14,7 @@ export interface Feedback {
 export interface CreateFeedbackRequest {
   subject: string;
   message: string;
+  consentToShareEmail: boolean;
 }
 
 export interface FeedbackResponse {
@@ -69,6 +71,7 @@ export class FeedbackAPI {
             user_id: userId,
             subject: feedbackData.subject.trim(),
             message: feedbackData.message.trim(),
+            consent_to_share_email: feedbackData.consentToShareEmail,
             status: "pending",
           },
         ])
@@ -181,6 +184,9 @@ export class FeedbackAPI {
       }
       if (updates.message !== undefined) {
         updateData.message = updates.message.trim();
+      }
+      if (updates.consentToShareEmail !== undefined) {
+        updateData.consent_to_share_email = updates.consentToShareEmail;
       }
 
       const { data, error } = await supabase
