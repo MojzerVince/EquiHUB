@@ -2085,7 +2085,10 @@ export default function CommunityScreen() {
                 }
               }}
             >
-              <Text style={{ fontSize: 18, color: "#FFFFFF" }}>👥</Text>
+              <Image
+                style={{ width: 36, height: 36 }}
+                source={require("../../assets/in_app_icons/friends.png")}
+              />
             </TouchableOpacity>
           )}
           <Text style={[styles.header, { color: "#FFFFFF" }]}>Community</Text>
@@ -2094,7 +2097,10 @@ export default function CommunityScreen() {
               style={styles.notificationIcon}
               onPress={() => setShowNotifications(true)}
             >
-              <Text style={{ fontSize: 18, color: "#FFFFFF" }}>🔔</Text>
+              <Image
+                style={{ width: 36, height: 36 }}
+                source={require("../../assets/in_app_icons/notifications.png")}
+              />
               <NotificationBadge count={notificationCount} />
             </TouchableOpacity>
           )}
@@ -2505,10 +2511,9 @@ export default function CommunityScreen() {
                         <Text
                           style={[styles.progressText, { color: theme.text }]}
                         >
-                          {activeGlobalChallenge.stableProgress > 0 
+                          {activeGlobalChallenge.stableProgress > 0
                             ? `${activeGlobalChallenge.stableName} - Rank #${activeGlobalChallenge.stableRank}`
-                            : `${activeGlobalChallenge.stableName} - Start riding to contribute to your stable!`
-                          }
+                            : `${activeGlobalChallenge.stableName} - Start riding to contribute to your stable!`}
                         </Text>
                         <View
                           style={[
@@ -3996,7 +4001,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     zIndex: 10,
   },
   friendsButton: {
@@ -4009,7 +4013,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     zIndex: 10,
   },
   // Modal Styles
@@ -4289,6 +4292,7 @@ const styles = StyleSheet.create({
   },
   availableChallengesSection: {
     padding: 15,
+    marginBottom: 115,
   },
   challengeDetails: {
     marginVertical: 8,
