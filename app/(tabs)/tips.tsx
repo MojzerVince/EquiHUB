@@ -2,6 +2,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useState } from "react";
 import {
   Image,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -10,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import TutorialListScreen from "../../components/TutorialListScreen";
 import { useTheme } from "../../contexts/ThemeContext";
 
 // TypeScript interfaces
@@ -39,6 +41,11 @@ const CoachScreen = () => {
   const theme = currentTheme.colors;
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedTutorial, setSelectedTutorial] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
 
   // Mock data for tutorial categories and content
   const tutorialCategories: TutorialCategory[] = [
@@ -233,6 +240,16 @@ const CoachScreen = () => {
     }, 1000);
   };
 
+  const handleStartTutorial = (tutorialId: string, tutorialTitle: string) => {
+    setSelectedTutorial({ id: tutorialId, title: tutorialTitle });
+    setShowTutorialModal(true);
+  };
+
+  const handleCloseTutorial = () => {
+    setShowTutorialModal(false);
+    setSelectedTutorial(null);
+  };
+
   const renderCategoryCard = (category: TutorialCategory) => (
     <TouchableOpacity
       key={category.id}
@@ -325,6 +342,7 @@ const CoachScreen = () => {
           {!tutorial.isLocked && (
             <TouchableOpacity
               style={[styles.startButton, { backgroundColor: theme.primary }]}
+              onPress={() => handleStartTutorial(tutorial.id, tutorial.title)}
             >
               <Text style={styles.startButtonText}>Start</Text>
             </TouchableOpacity>
@@ -440,6 +458,22 @@ const CoachScreen = () => {
           </View>
         )}
       </ScrollView>
+
+      {/* Tutorial Modal */}
+      <Modal
+        visible={showTutorialModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={handleCloseTutorial}
+      >
+        {selectedTutorial && (
+          <TutorialListScreen
+            tutorialId={selectedTutorial.id}
+            tutorialTitle={selectedTutorial.title}
+            onClose={handleCloseTutorial}
+          />
+        )}
+      </Modal>
     </View>
   );
 };
