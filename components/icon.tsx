@@ -17,7 +17,7 @@ export const icons = {
   ),
   coach: ({ focused }: IconProps) => (
     <Image
-      source={require("../assets/UI_resources/UI_white/coach_white.png")}
+      source={require("../assets/in_app_icons/tips.png")}
       style={{
         width: focused ? 44 : 38,
         height: focused ? 44 : 38,
