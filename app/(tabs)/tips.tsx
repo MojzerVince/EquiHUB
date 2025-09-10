@@ -369,78 +369,74 @@ const CoachScreen = () => {
           )}
         </View>
       </SafeAreaView>
-      <View
+      <ScrollView
         style={[
           styles.viewPort,
           { backgroundColor: currentTheme.colors.background },
         ]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {selectedCategory ? (
-            // Show tutorials for selected category
-            <View style={styles.tutorialsContainer}>
-              <View style={styles.categoryBanner}>
-                <Text style={styles.categoryBannerIcon}>
-                  {selectedCategoryData?.icon}
-                </Text>
-                <Text
-                  style={[
-                    styles.categoryBannerDescription,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  {selectedCategoryData?.description}
-                </Text>
-              </View>
+        {selectedCategory ? (
+          // Show tutorials for selected category
+          <View style={styles.tutorialsContainer}>
+            <View style={styles.categoryBanner}>
+              <Text style={styles.categoryBannerIcon}>
+                {selectedCategoryData?.icon}
+              </Text>
+              <Text
+                style={[
+                  styles.categoryBannerDescription,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                {selectedCategoryData?.description}
+              </Text>
+            </View>
 
-              <View style={styles.tutorialsList}>
-                {selectedCategoryData?.tutorials.map(renderTutorialCard)}
+            <View style={styles.tutorialsList}>
+              {selectedCategoryData?.tutorials.map(renderTutorialCard)}
+            </View>
+          </View>
+        ) : (
+          // Show category overview
+          <View style={styles.contentContainer}>
+            <View style={styles.introSection}>
+              <Text style={[styles.introTitle, { color: theme.text }]}>
+                Learn & Improve Your Horsemanship
+              </Text>
+              <Text
+                style={[
+                  styles.introDescription,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                Explore our comprehensive guides and tutorials to enhance your
+                skills in horse care, riding, and training.
+              </Text>
+            </View>
+
+            <View style={styles.categoriesContainer}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Browse Categories
+              </Text>
+              {tutorialCategories.map(renderCategoryCard)}
+            </View>
+
+            <View style={styles.featuredSection}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Featured Tutorials
+              </Text>
+              <View style={styles.featuredTutorials}>
+                {tutorialCategories[0]?.tutorials[0] &&
+                  renderTutorialCard(tutorialCategories[0].tutorials[0])}
               </View>
             </View>
-          ) : (
-            // Show category overview
-            <View style={styles.contentContainer}>
-              <View style={styles.introSection}>
-                <Text style={[styles.introTitle, { color: theme.text }]}>
-                  Learn & Improve Your Horsemanship
-                </Text>
-                <Text
-                  style={[
-                    styles.introDescription,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  Explore our comprehensive guides and tutorials to enhance your
-                  skills in horse care, riding, and training.
-                </Text>
-              </View>
-
-              <View style={styles.categoriesContainer}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  Browse Categories
-                </Text>
-                {tutorialCategories.map(renderCategoryCard)}
-              </View>
-
-              <View style={styles.featuredSection}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  Featured Tutorials
-                </Text>
-                <View style={styles.featuredTutorials}>
-                  {tutorialCategories[0]?.tutorials[0] &&
-                    renderTutorialCard(tutorialCategories[0].tutorials[0])}
-                </View>
-              </View>
-            </View>
-          )}
-        </ScrollView>
-      </View>
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 };
@@ -448,15 +444,26 @@ const CoachScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#335C67",
   },
   safeArea: {
-    paddingBottom: 0,
+    backgroundColor: "#335C67",
   },
   headerContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
+    position: "relative",
     marginBottom: -45,
+    marginTop: -5,
+  },
+  header: {
+    fontSize: 30,
+    fontFamily: "Inder",
+    color: "#fff",
+    textAlign: "center",
+    flex: 1,
+    fontWeight: "600",
   },
   headerWithBack: {
     flexDirection: "row",
@@ -476,22 +483,19 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontFamily: "Inder",
   },
-  header: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    fontFamily: "Inder",
-    textAlign: "center",
-  },
   viewPort: {
+    backgroundColor: "#FFFFFF",
     flex: 1,
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    marginTop: -8,
   },
   scrollView: {
     flex: 1,
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 10,
     paddingBottom: 100,
   },
   introSection: {
