@@ -7,6 +7,7 @@ import {
   EmergencyContact,
   EmergencyContactsAPI,
 } from "@/lib/emergencyContactsAPI";
+import { FeedbackAPI } from "@/lib/feedbackAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
 import { SMSTestUtility } from "@/lib/smsTestUtility";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -387,6 +388,12 @@ const OptionsScreen = () => {
     canAskAgain: true,
   });
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Feedback state
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackSubject, setFeedbackSubject] = useState("");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   // Load notification settings when component mounts
   useEffect(() => {
@@ -786,6 +793,54 @@ const OptionsScreen = () => {
     } catch (error) {
       console.error("Error requesting permissions:", error);
       showError("Failed to request permissions. Please try again.");
+    }
+  };
+
+  // Handle feedback submission
+  const handleSubmitFeedback = async () => {
+    if (!user?.id) return;
+
+    // Validate input
+    if (!feedbackSubject.trim()) {
+      showError("Please enter a subject for your feedback.");
+      return;
+    }
+
+    if (!feedbackMessage.trim()) {
+      showError("Please enter a message for your feedback.");
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+
+    try {
+      const result = await FeedbackAPI.submitFeedback(user.id, {
+        subject: feedbackSubject,
+        message: feedbackMessage,
+      });
+
+      if (result.success) {
+        // Clear form
+        setFeedbackSubject("");
+        setFeedbackMessage("");
+        setShowFeedback(false);
+
+        // Show success message
+        showConfirm(
+          "✅ Thanks for your feedback!",
+          "Your feedback has been successfully submitted. We appreciate your input and will review it carefully to help improve EquiHUB.",
+          () => {}
+        );
+      } else {
+        showError(
+          result.error || "Failed to submit feedback. Please try again."
+        );
+      }
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      showError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmittingFeedback(false);
     }
   };
 
@@ -1240,6 +1295,10 @@ const OptionsScreen = () => {
               <ActionButton
                 title="Privacy Policy"
                 onPress={handlePrivacyPolicy}
+              />
+              <ActionButton
+                title="Feedback"
+                onPress={() => setShowFeedback(true)}
               />
             </View>
           </View>
@@ -2043,6 +2102,167 @@ const OptionsScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Feedback Modal */}
+      <Modal
+        visible={showFeedback}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFeedback(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.feedbackModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View
+              style={[
+                styles.feedbackHeader,
+                { borderBottomColor: currentTheme.colors.accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.feedbackTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Send Feedback
+              </Text>
+              <TouchableOpacity
+                style={styles.feedbackCloseButton}
+                onPress={() => setShowFeedback(false)}
+              >
+                <Text
+                  style={[
+                    styles.feedbackCloseText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.feedbackContent}>
+              <Text
+                style={[
+                  styles.feedbackDescription,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                We value your feedback! Help us improve EquiHUB by sharing your
+                thoughts, suggestions, or reporting issues.
+              </Text>
+
+              {/* Subject Input */}
+              <Text
+                style={[
+                  styles.feedbackLabel,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Subject*
+              </Text>
+              <TextInput
+                style={[
+                  styles.feedbackSubjectInput,
+                  {
+                    borderColor: currentTheme.colors.border,
+                    backgroundColor: currentTheme.colors.surface,
+                    color: currentTheme.colors.text,
+                  },
+                ]}
+                placeholder="Brief description of your feedback"
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                value={feedbackSubject}
+                onChangeText={setFeedbackSubject}
+                maxLength={200}
+                editable={!isSubmittingFeedback}
+              />
+              <Text
+                style={[
+                  styles.feedbackCharacterCount,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {feedbackSubject.length}/200
+              </Text>
+
+              {/* Message Input */}
+              <Text
+                style={[
+                  styles.feedbackLabel,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Message*
+              </Text>
+              <TextInput
+                style={[
+                  styles.feedbackMessageInput,
+                  {
+                    borderColor: currentTheme.colors.border,
+                    backgroundColor: currentTheme.colors.surface,
+                    color: currentTheme.colors.text,
+                  },
+                ]}
+                placeholder="Please describe your feedback in detail..."
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                value={feedbackMessage}
+                onChangeText={setFeedbackMessage}
+                maxLength={2000}
+                multiline={true}
+                numberOfLines={8}
+                textAlignVertical="top"
+                editable={!isSubmittingFeedback}
+              />
+              <Text
+                style={[
+                  styles.feedbackCharacterCount,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {feedbackMessage.length}/2000
+              </Text>
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[
+                  styles.feedbackSubmitButton,
+                  {
+                    backgroundColor:
+                      isSubmittingFeedback ||
+                      !feedbackSubject.trim() ||
+                      !feedbackMessage.trim()
+                        ? currentTheme.colors.textSecondary
+                        : currentTheme.colors.primary,
+                  },
+                ]}
+                onPress={handleSubmitFeedback}
+                disabled={
+                  isSubmittingFeedback ||
+                  !feedbackSubject.trim() ||
+                  !feedbackMessage.trim()
+                }
+              >
+                {isSubmittingFeedback && (
+                  <ActivityIndicator
+                    size="small"
+                    color="#fff"
+                    style={{ marginRight: 8 }}
+                  />
+                )}
+                <Text style={styles.feedbackSubmitButtonText}>
+                  {isSubmittingFeedback ? "Sending..." : "Send Feedback"}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -2690,6 +2910,94 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 16,
     fontStyle: "italic",
+  },
+
+  // Feedback Modal Styles
+  feedbackModal: {
+    maxHeight: "90%",
+    minHeight: "70%",
+    borderRadius: 20,
+    padding: 0,
+    margin: 0,
+    width: "95%",
+  },
+  feedbackHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+  },
+  feedbackTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  feedbackCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  feedbackCloseText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  feedbackContent: {
+    padding: 20,
+    flex: 1,
+  },
+  feedbackDescription: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    marginBottom: 20,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  feedbackLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  feedbackSubjectInput: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    fontSize: 16,
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  feedbackMessageInput: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    fontSize: 16,
+    fontFamily: "Inder",
+    marginBottom: 4,
+    minHeight: 120,
+  },
+  feedbackCharacterCount: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    textAlign: "right",
+    marginBottom: 8,
+    opacity: 0.7,
+  },
+  feedbackSubmitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  feedbackSubmitButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
   },
 });
 
