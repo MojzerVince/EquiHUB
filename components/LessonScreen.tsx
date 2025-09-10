@@ -469,7 +469,9 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
   }
 
   const currentStep = lesson.steps[currentStepIndex];
-  const canProceed = currentStep.type === "quiz" ? showQuizResult : true;
+  const canProceed = currentStep.type === "quiz" 
+    ? (selectedAnswer !== null || showQuizResult) 
+    : true;
 
   return (
     <SafeAreaView
