@@ -106,10 +106,18 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
     );
     if (progress) {
       setLessonProgress(progress);
-      setCurrentStepIndex(progress.currentStep || 0);
+
+      // For completed lessons (review mode), start from the beginning
+      // For in-progress lessons, resume from current step
+      if (progress.isCompleted) {
+        setCurrentStepIndex(0); // Start from beginning for review
+      } else {
+        setCurrentStepIndex(progress.currentStep || 0);
+      }
     } else {
       // Start the lesson
       await TutorialProgressService.startLesson(user.id, tutorialId, lessonId);
+      setCurrentStepIndex(0);
     }
   };
 
@@ -117,6 +125,12 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
     if (!lesson || !user?.id) return;
 
     const currentStep = lesson.steps[currentStepIndex];
+
+    // Safety check for currentStep
+    if (!currentStep) {
+      console.warn("Current step is undefined, cannot proceed");
+      return;
+    }
 
     // Validate step completion based on type
     if (currentStep.type === "quiz" && !showQuizResult) {
@@ -221,9 +235,18 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
   };
 
   const renderStep = () => {
-    if (!lesson) return null;
+    if (!lesson || !lesson.steps) return null;
 
     const currentStep = lesson.steps[currentStepIndex];
+
+    // Handle case where currentStepIndex is out of bounds
+    if (!currentStep) {
+      console.warn(
+        `Step at index ${currentStepIndex} not found. Resetting to step 0.`
+      );
+      setCurrentStepIndex(0);
+      return null;
+    }
 
     return (
       <Animated.View
@@ -458,7 +481,7 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
     }
   };
 
-  if (!lesson) {
+  if (!lesson || !lesson.steps || lesson.steps.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <Text style={[styles.loadingText, { color: theme.text }]}>
@@ -469,9 +492,26 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
   }
 
   const currentStep = lesson.steps[currentStepIndex];
-  const canProceed = currentStep.type === "quiz" 
-    ? (selectedAnswer !== null || showQuizResult) 
-    : true;
+
+  // Handle case where currentStepIndex is out of bounds
+  if (!currentStep) {
+    // Reset to first step if current step is invalid
+    if (currentStepIndex !== 0) {
+      setCurrentStepIndex(0);
+    }
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={[styles.loadingText, { color: theme.text }]}>
+          Loading lesson...
+        </Text>
+      </View>
+    );
+  }
+
+  const canProceed =
+    currentStep.type === "quiz"
+      ? selectedAnswer !== null || showQuizResult
+      : true;
 
   return (
     <SafeAreaView
