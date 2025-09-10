@@ -95,28 +95,60 @@ export class GlobalChallengeAPI {
         userStableId = userStable?.stable_id || null;
       }
 
-      const { data: rankings, error } = await supabase
-        .from('stable_challenge_progress')
-        .select('*')
+      // Query individual stable contributions and aggregate them to get stable totals
+      const { data: contributions, error } = await supabase
+        .from('individual_stable_contributions')
+        .select(`
+          stable_id,
+          contribution,
+          stables(name)
+        `)
         .eq('challenge_id', challengeId)
-        .order('rank', { ascending: true });
+        .eq('is_active', true);
 
       if (error) {
         console.error('Error fetching global leaderboard:', error);
         return [];
       }
 
-      return (rankings || []).map((ranking: any) => ({
-        rank: ranking.rank || 999,
-        stableId: ranking.stable_id,
-        stableName: ranking.stable_name,
-        progressValue: parseFloat(ranking.progress_value),
-        memberCount: ranking.member_count,
-        averageContribution: parseFloat(ranking.average_contribution),
-        completedAt: ranking.completed_at,
-        lastUpdated: ranking.last_updated,
-        isUserStable: userStableId === ranking.stable_id
-      }));
+      // Aggregate contributions by stable
+      const stableMap = new Map();
+      
+      contributions?.forEach((contrib: any) => {
+        const stableId = contrib.stable_id;
+        const stableName = contrib.stables?.name || 'Unknown Stable';
+        const contribution = parseFloat(contrib.contribution) || 0;
+        
+        if (stableMap.has(stableId)) {
+          const existing = stableMap.get(stableId);
+          existing.totalProgress += contribution;
+          existing.memberCount += 1;
+        } else {
+          stableMap.set(stableId, {
+            stableId,
+            stableName,
+            totalProgress: contribution,
+            memberCount: 1
+          });
+        }
+      });
+
+      // Convert to array and sort by total progress
+      const rankings = Array.from(stableMap.values())
+        .sort((a, b) => b.totalProgress - a.totalProgress)
+        .map((stable, index) => ({
+          rank: index + 1,
+          stableId: stable.stableId,
+          stableName: stable.stableName,
+          progressValue: stable.totalProgress,
+          memberCount: stable.memberCount,
+          averageContribution: stable.memberCount > 0 ? stable.totalProgress / stable.memberCount : 0,
+          completedAt: undefined, // Changed from null to undefined
+          lastUpdated: new Date().toISOString(),
+          isUserStable: userStableId === stable.stableId
+        }));
+
+      return rankings;
     } catch (error) {
       console.error('Exception fetching global leaderboard:', error);
       return [];
@@ -270,13 +302,39 @@ export class GlobalChallengeAPI {
         .eq('user_id', userId)
         .single();
 
-      // Get stable's progress and rank
-      const { data: stableProgress } = await supabase
-        .from('stable_challenge_progress')
-        .select('progress_value, rank, completed_at')
+      // Get all contributions for this stable to calculate total progress
+      const { data: allStableContributions } = await supabase
+        .from('individual_stable_contributions')
+        .select('contribution')
         .eq('challenge_id', activeChallenge.id)
         .eq('stable_id', userStable.stable_id)
-        .single();
+        .eq('is_active', true);
+
+      // Calculate stable's total progress
+      const stableProgressValue = allStableContributions?.reduce((total: number, contrib: any) => 
+        total + (parseFloat(contrib.contribution) || 0), 0
+      ) || 0;
+
+      // Get rank by comparing with other stables (this is a simplified approach)
+      // For better performance, you might want to implement this differently
+      const { data: allStableRankings } = await supabase
+        .from('individual_stable_contributions')
+        .select('stable_id, contribution')
+        .eq('challenge_id', activeChallenge.id)
+        .eq('is_active', true);
+
+      // Calculate each stable's total and determine rank
+      const stableTotals = new Map();
+      allStableRankings?.forEach((contrib: any) => {
+        const stableId = contrib.stable_id;
+        const contribution = parseFloat(contrib.contribution) || 0;
+        stableTotals.set(stableId, (stableTotals.get(stableId) || 0) + contribution);
+      });
+
+      const sortedStables = Array.from(stableTotals.entries())
+        .sort((a, b) => b[1] - a[1]);
+      
+      const userStableRank = sortedStables.findIndex(([stableId]) => stableId === userStable.stable_id) + 1;
 
       // Get user's earned rewards
       const { data: rewards } = await supabase
@@ -291,11 +349,11 @@ export class GlobalChallengeAPI {
         stableName: (userStable.stables as any)?.name || 'Your Stable',
         startDate: activeChallenge.startDate,
         userContribution: userContribution ? parseFloat(userContribution.contribution) : 0,
-        stableProgress: stableProgress ? parseFloat(stableProgress.progress_value) : 0,
-        stableRank: stableProgress?.rank || 999,
+        stableProgress: stableProgressValue,
+        stableRank: userStableRank || 999,
         lastUpdated: new Date().toISOString(),
-        isCompleted: stableProgress?.completed_at !== null,
-        completedDate: stableProgress?.completed_at,
+        isCompleted: stableProgressValue >= activeChallenge.targetDistance, // Check if target reached
+        completedDate: stableProgressValue >= activeChallenge.targetDistance ? new Date().toISOString() : undefined,
         earnedRewards: rewards?.map((r: any) => r.reward_id) || []
       };
 
@@ -391,11 +449,40 @@ export class GlobalChallengeAPI {
     try {
       const supabase = getSupabase();
 
-      // Get stable statistics
-      const { data: stableStats } = await supabase
-        .from('stable_challenge_progress')
-        .select('progress_value, completed_at, member_count')
-        .eq('challenge_id', challengeId);
+      // Get stable statistics by aggregating individual contributions
+      const { data: allContributions } = await supabase
+        .from('individual_stable_contributions')
+        .select('stable_id, contribution, is_active')
+        .eq('challenge_id', challengeId)
+        .eq('is_active', true);
+
+      // Calculate stable totals
+      const stableMap = new Map();
+      allContributions?.forEach((contrib: any) => {
+        const stableId = contrib.stable_id;
+        const contribution = parseFloat(contrib.contribution) || 0;
+        
+        if (stableMap.has(stableId)) {
+          stableMap.get(stableId).totalProgress += contribution;
+        } else {
+          stableMap.set(stableId, {
+            stableId,
+            totalProgress: contribution,
+            memberCount: 1
+          });
+        }
+      });
+
+      const stableStats = Array.from(stableMap.values());
+
+      // Get current challenge to check target distance
+      const { data: currentChallenge } = await supabase
+        .from('global_challenges')
+        .select('target_distance')
+        .eq('id', challengeId)
+        .single();
+
+      const targetDistance = currentChallenge?.target_distance || 500;
 
       // Get contributor count
       const { count: contributorCount } = await supabase
@@ -405,9 +492,9 @@ export class GlobalChallengeAPI {
         .eq('is_active', true);
 
       const totalStables = stableStats?.length || 0;
-      const totalDistance = stableStats?.reduce((sum: number, stable: any) => sum + parseFloat(stable.progress_value), 0) || 0;
+      const totalDistance = stableStats?.reduce((sum: number, stable: any) => sum + stable.totalProgress, 0) || 0;
       const averageDistance = totalStables > 0 ? totalDistance / totalStables : 0;
-      const completedStables = stableStats?.filter((stable: any) => stable.completed_at !== null).length || 0;
+      const completedStables = stableStats?.filter((stable: any) => stable.totalProgress >= targetDistance).length || 0;
       const totalContributors = contributorCount || 0;
 
       return {
@@ -472,7 +559,7 @@ export class GlobalChallengeAPI {
           stable_id,
           contribution,
           profiles(name, profile_image_url),
-          stable_challenge_progress(stable_name)
+          stables(name)
         `)
         .eq('challenge_id', challengeId)
         .eq('is_active', true)
@@ -489,7 +576,7 @@ export class GlobalChallengeAPI {
         userName: performer.profiles?.name || 'Unknown User',
         userAvatar: performer.profiles?.profile_image_url || '',
         stableId: performer.stable_id,
-        stableName: performer.stable_challenge_progress?.stable_name || 'Unknown Stable',
+        stableName: performer.stables?.name || 'Unknown Stable',
         contribution: parseFloat(performer.contribution)
       }));
     } catch (error) {
