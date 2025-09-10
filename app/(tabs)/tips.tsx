@@ -583,8 +583,8 @@ const styles = StyleSheet.create({
   },
   tutorialsContainer: {
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 100,
+    paddingTop: 10,
+    paddingBottom: 130,
   },
   categoryBanner: {
     alignItems: "center",
