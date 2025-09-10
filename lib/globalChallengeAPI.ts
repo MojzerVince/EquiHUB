@@ -334,7 +334,19 @@ export class GlobalChallengeAPI {
       const sortedStables = Array.from(stableTotals.entries())
         .sort((a, b) => b[1] - a[1]);
       
-      const userStableRank = sortedStables.findIndex(([stableId]) => stableId === userStable.stable_id) + 1;
+      // Fix rank calculation - ensure we get a valid rank
+      let userStableRank = sortedStables.findIndex(([stableId]) => stableId === userStable.stable_id) + 1;
+      
+      // If rank is 0 (not found), it means the stable might not have contributions yet
+      // In that case, if there are no contributions, rank should be 1 (only participant)
+      // If there are other stables with contributions, rank should be last
+      if (userStableRank === 0) {
+        if (sortedStables.length === 0) {
+          userStableRank = 1; // Only participant, should be #1
+        } else {
+          userStableRank = sortedStables.length + 1; // Last place after all contributing stables
+        }
+      }
 
       // Get user's earned rewards
       const { data: rewards } = await supabase
@@ -350,7 +362,7 @@ export class GlobalChallengeAPI {
         startDate: activeChallenge.startDate,
         userContribution: userContribution ? parseFloat(userContribution.contribution) : 0,
         stableProgress: stableProgressValue,
-        stableRank: userStableRank || 999,
+        stableRank: userStableRank,
         lastUpdated: new Date().toISOString(),
         isCompleted: stableProgressValue >= activeChallenge.targetDistance, // Check if target reached
         completedDate: stableProgressValue >= activeChallenge.targetDistance ? new Date().toISOString() : undefined,

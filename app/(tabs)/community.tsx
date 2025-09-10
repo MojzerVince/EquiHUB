@@ -2505,8 +2505,10 @@ export default function CommunityScreen() {
                         <Text
                           style={[styles.progressText, { color: theme.text }]}
                         >
-                          {activeGlobalChallenge.stableName} - Rank #
-                          {activeGlobalChallenge.stableRank}
+                          {activeGlobalChallenge.stableProgress > 0 
+                            ? `${activeGlobalChallenge.stableName} - Rank #${activeGlobalChallenge.stableRank}`
+                            : `${activeGlobalChallenge.stableName} - Start riding to contribute to your stable!`
+                          }
                         </Text>
                         <View
                           style={[
@@ -4319,6 +4321,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+    marginBottom: 100,
   },
   challengeModalTitle: {
     fontSize: 20,
