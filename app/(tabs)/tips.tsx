@@ -424,7 +424,15 @@ const CoachScreen = () => {
           isProOnlyAndNotMember && { opacity: 0.7 },
         ]}
         activeOpacity={0.8}
-        disabled={tutorial.isLocked || isProOnlyAndNotMember}
+        disabled={tutorial.isLocked}
+        onPress={() => {
+          if (tutorial.isLocked) return;
+          if (isProOnlyAndNotMember) {
+            router.push("/pro-features");
+          } else {
+            handleStartTutorial(tutorial.id, tutorial.title);
+          }
+        }}
       >
         <View style={styles.tutorialImageContainer}>
           <Image
@@ -502,23 +510,10 @@ const CoachScreen = () => {
             <Text style={[styles.lessonCount, { color: theme.primary }]}>
               {tutorial.lessonCount} lessons
             </Text>
-            {isAccessible && (
-              <TouchableOpacity
-                style={[styles.startButton, { backgroundColor: theme.primary }]}
-                onPress={() => handleStartTutorial(tutorial.id, tutorial.title)}
-              >
-                <Text style={styles.startButtonText}>Start</Text>
-              </TouchableOpacity>
-            )}
             {isProOnlyAndNotMember && (
-              <TouchableOpacity
-                style={[styles.upgradeButton, { borderColor: "#FF6B35" }]}
-                onPress={() => router.push("/pro-features")}
-              >
-                <Text style={[styles.upgradeButtonText, { color: "#FF6B35" }]}>
-                  Upgrade
-                </Text>
-              </TouchableOpacity>
+              <Text style={[styles.upgradeText, { color: "#FF6B35" }]}>
+                Tap to upgrade
+              </Text>
             )}
           </View>
         </View>
@@ -609,12 +604,6 @@ const CoachScreen = () => {
             <Text style={[styles.lessonCount, { color: theme.textSecondary }]}>
               Last accessed: {new Date(lesson.lastAccessedDate).toLocaleDateString()}
             </Text>
-            <TouchableOpacity
-              style={[styles.continueButton, { backgroundColor: theme.primary }]}
-              onPress={() => handleStartTutorial(lesson.tutorialId, lesson.title)}
-            >
-              <Text style={styles.startButtonText}>Continue</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </TouchableOpacity>
@@ -1106,6 +1095,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+  },
+  upgradeText: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    fontStyle: "italic",
   },
 });
 
