@@ -2512,11 +2512,15 @@ const OptionsScreen = () => {
 
             <ScrollView style={styles.aboutContent}>
               <View style={styles.aboutLogoContainer}>
+                <Image 
+                  source={require("../../assets/icons/512x512.png")}
+                  style={styles.aboutAppIcon}
+                />
                 <Text style={[styles.aboutAppName, { color: currentTheme.colors.text }]}>
-                  🐎 EquiHUB
+                  EquiHUB
                 </Text>
                 <Text style={[styles.aboutVersion, { color: currentTheme.colors.textSecondary }]}>
-                  Version 1.0.0
+                  Version {appConfig.expo.version}
                 </Text>
               </View>
 
@@ -3469,6 +3473,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
     paddingVertical: 10,
+  },
+  aboutAppIcon: {
+    width: 80,
+    height: 80,
+    marginBottom: 12,
+    borderRadius: 16,
   },
   aboutAppName: {
     fontSize: 32,
