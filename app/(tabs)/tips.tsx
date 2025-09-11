@@ -39,6 +39,21 @@ interface Tutorial {
   proOnly?: boolean;
 }
 
+interface StartedLesson {
+  id: string;
+  tutorialId: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  lessonCount: number;
+  completedLessons: number;
+  duration: string;
+  difficulty: "Beginner" | "Intermediate" | "Advanced";
+  category: string;
+  lastAccessedDate: string;
+  progressPercentage: number;
+}
+
 const CoachScreen = () => {
   const { currentTheme } = useTheme();
   const { isProMember } = useSubscription();
@@ -50,6 +65,38 @@ const CoachScreen = () => {
     title: string;
   } | null>(null);
   const [showTutorialModal, setShowTutorialModal] = useState(false);
+
+  // Mock data for started lessons with progress
+  const [startedLessons, setStartedLessons] = useState<StartedLesson[]>([
+    {
+      id: "started-basic-first-aid",
+      tutorialId: "basic-first-aid",
+      title: "Basic Horse First Aid",
+      description: "Learn essential first aid techniques for common horse injuries and emergencies",
+      imageUrl: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=400&h=200&fit=crop",
+      lessonCount: 6,
+      completedLessons: 3,
+      duration: "45 min",
+      difficulty: "Beginner",
+      category: "first-aid",
+      lastAccessedDate: "2025-09-10",
+      progressPercentage: 50,
+    },
+    {
+      id: "started-daily-grooming",
+      tutorialId: "daily-grooming",
+      title: "Daily Grooming Routine",
+      description: "Master the essential daily grooming routine for your horse's health and happiness",
+      imageUrl: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=400&h=200&fit=crop",
+      lessonCount: 5,
+      completedLessons: 2,
+      duration: "35 min",
+      difficulty: "Beginner",
+      category: "grooming",
+      lastAccessedDate: "2025-09-09",
+      progressPercentage: 40,
+    }
+  ]);
 
   // Mock data for tutorial categories and content
   const tutorialCategories: TutorialCategory[] = [
@@ -244,10 +291,68 @@ const CoachScreen = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Simulate loading new content
+    // Simulate loading new content and updating progress
+    // In a real app, you would fetch updated progress from an API
+    
+    // Simulate some random progress updates for demonstration
+    setStartedLessons(prevLessons => 
+      prevLessons.map(lesson => {
+        // Randomly advance some lessons by 1 (for demo purposes)
+        if (Math.random() > 0.7 && lesson.completedLessons < lesson.lessonCount) {
+          const newCompleted = Math.min(lesson.completedLessons + 1, lesson.lessonCount);
+          return {
+            ...lesson,
+            completedLessons: newCompleted,
+            progressPercentage: Math.round((newCompleted / lesson.lessonCount) * 100),
+            lastAccessedDate: new Date().toISOString().split('T')[0]
+          };
+        }
+        return lesson;
+      }).filter(lesson => lesson.completedLessons < lesson.lessonCount)
+    );
+    
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
+  };
+
+  const updateLessonProgress = (tutorialId: string, completedLessons: number) => {
+    setStartedLessons(prevLessons => 
+      prevLessons.map(lesson => 
+        lesson.tutorialId === tutorialId 
+          ? {
+              ...lesson,
+              completedLessons,
+              progressPercentage: Math.round((completedLessons / lesson.lessonCount) * 100),
+              lastAccessedDate: new Date().toISOString().split('T')[0]
+            }
+          : lesson
+      ).filter(lesson => lesson.completedLessons < lesson.lessonCount) // Remove completed lessons
+    );
+  };
+
+  const addToStartedLessons = (tutorial: Tutorial) => {
+    // Check if tutorial is already in started lessons
+    const isAlreadyStarted = startedLessons.some(lesson => lesson.tutorialId === tutorial.id);
+    
+    if (!isAlreadyStarted) {
+      const newStartedLesson: StartedLesson = {
+        id: `started-${tutorial.id}`,
+        tutorialId: tutorial.id,
+        title: tutorial.title,
+        description: tutorial.description,
+        imageUrl: tutorial.imageUrl,
+        lessonCount: tutorial.lessonCount,
+        completedLessons: 0,
+        duration: tutorial.duration,
+        difficulty: tutorial.difficulty,
+        category: tutorial.category,
+        lastAccessedDate: new Date().toISOString().split('T')[0],
+        progressPercentage: 0,
+      };
+      
+      setStartedLessons(prev => [...prev, newStartedLesson]);
+    }
   };
 
   const handleStartTutorial = (tutorialId: string, tutorialTitle: string) => {
@@ -261,6 +366,11 @@ const CoachScreen = () => {
       // Navigate to pro features screen
       router.push("/pro-features");
       return;
+    }
+
+    // Add tutorial to started lessons if it's not already there
+    if (tutorial) {
+      addToStartedLessons(tutorial);
     }
 
     setSelectedTutorial({ id: tutorialId, title: tutorialTitle });
@@ -416,6 +526,101 @@ const CoachScreen = () => {
     );
   };
 
+  const renderStartedLessonCard = (lesson: StartedLesson) => {
+    return (
+      <TouchableOpacity
+        key={lesson.id}
+        style={[styles.tutorialCard, { backgroundColor: theme.surface }]}
+        activeOpacity={0.8}
+        onPress={() => handleStartTutorial(lesson.tutorialId, lesson.title)}
+      >
+        <View style={styles.tutorialImageContainer}>
+          <Image
+            source={{ uri: lesson.imageUrl }}
+            style={styles.tutorialImage}
+          />
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.7)"]}
+            style={styles.imageGradient}
+          >
+            <View style={styles.tutorialBadges}>
+              <View
+                style={[
+                  styles.difficultyBadge,
+                  { backgroundColor: getDifficultyColor(lesson.difficulty) },
+                ]}
+              >
+                <Text style={styles.badgeText}>{lesson.difficulty}</Text>
+              </View>
+              <View
+                style={[
+                  styles.durationBadge,
+                  { backgroundColor: "rgba(255,255,255,0.9)" },
+                ]}
+              >
+                <Text style={[styles.badgeText, { color: "#333" }]}>
+                  {lesson.duration}
+                </Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </View>
+
+        <View style={styles.tutorialContent}>
+          <View style={styles.tutorialTitleContainer}>
+            <Text
+              style={[styles.tutorialTitle, { color: theme.text }]}
+              numberOfLines={2}
+            >
+              {lesson.title}
+            </Text>
+            <View style={[styles.progressBadge, { backgroundColor: theme.primary }]}>
+              <Text style={styles.progressBadgeText}>
+                {Math.round(lesson.progressPercentage)}%
+              </Text>
+            </View>
+          </View>
+          <Text
+            style={[styles.tutorialDescription, { color: theme.textSecondary }]}
+            numberOfLines={2}
+          >
+            {lesson.description}
+          </Text>
+          
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBarBackground, { backgroundColor: theme.border }]}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  { 
+                    backgroundColor: theme.primary,
+                    width: `${lesson.progressPercentage}%`
+                  }
+                ]}
+              />
+            </View>
+            <Text style={[styles.progressText, { color: theme.textSecondary }]}>
+              {lesson.completedLessons} of {lesson.lessonCount} lessons completed
+            </Text>
+          </View>
+
+          <View style={styles.tutorialFooter}>
+            <Text style={[styles.lessonCount, { color: theme.textSecondary }]}>
+              Last accessed: {new Date(lesson.lastAccessedDate).toLocaleDateString()}
+            </Text>
+            <TouchableOpacity
+              style={[styles.continueButton, { backgroundColor: theme.primary }]}
+              onPress={() => handleStartTutorial(lesson.tutorialId, lesson.title)}
+            >
+              <Text style={styles.startButtonText}>Continue</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   const selectedCategoryData = tutorialCategories.find(
     (cat) => cat.id === selectedCategory
   );
@@ -505,11 +710,15 @@ const CoachScreen = () => {
 
             <View style={styles.featuredSection}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Featured Tutorials
+                {startedLessons.length > 0 ? "Continue Learning" : "Featured Tutorials"}
               </Text>
               <View style={styles.featuredTutorials}>
-                {tutorialCategories[0]?.tutorials[0] &&
-                  renderTutorialCard(tutorialCategories[0].tutorials[0])}
+                {startedLessons.length > 0 ? (
+                  startedLessons.map(renderStartedLessonCard)
+                ) : (
+                  tutorialCategories[0]?.tutorials[0] &&
+                  renderTutorialCard(tutorialCategories[0].tutorials[0])
+                )}
               </View>
             </View>
 
@@ -862,6 +1071,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     fontFamily: "Inder",
+  },
+  progressBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+    minWidth: 45,
+    alignItems: "center",
+  },
+  progressBadgeText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  progressContainer: {
+    marginVertical: 12,
+  },
+  progressBarBackground: {
+    height: 6,
+    borderRadius: 3,
+    marginBottom: 6,
+  },
+  progressBarFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 12,
+    fontFamily: "Inder",
+  },
+  continueButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
 });
 
