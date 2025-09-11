@@ -399,6 +399,9 @@ const OptionsScreen = () => {
   // Terms of Service state
   const [showTermsOfService, setShowTermsOfService] = useState(false);
 
+  // About state
+  const [showAbout, setShowAbout] = useState(false);
+
   // Load notification settings when component mounts
   useEffect(() => {
     loadNotificationSettings();
@@ -1288,7 +1291,7 @@ const OptionsScreen = () => {
             >
               <ActionButton
                 title="About"
-                onPress={() => console.log("About pressed")}
+                onPress={() => setShowAbout(true)}
               />
               <ActionButton
                 title="Help & Support"
@@ -2463,6 +2466,134 @@ const OptionsScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* About Modal */}
+      <Modal
+        visible={showAbout}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowAbout(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.aboutModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View
+              style={[
+                styles.aboutHeader,
+                { borderBottomColor: currentTheme.colors.accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.aboutTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                About EquiHUB
+              </Text>
+              <TouchableOpacity
+                style={styles.aboutCloseButton}
+                onPress={() => setShowAbout(false)}
+              >
+                <Text
+                  style={[
+                    styles.aboutCloseText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.aboutContent}>
+              <View style={styles.aboutLogoContainer}>
+                <Text style={[styles.aboutAppName, { color: currentTheme.colors.text }]}>
+                  🐎 EquiHUB
+                </Text>
+                <Text style={[styles.aboutVersion, { color: currentTheme.colors.textSecondary }]}>
+                  Version 1.0.0
+                </Text>
+              </View>
+
+              <Text
+                style={[
+                  styles.aboutText,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                <Text style={styles.aboutSectionTitle}>
+                  Welcome to EquiHUB!{"\n"}
+                </Text>
+                EquiHUB is your comprehensive companion for all things equestrian. Whether you're a professional rider, a passionate enthusiast, or just starting your journey with horses, our app is designed to enhance your experience and keep you connected with the equestrian community.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  🎯 Our Mission{"\n"}
+                </Text>
+                To empower equestrians with innovative tools that make horse care, training, and community connection easier, safer, and more enjoyable. We believe that technology can enhance the timeless bond between humans and horses.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  ✨ Key Features{"\n"}
+                </Text>
+                <Text style={styles.aboutFeatureItem}>🐴 Horse Management</Text>
+                Comprehensive profiles for all your horses with health records, training progress, and care schedules.{"\n\n"}
+
+                <Text style={styles.aboutFeatureItem}>📊 Training Tracking</Text>
+                Record and analyze your riding sessions with detailed metrics, GPS tracking, and progress visualization.{"\n\n"}
+
+                <Text style={styles.aboutFeatureItem}>🏆 Community Challenges</Text>
+                Join global and stable-specific challenges to stay motivated and connect with fellow riders.{"\n\n"}
+
+                <Text style={styles.aboutFeatureItem}>💬 Social Features</Text>
+                Share your achievements, connect with friends, and engage with the equestrian community.{"\n\n"}
+
+                <Text style={styles.aboutFeatureItem}>🚨 Safety First</Text>
+                Emergency contacts, first aid guidance, and safety features designed specifically for equestrians.{"\n\n"}
+
+                <Text style={styles.aboutFeatureItem}>📚 Tips & Guides</Text>
+                Expert advice, training tips, and educational content to improve your horsemanship skills.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  🌟 Pro Features{"\n"}
+                </Text>
+                Unlock advanced analytics, unlimited horses, priority support, and exclusive content with EquiHUB Pro.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  🛡️ Safety & Privacy{"\n"}
+                </Text>
+                Your data security and privacy are our top priorities. We use industry-standard encryption and never share your personal information without your consent.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  🤝 Community-Driven{"\n"}
+                </Text>
+                EquiHUB is built by equestrians, for equestrians. We listen to our community and continuously improve based on your feedback and needs.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  📧 Contact & Support{"\n"}
+                </Text>
+                Need help or have suggestions? Use the feedback feature in the app or visit our support resources. We're here to help you make the most of your equestrian journey.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  🙏 Acknowledgments{"\n"}
+                </Text>
+                Special thanks to the equestrian community for their invaluable feedback, testing, and support in making EquiHUB the best it can be.{"\n\n"}
+
+                <Text style={[styles.aboutFooter, { color: currentTheme.colors.textSecondary }]}>
+                  Made with ❤️ for the equestrian community{"\n"}
+                  © 2025 EquiHUB. All rights reserved.{"\n\n"}
+                  
+                  Follow your passion. Track your progress. Connect with your community.{"\n"}
+                  Happy riding! 🐎✨
+                </Text>
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -3291,6 +3422,88 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   termsOfServiceFooter: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    fontStyle: "italic",
+    textAlign: "center",
+    lineHeight: 18,
+    marginTop: 10,
+  },
+
+  // About Modal Styles
+  aboutModal: {
+    maxHeight: "90%",
+    minHeight: "85%",
+    borderRadius: 20,
+    padding: 0,
+    margin: 0,
+    width: "95%",
+  },
+  aboutHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    paddingTop: 10,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+  },
+  aboutTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  aboutCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  aboutCloseText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  aboutContent: {
+    padding: 20,
+    flex: 1,
+  },
+  aboutLogoContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+    paddingVertical: 10,
+  },
+  aboutAppName: {
+    fontSize: 32,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  aboutVersion: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    textAlign: "center",
+    opacity: 0.8,
+  },
+  aboutText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 22,
+    textAlign: "left",
+  },
+  aboutSectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  aboutFeatureItem: {
+    fontSize: 15,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    marginBottom: 4,
+    marginTop: 4,
+  },
+  aboutFooter: {
     fontSize: 12,
     fontFamily: "Inder",
     fontStyle: "italic",
