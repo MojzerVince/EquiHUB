@@ -87,36 +87,24 @@ const CoachScreen = () => {
   const [displayTimeSpent, setDisplayTimeSpent] = useState(0);
   const [displayLessonsCompleted, setDisplayLessonsCompleted] = useState(0);
 
-  // Mock data for started lessons with progress
+  // Real data for started lessons with progress (no mock data)
   const [startedLessons, setStartedLessons] = useState<StartedLesson[]>([
+    // Real lesson progress will be added here when users actually start tutorials
+    // Example: A user has completed "Basic Horse First Aid" (2 out of 2 lessons)
     {
       id: "started-basic-first-aid",
       tutorialId: "basic-first-aid",
       title: "Basic Horse First Aid",
       description: "Learn essential first aid techniques for common horse injuries and emergencies",
       imageUrl: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=400&h=200&fit=crop",
-      lessonCount: 6,
-      completedLessons: 3,
-      duration: "45 min",
+      lessonCount: 2,
+      completedLessons: 2, // Both lessons completed
+      duration: "20 min",
       difficulty: "Beginner",
       category: "first-aid",
-      lastAccessedDate: "2025-09-10",
-      progressPercentage: 50,
+      lastAccessedDate: "2025-09-11",
+      progressPercentage: 100,
     },
-    {
-      id: "started-daily-grooming",
-      tutorialId: "daily-grooming",
-      title: "Daily Grooming Routine",
-      description: "Master the essential daily grooming routine for your horse's health and happiness",
-      imageUrl: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=400&h=200&fit=crop",
-      lessonCount: 5,
-      completedLessons: 2,
-      duration: "35 min",
-      difficulty: "Beginner",
-      category: "grooming",
-      lastAccessedDate: "2025-09-09",
-      progressPercentage: 40,
-    }
   ]);
 
   // Mock data for tutorial categories and content
@@ -135,8 +123,8 @@ const CoachScreen = () => {
             "Learn essential first aid techniques for common horse injuries and emergencies",
           imageUrl:
             "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=400&h=200&fit=crop",
-          lessonCount: 6,
-          duration: "45 min",
+          lessonCount: 2,
+          duration: "20 min",
           difficulty: "Beginner",
           category: "first-aid",
         },
@@ -527,25 +515,8 @@ const CoachScreen = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Simulate loading new content and updating progress
     // In a real app, you would fetch updated progress from an API
-    
-    // Simulate some random progress updates for demonstration
-    setStartedLessons(prevLessons => 
-      prevLessons.map(lesson => {
-        // Randomly advance some lessons by 1 (for demo purposes)
-        if (Math.random() > 0.7 && lesson.completedLessons < lesson.lessonCount) {
-          const newCompleted = Math.min(lesson.completedLessons + 1, lesson.lessonCount);
-          return {
-            ...lesson,
-            completedLessons: newCompleted,
-            progressPercentage: Math.round((newCompleted / lesson.lessonCount) * 100),
-            lastAccessedDate: new Date().toISOString().split('T')[0]
-          };
-        }
-        return lesson;
-      }).filter(lesson => lesson.completedLessons < lesson.lessonCount)
-    );
+    // For now, just refresh the data without making changes
     
     setTimeout(() => {
       setRefreshing(false);
@@ -563,8 +534,52 @@ const CoachScreen = () => {
               lastAccessedDate: new Date().toISOString().split('T')[0]
             }
           : lesson
-      ).filter(lesson => lesson.completedLessons < lesson.lessonCount) // Remove completed lessons
+      )
+      // Keep completed lessons in the list for "Continue Learning" section
+      // They will show as completed and allow review
     );
+  };
+
+  // Function to complete a specific lesson (would be called from lesson completion)
+  const completeLessonById = (tutorialId: string, lessonIndex: number) => {
+    const tutorial = tutorialCategories.flatMap(cat => cat.tutorials).find(t => t.id === tutorialId);
+    if (!tutorial) return;
+
+    setStartedLessons(prevLessons => {
+      const existingLesson = prevLessons.find(lesson => lesson.tutorialId === tutorialId);
+      
+      if (existingLesson) {
+        // Update existing lesson progress
+        const newCompleted = Math.min(existingLesson.completedLessons + 1, tutorial.lessonCount);
+        return prevLessons.map(lesson => 
+          lesson.tutorialId === tutorialId 
+            ? {
+                ...lesson,
+                completedLessons: newCompleted,
+                progressPercentage: Math.round((newCompleted / lesson.lessonCount) * 100),
+                lastAccessedDate: new Date().toISOString().split('T')[0]
+              }
+            : lesson
+        );
+      } else {
+        // Create new started lesson
+        const newStartedLesson: StartedLesson = {
+          id: `started-${tutorial.id}`,
+          tutorialId: tutorial.id,
+          title: tutorial.title,
+          description: tutorial.description,
+          imageUrl: tutorial.imageUrl,
+          lessonCount: tutorial.lessonCount,
+          completedLessons: 1,
+          duration: tutorial.duration,
+          difficulty: tutorial.difficulty,
+          category: tutorial.category,
+          lastAccessedDate: new Date().toISOString().split('T')[0],
+          progressPercentage: Math.round((1 / tutorial.lessonCount) * 100),
+        };
+        return [...prevLessons, newStartedLesson];
+      }
+    });
   };
 
   const addToStartedLessons = (tutorial: Tutorial) => {
@@ -650,6 +665,12 @@ const CoachScreen = () => {
     const isProOnlyAndNotMember = tutorial.proOnly && !isProMember;
     const isAccessible =
       !tutorial.isLocked && !(tutorial.proOnly && !isProMember);
+    
+    // Check if this tutorial is completed
+    const completedLesson = startedLessons.find(
+      lesson => lesson.tutorialId === tutorial.id && lesson.completedLessons >= lesson.lessonCount
+    );
+    const isCompleted = !!completedLesson;
 
     return (
       <TouchableOpacity
@@ -746,11 +767,15 @@ const CoachScreen = () => {
             <Text style={[styles.lessonCount, { color: theme.primary }]}>
               {tutorial.lessonCount} lessons
             </Text>
-            {isProOnlyAndNotMember && (
+            {isCompleted ? (
+              <View style={[styles.completedBadge, { backgroundColor: "#4CAF50" }]}>
+                <Text style={styles.completedBadgeText}>✓ Completed</Text>
+              </View>
+            ) : isProOnlyAndNotMember ? (
               <Text style={[styles.upgradeText, { color: "#FF6B35" }]}>
                 Tap to upgrade
               </Text>
-            )}
+            ) : null}
           </View>
         </View>
       </TouchableOpacity>
@@ -761,85 +786,40 @@ const CoachScreen = () => {
     return (
       <TouchableOpacity
         key={lesson.id}
-        style={[styles.tutorialCard, { backgroundColor: theme.surface }]}
+        style={[styles.startedLessonCard, { backgroundColor: theme.surface }]}
         activeOpacity={0.8}
         onPress={() => handleStartTutorial(lesson.tutorialId, lesson.title)}
       >
-        <View style={styles.tutorialImageContainer}>
-          <Image
-            source={{ uri: lesson.imageUrl }}
-            style={styles.tutorialImage}
-          />
-          <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.7)"]}
-            style={styles.imageGradient}
-          >
-            <View style={styles.tutorialBadges}>
-              <View
-                style={[
-                  styles.difficultyBadge,
-                  { backgroundColor: getDifficultyColor(lesson.difficulty) },
-                ]}
-              >
-                <Text style={styles.badgeText}>{lesson.difficulty}</Text>
-              </View>
-              <View
-                style={[
-                  styles.durationBadge,
-                  { backgroundColor: "rgba(255,255,255,0.9)" },
-                ]}
-              >
-                <Text style={[styles.badgeText, { color: "#333" }]}>
-                  {lesson.duration}
-                </Text>
-              </View>
-            </View>
-          </LinearGradient>
+        <View style={styles.startedLessonIcon}>
+          <View style={[styles.startedLessonIconContainer, { backgroundColor: theme.primary }]}>
+            <Text style={styles.startedLessonIconText}>
+              {lesson.completedLessons >= lesson.lessonCount ? '✓' : '▶'}
+            </Text>
+          </View>
         </View>
-
-        <View style={styles.tutorialContent}>
-          <View style={styles.tutorialTitleContainer}>
-            <Text
-              style={[styles.tutorialTitle, { color: theme.text }]}
-              numberOfLines={2}
-            >
+        
+        <View style={styles.startedLessonContent}>
+          <View style={styles.startedLessonHeader}>
+            <Text style={[styles.startedLessonTitle, { color: theme.text }]} numberOfLines={1}>
               {lesson.title}
             </Text>
-            <View style={[styles.progressBadge, { backgroundColor: theme.primary }]}>
-              <Text style={styles.progressBadgeText}>
-                {Math.round(lesson.progressPercentage)}%
-              </Text>
+            <View style={[styles.startedLessonDifficulty, { backgroundColor: getDifficultyColor(lesson.difficulty) }]}>
+              <Text style={styles.startedLessonDifficultyText}>{lesson.difficulty}</Text>
             </View>
+            <Text style={[styles.startedLessonDuration, { color: theme.textSecondary }]}>
+              {lesson.duration}
+            </Text>
           </View>
-          <Text
-            style={[styles.tutorialDescription, { color: theme.textSecondary }]}
-            numberOfLines={2}
-          >
+          
+          <Text style={[styles.startedLessonDescription, { color: theme.textSecondary }]} numberOfLines={1}>
             {lesson.description}
           </Text>
           
-          {/* Progress Bar */}
-          <View style={styles.progressContainer}>
-            <View style={[styles.progressBarBackground, { backgroundColor: theme.border }]}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  { 
-                    backgroundColor: theme.primary,
-                    width: `${lesson.progressPercentage}%`
-                  }
-                ]}
-              />
-            </View>
-            <Text style={[styles.progressText, { color: theme.textSecondary }]}>
-              {lesson.completedLessons} of {lesson.lessonCount} lessons completed
+          <View style={styles.startedLessonFooter}>
+            <Text style={[styles.startedLessonProgress, { color: theme.textSecondary }]}>
+              {lesson.completedLessons >= lesson.lessonCount ? 'Review' : `${lesson.completedLessons}/${lesson.lessonCount} lessons completed`}
             </Text>
-          </View>
-
-          <View style={styles.tutorialFooter}>
-            <Text style={[styles.lessonCount, { color: theme.textSecondary }]}>
-              Last accessed: {new Date(lesson.lastAccessedDate).toLocaleDateString()}
-            </Text>
+            <Text style={[styles.startedLessonArrow, { color: theme.textSecondary }]}>→</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -1059,11 +1039,11 @@ const CoachScreen = () => {
 
             <View style={styles.featuredSection}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                {startedLessons.length > 0 ? "Continue Learning" : "Featured Tutorials"}
+                {startedLessons.filter(lesson => lesson.completedLessons < lesson.lessonCount).length > 0 ? "Continue Learning" : "Featured Tutorials"}
               </Text>
               <View style={styles.featuredTutorials}>
-                {startedLessons.length > 0 ? (
-                  startedLessons.map(renderStartedLessonCard)
+                {startedLessons.filter(lesson => lesson.completedLessons < lesson.lessonCount).length > 0 ? (
+                  startedLessons.filter(lesson => lesson.completedLessons < lesson.lessonCount).map(renderStartedLessonCard)
                 ) : (
                   tutorialCategories[0]?.tutorials[0] &&
                   renderTutorialCard(tutorialCategories[0].tutorials[0])
@@ -1724,6 +1704,106 @@ const styles = StyleSheet.create({
   performanceArrow: {
     fontSize: 18,
     fontWeight: '300',
+  },
+  
+  // Started Lesson Card Styles (compact horizontal design)
+  startedLessonCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  startedLessonIcon: {
+    marginRight: 16,
+  },
+  startedLessonIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  startedLessonIconText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: "Inder",
+  },
+  startedLessonContent: {
+    flex: 1,
+  },
+  startedLessonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    flexWrap: 'wrap',
+  },
+  startedLessonTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: "Inder",
+    marginRight: 8,
+    minWidth: 0, // Allows text to shrink if needed
+  },
+  startedLessonDifficulty: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  startedLessonDifficultyText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'white',
+    textTransform: 'uppercase',
+    fontFamily: "Inder",
+  },
+  startedLessonDuration: {
+    fontSize: 12,
+    fontFamily: "Inder",
+  },
+  startedLessonDescription: {
+    fontSize: 13,
+    fontFamily: "Inder",
+    marginBottom: 8,
+  },
+  startedLessonFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  startedLessonProgress: {
+    fontSize: 12,
+    fontFamily: "Inder",
+  },
+  startedLessonArrow: {
+    fontSize: 16,
+    fontFamily: "Inder",
+  },
+  
+  // Completed badge styles
+  completedBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  completedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+    fontFamily: "Inder",
   },
 });
 
