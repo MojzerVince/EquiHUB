@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -54,6 +55,16 @@ interface StartedLesson {
   progressPercentage: number;
 }
 
+interface EmergencyStep {
+  id: string;
+  title: string;
+  description: string;
+  steps: string[];
+  urgency: "Critical" | "Urgent" | "Important";
+  icon: string;
+  keywords: string[];
+}
+
 const CoachScreen = () => {
   const { currentTheme } = useTheme();
   const { isProMember } = useSubscription();
@@ -65,6 +76,8 @@ const CoachScreen = () => {
     title: string;
   } | null>(null);
   const [showTutorialModal, setShowTutorialModal] = useState(false);
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+  const [emergencySearchQuery, setEmergencySearchQuery] = useState("");
 
   // Mock data for started lessons with progress
   const [startedLessons, setStartedLessons] = useState<StartedLesson[]>([
@@ -276,6 +289,150 @@ const CoachScreen = () => {
     },
   ];
 
+  // Emergency First Aid Data
+  const emergencySteps: EmergencyStep[] = [
+    {
+      id: "colic",
+      title: "Colic (Abdominal Pain)",
+      description: "Immediate steps for suspected colic",
+      urgency: "Critical",
+      icon: "🚨",
+      keywords: ["colic", "stomach", "pain", "rolling", "lying down", "sweating"],
+      steps: [
+        "Remove all food and water immediately",
+        "Call your veterinarian - this is an emergency",
+        "Keep the horse moving by walking slowly",
+        "Do NOT allow the horse to roll or lie down",
+        "Monitor vital signs (temperature, pulse, respiration)",
+        "Note symptoms and time of onset for the vet",
+        "Stay calm but act quickly"
+      ]
+    },
+    {
+      id: "cuts-wounds",
+      title: "Cuts and Open Wounds",
+      description: "First aid for bleeding wounds",
+      urgency: "Urgent",
+      icon: "🩹",
+      keywords: ["cut", "wound", "bleeding", "laceration", "injury"],
+      steps: [
+        "Stay calm and approach the horse carefully",
+        "Apply direct pressure with clean cloth to control bleeding",
+        "Do NOT remove embedded objects",
+        "Clean around the wound (not inside) with saline solution",
+        "Apply sterile bandage if possible",
+        "Call veterinarian for wounds deeper than skin level",
+        "Monitor for signs of shock",
+        "Keep wound covered and horse calm"
+      ]
+    },
+    {
+      id: "choking",
+      title: "Choking",
+      description: "When horse cannot swallow or breathe properly",
+      urgency: "Critical",
+      icon: "🫁",
+      keywords: ["choking", "coughing", "gagging", "difficulty swallowing", "feed"],
+      steps: [
+        "Remove all food and water immediately",
+        "Call veterinarian immediately",
+        "Keep horse's head lowered to help drainage",
+        "Do NOT attempt to remove object manually",
+        "Gently massage throat area (external only)",
+        "Monitor breathing closely",
+        "Stay with the horse until help arrives"
+      ]
+    },
+    {
+      id: "lameness",
+      title: "Sudden Severe Lameness",
+      description: "Acute limb injury or pain",
+      urgency: "Urgent",
+      icon: "🦵",
+      keywords: ["lameness", "limping", "leg", "hoof", "pain", "not weight bearing"],
+      steps: [
+        "Stop all activity immediately",
+        "Confine horse to prevent further injury",
+        "Examine hoof for obvious foreign objects",
+        "Apply ice to swollen areas (20 min on, 20 min off)",
+        "Do NOT give pain medication without vet approval",
+        "Call veterinarian for assessment",
+        "Keep detailed notes on symptoms",
+        "Provide soft, level footing"
+      ]
+    },
+    {
+      id: "eye-injury",
+      title: "Eye Injury",
+      description: "Trauma or foreign object in eye",
+      urgency: "Urgent",
+      icon: "👁️",
+      keywords: ["eye", "injury", "swollen", "discharge", "squinting", "foreign object"],
+      steps: [
+        "Do NOT touch or rub the affected eye",
+        "Rinse gently with clean saline solution only",
+        "Cover eye with clean, damp cloth if needed",
+        "Keep horse in darkened area",
+        "Call veterinarian immediately",
+        "Prevent horse from rubbing eye",
+        "Note any discharge or changes in appearance"
+      ]
+    },
+    {
+      id: "heat-exhaustion",
+      title: "Heat Exhaustion/Overheating",
+      description: "Signs of overheating and dehydration",
+      urgency: "Urgent",
+      icon: "🌡️",
+      keywords: ["heat", "exhaustion", "overheating", "hot", "sweating", "dehydration"],
+      steps: [
+        "Move horse to shade immediately",
+        "Apply cool (not cold) water to neck, chest, and legs",
+        "Provide small amounts of cool water to drink",
+        "Use fans if available for air circulation",
+        "Monitor temperature every 15 minutes",
+        "Call vet if temperature exceeds 103°F (39.4°C)",
+        "Continue cooling until temperature normalizes",
+        "Watch for signs of shock"
+      ]
+    },
+    {
+      id: "vital-signs",
+      title: "How to Check Vital Signs",
+      description: "Essential monitoring techniques",
+      urgency: "Important",
+      icon: "💓",
+      keywords: ["vital signs", "temperature", "pulse", "heart rate", "breathing"],
+      steps: [
+        "Temperature: Use digital thermometer rectally (normal: 99-101°F)",
+        "Pulse: Find artery under jaw or behind elbow (normal: 28-44 bpm)",
+        "Respiration: Count chest movements (normal: 8-16 breaths/min)",
+        "Capillary refill: Press gum, should return to pink in 2 seconds",
+        "Record all measurements with time",
+        "Note any abnormal findings",
+        "Compare to horse's normal baseline values"
+      ]
+    },
+    {
+      id: "poisoning",
+      title: "Suspected Poisoning",
+      description: "Toxic plant or substance ingestion",
+      urgency: "Critical",
+      icon: "☠️",
+      keywords: ["poisoning", "toxic", "plants", "chemicals", "drooling", "seizures"],
+      steps: [
+        "Remove horse from source immediately",
+        "Call veterinarian and poison control if available",
+        "Do NOT induce vomiting",
+        "Save sample of suspected poison if safe to do so",
+        "Note time of exposure and amount if known",
+        "Monitor breathing and heart rate closely",
+        "Keep horse calm and still",
+        "Provide supportive care as directed by vet"
+      ]
+    }
+  ];
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "Beginner":
@@ -288,6 +445,27 @@ const CoachScreen = () => {
         return theme.textSecondary;
     }
   };
+
+  const getUrgencyColor = (urgency: string) => {
+    switch (urgency) {
+      case "Critical":
+        return "#F44336";
+      case "Urgent":
+        return "#FF9800";
+      case "Important":
+        return "#2196F3";
+      default:
+        return theme.textSecondary;
+    }
+  };
+
+  const filteredEmergencySteps = emergencySteps.filter(step =>
+    step.title.toLowerCase().includes(emergencySearchQuery.toLowerCase()) ||
+    step.description.toLowerCase().includes(emergencySearchQuery.toLowerCase()) ||
+    step.keywords.some(keyword => 
+      keyword.toLowerCase().includes(emergencySearchQuery.toLowerCase())
+    )
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -614,6 +792,119 @@ const CoachScreen = () => {
     (cat) => cat.id === selectedCategory
   );
 
+  const renderEmergencyModal = () => (
+    <Modal
+      visible={showEmergencyModal}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={() => setShowEmergencyModal(false)}
+    >
+      <View style={[styles.container, { backgroundColor: theme.primary }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.primary }]}>
+          <View style={styles.headerContainer}>
+            <View style={styles.headerWithBack}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => setShowEmergencyModal(false)}
+              >
+                <Image
+                  source={require("../../assets/in_app_icons/back.png")}
+                  style={{ width: 26, height: 26 }}
+                />
+              </TouchableOpacity>
+              <Text style={styles.header}>Emergency First Aid</Text>
+            </View>
+          </View>
+        </SafeAreaView>
+        
+        <ScrollView
+          style={[styles.viewPort, { backgroundColor: currentTheme.colors.background }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.contentContainer}>
+            {/* Search Bar */}
+            <View style={[styles.searchContainer, { backgroundColor: theme.surface }]}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={[styles.searchInput, { color: theme.text }]}
+                placeholder="Search emergency situations..."
+                placeholderTextColor={theme.textSecondary}
+                value={emergencySearchQuery}
+                onChangeText={setEmergencySearchQuery}
+              />
+            </View>
+
+            {/* Emergency Instructions */}
+            <View style={styles.emergencyInstructions}>
+              <Text style={[styles.emergencyTitle, { color: "#F44336" }]}>
+                ⚠️ EMERGENCY PROTOCOL
+              </Text>
+              <Text style={[styles.emergencySubtitle, { color: theme.text }]}>
+                In any life-threatening situation, call your veterinarian immediately!
+              </Text>
+            </View>
+
+            {/* Emergency Steps */}
+            <View style={styles.emergencyStepsContainer}>
+              {filteredEmergencySteps.map((step) => (
+                <View
+                  key={step.id}
+                  style={[styles.emergencyCard, { backgroundColor: theme.surface }]}
+                >
+                  <View style={styles.emergencyHeader}>
+                    <View style={styles.emergencyTitleContainer}>
+                      <Text style={styles.emergencyIcon}>{step.icon}</Text>
+                      <View style={styles.emergencyInfo}>
+                        <Text style={[styles.emergencyCardTitle, { color: theme.text }]}>
+                          {step.title}
+                        </Text>
+                        <Text style={[styles.emergencyDescription, { color: theme.textSecondary }]}>
+                          {step.description}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.urgencyBadge,
+                          { backgroundColor: getUrgencyColor(step.urgency) }
+                        ]}
+                      >
+                        <Text style={styles.urgencyText}>{step.urgency}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.emergencySteps}>
+                    {step.steps.map((stepText, index) => (
+                      <View key={index} style={styles.emergencyStep}>
+                        <View style={[styles.stepNumber, { backgroundColor: theme.primary }]}>
+                          <Text style={styles.stepNumberText}>{index + 1}</Text>
+                        </View>
+                        <Text style={[styles.stepText, { color: theme.text }]}>
+                          {stepText}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {filteredEmergencySteps.length === 0 && (
+              <View style={styles.noResultsContainer}>
+                <Text style={[styles.noResultsText, { color: theme.textSecondary }]}>
+                  No emergency procedures found for "{emergencySearchQuery}"
+                </Text>
+                <Text style={[styles.noResultsTip, { color: theme.textSecondary }]}>
+                  Try searching for terms like "colic", "wound", "lameness", or "choking"
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+
   return (
     <View
       style={[
@@ -697,6 +988,17 @@ const CoachScreen = () => {
               </Text>
             </View>
 
+            {/* Emergency First Aid Button */}
+            <TouchableOpacity
+              style={styles.emergencyButton}
+              onPress={() => setShowEmergencyModal(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.emergencyButtonText}>
+                🚨 Emergency First Aid Guide
+              </Text>
+            </TouchableOpacity>
+
             <View style={styles.featuredSection}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 {startedLessons.length > 0 ? "Continue Learning" : "Featured Tutorials"}
@@ -720,6 +1022,9 @@ const CoachScreen = () => {
           </View>
         )}
       </ScrollView>
+
+      {/* Emergency Modal */}
+      {renderEmergencyModal()}
 
       {/* Tutorial Modal */}
       <Modal
@@ -1101,6 +1406,161 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontFamily: "Inder",
     fontStyle: "italic",
+  },
+  // Emergency Modal Styles
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  searchIcon: {
+    fontSize: 20,
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: "Inder",
+  },
+  emergencyInstructions: {
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: "#FFF3E0",
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: "#F44336",
+  },
+  emergencyTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 8,
+  },
+  emergencySubtitle: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 20,
+  },
+  emergencyStepsContainer: {
+    gap: 16,
+  },
+  emergencyCard: {
+    borderRadius: 16,
+    padding: 16,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    marginBottom: 16,
+  },
+  emergencyHeader: {
+    marginBottom: 16,
+  },
+  emergencyTitleContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  emergencyIcon: {
+    fontSize: 24,
+    marginRight: 12,
+    marginTop: 2,
+  },
+  emergencyInfo: {
+    flex: 1,
+  },
+  emergencyCardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  emergencyDescription: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 20,
+  },
+  urgencyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 8,
+    alignItems: "center",
+  },
+  urgencyText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  emergencySteps: {
+    gap: 12,
+  },
+  emergencyStep: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+    marginTop: 2,
+  },
+  stepNumberText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 20,
+  },
+  noResultsContainer: {
+    alignItems: "center",
+    padding: 40,
+  },
+  noResultsText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  noResultsTip: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    textAlign: "center",
+  },
+  emergencyButton: {
+    backgroundColor: "#F44336",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    marginBottom: 20,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  emergencyButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    textAlign: "center",
   },
 });
 
