@@ -3028,14 +3028,20 @@ const MapScreen = () => {
               style={styles.statisticsButton}
               onPress={() => router.push("/statistics")}
             >
-              <Text style={styles.statisticsButtonText}>📊</Text>
+              <Image
+                style={{ width: 36, height: 36 }}
+                source={require("../../assets/in_app_icons/trends.png")}
+              />
             </TouchableOpacity>
             <Text style={styles.header}>Map</Text>
             <TouchableOpacity
               style={styles.historyButton}
               onPress={() => router.push("/sessions")}
             >
-              <Text style={styles.historyButtonText}>📜</Text>
+              <Image
+                style={{ width: 36, height: 36 }}
+                source={require("../../assets/in_app_icons/history.png")}
+              />
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -3079,14 +3085,20 @@ const MapScreen = () => {
             style={styles.statisticsButton}
             onPress={() => router.push("/statistics")}
           >
-            <Text style={styles.statisticsButtonText}>📊</Text>
+            <Image
+              style={{ width: 36, height: 36 }}
+              source={require("../../assets/in_app_icons/trends.png")}
+            />
           </TouchableOpacity>
           <Text style={styles.header}>Map</Text>
           <TouchableOpacity
             style={styles.historyButton}
             onPress={() => router.push("/sessions")}
           >
-            <Text style={styles.historyButtonText}>📜</Text>
+            <Image
+              style={{ width: 36, height: 36 }}
+              source={require("../../assets/in_app_icons/history.png")}
+            />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -4528,11 +4540,10 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: -45,
-    marginTop: -5,
+    marginBottom: -55,
+    marginTop: -20,
   },
   header: {
     fontSize: 30,
@@ -4547,8 +4558,8 @@ const styles = StyleSheet.create({
     flex: 1,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
-    marginTop: -4,
-    paddingTop: 5,
+    marginTop: -8,
+    paddingTop: 10,
   },
   mapContainer: {
     flex: 1,
@@ -4706,11 +4717,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-  },
-  statisticsButtonText: {
-    fontSize: 18,
-    color: "#FFFFFF",
   },
   historyButton: {
     padding: 10,
@@ -4720,11 +4726,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-  },
-  historyButtonText: {
-    fontSize: 18,
-    color: "#FFFFFF",
   },
   gpsContainer: {
     position: "absolute",

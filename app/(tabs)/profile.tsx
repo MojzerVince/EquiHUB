@@ -2232,7 +2232,7 @@ const styles = StyleSheet.create({
   userAge: {
     fontSize: 20,
     fontFamily: "Inder",
-    marginBottom: 15,
+    marginBottom: 5,
     textAlign: "center",
   },
   userDescription: {

@@ -18,8 +18,8 @@ export interface ContactPermissionStatus {
 }
 
 export class EmergencyContactsAPI {
-  private static readonly STORAGE_KEY = "emergency_contacts";
-  private static readonly MAX_CONTACTS = 3;
+  private static readonly STORAGE_KEY_PREFIX = "emergency_contacts_";
+  private static readonly MAX_CONTACTS = 1;
 
   // Request contacts permission
   static async requestContactsPermission(): Promise<ContactPermissionStatus> {
@@ -89,7 +89,7 @@ export class EmergencyContactsAPI {
   // Get saved emergency contacts
   static async getEmergencyContacts(userId: string): Promise<EmergencyContact[]> {
     try {
-      const key = `${this.STORAGE_KEY}_${userId}`;
+      const key = `${this.STORAGE_KEY_PREFIX}${userId}`;
       const data = await AsyncStorage.getItem(key);
       return data ? JSON.parse(data) : [];
     } catch (error) {
@@ -132,7 +132,7 @@ export class EmergencyContactsAPI {
       };
 
       const updatedContacts = [...existingContacts, newContact];
-      const key = `${this.STORAGE_KEY}_${userId}`;
+      const key = `${this.STORAGE_KEY_PREFIX}${userId}`;
       await AsyncStorage.setItem(key, JSON.stringify(updatedContacts));
 
       // Sync to database for server SMS functionality
@@ -165,7 +165,7 @@ export class EmergencyContactsAPI {
         (contact) => contact.id !== contactId
       );
 
-      const key = `${this.STORAGE_KEY}_${userId}`;
+      const key = `${this.STORAGE_KEY_PREFIX}${userId}`;
       await AsyncStorage.setItem(key, JSON.stringify(updatedContacts));
 
       // Remove from database if it exists
@@ -197,7 +197,7 @@ export class EmergencyContactsAPI {
         contact.id === contactId ? { ...contact, isEnabled } : contact
       );
 
-      const key = `${this.STORAGE_KEY}_${userId}`;
+      const key = `${this.STORAGE_KEY_PREFIX}${userId}`;
       await AsyncStorage.setItem(key, JSON.stringify(updatedContacts));
       return true;
     } catch (error) {

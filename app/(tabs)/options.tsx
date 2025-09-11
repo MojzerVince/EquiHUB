@@ -7,6 +7,7 @@ import {
   EmergencyContact,
   EmergencyContactsAPI,
 } from "@/lib/emergencyContactsAPI";
+import { FeedbackAPI } from "@/lib/feedbackAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
 import { SMSTestUtility } from "@/lib/smsTestUtility";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -158,7 +159,11 @@ const OptionsScreen = () => {
         await loadEmergencyContacts();
         setShowAddContact(false);
         setSearchQuery("");
-        Alert.alert("Success", "Emergency contact added successfully.");
+        showConfirm(
+          "✅ Success!",
+          "Emergency contact added successfully. They will now be notified in case of emergencies.",
+          () => {}
+        );
       } else {
         Alert.alert(
           "Error",
@@ -261,9 +266,10 @@ const OptionsScreen = () => {
           onPress: async () => {
             try {
               await SMSTestUtility.syncContactsToDatabase(user.id);
-              Alert.alert(
-                "✅ Sync Complete",
-                "Emergency contacts have been synced to the database. Server SMS alerts are now fully configured."
+              showConfirm(
+                "✅ Sync Complete!",
+                "Emergency contacts have been successfully synced to the database. Server SMS alerts are now fully configured and ready to protect you during emergencies.",
+                () => {}
               );
             } catch (error) {
               console.error("Error syncing contacts:", error);
@@ -382,6 +388,13 @@ const OptionsScreen = () => {
     canAskAgain: true,
   });
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Feedback state
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackSubject, setFeedbackSubject] = useState("");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [consentToShareEmail, setConsentToShareEmail] = useState(false);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   // Load notification settings when component mounts
   useEffect(() => {
@@ -784,6 +797,56 @@ const OptionsScreen = () => {
     }
   };
 
+  // Handle feedback submission
+  const handleSubmitFeedback = async () => {
+    if (!user?.id) return;
+
+    // Validate input
+    if (!feedbackSubject.trim()) {
+      showError("Please enter a subject for your feedback.");
+      return;
+    }
+
+    if (!feedbackMessage.trim()) {
+      showError("Please enter a message for your feedback.");
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+
+    try {
+      const result = await FeedbackAPI.submitFeedback(user.id, {
+        subject: feedbackSubject,
+        message: feedbackMessage,
+        consentToShareEmail: consentToShareEmail,
+      });
+
+      if (result.success) {
+        // Clear form
+        setFeedbackSubject("");
+        setFeedbackMessage("");
+        setConsentToShareEmail(false);
+        setShowFeedback(false);
+
+        // Show success message
+        showConfirm(
+          "✅ Thanks for your feedback!",
+          "Your feedback has been successfully submitted. We appreciate your input and will review it carefully to help improve EquiHUB.",
+          () => {}
+        );
+      } else {
+        showError(
+          result.error || "Failed to submit feedback. Please try again."
+        );
+      }
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      showError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
   const SettingItem = ({
     title,
     subtitle,
@@ -1110,7 +1173,7 @@ const OptionsScreen = () => {
               ]}
             >
               <ActionButton
-                title={`Emergency Contacts (${emergencyContacts.length}/3)`}
+                title={`Emergency Contacts (${emergencyContacts.length}/1)`}
                 onPress={() => setShowEmergencyContacts(true)}
               />
             </View>
@@ -1235,6 +1298,10 @@ const OptionsScreen = () => {
               <ActionButton
                 title="Privacy Policy"
                 onPress={handlePrivacyPolicy}
+              />
+              <ActionButton
+                title="Feedback"
+                onPress={() => setShowFeedback(true)}
               />
             </View>
           </View>
@@ -1610,23 +1677,36 @@ const OptionsScreen = () => {
                 </View>
               )}
 
-              {/* Add Contact Button */}
-              <TouchableOpacity
-                style={[
-                  styles.addContactButton,
-                  { backgroundColor: currentTheme.colors.primary },
-                ]}
-                onPress={() => {
-                  if (contactsPermissionStatus.granted) {
-                    loadDeviceContacts();
-                  }
-                  setShowAddContact(true);
-                }}
-              >
-                <Text style={styles.addContactButtonText}>
-                  + Add Emergency Contact
-                </Text>
-              </TouchableOpacity>
+              {/* Add Contact Button - Only show if under limit */}
+              {emergencyContacts.length < 1 ? (
+                <TouchableOpacity
+                  style={[
+                    styles.addContactButton,
+                    { backgroundColor: currentTheme.colors.primary },
+                  ]}
+                  onPress={() => {
+                    if (contactsPermissionStatus.granted) {
+                      loadDeviceContacts();
+                    }
+                    setShowAddContact(true);
+                  }}
+                >
+                  <Text style={styles.addContactButtonText}>
+                    + Add Emergency Contact
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View
+                  style={[
+                    styles.addContactButton,
+                    { backgroundColor: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  <Text style={[styles.addContactButtonText, { opacity: 0.8 }]}>
+                    ✓ Emergency Contact Limit Reached (1/1)
+                  </Text>
+                </View>
+              )}
 
               {/* Sync Contacts Button */}
               <TouchableOpacity
@@ -2021,6 +2101,211 @@ const OptionsScreen = () => {
                   </Text>
                 </View>
               )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Feedback Modal */}
+      <Modal
+        visible={showFeedback}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFeedback(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.feedbackModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View
+              style={[
+                styles.feedbackHeader,
+                { borderBottomColor: currentTheme.colors.accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.feedbackTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Send Feedback
+              </Text>
+              <TouchableOpacity
+                style={styles.feedbackCloseButton}
+                onPress={() => setShowFeedback(false)}
+              >
+                <Text
+                  style={[
+                    styles.feedbackCloseText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.feedbackContent}>
+              <Text
+                style={[
+                  styles.feedbackDescription,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                We value your feedback! Help us improve EquiHUB by sharing your
+                thoughts, suggestions, or reporting issues.
+              </Text>
+
+              {/* Subject Input */}
+              <Text
+                style={[
+                  styles.feedbackLabel,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Subject*
+              </Text>
+              <TextInput
+                style={[
+                  styles.feedbackSubjectInput,
+                  {
+                    borderColor: currentTheme.colors.border,
+                    backgroundColor: currentTheme.colors.surface,
+                    color: currentTheme.colors.text,
+                  },
+                ]}
+                placeholder="Brief description of your feedback"
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                value={feedbackSubject}
+                onChangeText={setFeedbackSubject}
+                maxLength={200}
+                editable={!isSubmittingFeedback}
+              />
+              <Text
+                style={[
+                  styles.feedbackCharacterCount,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {feedbackSubject.length}/200
+              </Text>
+
+              {/* Message Input */}
+              <Text
+                style={[
+                  styles.feedbackLabel,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Message*
+              </Text>
+              <TextInput
+                style={[
+                  styles.feedbackMessageInput,
+                  {
+                    borderColor: currentTheme.colors.border,
+                    backgroundColor: currentTheme.colors.surface,
+                    color: currentTheme.colors.text,
+                  },
+                ]}
+                placeholder="Please describe your feedback in detail..."
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                value={feedbackMessage}
+                onChangeText={setFeedbackMessage}
+                maxLength={2000}
+                multiline={true}
+                numberOfLines={8}
+                textAlignVertical="top"
+                editable={!isSubmittingFeedback}
+              />
+              <Text
+                style={[
+                  styles.feedbackCharacterCount,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {feedbackMessage.length}/2000
+              </Text>
+
+              {/* Consent Checkbox */}
+              <View style={styles.consentContainer}>
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() => setConsentToShareEmail(!consentToShareEmail)}
+                  disabled={isSubmittingFeedback}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      {
+                        borderColor: currentTheme.colors.border,
+                        backgroundColor: consentToShareEmail
+                          ? currentTheme.colors.primary
+                          : currentTheme.colors.surface,
+                      },
+                    ]}
+                  >
+                    {consentToShareEmail && (
+                      <Text style={styles.checkboxCheckmark}>✓</Text>
+                    )}
+                  </View>
+                  <View style={styles.checkboxTextContainer}>
+                    <Text
+                      style={[
+                        styles.consentOptionalText,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      Optional
+                    </Text>
+                    <Text
+                      style={[
+                        styles.consentText,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      I consent to share my email address to receive updates
+                      about my feedback
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[
+                  styles.feedbackSubmitButton,
+                  {
+                    backgroundColor:
+                      isSubmittingFeedback ||
+                      !feedbackSubject.trim() ||
+                      !feedbackMessage.trim()
+                        ? currentTheme.colors.textSecondary
+                        : currentTheme.colors.primary,
+                  },
+                ]}
+                onPress={handleSubmitFeedback}
+                disabled={
+                  isSubmittingFeedback ||
+                  !feedbackSubject.trim() ||
+                  !feedbackMessage.trim()
+                }
+              >
+                {isSubmittingFeedback && (
+                  <ActivityIndicator
+                    size="small"
+                    color="#fff"
+                    style={{ marginRight: 8 }}
+                  />
+                )}
+                <Text style={styles.feedbackSubmitButtonText}>
+                  {isSubmittingFeedback ? "Sending..." : "Send Feedback"}
+                </Text>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -2672,6 +2957,136 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 16,
     fontStyle: "italic",
+  },
+
+  // Feedback Modal Styles
+  feedbackModal: {
+    maxHeight: "90%",
+    minHeight: "80%",
+    borderRadius: 20,
+    padding: 0,
+    margin: 0,
+    width: "95%",
+  },
+  feedbackHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+  },
+  feedbackTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  feedbackCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  feedbackCloseText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  feedbackContent: {
+    padding: 20,
+    flex: 1,
+  },
+  feedbackDescription: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    marginBottom: 20,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  feedbackLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  feedbackSubjectInput: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    fontSize: 16,
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  feedbackMessageInput: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    fontSize: 16,
+    fontFamily: "Inder",
+    marginBottom: 4,
+    minHeight: 120,
+  },
+  feedbackCharacterCount: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    textAlign: "right",
+    marginBottom: 8,
+    opacity: 0.7,
+  },
+  feedbackSubmitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 20,
+    marginBottom: 50,
+  },
+  feedbackSubmitButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  consentContainer: {
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 8,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderRadius: 4,
+    marginRight: 12,
+    marginTop: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxCheckmark: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "bold",
+    lineHeight: 16,
+  },
+  checkboxTextContainer: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  consentOptionalText: {
+    fontSize: 18,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  consentText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 20,
   },
 });
 

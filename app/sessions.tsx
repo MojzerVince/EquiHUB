@@ -859,7 +859,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    marginBottom: -45,
+    marginBottom: -55,
+    marginTop: -15,
   },
   backButton: {
     padding: 10,
@@ -907,7 +908,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
-    marginTop: 5,
+    marginTop: -8,
     paddingTop: 30,
   },
   loadingContainer: {

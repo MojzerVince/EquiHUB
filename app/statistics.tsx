@@ -857,11 +857,11 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
-    marginBottom: -30,
-    marginTop: -10,
+    marginBottom: -10,
+    marginTop: -12,
   },
   backButton: {
     padding: 10,
