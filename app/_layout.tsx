@@ -16,6 +16,7 @@ import CustomSplashScreen from "@/components/SplashScreen";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DialogProvider } from "@/contexts/DialogContext";
 import { MetricProvider } from "@/contexts/MetricContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { ThemeProvider as CustomThemeProvider } from "@/contexts/ThemeContext";
 import { TrackingProvider } from "@/contexts/TrackingContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -109,10 +110,11 @@ const AppContent = () => {
     <CustomThemeProvider>
       <MetricProvider>
         <DialogProvider>
-          <TrackingProvider>
-            <ThemeProvider
-              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-            >
+          <SubscriptionProvider>
+            <TrackingProvider>
+              <ThemeProvider
+                value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+              >
               <ProtectedRoute splashActive={false}>
                 <Stack
                   screenOptions={{ headerShown: false, animation: "none" }}
@@ -171,9 +173,10 @@ const AppContent = () => {
               </ProtectedRoute>
             </ThemeProvider>
           </TrackingProvider>
-        </DialogProvider>
-      </MetricProvider>
-    </CustomThemeProvider>
+        </SubscriptionProvider>
+      </DialogProvider>
+    </MetricProvider>
+  </CustomThemeProvider>
   );
 };
 
