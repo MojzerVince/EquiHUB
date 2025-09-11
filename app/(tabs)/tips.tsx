@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   Modal,
@@ -78,6 +78,14 @@ const CoachScreen = () => {
   const [showTutorialModal, setShowTutorialModal] = useState(false);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [emergencySearchQuery, setEmergencySearchQuery] = useState("");
+
+  // Performance tracking state (real data only)
+  const [totalTimeSpent, setTotalTimeSpent] = useState(0); // Total hours spent learning
+  const [totalLessonsCompleted, setTotalLessonsCompleted] = useState(0); // Total lessons completed
+  
+  // Performance counter animation state
+  const [displayTimeSpent, setDisplayTimeSpent] = useState(0);
+  const [displayLessonsCompleted, setDisplayLessonsCompleted] = useState(0);
 
   // Mock data for started lessons with progress
   const [startedLessons, setStartedLessons] = useState<StartedLesson[]>([
@@ -432,6 +440,56 @@ const CoachScreen = () => {
       ]
     }
   ];
+
+  // Counter animation effect for performance metrics
+  useEffect(() => {
+    const animateCounters = () => {
+      const duration = 2000; // 2 seconds
+      const steps = 60; // 60 frames for smooth animation
+      const timeIncrement = totalTimeSpent / steps;
+      const lessonsIncrement = totalLessonsCompleted / steps;
+      
+      let currentStep = 0;
+      const timer = setInterval(() => {
+        currentStep++;
+        setDisplayTimeSpent(timeIncrement * currentStep);
+        setDisplayLessonsCompleted(Math.floor(lessonsIncrement * currentStep));
+        
+        if (currentStep >= steps) {
+          clearInterval(timer);
+          setDisplayTimeSpent(totalTimeSpent);
+          setDisplayLessonsCompleted(totalLessonsCompleted);
+        }
+      }, duration / steps);
+      
+      return timer;
+    };
+
+    const timer = animateCounters();
+    return () => clearInterval(timer);
+  }, [totalTimeSpent, totalLessonsCompleted]);
+
+  // Calculate real performance data based on started lessons
+  useEffect(() => {
+    const calculatePerformance = () => {
+      // Calculate total lessons completed across all started tutorials (REAL DATA ONLY)
+      const completedCount = startedLessons.reduce((sum, lesson) => sum + lesson.completedLessons, 0);
+      
+      // Calculate total time spent based on actual lessons completed (REAL DATA ONLY)
+      const timeSpent = startedLessons.reduce((sum, lesson) => {
+        const durationMinutes = parseInt(lesson.duration.replace(' min', ''));
+        const lessonDuration = durationMinutes / lesson.lessonCount; // minutes per lesson
+        const timeForCompletedLessons = lesson.completedLessons * lessonDuration;
+        return sum + (timeForCompletedLessons / 60); // convert to hours
+      }, 0);
+
+      // Use only real data - no base values
+      setTotalTimeSpent(Number(timeSpent.toFixed(1)));
+      setTotalLessonsCompleted(completedCount);
+    };
+
+    calculatePerformance();
+  }, [startedLessons]);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -1019,6 +1077,47 @@ const CoachScreen = () => {
               </Text>
               {tutorialCategories.map(renderCategoryCard)}
             </View>
+
+            {/* My Performance Section */}
+            <View style={styles.performanceSection}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                My Performance
+              </Text>
+              
+              <View style={styles.performanceCards}>
+                {/* Time Spent Card */}
+                <View style={[styles.performanceCard, { backgroundColor: theme.surface }]}>
+                  <View style={styles.performanceIcon}>
+                    <View style={[styles.performanceIconContainer, { backgroundColor: theme.primary }]}>
+                      <Text style={styles.performanceIconText}>⏱️</Text>
+                    </View>
+                  </View>
+                  <View style={styles.performanceContent}>
+                    <Text style={styles.performanceLabel}>TIME SPENT</Text>
+                    <Text style={[styles.performanceValue, { color: theme.text }]}>
+                      {displayTimeSpent.toFixed(1)} hours
+                    </Text>
+                  </View>
+                  <Text style={[styles.performanceArrow, { color: theme.textSecondary }]}>›</Text>
+                </View>
+
+                {/* Lessons Completed Card */}
+                <View style={[styles.performanceCard, { backgroundColor: theme.surface }]}>
+                  <View style={styles.performanceIcon}>
+                    <View style={[styles.performanceIconContainer, { backgroundColor: theme.accent }]}>
+                      <Text style={styles.performanceIconText}>🎯</Text>
+                    </View>
+                  </View>
+                  <View style={styles.performanceContent}>
+                    <Text style={styles.performanceLabel}>LESSONS COMPLETED</Text>
+                    <Text style={[styles.performanceValue, { color: theme.text }]}>
+                      {displayLessonsCompleted} lessons
+                    </Text>
+                  </View>
+                  <Text style={[styles.performanceArrow, { color: theme.textSecondary }]}>›</Text>
+                </View>
+              </View>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -1561,6 +1660,70 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontFamily: "Inder",
     textAlign: "center",
+  },
+  
+  // My Performance section styles
+  performanceSection: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  
+  performanceCards: {
+    gap: 12,
+  },
+  
+  performanceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  
+  performanceIcon: {
+    marginRight: 16,
+  },
+  
+  performanceIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  performanceIconText: {
+    fontSize: 20,
+  },
+  
+  performanceContent: {
+    flex: 1,
+  },
+  
+  performanceLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 4,
+    fontFamily: "Inder",
+    letterSpacing: 0.5,
+  },
+  
+  performanceValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: "Inder",
+  },
+  
+  performanceArrow: {
+    fontSize: 18,
+    fontWeight: '300',
   },
 });
 
