@@ -310,7 +310,7 @@ const MapScreen = () => {
   const [trackingPoints, setTrackingPoints] = useState<TrackingPoint[]>([]);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
-  const [highAccuracyMode, setHighAccuracyMode] = useState<boolean>(false);
+
   const [showBatteryInfoModal, setShowBatteryInfoModal] =
     useState<boolean>(false);
 
@@ -576,8 +576,8 @@ const MapScreen = () => {
         async () => {
           await syncBackgroundData();
         },
-        highAccuracyMode ? 500 : 2000
-      ); // Sync every 500ms in high accuracy, 2s in normal
+        2000
+      ); // Sync every 2 seconds
     }
 
     return () => {
@@ -586,7 +586,7 @@ const MapScreen = () => {
         console.log("⏹️ Stopped background data sync timer");
       }
     };
-  }, [isTracking, isUsingBackgroundLocation, highAccuracyMode]);
+  }, [isTracking, isUsingBackgroundLocation]);
 
   // Request camera, media library, and notification permissions
   const requestCameraPermissions = async () => {
@@ -2399,9 +2399,7 @@ const MapScreen = () => {
       }
 
       // Start both foreground and background location tracking from the beginning
-      console.log(
-        `🚀 Starting both foreground and background tracking with highAccuracyMode: ${highAccuracyMode}`
-      );
+      console.log("🚀 Starting both foreground and background tracking");
 
       // Start foreground location tracking
       await restartLocationWatcherForTracking();
@@ -2966,65 +2964,7 @@ const MapScreen = () => {
     return segments;
   };
 
-  // Update high accuracy mode and restart tracking if active
-  const updateHighAccuracyMode = async (newMode: boolean) => {
-    const previousMode = highAccuracyMode;
-    console.log(
-      `🔄 updateHighAccuracyMode called: ${previousMode} → ${newMode}, isTracking: ${isTracking}`
-    );
-    setHighAccuracyMode(newMode);
 
-    // If tracking is active, restart the current tracking mode with new settings
-    if (isTracking) {
-      try {
-        console.log(
-          `🔄 Updating tracking mode: ${previousMode ? "High" : "Normal"} → ${
-            newMode ? "High" : "Normal"
-          } Accuracy`
-        );
-
-        if (isUsingBackgroundLocation) {
-          // Restart background tracking with new settings
-          console.log(
-            "🔄 Restarting background tracking with new accuracy settings"
-          );
-          await switchToBackgroundLocation();
-        } else {
-          // Restart foreground tracking with new settings
-          console.log(
-            "🔄 Restarting foreground tracking with new accuracy settings"
-          );
-          await restartLocationWatcherForTracking();
-        }
-
-        console.log(
-          `✅ Successfully updated to ${
-            newMode ? "High" : "Normal"
-          } Accuracy mode`
-        );
-      } catch (error) {
-        console.error("Error updating tracking mode:", error);
-        // Revert the state if update failed
-        setHighAccuracyMode(previousMode);
-      }
-    }
-
-    // Show notification when ultra-fast mode is enabled (whether tracking or not)
-    if (newMode && !previousMode) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "⚡ Ultra-Fast GPS Enabled",
-          body: isTracking
-            ? "Ultra-high precision tracking is now active. Battery usage will increase."
-            : "Ultra-fast GPS is ready. Start tracking for maximum precision.",
-          sound: false,
-          priority: Notifications.AndroidNotificationPriority.DEFAULT,
-        },
-        trigger: null,
-        identifier: "ultra-fast-gps-enabled",
-      });
-    }
-  };
 
   // Restart location watcher with optimized settings for tracking
   const restartLocationWatcherForTracking = async () => {
@@ -3041,7 +2981,7 @@ const MapScreen = () => {
         const subscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: highAccuracyMode ? 500 : 1500, // Optimized updates during tracking to reduce noise
+            timeInterval: 1500, // Optimized updates during tracking to reduce noise
             distanceInterval: 1, // Update every 1 meter during tracking (reduced from 0.5m to minimize GPS drift)
           },
           (location) => {
@@ -3077,7 +3017,7 @@ const MapScreen = () => {
 
                 // During tracking, capture more frequent updates
                 if (
-                  timeDiff >= (highAccuracyMode ? 250 : 500) ||
+                  timeDiff >= 500 ||
                   distance >= 0.5
                 ) {
                   // Update current gait based on new tracking point
@@ -3997,64 +3937,7 @@ const MapScreen = () => {
               </View>
             )}
 
-            {/* High Accuracy Toggle - Hidden during tracking */}
-            {!isTracking && (
-              <View
-                style={[
-                  styles.highAccuracyContainer,
-                  { backgroundColor: currentTheme.colors.surface },
-                ]}
-              >
-                <View style={styles.highAccuracyRow}>
-                  <Text
-                    style={[
-                      styles.highAccuracyLabel,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    Ultra-Fast GPS Tracking
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setShowBatteryInfoModal(true)}
-                    style={styles.infoButton}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.infoButtonText,
-                        { color: currentTheme.colors.primary },
-                      ]}
-                    >
-                      ⓘ
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.toggleSwitch,
-                      {
-                        backgroundColor: highAccuracyMode
-                          ? currentTheme.colors.primary
-                          : currentTheme.colors.border,
-                      },
-                    ]}
-                    onPress={() => updateHighAccuracyMode(!highAccuracyMode)}
-                    activeOpacity={0.8}
-                  >
-                    <View
-                      style={[
-                        styles.toggleKnob,
-                        {
-                          backgroundColor: "#FFFFFF",
-                          transform: [
-                            { translateX: highAccuracyMode ? 20 : 0 },
-                          ],
-                        },
-                      ]}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
+
 
             {/* Fall Detection Toggle - Hidden during tracking */}
             {!isTracking && (
