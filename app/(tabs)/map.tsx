@@ -150,9 +150,24 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (data) {
     const { locations } = data as any;
 
+    // Check if tracking is currently active before processing locations
+    try {
+      const trackingStatus = await AsyncStorage.getItem("is_tracking_active");
+      const isTrackingActive = trackingStatus === "true";
+      
+      if (!isTrackingActive) {
+        console.log("🚫 Tracking not active - skipping background location processing");
+        return;
+      }
+    } catch (error) {
+      console.error("Error checking tracking status:", error);
+      // If we can't check status, don't process to be safe
+      return;
+    }
+
     // Process all location updates, not just the first one
     if (locations && locations.length > 0) {
-      console.log(`🔄 Processing ${locations.length} background location(s)`);
+      console.log(`🔄 Processing ${locations.length} background location(s) - tracking is active`);
 
       const trackingPoints = locations.map((location: any, index: number) => ({
         latitude: location.coords.latitude,
@@ -300,13 +315,13 @@ const MapScreen = () => {
   const [fallDetectionEnabled, setFallDetectionEnabled] = useState(false);
   const [fallDetectionConfig, setFallDetectionConfig] =
     useState<FallDetectionConfig>({
-      accelerationThreshold: 3.0, // Baseline threshold
-      highSpeedThreshold: 15.0, // 15g for high-speed impacts
-      lowSpeedThreshold: 5.0, // 5g for low-speed impacts
-      speedDetectionThreshold: 3.0, // 3 m/s to determine high vs low speed
-      gyroscopeThreshold: 3.0, // Lowered from 4.0 to 3.0 for more sensitivity
-      impactDuration: 500, // Reduced from 800 to 500ms for quicker detection
-      recoveryTimeout: 20000, // Set to 20000ms (20 seconds)
+      accelerationThreshold: 5.0, // Increased from 3.0 to reduce false positives when dismounting
+      highSpeedThreshold: 20.0, // Increased from 15.0g for high-speed impacts
+      lowSpeedThreshold: 8.0, // Increased from 5.0g for low-speed impacts
+      speedDetectionThreshold: 5.0, // Increased from 3.0 m/s to determine high vs low speed
+      gyroscopeThreshold: 5.0, // Increased from 3.0 to 5.0 for less sensitivity to normal movement
+      impactDuration: 800, // Increased from 500 to 800ms for more reliable detection
+      recoveryTimeout: 20000, // Keep at 20000ms (20 seconds)
       isEnabled: true,
     });
   const [recentFallEvents, setRecentFallEvents] = useState<FallEvent[]>([]);
@@ -353,6 +368,8 @@ const MapScreen = () => {
     loadUserProfile();
     // Load fall detection disclaimer acceptance status
     loadFallDisclaimerStatus();
+    // Initialize tracking status as inactive
+    initializeTrackingStatus();
   }, []);
 
   // Load fall detection disclaimer acceptance status
@@ -362,6 +379,22 @@ const MapScreen = () => {
       setFallDisclaimerAccepted(accepted === "true");
     } catch (error) {
       console.error("Error loading fall disclaimer status:", error);
+    }
+  };
+
+  // Initialize tracking status in AsyncStorage
+  const initializeTrackingStatus = async () => {
+    try {
+      // Set initial tracking status to false (inactive) unless already set
+      const currentStatus = await AsyncStorage.getItem("is_tracking_active");
+      if (currentStatus === null) {
+        await AsyncStorage.setItem("is_tracking_active", "false");
+        console.log("🔄 Initialized tracking status as inactive");
+      } else {
+        console.log(`🔄 Current tracking status: ${currentStatus}`);
+      }
+    } catch (error) {
+      console.error("Error initializing tracking status:", error);
     }
   };
 
@@ -1249,6 +1282,8 @@ const MapScreen = () => {
         })
         .then(() => {
           // Background location tracking cleaned up
+          // Reset tracking status to inactive
+          return AsyncStorage.setItem("is_tracking_active", "false");
         })
         .catch((error) => {
           console.error(
@@ -2292,6 +2327,9 @@ const MapScreen = () => {
 
       // Clear any existing tracking points in storage
       await AsyncStorage.removeItem("current_tracking_points");
+      
+      // Set tracking status in AsyncStorage for background task
+      await AsyncStorage.setItem("is_tracking_active", "true");
 
       // Ensure any background task is stopped first
       const isAlreadyRunning = await Location.hasStartedLocationUpdatesAsync(
@@ -2402,6 +2440,9 @@ const MapScreen = () => {
 
       // Clean up storage
       await AsyncStorage.removeItem("current_tracking_points");
+      
+      // Set tracking status to inactive in AsyncStorage
+      await AsyncStorage.setItem("is_tracking_active", "false");
 
       // Reset app state tracking
       setIsUsingBackgroundLocation(false);
