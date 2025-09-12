@@ -396,6 +396,12 @@ const OptionsScreen = () => {
   const [consentToShareEmail, setConsentToShareEmail] = useState(false);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
+  // Terms of Service state
+  const [showTermsOfService, setShowTermsOfService] = useState(false);
+
+  // About state
+  const [showAbout, setShowAbout] = useState(false);
+
   // Load notification settings when component mounts
   useEffect(() => {
     loadNotificationSettings();
@@ -1285,7 +1291,7 @@ const OptionsScreen = () => {
             >
               <ActionButton
                 title="About"
-                onPress={() => console.log("About pressed")}
+                onPress={() => setShowAbout(true)}
               />
               <ActionButton
                 title="Help & Support"
@@ -1293,7 +1299,7 @@ const OptionsScreen = () => {
               />
               <ActionButton
                 title="Terms of Service"
-                onPress={() => console.log("Terms pressed")}
+                onPress={() => setShowTermsOfService(true)}
               />
               <ActionButton
                 title="Privacy Policy"
@@ -2310,6 +2316,288 @@ const OptionsScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Terms of Service Modal */}
+      <Modal
+        visible={showTermsOfService}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowTermsOfService(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.termsOfServiceModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View
+              style={[
+                styles.termsOfServiceHeader,
+                { borderBottomColor: currentTheme.colors.accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.termsOfServiceTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Terms of Service
+              </Text>
+              <TouchableOpacity
+                style={styles.termsOfServiceCloseButton}
+                onPress={() => setShowTermsOfService(false)}
+              >
+                <Text
+                  style={[
+                    styles.termsOfServiceCloseText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.termsOfServiceContent}>
+              <Text
+                style={[
+                  styles.termsOfServiceText,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  1. Acceptance of Terms{"\n"}
+                </Text>
+                By downloading, installing, or using EquiHUB, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our application.{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  2. Description of Service{"\n"}
+                </Text>
+                EquiHUB is a mobile application designed for equestrian enthusiasts to track horse training sessions, manage horse care, connect with the equestrian community, and access safety features including emergency contacts and first aid guidance.{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  3. User Accounts and Registration{"\n"}
+                </Text>
+                • You must provide accurate and complete information when creating an account{"\n"}
+                • You are responsible for maintaining the security of your account credentials{"\n"}
+                • You must be at least 13 years old to use EquiHUB{"\n"}
+                • One account per user is permitted{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  4. User Conduct and Content{"\n"}
+                </Text>
+                You agree not to:{"\n"}
+                • Post inappropriate, offensive, or harmful content{"\n"}
+                • Harass, bully, or threaten other users{"\n"}
+                • Share false or misleading information{"\n"}
+                • Violate any applicable laws or regulations{"\n"}
+                • Attempt to hack, disrupt, or damage the application{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  5. Privacy and Data Protection{"\n"}
+                </Text>
+                Your privacy is important to us. Please review our Privacy Policy to understand how we collect, use, and protect your information. By using EquiHUB, you consent to our data practices as described in our Privacy Policy.{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  6. Safety Features and Emergency Services{"\n"}
+                </Text>
+                • Emergency contact features are provided as a convenience but should not replace professional emergency services{"\n"}
+                • Always call local emergency services (911, 112, etc.) in case of serious emergencies{"\n"}
+                • First aid information is for educational purposes only and does not replace professional medical training{"\n"}
+                • EquiHUB is not responsible for the accuracy or effectiveness of emergency features{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  7. Location Services{"\n"}
+                </Text>
+                EquiHUB may use location services to provide tracking features and safety functionality. You can control location permissions through your device settings.{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  8. Subscription and Pro Features{"\n"}
+                </Text>
+                • Some features may require a paid subscription{"\n"}
+                • Subscription fees are charged according to your selected plan{"\n"}
+                • Cancellation policies apply as described in your app store{"\n"}
+                • Pro features may be modified or discontinued with notice{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  9. Intellectual Property{"\n"}
+                </Text>
+                EquiHUB and its content are protected by copyright, trademark, and other intellectual property laws. You may not copy, distribute, or create derivative works without permission.{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  10. Limitation of Liability{"\n"}
+                </Text>
+                EquiHUB is provided "as is" without warranties. We are not liable for any damages arising from your use of the application, including but not limited to data loss, injury, or equipment damage.{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  11. Indemnification{"\n"}
+                </Text>
+                You agree to indemnify and hold EquiHUB harmless from any claims, damages, or expenses arising from your use of the application or violation of these terms.{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  12. Termination{"\n"}
+                </Text>
+                We may suspend or terminate your account for violation of these terms. You may delete your account at any time through the application settings.{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  13. Changes to Terms{"\n"}
+                </Text>
+                We reserve the right to modify these Terms of Service at any time. Users will be notified of significant changes through the application or email.{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  14. Governing Law{"\n"}
+                </Text>
+                These terms are governed by the laws of the jurisdiction where EquiHUB is operated, without regard to conflict of law principles.{"\n\n"}
+
+                <Text style={styles.termsOfServiceSectionTitle}>
+                  15. Contact Information{"\n"}
+                </Text>
+                For questions about these Terms of Service, please contact us through the feedback feature in the application.{"\n\n"}
+
+                <Text style={[styles.termsOfServiceFooter, { color: currentTheme.colors.textSecondary }]}>
+                  Last Updated: {new Date().toLocaleDateString()}{"\n"}
+                  Version 1.0{"\n\n"}
+                  Thank you for using EquiHUB and being part of our equestrian community!
+                </Text>
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* About Modal */}
+      <Modal
+        visible={showAbout}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowAbout(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.aboutModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View
+              style={[
+                styles.aboutHeader,
+                { borderBottomColor: currentTheme.colors.accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.aboutTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                About EquiHUB
+              </Text>
+              <TouchableOpacity
+                style={styles.aboutCloseButton}
+                onPress={() => setShowAbout(false)}
+              >
+                <Text
+                  style={[
+                    styles.aboutCloseText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.aboutContent}>
+              <View style={styles.aboutLogoContainer}>
+                <Image 
+                  source={require("../../assets/icons/512x512.png")}
+                  style={styles.aboutAppIcon}
+                />
+                <Text style={[styles.aboutAppName, { color: currentTheme.colors.text }]}>
+                  EquiHUB
+                </Text>
+                <Text style={[styles.aboutVersion, { color: currentTheme.colors.textSecondary }]}>
+                  Version {appConfig.expo.version}
+                </Text>
+              </View>
+
+              <Text
+                style={[
+                  styles.aboutText,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                <Text style={styles.aboutSectionTitle}>
+                  Welcome to EquiHUB!{"\n"}
+                </Text>
+                EquiHUB is your comprehensive companion for all things equestrian. Whether you're a professional rider, a passionate enthusiast, or just starting your journey with horses, our app is designed to enhance your experience and keep you connected with the equestrian community.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  🎯 Our Mission{"\n"}
+                </Text>
+                To empower equestrians with innovative tools that make horse care, training, and community connection easier, safer, and more enjoyable. We believe that technology can enhance the timeless bond between humans and horses.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  ✨ Key Features{"\n"}
+                </Text>
+                <Text style={styles.aboutFeatureItem}>🐴 Horse Management</Text>
+                Comprehensive profiles for all your horses with health records, training progress, and care schedules.{"\n\n"}
+
+                <Text style={styles.aboutFeatureItem}>📊 Training Tracking</Text>
+                Record and analyze your riding sessions with detailed metrics, GPS tracking, and progress visualization.{"\n\n"}
+
+                <Text style={styles.aboutFeatureItem}>🏆 Community Challenges</Text>
+                Join global and stable-specific challenges to stay motivated and connect with fellow riders.{"\n\n"}
+
+                <Text style={styles.aboutFeatureItem}>💬 Social Features</Text>
+                Share your achievements, connect with friends, and engage with the equestrian community.{"\n\n"}
+
+                <Text style={styles.aboutFeatureItem}>🚨 Safety First</Text>
+                Emergency contacts, first aid guidance, and safety features designed specifically for equestrians.{"\n\n"}
+
+                <Text style={styles.aboutFeatureItem}>📚 Tips & Guides</Text>
+                Expert advice, training tips, and educational content to improve your horsemanship skills.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  🌟 Pro Features{"\n"}
+                </Text>
+                Unlock advanced analytics, unlimited horses, priority support, and exclusive content with EquiHUB Pro.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  🛡️ Safety & Privacy{"\n"}
+                </Text>
+                Your data security and privacy are our top priorities. We use industry-standard encryption and never share your personal information without your consent.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  🤝 Community-Driven{"\n"}
+                </Text>
+                EquiHUB is built by equestrians, for equestrians. We listen to our community and continuously improve based on your feedback and needs.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  📧 Contact & Support{"\n"}
+                </Text>
+                Need help or have suggestions? Use the feedback feature in the app or visit our support resources. We're here to help you make the most of your equestrian journey.{"\n\n"}
+
+                <Text style={styles.aboutSectionTitle}>
+                  🙏 Acknowledgments{"\n"}
+                </Text>
+                Special thanks to the equestrian community for their invaluable feedback, testing, and support in making EquiHUB the best it can be.{"\n\n"}
+
+                <Text style={[styles.aboutFooter, { color: currentTheme.colors.textSecondary }]}>
+                  Made with ❤️ for the equestrian community{"\n"}
+                  © 2025 EquiHUB. All rights reserved.{"\n\n"}
+                  
+                  Follow your passion. Track your progress. Connect with your community.{"\n"}
+                  Happy riding! 🐎✨
+                </Text>
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -3087,6 +3375,151 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inder",
     lineHeight: 20,
+  },
+
+  // Terms of Service Modal Styles
+  termsOfServiceModal: {
+    maxHeight: "90%",
+    minHeight: "85%",
+    borderRadius: 20,
+    padding: 0,
+    margin: 0,
+    width: "95%",
+  },
+  termsOfServiceHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    paddingTop: 10,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+  },
+  termsOfServiceTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  termsOfServiceCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  termsOfServiceCloseText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  termsOfServiceContent: {
+    padding: 20,
+    flex: 1,
+  },
+  termsOfServiceText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 22,
+    textAlign: "left",
+  },
+  termsOfServiceSectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  termsOfServiceFooter: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    fontStyle: "italic",
+    textAlign: "center",
+    lineHeight: 18,
+    marginTop: 10,
+  },
+
+  // About Modal Styles
+  aboutModal: {
+    maxHeight: "90%",
+    minHeight: "85%",
+    borderRadius: 20,
+    padding: 0,
+    margin: 0,
+    width: "95%",
+  },
+  aboutHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    paddingTop: 10,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+  },
+  aboutTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  aboutCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  aboutCloseText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  aboutContent: {
+    padding: 20,
+    flex: 1,
+  },
+  aboutLogoContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+    paddingVertical: 10,
+  },
+  aboutAppIcon: {
+    width: 80,
+    height: 80,
+    marginBottom: 12,
+    borderRadius: 16,
+  },
+  aboutAppName: {
+    fontSize: 32,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  aboutVersion: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    textAlign: "center",
+    opacity: 0.8,
+  },
+  aboutText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 22,
+    textAlign: "left",
+  },
+  aboutSectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  aboutFeatureItem: {
+    fontSize: 15,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    marginBottom: 4,
+    marginTop: 4,
+  },
+  aboutFooter: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    fontStyle: "italic",
+    textAlign: "center",
+    lineHeight: 18,
+    marginTop: 10,
   },
 });
 

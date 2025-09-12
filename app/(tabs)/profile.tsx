@@ -742,6 +742,13 @@ const ProfileScreen = () => {
     }
   };
 
+  const handleNameChange = (text: string) => {
+    // Limit to 20 characters
+    if (text.length <= 20) {
+      setUserName(text);
+    }
+  };
+
   const handleStableSelection = (
     stable: SimpleStable | null,
     isNewStable?: boolean,
@@ -846,6 +853,10 @@ const ProfileScreen = () => {
   const handleSave = async () => {
     if (userName.trim() === "") {
       showError("Name cannot be empty");
+      return;
+    }
+    if (userName.trim().length > 20) {
+      showError("Name must be 20 characters or less");
       return;
     }
     if (userAge.trim() === "" || isNaN(Number(userAge))) {
@@ -1622,10 +1633,23 @@ const ProfileScreen = () => {
                     },
                   ]}
                   value={userName}
-                  onChangeText={setUserName}
+                  onChangeText={handleNameChange}
                   placeholder="Enter your name"
                   placeholderTextColor={currentTheme.colors.textSecondary}
                 />
+                <Text
+                  style={[
+                    styles.characterCounter,
+                    {
+                      color:
+                        userName.length > 15
+                          ? "#FF6B6B"
+                          : currentTheme.colors.textSecondary,
+                    },
+                  ]}
+                >
+                  {userName.length}/20
+                </Text>
                 <TextInput
                   style={[
                     styles.editInput,
@@ -2188,8 +2212,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inder",
     textAlign: "right",
-    marginTop: 5,
-    marginBottom: 10,
+    marginTop: -10,
+    marginBottom: 15,
     marginRight: 5,
   },
   profileImageContainer: {
