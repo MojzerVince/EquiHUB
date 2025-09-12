@@ -92,8 +92,8 @@ android {
         applicationId 'com.mojzi1969.EquiHUB'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 33
-        versionName "0.7.0 - learning test"
+        versionCode 34
+        versionName "0.7.1 - learning test"
         missingDimensionStrategy 'store', 'play'
     }
     
