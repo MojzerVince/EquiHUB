@@ -186,14 +186,57 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
         );
         const existingPoints = existingData ? JSON.parse(existingData) : [];
 
-        // Filter out points with poor accuracy (optional - can be adjusted)
-        const goodAccuracyPoints = trackingPoints.filter(
-          (point: TrackingPoint) => !point.accuracy || point.accuracy <= 50 // Only accept points with accuracy ≤ 50 meters
-        );
+        // Enhanced filtering for GPS drift and accuracy
+        const filteredPoints = [];
+        
+        for (const point of trackingPoints) {
+          // Filter by accuracy first (reject points with accuracy > 30m)
+          if (point.accuracy && point.accuracy > 30) {
+            continue; // Skip this point due to poor accuracy
+          }
+          
+          // Check movement threshold against last existing point
+          if (existingPoints.length > 0) {
+            const lastPoint = existingPoints[existingPoints.length - 1];
+            const timeDiff = point.timestamp - lastPoint.timestamp;
+            
+            // Calculate distance from last point using Haversine formula
+            const R = 6371e3; // Earth's radius in meters
+            const φ1 = (lastPoint.latitude * Math.PI) / 180;
+            const φ2 = (point.latitude * Math.PI) / 180;
+            const Δφ = ((point.latitude - lastPoint.latitude) * Math.PI) / 180;
+            const Δλ = ((point.longitude - lastPoint.longitude) * Math.PI) / 180;
+            
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                      Math.cos(φ1) * Math.cos(φ2) * 
+                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c; // Distance in meters
+            
+            // Enhanced movement threshold based on accuracy
+            const accuracyThreshold = Math.max(
+              3, // Minimum 3m threshold
+              (point.accuracy || 10) * 0.5 // Use half of GPS accuracy as threshold
+            );
+            
+            // Speed-based threshold adjustment
+            const speedBasedThreshold = (point.speed && point.speed > 1.5) ? 
+              Math.max(2, accuracyThreshold * 0.7) : accuracyThreshold;
+            
+            // Require significant time AND movement to reduce GPS drift
+            if (timeDiff >= 3000 || (timeDiff >= 2000 && distance >= speedBasedThreshold)) {
+              filteredPoints.push(point);
+            }
+            // Skip point if it's too close or too recent (likely GPS drift)
+          } else {
+            // First point, always add it
+            filteredPoints.push(point);
+          }
+        }
 
-        if (goodAccuracyPoints.length > 0) {
-          // Add new points
-          const updatedPoints = [...existingPoints, ...goodAccuracyPoints];
+        if (filteredPoints.length > 0) {
+          // Add filtered points
+          const updatedPoints = [...existingPoints, ...filteredPoints];
 
           // Limit stored points to prevent memory issues (keep last 2000 points for longer rides)
           const limitedPoints = updatedPoints.slice(-2000);
@@ -204,7 +247,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
           );
 
           console.log(
-            `📊 Background locations saved: ${goodAccuracyPoints.length}/${trackingPoints.length} (good accuracy), total: ${limitedPoints.length}`
+            `📊 Background locations saved: ${filteredPoints.length}/${trackingPoints.length} (after GPS drift filtering), total: ${limitedPoints.length}`
           );
 
           // Update last known location timestamp for debugging
@@ -214,7 +257,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
           );
         } else {
           console.log(
-            "⚠️ All background locations filtered out due to poor accuracy"
+            "⚠️ All background locations filtered out due to GPS drift or poor accuracy"
           );
         }
       } catch (error) {
@@ -803,8 +846,8 @@ const MapScreen = () => {
         const subscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: 1000, // Update every 1s for general location monitoring
-            distanceInterval: 1, // Update every 1 meter movement
+            timeInterval: 2000, // Update every 2s to reduce GPS noise
+            distanceInterval: 3, // Update only after 3m movement to reduce drift
           },
           (location) => {
             const { latitude, longitude, accuracy, speed } = location.coords;
@@ -827,8 +870,14 @@ const MapScreen = () => {
             const strength = calculateGpsStrength(accuracy);
             setGpsStrength(strength);
 
-            // If actively tracking, immediately add point to tracking points
+            // If actively tracking, add point only if accuracy is good enough
             if (isTracking) {
+              // Skip points with poor accuracy to prevent GPS drift inflation
+              if (accuracy && accuracy > 25) {
+                console.log(`🚫 Skipping location update due to poor accuracy: ${accuracy.toFixed(1)}m`);
+                return; // Skip this location update
+              }
+
               const trackingPoint: TrackingPoint = {
                 latitude,
                 longitude,
@@ -850,8 +899,18 @@ const MapScreen = () => {
                     longitude
                   );
 
-                  // Only add if enough time has passed (500ms) or significant movement (2m)
-                  if (timeDiff >= 500 || distance >= 2) {
+                  // Enhanced movement threshold to filter GPS drift
+                  // Calculate dynamic threshold based on GPS accuracy
+                  const accuracyThreshold = Math.max(
+                    3, // Minimum 3m threshold
+                    (accuracy || 10) * 0.5 // Use half of GPS accuracy as threshold, default 5m if no accuracy
+                  );
+                  
+                  // Require both time AND significant movement to reduce GPS drift
+                  // Also consider speed - if moving fast, allow smaller distance threshold
+                  const speedBasedThreshold = (speed && speed > 1.5) ? Math.max(2, accuracyThreshold * 0.7) : accuracyThreshold;
+                  
+                  if (timeDiff >= 2000 || (timeDiff >= 1000 && distance >= speedBasedThreshold)) {
                     const newPoints = [...prev, trackingPoint];
 
                     // Update real-time gait segments with new path
@@ -2982,8 +3041,8 @@ const MapScreen = () => {
         const subscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: highAccuracyMode ? 250 : 1000, // Ultra-fast updates during tracking
-            distanceInterval: 0.5, // Update every 0.5 meters during tracking
+            timeInterval: highAccuracyMode ? 500 : 1500, // Optimized updates during tracking to reduce noise
+            distanceInterval: 1, // Update every 1 meter during tracking (reduced from 0.5m to minimize GPS drift)
           },
           (location) => {
             const { latitude, longitude, accuracy, speed } = location.coords;
