@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { OAuthButtonGroup } from "../components/OAuthButtons";
+import { OAuthDebugger } from "../components/OAuthDebugger";
 import { AuthAPI, AuthUser, LoginData } from "../lib/authAPI";
 
 const LoginScreen = () => {
@@ -251,6 +252,9 @@ const LoginScreen = () => {
               disabled={loading}
               showDivider={true}
             />
+
+            {/* Temporary OAuth Debugger - Remove this after fixing OAuth */}
+            <OAuthDebugger />
 
             <TouchableOpacity
               style={styles.registerLinkContainer}

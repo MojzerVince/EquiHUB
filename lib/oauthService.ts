@@ -73,7 +73,21 @@ export class OAuthService {
 
       if (error) {
         console.error('❌ Google OAuth error:', error);
-        return { user: null, error: error.message };
+        
+        // Provide specific error messages for common issues
+        if (error.message.includes('provider is not enabled')) {
+          return { 
+            user: null, 
+            error: 'Google Sign-In is not enabled in Supabase. Please enable it in Authentication → Providers in your Supabase dashboard.' 
+          };
+        } else if (error.message.includes('invalid_client')) {
+          return { 
+            user: null, 
+            error: 'Google OAuth client configuration is invalid. Please check your Google Cloud Console setup.' 
+          };
+        }
+        
+        return { user: null, error: `Google Sign-In error: ${error.message}` };
       }
 
       if (!data.url) {
