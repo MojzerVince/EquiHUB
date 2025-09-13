@@ -71,39 +71,57 @@ export const OAuthButton: React.FC<OAuthButtonProps> = ({
   };
 
   const getButtonStyle = () => {
-    const baseStyle = {
-      ...styles.button,
-      backgroundColor: disabled ? theme.colors.surface : "white",
-      borderColor: theme.colors.border,
-      opacity: disabled ? 0.6 : 1,
-    };
-
-    // Special styling for Apple button
-    if (provider.id === "apple") {
+    if (provider.id === "google") {
       return {
-        ...baseStyle,
-        backgroundColor: disabled ? theme.colors.surface : "#000000",
+        ...styles.button,
+        backgroundColor: disabled ? "#f8f9fa" : "#ffffff",
+        borderColor: disabled ? "#e8eaed" : "#dadce0",
+        borderWidth: 1,
+        opacity: disabled ? 0.6 : 1,
       };
     }
 
-    return baseStyle;
+    if (provider.id === "apple") {
+      return {
+        ...styles.button,
+        backgroundColor: disabled ? "#1c1c1e" : "#000000",
+        borderColor: disabled ? "#1c1c1e" : "#000000",
+        borderWidth: 0,
+        opacity: disabled ? 0.6 : 1,
+      };
+    }
+
+    return styles.button;
   };
 
   const getTextStyle = () => {
-    const baseStyle = {
-      ...styles.buttonText,
-      color: disabled ? theme.colors.textSecondary : theme.colors.text,
-    };
-
-    // White text for Apple button
-    if (provider.id === "apple") {
+    if (provider.id === "google") {
       return {
-        ...baseStyle,
-        color: disabled ? theme.colors.textSecondary : "#ffffff",
+        ...styles.buttonText,
+        color: disabled ? "#999999" : "#3c4043",
+        fontWeight: "500" as const,
       };
     }
 
-    return baseStyle;
+    if (provider.id === "apple") {
+      return {
+        ...styles.buttonText,
+        color: disabled ? "#cccccc" : "#ffffff",
+        fontWeight: "600" as const,
+      };
+    }
+
+    return styles.buttonText;
+  };
+
+  const getButtonText = () => {
+    if (provider.id === "google") {
+      return mode === "login" ? "Continue with Google" : "Continue with Google";
+    }
+    if (provider.id === "apple") {
+      return mode === "login" ? "Continue with Apple" : "Continue with Apple";
+    }
+    return `${mode === "login" ? "Sign in" : "Sign up"} with ${provider.name}`;
   };
 
   return (
@@ -117,15 +135,22 @@ export const OAuthButton: React.FC<OAuthButtonProps> = ({
         {loading ? (
           <ActivityIndicator
             size="small"
-            color={provider.id === "apple" ? "#ffffff" : theme.colors.primary}
-            style={styles.icon}
+            color={provider.id === "apple" ? "#ffffff" : "#4285f4"}
+            style={styles.loadingIcon}
           />
         ) : (
-          <Text style={[styles.icon, getTextStyle()]}>{provider.icon}</Text>
+          <>
+            {provider.id === "google" && (
+              <View style={styles.googleIcon}>
+                <Text style={styles.googleG}>G</Text>
+              </View>
+            )}
+            {provider.id === "apple" && (
+              <Text style={styles.appleIcon}>🍎</Text>
+            )}
+          </>
         )}
-        <Text style={getTextStyle()}>
-          {mode === "login" ? "Sign in" : "Sign up"} with {provider.name}
-        </Text>
+        <Text style={getTextStyle()}>{getButtonText()}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -219,21 +244,45 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    minHeight: 56,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    minHeight: 50,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   buttonContent: {
     flexDirection: "row",
     alignItems: "center",
   },
-  icon: {
-    fontSize: 20,
+  loadingIcon: {
     marginRight: 12,
+  },
+  googleIcon: {
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  googleG: {
+    color: "#4285f4",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  appleIcon: {
+    fontSize: 16,
+    marginRight: 12,
+    color: "#ffffff",
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "500",
   },
 });
