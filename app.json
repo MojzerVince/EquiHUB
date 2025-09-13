@@ -17,7 +17,8 @@
       },
       "config": {
         "googleMapsApiKey": "AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg"
-      }
+      },
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -49,6 +50,7 @@
           "apiKey": "AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg"
         }
       },
+      "googleServicesFile": "./google-services.json",
       "foregroundService": {
         "notificationTitle": "EquiHUB GPS Tracking",
         "notificationBody": "Tracking your riding session",
@@ -82,6 +84,12 @@
           "color": "#ffffff",
           "defaultChannel": "default"
         }
+      ],
+      [
+        "@react-native-google-signin/google-signin"
+      ],
+      [
+        "expo-apple-authentication"
       ]
     ],
     "experiments": {

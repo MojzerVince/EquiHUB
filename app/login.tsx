@@ -14,7 +14,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AuthAPI, LoginData } from "../lib/authAPI";
+import { OAuthButtonGroup } from "../components/OAuthButtons";
+import { AuthAPI, AuthUser, LoginData } from "../lib/authAPI";
 
 const LoginScreen = () => {
   const router = useRouter();
@@ -76,6 +77,15 @@ const LoginScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOAuthSuccess = (user: AuthUser) => {
+    console.log("OAuth login successful, waiting for auth state to update...");
+    // Let the AuthContext handle navigation
+  };
+
+  const handleOAuthError = (error: string) => {
+    showError(error);
   };
 
   const handleForgotPassword = async () => {
@@ -232,6 +242,15 @@ const LoginScreen = () => {
                 <Text style={styles.loginButtonText}>Sign In</Text>
               )}
             </TouchableOpacity>
+
+            {/* OAuth Buttons */}
+            <OAuthButtonGroup
+              mode="login"
+              onSuccess={handleOAuthSuccess}
+              onError={handleOAuthError}
+              disabled={loading}
+              showDivider={true}
+            />
 
             <TouchableOpacity
               style={styles.registerLinkContainer}

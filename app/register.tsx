@@ -15,7 +15,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AuthAPI, RegisterData } from "../lib/authAPI";
+import { OAuthButtonGroup } from "../components/OAuthButtons";
+import { AuthAPI, AuthUser, RegisterData } from "../lib/authAPI";
 import { SimpleStable, SimpleStableAPI } from "../lib/simpleStableAPI";
 
 const RegisterScreen = () => {
@@ -164,6 +165,17 @@ const RegisterScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOAuthSuccess = (user: AuthUser) => {
+    console.log(
+      "OAuth registration successful, waiting for auth state to update..."
+    );
+    // Let the AuthContext handle navigation
+  };
+
+  const handleOAuthError = (error: string) => {
+    showError(error);
   };
 
   const handleInputChange = (
@@ -509,6 +521,15 @@ const RegisterScreen = () => {
                 <Text style={styles.registerButtonText}>Create Account</Text>
               )}
             </TouchableOpacity>
+
+            {/* OAuth Buttons */}
+            <OAuthButtonGroup
+              mode="register"
+              onSuccess={handleOAuthSuccess}
+              onError={handleOAuthError}
+              disabled={loading}
+              showDivider={true}
+            />
 
             <TouchableOpacity
               style={styles.loginLinkContainer}
