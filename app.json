@@ -7,7 +7,7 @@
     "icon": "./assets/icons/512x512.png",
     "scheme": "equihub",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
