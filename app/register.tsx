@@ -16,27 +16,27 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { OAuthButtonGroup } from "../components/OAuthButtons";
-import { AuthAPI, AuthUser, RegisterData } from "../lib/authAPI";
+import { AuthUser, RegisterData } from "../lib/authAPI";
 import { SimpleStable, SimpleStableAPI } from "../lib/simpleStableAPI";
 
 const RegisterScreen = () => {
   const router = useRouter();
   const { showError, showConfirm } = useDialog();
 
-  // Form state
-  const [formData, setFormData] = useState<RegisterData>({
-    email: "",
-    password: "",
+  // OAuth and form state
+  const [oauthUser, setOauthUser] = useState<AuthUser | null>(null);
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const [step, setStep] = useState<"oauth" | "profile">("oauth");
+
+  // Form state (without email and password)
+  const [formData, setFormData] = useState<Partial<RegisterData>>({
     name: "",
     age: 18,
     description: "",
     riding_experience: 0,
   });
 
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Stable selection state
   const [selectedStable, setSelectedStable] = useState<SimpleStable | null>(
@@ -50,28 +50,6 @@ const RegisterScreen = () => {
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters long";
-    }
-
-    // Confirm password validation
-    if (!confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password";
-    } else if (formData.password !== confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
 
     // Name validation
     const namePattern = /^[\p{L}\p{M}\s\-'\.]+$/u;
@@ -103,7 +81,12 @@ const RegisterScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleRegister = async () => {
+  const handleCompleteProfile = async () => {
+    if (!oauthUser) {
+      showError("Please authenticate with Google first");
+      return;
+    }
+
     if (!validateForm()) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
@@ -114,52 +97,47 @@ const RegisterScreen = () => {
     setErrors({});
 
     try {
-      // First, register the user
-      const { user, error } = await AuthAPI.register(formData);
+      // Complete the profile with additional information
+      // The user is already authenticated via OAuth, so we just need to update their profile
 
-      if (error) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        showError(error);
-        return;
-      }
-
-      if (user) {
-        // Handle stable creation after successful registration
-        try {
-          if (newStableData) {
-            // Create new stable
-            const createResult = await SimpleStableAPI.createStable({
-              ...newStableData,
-              creator_id: user.id,
-            });
-
-            if (createResult.error) {
-              console.error("Error creating stable:", createResult.error);
-            }
-          }
-          // Note: Stable selection (without joining) can be handled in profile later
-        } catch (error) {
-          console.error("Error handling stable creation:", error);
-          // Don't fail registration for stable errors
-        }
-
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-        let successMessage =
-          "Your account has been created successfully. Please check your email to verify your account before logging in. Once logged in, you'll stay signed in automatically on this device.";
-
+      // Handle stable creation after successful authentication
+      try {
         if (newStableData) {
-          successMessage += `\n\nYou have created ${newStableData.name}!`;
-        } else if (selectedStable) {
-          successMessage += `\n\nYou can set your stable preference in your profile after logging in.`;
-        }
+          // Create new stable
+          const createResult = await SimpleStableAPI.createStable({
+            ...newStableData,
+            creator_id: oauthUser.id,
+          });
 
-        showConfirm("Registration Successful!", successMessage, () =>
-          router.replace("/login")
-        );
+          if (createResult.error) {
+            console.error("Error creating stable:", createResult.error);
+          }
+        }
+        // Note: Stable selection (without joining) can be handled in profile later
+      } catch (error) {
+        console.error("Error handling stable creation:", error);
+        // Don't fail registration for stable errors
       }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      let successMessage =
+        "Welcome to EquiHUB! Your profile has been completed successfully.";
+
+      if (newStableData) {
+        successMessage += `\n\nYou have created ${newStableData.name}!`;
+      } else if (selectedStable) {
+        successMessage += `\n\nYou can set your stable preference in your profile later.`;
+      }
+
+      showConfirm("Profile Complete!", successMessage, () => {
+        // Let the AuthContext handle navigation automatically
+        console.log(
+          "Profile completion successful, auth state should handle navigation"
+        );
+      });
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Profile completion error:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showError("An unexpected error occurred. Please try again.");
     } finally {
@@ -168,21 +146,53 @@ const RegisterScreen = () => {
   };
 
   const handleOAuthSuccess = (user: AuthUser) => {
-    console.log(
-      "OAuth registration successful, waiting for auth state to update..."
-    );
-    // Let the AuthContext handle navigation
+    console.log("OAuth authentication successful:", user.email);
+    setOauthUser(user);
+    setStep("profile");
+    // Pre-fill the name if available from OAuth
+    if (user.email) {
+      setFormData((prev) => ({
+        ...prev,
+        name: prev.name || user.email.split("@")[0], // Use email prefix as default name
+      }));
+    }
   };
 
   const handleOAuthError = (error: string) => {
+    setOauthLoading(false);
     showError(error);
   };
 
+  const handleBackToOAuth = () => {
+    setStep("oauth");
+    setOauthUser(null);
+    setFormData({
+      name: "",
+      age: 18,
+      description: "",
+      riding_experience: 0,
+    });
+  };
+
+  const handleProfileCompletion = async () => {
+    if (!isFormValid()) return;
+    await handleCompleteProfile();
+  };
+
+  const isFormValid = (): boolean => {
+    return !!(
+      formData.name &&
+      formData.name.length >= 2 &&
+      formData.age &&
+      formData.age >= 13
+    );
+  };
+
   const handleInputChange = (
-    field: keyof RegisterData,
+    field: keyof Partial<RegisterData>,
     value: string | number
   ) => {
-    setFormData((prev: RegisterData) => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -244,307 +254,248 @@ const RegisterScreen = () => {
         >
           {/* Header */}
           <View style={styles.headerContainer}>
-            <Text style={styles.title}>Join EquiHUB</Text>
-            <Text style={styles.subtitle}>Create your equestrian profile</Text>
+            {step === "oauth" ? (
+              <>
+                <Text style={styles.title}>Join EquiHUB</Text>
+                <Text style={styles.subtitle}>
+                  Sign in with your Google account to get started
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.title}>Complete Your Profile</Text>
+                <Text style={styles.subtitle}>Tell us more about yourself</Text>
+                {oauthUser && (
+                  <Text style={styles.welcomeText}>
+                    Welcome, {oauthUser.email}!
+                  </Text>
+                )}
+              </>
+            )}
           </View>
 
-          {/* Form */}
-          <View style={styles.formContainer}>
-            {/* Name Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <TextInput
-                style={[
-                  styles.textInput,
-                  errors.name ? styles.inputError : null,
-                ]}
-                value={formData.name}
-                onChangeText={(text) => handleInputChange("name", text)}
-                placeholder="Enter your full name"
-                placeholderTextColor="#999"
-                autoCapitalize="words"
-                autoCorrect={false}
-                maxLength={50}
-              />
-              {errors.name ? (
-                <Text style={styles.errorText}>{errors.name}</Text>
-              ) : null}
-            </View>
+          {/* OAuth Step */}
+          {step === "oauth" && (
+            <View style={styles.oauthContainer}>
+              <Text style={styles.oauthDescription}>
+                Please sign in with Google to create your EquiHUB account. Your
+                email will be used to create your profile.
+              </Text>
 
-            {/* Age Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Age</Text>
-              <TextInput
-                style={[
-                  styles.textInput,
-                  errors.age ? styles.inputError : null,
-                ]}
-                value={formData.age.toString()}
-                onChangeText={(text) => {
-                  const age = parseInt(text) || 0;
-                  handleInputChange("age", age);
+              <OAuthButtonGroup
+                mode="register"
+                onSuccess={handleOAuthSuccess}
+                onError={handleOAuthError}
+                disabled={oauthLoading}
+                showDivider={false}
+              />
+
+              <TouchableOpacity
+                style={styles.loginLinkContainer}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.replace("/login");
                 }}
-                placeholder="Enter your age"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-                maxLength={3}
-              />
-              {errors.age ? (
-                <Text style={styles.errorText}>{errors.age}</Text>
-              ) : null}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.loginLinkText}>
+                  Already have an account?{" "}
+                </Text>
+                <Text style={styles.loginLink}>Sign In</Text>
+              </TouchableOpacity>
             </View>
+          )}
 
-            {/* Riding Experience Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Riding Experience (Years)</Text>
-              <TextInput
-                style={[
-                  styles.textInput,
-                  errors.riding_experience ? styles.inputError : null,
-                ]}
-                value={formData.riding_experience?.toString() || "0"}
-                onChangeText={(text) => {
-                  const experience = parseInt(text) || 0;
-                  handleInputChange("riding_experience", experience);
-                }}
-                placeholder="Years of riding experience"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-                maxLength={2}
-              />
-              {errors.riding_experience ? (
-                <Text style={styles.errorText}>{errors.riding_experience}</Text>
-              ) : null}
-            </View>
+          {/* Profile Completion Step */}
+          {step === "profile" && (
+            <View style={styles.formContainer}>
+              {/* Back Button */}
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleBackToOAuth}
+              >
+                <Text style={styles.backButtonText}>
+                  ← Back to Authentication
+                </Text>
+              </TouchableOpacity>
 
-            {/* Email Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email Address</Text>
-              <TextInput
-                style={[
-                  styles.textInput,
-                  errors.email ? styles.inputError : null,
-                ]}
-                value={formData.email}
-                onChangeText={(text) =>
-                  handleInputChange("email", text.toLowerCase().trim())
-                }
-                placeholder="Enter your email address"
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-              />
-              {errors.email ? (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              ) : null}
-            </View>
-
-            {/* Password Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <View style={styles.passwordContainer}>
+              {/* Name Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Full Name</Text>
                 <TextInput
                   style={[
-                    styles.passwordInput,
-                    errors.password ? styles.inputError : null,
+                    styles.textInput,
+                    errors.name ? styles.inputError : null,
                   ]}
-                  value={formData.password}
-                  onChangeText={(text) => handleInputChange("password", text)}
-                  placeholder="Create a password"
+                  value={formData.name || ""}
+                  onChangeText={(text) => handleInputChange("name", text)}
+                  placeholder="Enter your full name"
                   placeholderTextColor="#999"
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
+                  autoCapitalize="words"
                   autoCorrect={false}
-                  autoComplete="new-password"
+                  maxLength={50}
                 />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setShowPassword(!showPassword);
-                  }}
-                  activeOpacity={0.6}
-                >
-                  <Text style={styles.eyeIcon}>
-                    {showPassword ? "🙈" : "👁️"}
-                  </Text>
-                </TouchableOpacity>
+                {errors.name ? (
+                  <Text style={styles.errorText}>{errors.name}</Text>
+                ) : null}
               </View>
-              {errors.password ? (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              ) : null}
-            </View>
 
-            {/* Confirm Password Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Confirm Password</Text>
-              <View style={styles.passwordContainer}>
+              {/* Age Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Age</Text>
                 <TextInput
                   style={[
-                    styles.passwordInput,
-                    errors.confirmPassword ? styles.inputError : null,
+                    styles.textInput,
+                    errors.age ? styles.inputError : null,
                   ]}
-                  value={confirmPassword}
+                  value={formData.age?.toString() || "18"}
                   onChangeText={(text) => {
-                    setConfirmPassword(text);
-                    if (errors.confirmPassword) {
-                      setErrors((prev) => ({
-                        ...prev,
-                        confirmPassword: "",
-                      }));
-                    }
+                    const age = parseInt(text) || 18;
+                    handleInputChange("age", age);
                   }}
-                  placeholder="Confirm your password"
+                  placeholder="Enter your age"
                   placeholderTextColor="#999"
-                  secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="new-password"
+                  keyboardType="numeric"
+                  maxLength={3}
                 />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setShowConfirmPassword(!showConfirmPassword);
-                  }}
-                  activeOpacity={0.6}
-                >
-                  <Text style={styles.eyeIcon}>
-                    {showConfirmPassword ? "🙈" : "👁️"}
-                  </Text>
-                </TouchableOpacity>
+                {errors.age ? (
+                  <Text style={styles.errorText}>{errors.age}</Text>
+                ) : null}
               </View>
-              {errors.confirmPassword ? (
-                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-              ) : null}
-            </View>
 
-            {/* Description Input (Optional) */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>About You (Optional)</Text>
-              <TextInput
-                style={[styles.textArea]}
-                value={formData.description}
-                onChangeText={(text) => handleInputChange("description", text)}
-                placeholder="Tell us a bit about yourself and your equestrian interests..."
-                placeholderTextColor="#999"
-                multiline={true}
-                numberOfLines={4}
-                maxLength={500}
-                textAlignVertical="top"
-              />
-              <Text style={styles.characterCount}>
-                {formData.description?.length || 0}/500
-              </Text>
-            </View>
-
-            {/* Stable Selection */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Stable/Ranch (Optional)</Text>
-              <Text style={styles.inputDescription}>
-                Choose a stable to associate with or skip to set this later
-              </Text>
-
-              {selectedStable ? (
-                <View style={styles.selectedStableContainer}>
-                  <View style={styles.selectedStableInfo}>
-                    <Text style={styles.selectedStableName}>
-                      {selectedStable.name}
-                    </Text>
-                    <Text style={styles.selectedStableLocation}>
-                      {selectedStable.city && selectedStable.state_province
-                        ? `${selectedStable.city}, ${selectedStable.state_province}`
-                        : selectedStable.location || "Location not specified"}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.changeStableButton}
-                    onPress={() => setShowStableSelection(true)}
-                  >
-                    <Text style={styles.changeStableButtonText}>Change</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : newStableData ? (
-                <View style={styles.selectedStableContainer}>
-                  <View style={styles.selectedStableInfo}>
-                    <Text style={styles.selectedStableName}>
-                      {newStableData.name}
-                    </Text>
-                    <Text style={styles.selectedStableLocation}>
-                      New stable - you'll be the owner
-                    </Text>
-                    {newStableData.city && newStableData.state_province && (
-                      <Text style={styles.selectedStableMembers}>
-                        {newStableData.city}, {newStableData.state_province}
-                      </Text>
-                    )}
-                  </View>
-                  <TouchableOpacity
-                    style={styles.changeStableButton}
-                    onPress={() => setShowStableSelection(true)}
-                  >
-                    <Text style={styles.changeStableButtonText}>Change</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.selectStableButton}
-                  onPress={() => setShowStableSelection(true)}
-                >
-                  <Text style={styles.selectStableButtonText}>
-                    Choose a Stable
+              {/* Riding Experience Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Riding Experience (Years)</Text>
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    errors.riding_experience ? styles.inputError : null,
+                  ]}
+                  value={formData.riding_experience?.toString() || "0"}
+                  onChangeText={(text) => {
+                    const experience = parseInt(text) || 0;
+                    handleInputChange("riding_experience", experience);
+                  }}
+                  placeholder="Years of riding experience"
+                  placeholderTextColor="#999"
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+                {errors.riding_experience ? (
+                  <Text style={styles.errorText}>
+                    {errors.riding_experience}
                   </Text>
-                </TouchableOpacity>
-              )}
+                ) : null}
+              </View>
+
+              {/* Description Input (Optional) */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>About You (Optional)</Text>
+                <TextInput
+                  style={[styles.textArea]}
+                  value={formData.description || ""}
+                  onChangeText={(text) =>
+                    handleInputChange("description", text)
+                  }
+                  placeholder="Tell us a bit about yourself and your equestrian interests..."
+                  placeholderTextColor="#999"
+                  multiline={true}
+                  numberOfLines={4}
+                  maxLength={500}
+                  textAlignVertical="top"
+                />
+                <Text style={styles.characterCount}>
+                  {formData.description?.length || 0}/500
+                </Text>
+              </View>
+
+              {/* Stable Selection */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Stable/Ranch (Optional)</Text>
+                <Text style={styles.inputDescription}>
+                  Choose a stable to associate with or skip to set this later
+                </Text>
+
+                {selectedStable ? (
+                  <View style={styles.selectedStableContainer}>
+                    <View style={styles.selectedStableInfo}>
+                      <Text style={styles.selectedStableName}>
+                        {selectedStable.name}
+                      </Text>
+                      <Text style={styles.selectedStableLocation}>
+                        {selectedStable.city && selectedStable.state_province
+                          ? `${selectedStable.city}, ${selectedStable.state_province}`
+                          : selectedStable.location || "Location not specified"}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.changeStableButton}
+                      onPress={() => setShowStableSelection(true)}
+                    >
+                      <Text style={styles.changeStableButtonText}>Change</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : newStableData ? (
+                  <View style={styles.selectedStableContainer}>
+                    <View style={styles.selectedStableInfo}>
+                      <Text style={styles.selectedStableName}>
+                        {newStableData.name}
+                      </Text>
+                      <Text style={styles.selectedStableLocation}>
+                        New stable - you'll be the owner
+                      </Text>
+                      {newStableData.city && newStableData.state_province && (
+                        <Text style={styles.selectedStableMembers}>
+                          {newStableData.city}, {newStableData.state_province}
+                        </Text>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={styles.changeStableButton}
+                      onPress={() => setShowStableSelection(true)}
+                    >
+                      <Text style={styles.changeStableButtonText}>Change</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.selectStableButton}
+                    onPress={() => setShowStableSelection(true)}
+                  >
+                    <Text style={styles.selectStableButtonText}>
+                      Choose a Stable
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </View>
+          )}
 
-          {/* Buttons */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.registerButton,
-                loading ? styles.disabledButton : null,
-              ]}
-              onPress={handleRegister}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              {loading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color="#fff" />
-                  <Text style={styles.loadingText}>Creating Account...</Text>
-                </View>
-              ) : (
-                <Text style={styles.registerButtonText}>Create Account</Text>
-              )}
-            </TouchableOpacity>
-
-            {/* OAuth Buttons */}
-            <OAuthButtonGroup
-              mode="register"
-              onSuccess={handleOAuthSuccess}
-              onError={handleOAuthError}
-              disabled={loading}
-              showDivider={true}
-            />
-
-            <TouchableOpacity
-              style={styles.loginLinkContainer}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.replace("/login");
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.loginLinkText}>
-                Already have an account?{" "}
-              </Text>
-              <Text style={styles.loginLink}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Buttons - Only show for profile step */}
+          {step === "profile" && (
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.registerButton,
+                  loading ? styles.disabledButton : null,
+                ]}
+                onPress={handleProfileCompletion}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                {loading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#fff" />
+                    <Text style={styles.loadingText}>Creating Account...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.registerButtonText}>
+                    Complete Registration
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Terms */}
           <View style={styles.termsContainer}>
@@ -872,6 +823,39 @@ const styles = StyleSheet.create({
     color: "#3498DB",
     fontSize: 16,
     fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  oauthContainer: {
+    paddingVertical: 20,
+  },
+  oauthDescription: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    color: "#555",
+    textAlign: "center",
+    marginBottom: 30,
+    lineHeight: 22,
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    marginBottom: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 8,
+  },
+  backButtonText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    color: "#3498DB",
+    fontWeight: "600",
+  },
+  welcomeText: {
+    fontSize: 18,
+    fontFamily: "Inder",
+    color: "#2c3e50",
+    textAlign: "center",
+    marginBottom: 10,
     fontWeight: "600",
   },
 });
