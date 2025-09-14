@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import {
   Dimensions,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,28 +20,16 @@ const WelcomeScreen = () => {
       <View style={styles.content}>
         {/* Header Section */}
         <View style={styles.headerSection}>
-          <Text style={styles.logo}>🐴</Text>
-          <Text style={styles.title}>EquiHUB</Text>
-          <Text style={styles.subtitle}>Your Equestrian Community</Text>
+          <Image
+            style={styles.appIcon}
+            source={require("../assets/icons/512x512.png")}
+          />
+          <Text style={styles.appName}>EquiHUB</Text>
+          <Text style={styles.appSlogan}>Ride safer. Ride smarter.</Text>
         </View>
 
-        {/* Feature Highlights */}
-        <View style={styles.featuresSection}>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>🐎</Text>
-            <Text style={styles.featureText}>Manage Your Horses</Text>
-          </View>
-
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>🏆</Text>
-            <Text style={styles.featureText}>Track Achievements</Text>
-          </View>
-
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>🌍</Text>
-            <Text style={styles.featureText}>Connect with Riders</Text>
-          </View>
-        </View>
+        {/* Spacer */}
+        <View style={styles.spacer} />
 
         {/* Action Buttons */}
         <View style={styles.buttonSection}>
@@ -56,36 +45,15 @@ const WelcomeScreen = () => {
             onPress={() => router.push("/login")}
           >
             <Text style={styles.secondaryButtonText}>
-              Already have an account? Sign In
+              Already have an account? Sign in
             </Text>
           </TouchableOpacity>
-        </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <View style={styles.footerDivider} />
-          <Text style={styles.footerMainText}>
-            Join thousands of equestrians worldwide
+          {/* Motivating Subtext */}
+          <Text style={styles.motivatingText}>
+            Join thousands of riders who trust EquiHUB to enhance their
+            equestrian journey
           </Text>
-          <Text style={styles.footerSubText}>
-            Connect • Learn • Grow • Compete
-          </Text>
-          <View style={styles.footerStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>10K+</Text>
-              <Text style={styles.statLabel}>Riders</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>25K+</Text>
-              <Text style={styles.statLabel}>Horses</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>50+</Text>
-              <Text style={styles.statLabel}>Countries</Text>
-            </View>
-          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -95,74 +63,56 @@ const WelcomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#335C67",
+    backgroundColor: "#ffffff",
   },
   content: {
     flex: 1,
     paddingHorizontal: 30,
-    marginTop: -90,
     justifyContent: "space-between",
+    paddingTop: 40,
+    paddingBottom: 40,
   },
   headerSection: {
     alignItems: "center",
-    marginTop: height * 0.1,
+    marginTop: height * 0.15,
   },
-  logo: {
-    fontSize: 80,
-    marginBottom: 10,
+  appIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 25,
+    marginBottom: 30,
   },
-  title: {
-    fontSize: 48,
+  appName: {
+    fontSize: 52,
     fontFamily: "Inder",
     fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 0,
+    color: "#2C3E50",
+    marginBottom: 10,
     textAlign: "center",
   },
-  subtitle: {
+  appSlogan: {
     fontSize: 20,
     fontFamily: "Inder",
-    color: "#B8D4DA",
+    color: "#7F8C8D",
     textAlign: "center",
-    marginBottom: 20,
-  },
-  featuresSection: {
-    marginTop: 20,
-    marginBottom: 40,
-  },
-  featureItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 15,
-    padding: 20,
-  },
-  featureIcon: {
-    fontSize: 28,
-    marginRight: 20,
-    width: 40,
-    textAlign: "center",
-  },
-  featureText: {
-    fontSize: 18,
-    fontFamily: "Inder",
-    color: "#fff",
     fontWeight: "500",
+    letterSpacing: 0.5,
+  },
+  spacer: {
     flex: 1,
   },
   buttonSection: {
-    marginBottom: 20,
+    alignItems: "center",
   },
   primaryButton: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
+    backgroundColor: "#3498DB",
+    borderRadius: 25,
     paddingVertical: 18,
-    paddingHorizontal: 30,
+    paddingHorizontal: 40,
     alignItems: "center",
-    marginTop: -30,
     marginBottom: 15,
-    shadowColor: "#000",
+    width: "100%",
+    shadowColor: "#3498DB",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -172,91 +122,34 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   primaryButtonText: {
-    color: "#335C67",
-    fontSize: 20,
+    color: "#ffffff",
+    fontSize: 18,
     fontFamily: "Inder",
     fontWeight: "bold",
   },
   secondaryButton: {
-    borderWidth: 2,
-    borderColor: "#fff",
-    borderRadius: 15,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    alignItems: "center",
     backgroundColor: "transparent",
+    borderRadius: 25,
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    alignItems: "center",
+    marginBottom: 25,
+    width: "100%",
   },
   secondaryButtonText: {
-    color: "#fff",
+    color: "#3498DB",
     fontSize: 16,
     fontFamily: "Inder",
     fontWeight: "600",
   },
-  footer: {
-    alignItems: "center",
-    marginBottom: 30,
-  },
-  footerDivider: {
-    width: 50,
-    height: 2,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    marginBottom: 20,
-    borderRadius: 1,
-  },
-  footerMainText: {
+  motivatingText: {
     fontSize: 16,
     fontFamily: "Inder",
-    color: "#fff",
+    color: "#95A5A6",
     textAlign: "center",
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  footerSubText: {
-    fontSize: 14,
-    fontFamily: "Inder",
-    color: "#B8D4DA",
-    textAlign: "center",
-    marginBottom: 25,
-    letterSpacing: 1,
-  },
-  footerStats: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 20,
-    paddingVertical: 15,
-    paddingHorizontal: 25,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  statItem: {
-    alignItems: "center",
-    paddingHorizontal: 15,
-  },
-  statNumber: {
-    fontSize: 20,
-    fontFamily: "Inder",
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 2,
-  },
-  statLabel: {
-    fontSize: 12,
-    fontFamily: "Inder",
-    color: "#B8D4DA",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  statDivider: {
-    width: 1,
-    height: 35,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-  },
-  footerText: {
-    fontSize: 14,
-    fontFamily: "Inder",
-    color: "#B8D4DA",
-    textAlign: "center",
+    lineHeight: 24,
+    paddingHorizontal: 10,
+    maxWidth: "90%",
   },
 });
 
