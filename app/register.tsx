@@ -6,6 +6,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -215,14 +216,33 @@ const RegisterScreen = () => {
     setNewStableData(isNewStable ? stableData : null);
   };
 
-  const handleTermsPress = (type: "terms" | "privacy") => {
+  const handleTermsPress = async (type: "terms" | "privacy") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const title = type === "terms" ? "Terms of Service" : "Privacy Policy";
+    if (type === "privacy") {
+      try {
+        const privacyPolicyUrl =
+          "https://sites.google.com/view/equihub-privacy/f%C5%91oldal";
+        const canOpen = await Linking.canOpenURL(privacyPolicyUrl);
+
+        if (canOpen) {
+          await Linking.openURL(privacyPolicyUrl);
+        } else {
+          showError(
+            "Unable to open privacy policy. Please check your browser settings."
+          );
+        }
+      } catch (error) {
+        console.error("Error opening privacy policy:", error);
+        showError("Unable to open privacy policy. Please try again later.");
+      }
+      return;
+    }
+
+    // Handle Terms of Service (keeping existing logic)
+    const title = "Terms of Service";
     const message =
-      type === "terms"
-        ? "Our Terms of Service outline the rules and regulations for using EquiHUB. This would typically open a detailed terms page or web view."
-        : "Our Privacy Policy explains how we collect, use, and protect your personal information. This would typically open a detailed privacy page or web view.";
+      "Our Terms of Service outline the rules and regulations for using EquiHUB. This would typically open a detailed terms page or web view.";
 
     showConfirm(
       title,
