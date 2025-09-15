@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -7,7 +7,30 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "../contexts/ThemeContext";
-import { OAuthProvider, OAuthService } from "../lib/oauthService";
+
+// Define types locally to avoid importing from OAuth service
+interface OAuthProvider {
+  id: "google" | "apple";
+  name: string;
+  color: string;
+  icon: string;
+}
+
+// Mock providers for when OAuth service isn't available
+const mockProviders: OAuthProvider[] = [
+  {
+    id: "google",
+    name: "Google",
+    color: "#4285F4",
+    icon: "🔍",
+  },
+  {
+    id: "apple",
+    name: "Apple",
+    color: "#000000",
+    icon: "🍎",
+  },
+];
 
 interface OAuthButtonProps {
   provider: OAuthProvider;
@@ -34,6 +57,9 @@ export const OAuthButton: React.FC<OAuthButtonProps> = ({
     setLoading(true);
 
     try {
+      // Dynamic import to prevent native module loading issues in Expo Go
+      const { OAuthService } = await import("../lib/oauthService");
+
       let result;
 
       if (mode === "login") {
@@ -173,7 +199,25 @@ export const OAuthButtonGroup: React.FC<OAuthButtonGroupProps> = ({
 }) => {
   const { currentTheme } = useTheme();
   const theme = currentTheme;
-  const availableProviders = OAuthService.getAvailableProviders();
+  const [availableProviders, setAvailableProviders] = useState<OAuthProvider[]>(
+    []
+  );
+
+  useEffect(() => {
+    // Dynamic import to prevent native module loading issues in Expo Go
+    const loadProviders = async () => {
+      try {
+        const { OAuthService } = await import("../lib/oauthService");
+        const providers = OAuthService.getAvailableProviders();
+        setAvailableProviders(providers);
+      } catch (error) {
+        console.log("OAuth providers not available in this environment");
+        setAvailableProviders([]);
+      }
+    };
+
+    loadProviders();
+  }, []);
 
   if (availableProviders.length === 0) {
     return null;
@@ -204,7 +248,7 @@ export const OAuthButtonGroup: React.FC<OAuthButtonGroupProps> = ({
       )}
 
       <View style={styles.buttonsContainer}>
-        {availableProviders.map((provider) => (
+        {availableProviders.map((provider: OAuthProvider) => (
           <OAuthButton
             key={provider.id}
             provider={provider}

@@ -2,7 +2,7 @@
 export const oauthConfig = {
   google: {
     // You'll need to replace these with your actual OAuth 2.0 client IDs from Google Cloud Console
-    //iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
+    iosClientId: 'YOUR_ACTUAL_IOS_CLIENT_ID.apps.googleusercontent.com', // Replace with your iOS client ID from Google Cloud Console
     androidClientId: '645905000706-r5d9rejr3lakueqrhl1tk7ldmpv2jt2v.apps.googleusercontent.com',
     webClientId: '645905000706-84poben7qoa735imq8ukp765ho5k0d97.apps.googleusercontent.com', // This is the web client ID that should be used for Supabase
     scopes: ['openid', 'profile', 'email'],

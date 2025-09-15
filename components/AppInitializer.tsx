@@ -64,6 +64,19 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
       await initializeSupabase();
       console.log("✅ Supabase initialized");
 
+      // Initialize Google Sign-In (only if not in Expo Go)
+      try {
+        console.log("🔄 Configuring Google Sign-In...");
+        const { OAuthService } = await import("../lib/oauthService");
+        OAuthService.configureGoogleSignIn();
+        console.log("✅ Google Sign-In configured");
+      } catch (error) {
+        console.log(
+          "⚠️ Google Sign-In not available (probably running in Expo Go):",
+          error
+        );
+      }
+
       setIsInitialized(true);
       setInitError(null);
     } catch (error) {

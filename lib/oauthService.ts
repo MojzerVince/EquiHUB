@@ -1,14 +1,9 @@
-import * as AppleAuthentication from 'expo-apple-authentication';
-import * as AuthSession from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
-import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import { AuthUser } from './authAPI';
+import { oauthConfig } from './oauthConfig';
 import { SessionManager } from './sessionManager';
 import { getSupabase } from './supabase';
-
-// Complete the WebBrowser auth session when returning to app
-WebBrowser.maybeCompleteAuthSession();
 
 export interface OAuthProvider {
   id: 'google' | 'apple';
@@ -34,118 +29,98 @@ export const oauthProviders: OAuthProvider[] = [
 
 export class OAuthService {
   
+  // Configure Google Sign-In
+  static async configureGoogleSignIn() {
+    try {
+      const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+      GoogleSignin.configure({
+        webClientId: oauthConfig.google.webClientId,
+        iosClientId: oauthConfig.google.iosClientId,
+        offlineAccess: true,
+        hostedDomain: '',
+        forceCodeForRefreshToken: true,
+      });
+    } catch (error) {
+      console.log('Google Sign-In not available in this environment');
+      throw error;
+    }
+  }
+
   // Check if Apple Sign In is available (iOS 13+)
   static async isAppleSignInAvailable(): Promise<boolean> {
     if (Platform.OS !== 'ios') return false;
     try {
+      const AppleAuthentication = await import('expo-apple-authentication');
       return await AppleAuthentication.isAvailableAsync();
     } catch {
       return false;
     }
   }
 
-  // Sign in with Google
+  // Sign in with Google (Native Modal - Production Only)
   static async signInWithGoogle(): Promise<{ user: AuthUser | null; error: string | null }> {
     try {
-      console.log('🔵 Starting Google Sign In...');
+      console.log('🔵 Starting Native Google Sign In...');
       
+      const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+      
+      // Configure Google Sign-In if not already configured
+      await this.configureGoogleSignIn();
+      
+      // Check if device has Google Play Services (Android)
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices();
+      }
+      
+      // Show the native Google account selection modal
+      const userInfo = await GoogleSignin.signIn();
+      console.log('📱 Google user info received:', userInfo.data?.user?.email);
+
+      if (!userInfo.data?.idToken) {
+        return { user: null, error: 'No ID token received from Google' };
+      }
+
+      // Sign in to Supabase using the Google ID token
       const supabase = getSupabase();
-      
-      // Create auth request
-      const redirectUri = AuthSession.makeRedirectUri({
-        scheme: 'equihub',
-        path: 'auth/callback',
-      });
-
-      console.log('📱 Redirect URI:', redirectUri);
-
-      // Start Google OAuth flow through Supabase
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
-        options: {
-          redirectTo: redirectUri,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
+        token: userInfo.data.idToken,
       });
 
       if (error) {
-        console.error('❌ Google OAuth error:', error);
-        
-        // Provide specific error messages for common issues
-        if (error.message.includes('provider is not enabled')) {
-          return { 
-            user: null, 
-            error: 'Google Sign-In is not enabled in Supabase. Please enable it in Authentication → Providers in your Supabase dashboard.' 
-          };
-        } else if (error.message.includes('invalid_client')) {
-          return { 
-            user: null, 
-            error: 'Google OAuth client configuration is invalid. Please check your Google Cloud Console setup.' 
-          };
-        }
-        
-        return { user: null, error: `Google Sign-In error: ${error.message}` };
+        console.error('❌ Supabase Google OAuth error:', error);
+        return { user: null, error: `Authentication failed: ${error.message}` };
       }
 
-      if (!data.url) {
-        return { user: null, error: 'Failed to get OAuth URL' };
+      if (!data.user) {
+        return { user: null, error: 'Failed to authenticate with Google' };
       }
 
-      console.log('🌐 Opening OAuth URL...');
+      const authUser: AuthUser = {
+        id: data.user.id,
+        email: data.user.email!,
+        created_at: data.user.created_at!,
+      };
+
+      // Store last login time
+      await SessionManager.storeLastLoginTime();
+      await SessionManager.markUserAsUsedApp();
+
+      console.log('✅ Native Google Sign In successful:', authUser.email);
+      return { user: authUser, error: null };
+
+    } catch (error: any) {
+      console.error('❌ Native Google Sign In error:', error);
       
-      // Open the OAuth URL in browser
-      const result = await WebBrowser.openAuthSessionAsync(
-        data.url,
-        redirectUri,
-        {
-          showInRecents: true,
-        }
-      );
-
-      console.log('📱 OAuth result:', result);
-
-      if (result.type === 'success') {
-        // Parse the URL to get the session info
-        const url = result.url;
-        const parsedUrl = new URL(url);
-        
-        // Check for error in callback
-        const error = parsedUrl.searchParams.get('error');
-        if (error) {
-          return { user: null, error: `OAuth error: ${error}` };
-        }
-
-        // Get the session after successful OAuth
-        const { data: session, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError || !session.session?.user) {
-          console.error('❌ Session error after OAuth:', sessionError);
-          return { user: null, error: 'Failed to get session after OAuth' };
-        }
-
-        const authUser: AuthUser = {
-          id: session.session.user.id,
-          email: session.session.user.email!,
-          created_at: session.session.user.created_at!,
-        };
-
-        // Store last login time
-        await SessionManager.storeLastLoginTime();
-        await SessionManager.markUserAsUsedApp();
-
-        console.log('✅ Google Sign In successful:', authUser.email);
-        return { user: authUser, error: null };
-      } else if (result.type === 'cancel') {
+      // Handle specific Google Sign-In errors
+      if (error.code === 'SIGN_IN_CANCELLED') {
         return { user: null, error: 'Sign in was cancelled' };
-      } else {
-        return { user: null, error: 'Sign in failed' };
+      } else if (error.code === 'IN_PROGRESS') {
+        return { user: null, error: 'Another sign in is already in progress' };
+      } else if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
+        return { user: null, error: 'Google Play Services is not available on this device' };
       }
-
-    } catch (error) {
-      console.error('❌ Google Sign In error:', error);
+      
       return { user: null, error: 'An unexpected error occurred with Google Sign In' };
     }
   }
@@ -170,6 +145,7 @@ export class OAuthService {
       );
 
       // Request Apple authentication
+      const AppleAuthentication = await import('expo-apple-authentication');
       const appleCredential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -238,24 +214,6 @@ export class OAuthService {
     return this.signInWithApple();
   }
 
-  // Handle deep link callback (for Google OAuth)
-  static handleAuthCallback(url: string): boolean {
-    try {
-      console.log('📱 Handling auth callback URL:', url);
-      
-      // Check if this is an auth callback
-      if (url.includes('auth/callback')) {
-        // The WebBrowser session will handle this automatically
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('❌ Error handling auth callback:', error);
-      return false;
-    }
-  }
-
   // Get available OAuth providers for current platform
   static getAvailableProviders(): OAuthProvider[] {
     const providers: OAuthProvider[] = [];
@@ -274,6 +232,16 @@ export class OAuthService {
   // Sign out (works for all auth methods)
   static async signOut(): Promise<{ error: string | null }> {
     try {
+      // Sign out from Google if signed in
+      try {
+        const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+        await GoogleSignin.signOut();
+        console.log('✅ Google sign-out successful');
+      } catch (googleError) {
+        // Ignore Google sign-out errors as user might not be signed in via Google
+        console.log('Google sign-out skipped:', googleError);
+      }
+
       const supabase = getSupabase();
       const { error } = await supabase.auth.signOut();
       
