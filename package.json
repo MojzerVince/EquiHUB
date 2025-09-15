@@ -52,6 +52,7 @@
     "expo-web-browser": "~15.0.7",
     "express": "^5.1.0",
     "feather-icons": "^4.29.2",
+    "nitro-modules": "^0.1.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.4",
