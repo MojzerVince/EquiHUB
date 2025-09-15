@@ -26,7 +26,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
-      "versionCode": 34,
+      "versionCode": 35,
       "permissions": [
         "INTERNET",
         "FOREGROUND_SERVICE",
@@ -81,6 +81,12 @@
           "icon": "./assets/icons/512x512.png",
           "color": "#ffffff",
           "defaultChannel": "default"
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID"
         }
       ]
     ],
