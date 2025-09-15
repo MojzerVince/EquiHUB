@@ -1,30 +1,81 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
+  ext.kotlinVersion = '1.8.22'
+  repositories {
+    // Primary repositories
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+    
+    // Fallback repositories
+    maven { 
+      url 'https://repo1.maven.org/maven2'
+      name 'Maven Central Mirror'
     }
-
-    dependencies {
-        // ✅ fixált verziók
-        classpath("com.android.tools.build:gradle:8.1.4")
-        classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
-
-        // ❌ ne legyen itt semmi org.jfrog.buildinfo
-    }
+  }
+  
+  dependencies {
+    classpath('com.android.tools.build:gradle:8.0.2')
+    classpath('com.facebook.react:react-native-gradle-plugin')
+    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22')
+  }
+  
+  // Exclude JFrog buildinfo globally
+  configurations.all {
+    exclude group: 'org.jfrog.buildinfo'
+  }
 }
 
-// ✅ teljes tiltás JFrog-ra
+ext {
+  buildToolsVersion = "33.0.0"
+  minSdkVersion = 21
+  compileSdkVersion = 33
+  targetSdkVersion = 33
+  ndkVersion = "23.1.7779620"
+}
+
+def reactNativeAndroidDir = new File(
+  providers.exec {
+    workingDir(rootDir)
+    commandLine("node", "--print", "require.resolve('react-native/package.json')")
+  }.standardOutput.asText.get().trim(),
+  "../android"
+)
+
 allprojects {
-    repositories {
-        google()
-        mavenCentral()
+  repositories {
+    maven {
+      // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+      url(reactNativeAndroidDir)
     }
 
-    configurations.all {
-        exclude group: "org.jfrog.buildinfo"
+    // Primary repositories
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+    maven { url 'https://www.jitpack.io' }
+    
+    // Only safe fallback repositories
+    maven { 
+      url 'https://repo1.maven.org/maven2'
+      name 'Maven Central Mirror'
     }
+  }
+  
+  // Apply resolution strategy to all projects
+  configurations.all {
+    resolutionStrategy {
+      // Set cache policy to avoid stale cache issues
+      cacheDynamicVersionsFor 5, 'minutes'
+      cacheChangingModulesFor 0, 'seconds'
+    }
+    
+    // Exclude problematic dependencies at the configuration level
+    exclude group: 'org.jfrog.buildinfo'
+  }
 }
+
+// Apply plugins at the end to ensure our resolution strategies take effect first
+apply plugin: "com.facebook.react.rootproject"
+apply plugin: "expo-root-project"
