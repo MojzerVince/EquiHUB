@@ -1,5 +1,7 @@
+import { OAuthButtonGroup } from "@/components/OAuthButtons";
 import { useDialog } from "@/contexts/DialogContext";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -78,6 +80,15 @@ const LoginScreen = () => {
     }
   };
 
+  const handleOAuthSuccess = (user: any) => {
+    console.log("OAuth login successful:", user);
+    // The AuthContext will handle navigation automatically
+  };
+
+  const handleOAuthError = (error: string) => {
+    showError(error);
+  };
+
   const handleForgotPassword = async () => {
     if (!formData.email) {
       showError("Please enter your email address to reset your password.");
@@ -136,6 +147,11 @@ const LoginScreen = () => {
         >
           {/* Header */}
           <View style={styles.headerContainer}>
+            <Image
+              source={require("../assets/icons/512x512.png")}
+              style={styles.logo}
+              contentFit="contain"
+            />
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to your EquiHUB account</Text>
           </View>
@@ -216,7 +232,18 @@ const LoginScreen = () => {
             </View>
           </View>
 
-          {/* Buttons */}
+          {/* OAuth Buttons */}
+          <View style={styles.oauthContainer}>
+            <OAuthButtonGroup
+              mode="login"
+              onSuccess={handleOAuthSuccess}
+              onError={handleOAuthError}
+              disabled={loading}
+              showDivider={false}
+            />
+          </View>
+
+          {/* Traditional Login */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[
@@ -229,7 +256,7 @@ const LoginScreen = () => {
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
+                <Text style={styles.loginButtonText}>Sign In with Email</Text>
               )}
             </TouchableOpacity>
 
@@ -256,7 +283,7 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#335C67",
+    backgroundColor: "#FFFFFF",
   },
   safeArea: {
     flex: 1,
@@ -270,25 +297,34 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     paddingHorizontal: 30,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingTop: 40,
+    paddingBottom: 30,
     alignItems: "center",
   },
+  logo: {
+    width: 60,
+    height: 60,
+    marginBottom: 15,
+  },
   title: {
-    fontSize: 36,
+    fontSize: 32,
     fontFamily: "Inder",
     fontWeight: "bold",
-    color: "#fff",
+    color: "#335C67",
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: "Inder",
-    color: "#B8D4DA",
+    color: "#7A8B8E",
     textAlign: "center",
   },
+  oauthContainer: {
+    paddingHorizontal: 30,
+    marginBottom: 30,
+  },
   formContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: "#F8FAFB",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     paddingHorizontal: 30,
@@ -307,12 +343,12 @@ const styles = StyleSheet.create({
   },
   textInput: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#E8EAED",
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     fontFamily: "Inder",
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#FFFFFF",
     color: "#333",
     minHeight: 50,
   },
@@ -320,9 +356,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#E8EAED",
     borderRadius: 12,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#FFFFFF",
   },
   passwordInput: {
     flex: 1,
@@ -368,7 +404,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E8F4F8",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#B8D4DA",
+    borderColor: "#C1E4EA",
   },
   persistenceInfoIcon: {
     fontSize: 16,
@@ -383,6 +419,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     paddingHorizontal: 30,
     paddingTop: 20,
+    backgroundColor: "#F8FAFB",
   },
   loginButton: {
     backgroundColor: "#335C67",
@@ -417,15 +454,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   registerLinkText: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: "Inder",
-    color: "#fff",
+    color: "#7A8B8E",
   },
   registerLink: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: "Inder",
     fontWeight: "600",
-    color: "#fff",
+    color: "#335C67",
   },
 });
 

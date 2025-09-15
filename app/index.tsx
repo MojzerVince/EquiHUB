@@ -1,6 +1,11 @@
+import { useDialog } from "@/contexts/DialogContext";
+import { oauthService } from "@/lib/oauthService";
+import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   StyleSheet,
   Text,
@@ -13,13 +18,44 @@ const { width, height } = Dimensions.get("window");
 
 const WelcomeScreen = () => {
   const router = useRouter();
+  const { showError } = useDialog();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleGetStarted = async () => {
+    try {
+      setIsLoading(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // First, initiate Google account selection
+      const result = await oauthService.signInWithGoogle();
+
+      if (result.error) {
+        showError(result.error);
+        return;
+      }
+
+      if (result.user) {
+        // User authenticated with Google, now navigate to register to complete profile
+        router.push("/register");
+      }
+    } catch (error) {
+      console.error("Error during get started:", error);
+      showError("Failed to authenticate with Google. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* Header Section */}
         <View style={styles.headerSection}>
-          <Text style={styles.logo}>🐴</Text>
+          <Image
+            source={require("../assets/icons/512x512.png")}
+            style={styles.logo}
+            contentFit="contain"
+          />
           <Text style={styles.title}>EquiHUB</Text>
           <Text style={styles.subtitle}>Your Equestrian Community</Text>
         </View>
@@ -45,10 +81,18 @@ const WelcomeScreen = () => {
         {/* Action Buttons */}
         <View style={styles.buttonSection}>
           <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => router.push("/register")}
+            style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
+            onPress={handleGetStarted}
+            disabled={isLoading}
           >
-            <Text style={styles.primaryButtonText}>Get Started</Text>
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#fff" />
+                <Text style={styles.primaryButtonText}>Connecting...</Text>
+              </View>
+            ) : (
+              <Text style={styles.primaryButtonText}>Get Started</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -95,12 +139,11 @@ const WelcomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#335C67",
+    backgroundColor: "#FFFFFF",
   },
   content: {
     flex: 1,
     paddingHorizontal: 30,
-    marginTop: -90,
     justifyContent: "space-between",
   },
   headerSection: {
@@ -108,21 +151,22 @@ const styles = StyleSheet.create({
     marginTop: height * 0.1,
   },
   logo: {
-    fontSize: 80,
-    marginBottom: 10,
+    width: 100,
+    height: 100,
+    marginBottom: 20,
   },
   title: {
     fontSize: 48,
     fontFamily: "Inder",
     fontWeight: "bold",
-    color: "#fff",
+    color: "#335C67",
     marginBottom: 0,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 20,
     fontFamily: "Inder",
-    color: "#B8D4DA",
+    color: "#7A8B8E",
     textAlign: "center",
     marginBottom: 20,
   },
@@ -134,9 +178,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#F8FAFB",
     borderRadius: 15,
     padding: 20,
+    borderWidth: 1,
+    borderColor: "#E8EAED",
   },
   featureIcon: {
     fontSize: 28,
@@ -147,7 +193,7 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 18,
     fontFamily: "Inder",
-    color: "#fff",
+    color: "#335C67",
     fontWeight: "500",
     flex: 1,
   },
@@ -155,31 +201,38 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   primaryButton: {
-    backgroundColor: "#fff",
+    backgroundColor: "#335C67",
     borderRadius: 15,
     paddingVertical: 18,
     paddingHorizontal: 30,
     alignItems: "center",
-    marginTop: -30,
     marginBottom: 15,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 5,
   },
+  buttonDisabled: {
+    backgroundColor: "#A8A8A8",
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   primaryButtonText: {
-    color: "#335C67",
+    color: "#FFFFFF",
     fontSize: 20,
     fontFamily: "Inder",
     fontWeight: "bold",
   },
   secondaryButton: {
     borderWidth: 2,
-    borderColor: "#fff",
+    borderColor: "#335C67",
     borderRadius: 15,
     paddingVertical: 15,
     paddingHorizontal: 30,
@@ -187,7 +240,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   secondaryButtonText: {
-    color: "#fff",
+    color: "#335C67",
     fontSize: 16,
     fontFamily: "Inder",
     fontWeight: "600",
@@ -199,14 +252,14 @@ const styles = StyleSheet.create({
   footerDivider: {
     width: 50,
     height: 2,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    backgroundColor: "#E8EAED",
     marginBottom: 20,
     borderRadius: 1,
   },
   footerMainText: {
     fontSize: 16,
     fontFamily: "Inder",
-    color: "#fff",
+    color: "#335C67",
     textAlign: "center",
     fontWeight: "600",
     marginBottom: 8,
@@ -214,7 +267,7 @@ const styles = StyleSheet.create({
   footerSubText: {
     fontSize: 14,
     fontFamily: "Inder",
-    color: "#B8D4DA",
+    color: "#7A8B8E",
     textAlign: "center",
     marginBottom: 25,
     letterSpacing: 1,
@@ -222,12 +275,12 @@ const styles = StyleSheet.create({
   footerStats: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#F8FAFB",
     borderRadius: 20,
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: "#E8EAED",
   },
   statItem: {
     alignItems: "center",
@@ -237,25 +290,25 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: "Inder",
     fontWeight: "bold",
-    color: "#fff",
+    color: "#335C67",
     marginBottom: 2,
   },
   statLabel: {
     fontSize: 12,
     fontFamily: "Inder",
-    color: "#B8D4DA",
+    color: "#7A8B8E",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   statDivider: {
     width: 1,
     height: 35,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    backgroundColor: "#E8EAED",
   },
   footerText: {
     fontSize: 14,
     fontFamily: "Inder",
-    color: "#B8D4DA",
+    color: "#7A8B8E",
     textAlign: "center",
   },
 });
