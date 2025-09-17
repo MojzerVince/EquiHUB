@@ -1,20 +1,21 @@
 import { useDialog } from "@/contexts/DialogContext";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthAPI, LoginData } from "../lib/authAPI";
+import { useGoogleAuth } from "../lib/googleAuth";
 
 const LoginScreen = () => {
   const router = useRouter();
@@ -31,6 +32,19 @@ const LoginScreen = () => {
 
   // Form validation
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // Google Auth Setup
+  const { request, response, promptAsync } = useGoogleAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Handle Google Auth Response
+  useEffect(() => {
+    if (response?.type === 'success' && response.authentication) {
+      handleGoogleSignIn(response.authentication.accessToken);
+    } else if (response?.type === 'error') {
+      showError('Google authentication failed');
+    }
+  }, [response]);
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -75,6 +89,48 @@ const LoginScreen = () => {
       showError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async (accessToken: string) => {
+    setGoogleLoading(true);
+    try {
+      const { user, error } = await AuthAPI.signInWithGoogle(accessToken);
+
+      if (error === 'GOOGLE_USER_NOT_FOUND') {
+        // User needs to register first
+        showConfirm(
+          'Account Not Found',
+          'No account found with this Google account. Would you like to create a new account?',
+          () => {
+            router.push('/register');
+          }
+        );
+        return;
+      }
+
+      if (error) {
+        showError(error);
+        return;
+      }
+
+      if (user) {
+        console.log("Google sign in successful, waiting for auth state to update...");
+      }
+    } catch (error) {
+      console.error("Google sign in error:", error);
+      showError("Google sign in failed. Please try again.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (request) {
+      promptAsync();
+    } else {
+      showError('Google authentication is not ready. Please try again.');
     }
   };
 
@@ -230,6 +286,32 @@ const LoginScreen = () => {
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <Text style={styles.loginButtonText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Google Sign In Button */}
+            <TouchableOpacity
+              style={[
+                styles.googleButton,
+                (googleLoading || !request) ? styles.disabledButton : null,
+              ]}
+              onPress={handleGoogleLogin}
+              disabled={googleLoading || !request}
+            >
+              {googleLoading ? (
+                <ActivityIndicator size="small" color="#666" />
+              ) : (
+                <>
+                  <Text style={styles.googleButtonIcon}>G</Text>
+                  <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                </>
               )}
             </TouchableOpacity>
 
@@ -426,6 +508,50 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     fontWeight: "600",
     color: "#fff",
+  },
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#333",
+  },
+  dividerText: {
+    marginHorizontal: 15,
+    fontSize: 16,
+    fontFamily: "Inder",
+    color: "#666",
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  googleButtonIcon: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#4285F4",
+    marginRight: 10,
+    fontFamily: "Inder",
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    color: "#333",
   },
 });
 

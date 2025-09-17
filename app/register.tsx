@@ -2,7 +2,7 @@ import SimpleStableSelection from "@/components/SimpleStableSelection";
 import { useDialog } from "@/contexts/DialogContext";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -15,27 +15,29 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AuthAPI, RegisterData } from "../lib/authAPI";
+import { AuthAPI } from "../lib/authAPI";
+import { fetchGoogleUserInfo, GoogleUserInfo, useGoogleAuth } from "../lib/googleAuth";
 import { SimpleStable, SimpleStableAPI } from "../lib/simpleStableAPI";
 
 const RegisterScreen = () => {
   const router = useRouter();
   const { showError, showConfirm } = useDialog();
 
-  // Form state
-  const [formData, setFormData] = useState<RegisterData>({
-    email: "",
-    password: "",
+  // Registration flow state
+  const [step, setStep] = useState(1); // 1 = Google Auth, 2 = Profile Form
+  const [googleUser, setGoogleUser] = useState<GoogleUserInfo | null>(null);
+  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
+  
+  // Form state (only profile data, no email/password)
+  const [formData, setFormData] = useState({
     name: "",
     age: 18,
     description: "",
     riding_experience: 0,
   });
 
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Stable selection state
   const [selectedStable, setSelectedStable] = useState<SimpleStable | null>(
@@ -44,33 +46,23 @@ const RegisterScreen = () => {
   const [newStableData, setNewStableData] = useState<any>(null);
   const [showStableSelection, setShowStableSelection] = useState(false);
 
-  // Form validation
+  // Google Auth Setup
+  const { request, response, promptAsync } = useGoogleAuth();
+
+  // Form validation (only for step 2 - profile data)
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const validateForm = (): boolean => {
+  // Handle Google Auth Response
+  useEffect(() => {
+    if (response?.type === 'success' && response.authentication) {
+      handleGoogleAuthSuccess(response.authentication.accessToken);
+    } else if (response?.type === 'error') {
+      showError('Google authentication failed');
+    }
+  }, [response]);
+
+  const validateProfileForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters long";
-    }
-
-    // Confirm password validation
-    if (!confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password";
-    } else if (formData.password !== confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
 
     // Name validation
     const namePattern = /^[\p{L}\p{M}\s\-'\.]+$/u;
@@ -102,9 +94,46 @@ const RegisterScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleRegister = async () => {
-    if (!validateForm()) {
+  const handleGoogleAuthSuccess = async (accessToken: string) => {
+    setGoogleLoading(true);
+    try {
+      // Fetch Google user info
+      const userInfo = await fetchGoogleUserInfo(accessToken);
+      setGoogleUser(userInfo);
+      setGoogleAccessToken(accessToken);
+      
+      // Pre-fill name if available
+      if (userInfo.name) {
+        setFormData(prev => ({ ...prev, name: userInfo.name }));
+      }
+      
+      // Move to profile form step
+      setStep(2);
+    } catch (error) {
+      console.error("Google auth error:", error);
+      showError("Failed to get Google account information");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (request) {
+      promptAsync();
+    } else {
+      showError('Google authentication is not ready. Please try again.');
+    }
+  };
+
+  const handleProfileSubmit = async () => {
+    if (!validateProfileForm()) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+
+    if (!googleAccessToken || !googleUser) {
+      showError("Google authentication required");
       return;
     }
 
@@ -113,8 +142,17 @@ const RegisterScreen = () => {
     setErrors({});
 
     try {
-      // First, register the user
-      const { user, error } = await AuthAPI.register(formData);
+      // Register with Google auth
+      const { user, error } = await AuthAPI.registerWithGoogle(
+        googleAccessToken,
+        {
+          name: formData.name,
+          age: formData.age,
+          description: formData.description,
+          riding_experience: formData.riding_experience,
+          stable_id: selectedStable?.id
+        }
+      );
 
       if (error) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -167,10 +205,10 @@ const RegisterScreen = () => {
   };
 
   const handleInputChange = (
-    field: keyof RegisterData,
+    field: string,
     value: string | number
   ) => {
-    setFormData((prev: RegisterData) => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -232,12 +270,60 @@ const RegisterScreen = () => {
         >
           {/* Header */}
           <View style={styles.headerContainer}>
-            <Text style={styles.title}>Join EquiHUB</Text>
-            <Text style={styles.subtitle}>Create your equestrian profile</Text>
+            <Text style={styles.title}>
+              {step === 1 ? "Join EquiHUB" : "Complete Your Profile"}
+            </Text>
+            <Text style={styles.subtitle}>
+              {step === 1 
+                ? "Sign up with your Google account to get started" 
+                : "Tell us about yourself"}
+            </Text>
+            {step === 2 && googleUser && (
+              <View style={styles.googleUserInfo}>
+                <Text style={styles.googleUserEmail}>{googleUser.email}</Text>
+              </View>
+            )}
           </View>
 
-          {/* Form */}
+          {/* Step-based Form */}
           <View style={styles.formContainer}>
+            {step === 1 ? (
+              // Step 1: Google Authentication
+              <View style={styles.googleAuthContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.googleButton,
+                    (googleLoading || !request) ? styles.disabledButton : null,
+                  ]}
+                  onPress={handleGoogleAuth}
+                  disabled={googleLoading || !request}
+                >
+                  {googleLoading ? (
+                    <ActivityIndicator size="small" color="#666" />
+                  ) : (
+                    <>
+                      <Text style={styles.googleButtonIcon}>G</Text>
+                      <Text style={styles.googleButtonText}>Sign up with Google</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+                
+                <View style={styles.loginPrompt}>
+                  <Text style={styles.loginPromptText}>Already have an account?</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.replace("/login");
+                    }}
+                    style={styles.googleLoginLink}
+                  >
+                    <Text style={styles.googleLoginLinkText}>Sign In</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              // Step 2: Profile Form
+              <View style={styles.profileFormContainer}>
             {/* Name Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Full Name</Text>
@@ -305,109 +391,9 @@ const RegisterScreen = () => {
               ) : null}
             </View>
 
-            {/* Email Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email Address</Text>
-              <TextInput
-                style={[
-                  styles.textInput,
-                  errors.email ? styles.inputError : null,
-                ]}
-                value={formData.email}
-                onChangeText={(text) =>
-                  handleInputChange("email", text.toLowerCase().trim())
-                }
-                placeholder="Enter your email address"
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-              />
-              {errors.email ? (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              ) : null}
-            </View>
 
-            {/* Password Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={[
-                    styles.passwordInput,
-                    errors.password ? styles.inputError : null,
-                  ]}
-                  value={formData.password}
-                  onChangeText={(text) => handleInputChange("password", text)}
-                  placeholder="Create a password"
-                  placeholderTextColor="#999"
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="new-password"
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setShowPassword(!showPassword);
-                  }}
-                  activeOpacity={0.6}
-                >
-                  <Text style={styles.eyeIcon}>
-                    {showPassword ? "🙈" : "👁️"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {errors.password ? (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              ) : null}
-            </View>
 
-            {/* Confirm Password Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Confirm Password</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={[
-                    styles.passwordInput,
-                    errors.confirmPassword ? styles.inputError : null,
-                  ]}
-                  value={confirmPassword}
-                  onChangeText={(text) => {
-                    setConfirmPassword(text);
-                    if (errors.confirmPassword) {
-                      setErrors((prev) => ({
-                        ...prev,
-                        confirmPassword: "",
-                      }));
-                    }
-                  }}
-                  placeholder="Confirm your password"
-                  placeholderTextColor="#999"
-                  secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="new-password"
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setShowConfirmPassword(!showConfirmPassword);
-                  }}
-                  activeOpacity={0.6}
-                >
-                  <Text style={styles.eyeIcon}>
-                    {showConfirmPassword ? "🙈" : "👁️"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {errors.confirmPassword ? (
-                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-              ) : null}
-            </View>
+
 
             {/* Description Input (Optional) */}
             <View style={styles.inputGroup}>
@@ -487,16 +473,19 @@ const RegisterScreen = () => {
                 </TouchableOpacity>
               )}
             </View>
+              </View>
+            )}
           </View>
 
-          {/* Buttons */}
+          {/* Buttons - only show for step 2 */}
+          {step === 2 && (
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[
                 styles.registerButton,
                 loading ? styles.disabledButton : null,
               ]}
-              onPress={handleRegister}
+              onPress={handleProfileSubmit}
               disabled={loading}
               activeOpacity={0.8}
             >
@@ -524,8 +513,9 @@ const RegisterScreen = () => {
               <Text style={styles.loginLink}>Sign In</Text>
             </TouchableOpacity>
           </View>
+          )}
 
-          {/* Terms */}
+          {/* Terms - show for both steps */}
           <View style={styles.termsContainer}>
             <Text style={styles.termsText}>
               By creating an account, you agree to our{" "}
@@ -632,28 +622,7 @@ const styles = StyleSheet.create({
     color: "#333",
     minHeight: 100,
   },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    backgroundColor: "#f9f9f9",
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: "Inder",
-    color: "#333",
-    minHeight: 50,
-  },
-  eyeButton: {
-    padding: 16,
-  },
-  eyeIcon: {
-    fontSize: 20,
-  },
+
   inputError: {
     borderColor: "#FF6B6B",
     backgroundColor: "#FFF5F5",
@@ -814,6 +783,74 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inder",
     fontWeight: "600",
+  },
+  googleUserInfo: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: "#f0f8ff",
+    borderRadius: 8,
+  },
+  googleUserEmail: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    color: "#666",
+    textAlign: "center",
+  },
+  googleAuthContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    minWidth: 250,
+  },
+  googleButtonIcon: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#4285F4",
+    marginRight: 10,
+    fontFamily: "Inder",
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    color: "#333",
+  },
+  loginPrompt: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loginPromptText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    color: "#666",
+    marginRight: 5,
+  },
+  googleLoginLink: {
+    padding: 5,
+  },
+  googleLoginLinkText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    color: "#335C67",
+  },
+  profileFormContainer: {
+    paddingVertical: 20,
   },
 });
 

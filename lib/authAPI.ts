@@ -563,4 +563,179 @@ export class AuthAPI {
       };
     }
   }
+
+  // Google Sign In
+  static async signInWithGoogle(accessToken: string): Promise<{ user: AuthUser | null; error: string | null }> {
+    try {
+      console.log('Attempting Google sign in...');
+      
+      // Get user info from Google
+      const response = await fetch(
+        `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${accessToken}`
+      );
+      
+      if (!response.ok) {
+        return { user: null, error: 'Failed to fetch Google user information' };
+      }
+
+      const googleUser = await response.json();
+      
+      if (!googleUser.email) {
+        return { user: null, error: 'No email found in Google account' };
+      }
+
+      const supabase = getSupabase();
+
+      // Check if user already exists
+      const { data: existingUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', googleUser.email)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error checking existing user:', fetchError);
+        return { user: null, error: 'Database error occurred' };
+      }
+
+      if (existingUser) {
+        // User exists, store login time and return user
+        await SessionManager.storeLastLoginTime();
+        console.log('Google sign in successful for existing user');
+        return { 
+          user: {
+            id: existingUser.id,
+            email: existingUser.email,
+            created_at: existingUser.created_at
+          }, 
+          error: null 
+        };
+      } else {
+        // User doesn't exist, they need to register
+        return { user: null, error: 'GOOGLE_USER_NOT_FOUND' };
+      }
+
+    } catch (error) {
+      console.error('Google sign in error:', error);
+      return { user: null, error: 'Google sign in failed' };
+    }
+  }
+
+  // Google Registration (for new users)
+  static async registerWithGoogle(
+    accessToken: string, 
+    profileData: { name: string; age: number; description?: string; riding_experience?: number; stable_id?: string }
+  ): Promise<{ user: AuthUser | null; error: string | null }> {
+    try {
+      console.log('Attempting Google registration...');
+      
+      // Get user info from Google
+      const response = await fetch(
+        `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${accessToken}`
+      );
+      
+      if (!response.ok) {
+        return { user: null, error: 'Failed to fetch Google user information' };
+      }
+
+      const googleUser = await response.json();
+      
+      if (!googleUser.email) {
+        return { user: null, error: 'No email found in Google account' };
+      }
+
+      // Validate profile data
+      if (!profileData.name || !profileData.age) {
+        return { user: null, error: 'Name and age are required' };
+      }
+
+      if (profileData.age < 13 || profileData.age > 120) {
+        return { user: null, error: 'Age must be between 13 and 120' };
+      }
+
+      if (profileData.riding_experience !== undefined && (profileData.riding_experience < 0 || profileData.riding_experience > 80)) {
+        return { user: null, error: 'Riding experience must be between 0 and 80 years' };
+      }
+
+      const supabase = getSupabase();
+
+      // Check if user already exists
+      const { data: existingUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', googleUser.email)
+        .single();
+
+      if (existingUser) {
+        return { user: null, error: 'User already exists with this Google account. Please sign in instead.' };
+      }
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error checking existing user:', fetchError);
+        return { user: null, error: 'Database error occurred' };
+      }
+
+      // Create new user profile
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert([{
+          email: googleUser.email,
+          name: profileData.name,
+          age: profileData.age,
+          description: profileData.description || '',
+          riding_experience: profileData.riding_experience || 0,
+          auth_provider: 'google',
+          google_id: googleUser.id
+        }])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('User registration error:', insertError);
+        if (insertError.code === '23505') {
+          return { user: null, error: 'A user with this email already exists' };
+        }
+        return { user: null, error: 'Failed to create user account' };
+      }
+
+      // Join stable if provided
+      if (profileData.stable_id && newUser) {
+        try {
+          const { error: stableError } = await supabase
+            .from('stable_members')
+            .insert([{
+              stable_id: profileData.stable_id,
+              user_id: newUser.id,
+              role: 'member',
+              joined_at: new Date().toISOString()
+            }]);
+
+          if (stableError) {
+            console.error('Error joining stable:', stableError);
+            // Don't fail registration if stable join fails
+          }
+        } catch (stableJoinError) {
+          console.error('Stable join error:', stableJoinError);
+          // Don't fail registration if stable join fails
+        }
+      }
+
+      // Store last login time for session tracking
+      await SessionManager.storeLastLoginTime();
+
+      console.log('Google registration successful');
+      return { 
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          created_at: newUser.created_at
+        }, 
+        error: null 
+      };
+
+    } catch (error) {
+      console.error('Google registration error:', error);
+      return { user: null, error: 'Google registration failed' };
+    }
+  }
 }
