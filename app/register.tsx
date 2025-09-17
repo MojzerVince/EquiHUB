@@ -2,7 +2,7 @@ import SimpleStableSelection from "@/components/SimpleStableSelection";
 import { useDialog } from "@/contexts/DialogContext";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -26,7 +26,6 @@ const RegisterScreen = () => {
   // Registration flow state
   const [step, setStep] = useState(1); // 1 = Google Auth, 2 = Profile Form
   const [googleUser, setGoogleUser] = useState<GoogleUserInfo | null>(null);
-  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
   
   // Form state (only profile data, no email/password)
   const [formData, setFormData] = useState({
@@ -52,14 +51,7 @@ const RegisterScreen = () => {
   // Form validation (only for step 2 - profile data)
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // Handle Google Auth Response
-  useEffect(() => {
-    if (response?.type === 'success' && response.authentication) {
-      handleGoogleAuthSuccess(response.authentication.accessToken);
-    } else if (response?.type === 'error') {
-      showError('Google authentication failed');
-    }
-  }, [response]);
+  // Google Auth Response is handled directly in handleGoogleAuth
 
   const validateProfileForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -94,35 +86,35 @@ const RegisterScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleGoogleAuthSuccess = async (accessToken: string) => {
+  const handleGoogleAuth = async () => {
     setGoogleLoading(true);
     try {
-      // Fetch Google user info
-      const userInfo = await fetchGoogleUserInfo(accessToken);
-      setGoogleUser(userInfo);
-      setGoogleAccessToken(accessToken);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
-      // Pre-fill name if available
-      if (userInfo.name) {
-        setFormData(prev => ({ ...prev, name: userInfo.name }));
+      const result = await promptAsync();
+      
+      if (result?.type === 'success') {
+        // Get user info from the result
+        const userInfo = await fetchGoogleUserInfo(result.user);
+        setGoogleUser(userInfo);
+        
+        // Pre-fill name if available
+        if (userInfo.name) {
+          setFormData(prev => ({ ...prev, name: userInfo.name }));
+        }
+        
+        // Move to profile form step
+        setStep(2);
+      } else if (result?.type === 'cancelled') {
+        console.log('Google auth cancelled');
+      } else if (result?.type === 'error') {
+        showError(result.error || 'Google authentication failed');
       }
-      
-      // Move to profile form step
-      setStep(2);
     } catch (error) {
       console.error("Google auth error:", error);
-      showError("Failed to get Google account information");
+      showError("Failed to authenticate with Google");
     } finally {
       setGoogleLoading(false);
-    }
-  };
-
-  const handleGoogleAuth = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (request) {
-      promptAsync();
-    } else {
-      showError('Google authentication is not ready. Please try again.');
     }
   };
 
@@ -132,7 +124,7 @@ const RegisterScreen = () => {
       return;
     }
 
-    if (!googleAccessToken || !googleUser) {
+    if (!googleUser) {
       showError("Google authentication required");
       return;
     }
@@ -144,7 +136,7 @@ const RegisterScreen = () => {
     try {
       // Register with Google auth
       const { user, error } = await AuthAPI.registerWithGoogle(
-        googleAccessToken,
+        googleUser,
         {
           name: formData.name,
           age: formData.age,

@@ -6,12 +6,13 @@
 import Constants from "expo-constants";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import { configureGoogleSignIn } from "../lib/googleAuth";
 import { initializeSupabase } from "../lib/supabase";
 
 interface AppInitializerProps {
@@ -63,6 +64,11 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
       console.log("🔄 Initializing Supabase...");
       await initializeSupabase();
       console.log("✅ Supabase initialized");
+
+      // Initialize Google Sign In
+      console.log("🔄 Configuring Google Sign In...");
+      await configureGoogleSignIn();
+      console.log("✅ Google Sign In configured");
 
       setIsInitialized(true);
       setInitError(null);

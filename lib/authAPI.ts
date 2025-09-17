@@ -565,20 +565,9 @@ export class AuthAPI {
   }
 
   // Google Sign In
-  static async signInWithGoogle(accessToken: string): Promise<{ user: AuthUser | null; error: string | null }> {
+  static async signInWithGoogle(googleUser: any): Promise<{ user: AuthUser | null; error: string | null }> {
     try {
       console.log('Attempting Google sign in...');
-      
-      // Get user info from Google
-      const response = await fetch(
-        `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${accessToken}`
-      );
-      
-      if (!response.ok) {
-        return { user: null, error: 'Failed to fetch Google user information' };
-      }
-
-      const googleUser = await response.json();
       
       if (!googleUser.email) {
         return { user: null, error: 'No email found in Google account' };
@@ -623,22 +612,11 @@ export class AuthAPI {
 
   // Google Registration (for new users)
   static async registerWithGoogle(
-    accessToken: string, 
+    googleUser: any, 
     profileData: { name: string; age: number; description?: string; riding_experience?: number; stable_id?: string }
   ): Promise<{ user: AuthUser | null; error: string | null }> {
     try {
       console.log('Attempting Google registration...');
-      
-      // Get user info from Google
-      const response = await fetch(
-        `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${accessToken}`
-      );
-      
-      if (!response.ok) {
-        return { user: null, error: 'Failed to fetch Google user information' };
-      }
-
-      const googleUser = await response.json();
       
       if (!googleUser.email) {
         return { user: null, error: 'No email found in Google account' };

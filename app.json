@@ -71,9 +71,7 @@
           "locationWhenInUsePermission": "This app needs location access to track your riding routes and show your position on the map."
         }
       ],
-      [
-        "expo-task-manager"
-      ],
+      ["expo-task-manager"],
       "expo-font",
       [
         "expo-notifications",
@@ -82,7 +80,8 @@
           "color": "#ffffff",
           "defaultChannel": "default"
         }
-      ]
+      ],
+      ["@react-native-google-signin/google-signin"]
     ],
     "experiments": {
       "typedRoutes": true

@@ -15,7 +15,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthAPI, LoginData } from "../lib/authAPI";
-import { useGoogleAuth } from "../lib/googleAuth";
+import { fetchGoogleUserInfo, useGoogleAuth } from '../lib/googleAuth';
+
 
 const LoginScreen = () => {
   const router = useRouter();
@@ -39,11 +40,7 @@ const LoginScreen = () => {
 
   // Handle Google Auth Response
   useEffect(() => {
-    if (response?.type === 'success' && response.authentication) {
-      handleGoogleSignIn(response.authentication.accessToken);
-    } else if (response?.type === 'error') {
-      showError('Google authentication failed');
-    }
+    // No longer needed - the new implementation handles response directly
   }, [response]);
 
   const validateForm = (): boolean => {
@@ -92,30 +89,47 @@ const LoginScreen = () => {
     }
   };
 
-  const handleGoogleSignIn = async (accessToken: string) => {
+  const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const { user, error } = await AuthAPI.signInWithGoogle(accessToken);
+      const result = await promptAsync();
+      
+      if (result?.type === 'success') {
+        // Get user info from the result
+        const googleUser = await fetchGoogleUserInfo(result.user);
+        
+        // Sign in with Google through our API
+        const { user, error } = await AuthAPI.signInWithGoogle(googleUser);
 
-      if (error === 'GOOGLE_USER_NOT_FOUND') {
-        // User needs to register first
-        showConfirm(
-          'Account Not Found',
-          'No account found with this Google account. Would you like to create a new account?',
-          () => {
-            router.push('/register');
-          }
-        );
-        return;
-      }
+        if (error === 'GOOGLE_USER_NOT_FOUND') {
+          // User needs to register first
+          showConfirm(
+            'Account Not Found',
+            'No account found with this Google account. Would you like to create a new account?',
+            () => {
+              router.push({
+                pathname: '/register',
+                params: { 
+                  googleUser: JSON.stringify(googleUser)
+                }
+              });
+            }
+          );
+          return;
+        }
 
-      if (error) {
-        showError(error);
-        return;
-      }
+        if (error) {
+          showError(error);
+          return;
+        }
 
-      if (user) {
-        console.log("Google sign in successful, waiting for auth state to update...");
+        if (user) {
+          console.log("Google sign in successful, waiting for auth state to update...");
+        }
+      } else if (result?.type === 'cancelled') {
+        console.log('Google Sign In cancelled');
+      } else if (result?.type === 'error') {
+        showError(result.error || 'Google authentication failed');
       }
     } catch (error) {
       console.error("Google sign in error:", error);
@@ -127,11 +141,7 @@ const LoginScreen = () => {
 
   const handleGoogleLogin = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (request) {
-      promptAsync();
-    } else {
-      showError('Google authentication is not ready. Please try again.');
-    }
+    handleGoogleSignIn();
   };
 
   const handleForgotPassword = async () => {

@@ -1,56 +1,81 @@
-import { makeRedirectUri, useAuthRequest } from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
-WebBrowser.maybeCompleteAuthSession();
-
-// Google OAuth configuration
-const discovery = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+// Google OAuth Configuration
+const GOOGLE_CONFIG = {
+  webClientId: '645905000706-84poben7qoa735imq8ukp765ho5k0d97.apps.googleusercontent.com', // Your Web Client ID
+  androidClientId: '645905000706-r5d9rejr3lakueqrhl1tk7ldmpv2jt2v.apps.googleusercontent.com', // Your Android Client ID
+  iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com', // Your iOS Client ID (when you have one)
+  offlineAccess: true,
+  forceCodeForRefreshToken: true,
+  scopes: ['openid', 'profile', 'email'],
 };
 
-// Replace with your actual Google OAuth client IDs
-const GOOGLE_CLIENT_IDS = {
-  android: '645905000706-r5d9rejr3lakueqrhl1tk7ldmpv2jt2v.apps.googleusercontent.com',
-  web: '645905000706-84poben7qoa735imq8ukp765ho5k0d97.apps.googleusercontent.com',
- // ios: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com', // Optional for future iOS support
-};
-
-export const useGoogleAuth = () => {
-  const clientId = Platform.select({
-    android: GOOGLE_CLIENT_IDS.android,
-    web: GOOGLE_CLIENT_IDS.web,
-    //ios: GOOGLE_CLIENT_IDS.ios,
-    default: GOOGLE_CLIENT_IDS.android,
-  });
-
-  const redirectUri = makeRedirectUri();
-
-  const [request, response, promptAsync] = useAuthRequest(
-    {
-      clientId: clientId!,
-      scopes: ['openid', 'profile', 'email'],
-      redirectUri,
-    },
-    discovery
-  );
-
-  return { request, response, promptAsync };
-};
-
-export const fetchGoogleUserInfo = async (accessToken: string) => {
+// Configure Google Sign In
+export const configureGoogleSignIn = async () => {
   try {
-    const response = await fetch(
-      `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${accessToken}`
-    );
-    const userInfo = await response.json();
-    return userInfo;
+    GoogleSignin.configure({
+      webClientId: GOOGLE_CONFIG.webClientId,
+      iosClientId: GOOGLE_CONFIG.iosClientId,
+      offlineAccess: GOOGLE_CONFIG.offlineAccess,
+      forceCodeForRefreshToken: GOOGLE_CONFIG.forceCodeForRefreshToken,
+    });
   } catch (error) {
-    console.error('Error fetching Google user info:', error);
+    console.error('Google SignIn configuration error:', error);
     throw error;
   }
+};
+
+// Google Sign In Hook (replacing useAuthRequest)
+export const useGoogleAuth = () => {
+  const signIn = async () => {
+    try {
+      // Configure Google SignIn if not already configured
+      await configureGoogleSignIn();
+      
+      // Check if device has Google Play Services (Android)
+      await GoogleSignin.hasPlayServices();
+      
+      // Sign in
+      const userInfo = await GoogleSignin.signIn();
+      
+      return {
+        type: 'success',
+        user: userInfo.data?.user || userInfo,
+        tokens: userInfo,
+      };
+    } catch (error: any) {
+      console.error('Google Sign In error:', error);
+      
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        return { type: 'cancelled' };
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        return { type: 'in_progress' };
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        return { type: 'play_services_not_available' };
+      } else {
+        return { type: 'error', error: error.message };
+      }
+    }
+  };
+
+  return { 
+    request: true, // Always ready
+    response: null, // Not used in this implementation
+    promptAsync: signIn,
+  };
+};
+
+export const fetchGoogleUserInfo = async (user: any) => {
+  // With react-native-google-signin, user info is already available
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    given_name: user.givenName,
+    family_name: user.familyName,
+    picture: user.photo,
+    locale: 'en', // Default locale
+  };
 };
 
 export interface GoogleUserInfo {
