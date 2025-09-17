@@ -26,10 +26,7 @@ export const useGoogleAuth = () => {
     default: GOOGLE_CLIENT_IDS.android,
   });
 
-  const redirectUri = makeRedirectUri({
-    scheme: 'equihub',
-    path: 'oauth',
-  });
+  const redirectUri = makeRedirectUri();
 
   const [request, response, promptAsync] = useAuthRequest(
     {
