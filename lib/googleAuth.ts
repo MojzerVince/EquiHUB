@@ -1,18 +1,50 @@
 import { Platform } from 'react-native';
 
-// Conditional import for native platforms
-let GoogleSignin: any;
-let statusCodes: any;
+// Lazy-loaded Google Sign In module to prevent TurboModule errors
+let GoogleSignin: any = null;
+let statusCodes: any = null;
+let googleSignInAvailable = false;
 
-try {
-  if (Platform.OS !== 'web') {
+// Function to safely initialize Google Sign In module
+const initializeGoogleSignInModule = () => {
+  if (googleSignInAvailable || GoogleSignin) {
+    return true;
+  }
+
+  // Only try to import on native platforms and in development builds
+  if (Platform.OS === 'web') {
+    return false;
+  }
+
+  try {
+    // Check if we're in Expo Go (which doesn't support native modules)
+    const Constants = require('expo-constants');
+    const executionEnvironment = Constants.default?.executionEnvironment || Constants.executionEnvironment;
+    
+    if (executionEnvironment === 'storeClient') {
+      console.log('Running in Expo Go - Google Sign In native module not available');
+      return false;
+    }
+
+    // Additional check for Expo Go using app config
+    const appOwnership = Constants.default?.appOwnership || Constants.appOwnership;
+    if (appOwnership === 'expo') {
+      console.log('Running in Expo Go client - Google Sign In native module not available');
+      return false;
+    }
+
+    // Try to import the module
     const googleSignin = require('@react-native-google-signin/google-signin');
     GoogleSignin = googleSignin.GoogleSignin;
     statusCodes = googleSignin.statusCodes;
+    googleSignInAvailable = true;
+    console.log('Google Sign In native module loaded successfully');
+    return true;
+  } catch (error) {
+    console.log('Google Sign In native module not available, using web fallback');
+    return false;
   }
-} catch (error) {
-  console.log('Google Sign In native module not available, using web fallback');
-}
+};
 
 // Google OAuth Configuration - Using environment variables
 const GOOGLE_CONFIG = {
@@ -30,20 +62,28 @@ export const configureGoogleSignIn = async () => {
     if (Platform.OS === 'web') {
       // Web configuration - no configuration needed for manual OAuth flow
       console.log('Google Sign In configured for web');
-      return;
+      return true;
     }
     
-    if (GoogleSignin) {
+    // Try to initialize the native module
+    const isAvailable = initializeGoogleSignInModule();
+    
+    if (isAvailable && GoogleSignin) {
       GoogleSignin.configure({
         webClientId: GOOGLE_CONFIG.webClientId,
         iosClientId: GOOGLE_CONFIG.iosClientId,
         offlineAccess: GOOGLE_CONFIG.offlineAccess,
         forceCodeForRefreshToken: GOOGLE_CONFIG.forceCodeForRefreshToken,
       });
+      console.log('Google Sign In configured for native platform');
+      return true;
+    } else {
+      console.log('Google Sign In native module not available, will use web OAuth');
+      return false;
     }
   } catch (error) {
-    console.error('Google SignIn configuration error:', error);
-    throw error;
+    console.log('Google SignIn configuration failed, falling back to web OAuth:', error);
+    return false;
   }
 };
 
@@ -57,11 +97,10 @@ export const useGoogleAuth = () => {
       }
       
       // For native apps, try native module first, fallback to web OAuth
-      if (GoogleSignin) {
+      const nativeAvailable = await configureGoogleSignIn();
+      
+      if (nativeAvailable && GoogleSignin) {
         try {
-          // Configure Google SignIn if not already configured
-          await configureGoogleSignIn();
-          
           // Check if device has Google Play Services (Android)
           await GoogleSignin.hasPlayServices();
           
@@ -85,6 +124,7 @@ export const useGoogleAuth = () => {
         }
       } else {
         // Native module not available, use web OAuth
+        console.log('Using web OAuth flow for Google Sign In');
         return await initiateWebGoogleAuth();
       }
     } catch (error: any) {
@@ -120,30 +160,40 @@ const initiateWebGoogleAuth = async () => {
       return await openGoogleAuthPopup(authUrl.toString(), redirectUri);
     } else {
       // For mobile, use in-app browser
-      const { WebBrowser } = require('expo-web-browser');
-      const result = await WebBrowser.openAuthSessionAsync(authUrl.toString(), redirectUri);
-      
-      if (result.type === 'success' && result.url) {
-        const url = new URL(result.url);
-        const code = url.searchParams.get('code');
+      try {
+        const WebBrowser = require('expo-web-browser');
         
-        if (code) {
-          // Exchange code for user info via server
-          const { AuthAPI } = require('./authAPI');
-          const authResult = await AuthAPI.googleOAuth(code, redirectUri);
-          
-          if (authResult.error) {
-            return { type: 'error', error: authResult.error };
-          }
-          
-          return {
-            type: 'success',
-            user: authResult.user,
-          };
+        if (!WebBrowser || !WebBrowser.openAuthSessionAsync) {
+          throw new Error('expo-web-browser not available or incomplete');
         }
+        
+        const result = await WebBrowser.openAuthSessionAsync(authUrl.toString(), redirectUri);
+        
+        if (result.type === 'success' && result.url) {
+          const url = new URL(result.url);
+          const code = url.searchParams.get('code');
+          
+          if (code) {
+            // Exchange code for user info via server
+            const { AuthAPI } = require('./authAPI');
+            const authResult = await AuthAPI.googleOAuth(code, redirectUri);
+            
+            if (authResult.error) {
+              return { type: 'error', error: authResult.error };
+            }
+            
+            return {
+              type: 'success',
+              user: authResult.user,
+            };
+          }
+        }
+        
+        return { type: 'cancelled' };
+      } catch (webBrowserError: any) {
+        console.error('WebBrowser error:', webBrowserError);
+        return { type: 'error', error: `WebBrowser not available: ${webBrowserError.message}` };
       }
-      
-      return { type: 'cancelled' };
     }
   } catch (error: any) {
     console.error('Web Google Auth error:', error);

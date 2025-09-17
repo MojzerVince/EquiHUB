@@ -65,10 +65,18 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
       await initializeSupabase();
       console.log("✅ Supabase initialized");
 
-      // Initialize Google Sign In
+      // Initialize Google Sign In (optional - don't fail if not available)
       console.log("🔄 Configuring Google Sign In...");
-      await configureGoogleSignIn();
-      console.log("✅ Google Sign In configured");
+      try {
+        const googleConfigured = await configureGoogleSignIn();
+        if (googleConfigured) {
+          console.log("✅ Google Sign In configured");
+        } else {
+          console.log("ℹ️ Google Sign In will use web OAuth fallback");
+        }
+      } catch (error) {
+        console.log("⚠️ Google Sign In configuration failed, will use web fallback:", error);
+      }
 
       setIsInitialized(true);
       setInitError(null);
