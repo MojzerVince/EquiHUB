@@ -192,7 +192,16 @@ const initiateWebGoogleAuth = async () => {
         return { type: 'cancelled' };
       } catch (webBrowserError: any) {
         console.error('WebBrowser error:', webBrowserError);
-        return { type: 'error', error: `WebBrowser not available: ${webBrowserError.message}` };
+        
+        // Provide a more user-friendly error message for Expo Go limitations
+        let errorMessage = 'Google Sign In not available in Expo Go. ';
+        errorMessage += 'Please use a development build or try the web version.';
+        
+        return { 
+          type: 'error', 
+          error: errorMessage,
+          details: webBrowserError.message
+        };
       }
     }
   } catch (error: any) {
