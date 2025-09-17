@@ -1,4 +1,18 @@
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { Platform } from 'react-native';
+
+// Conditional import for native platforms
+let GoogleSignin: any;
+let statusCodes: any;
+
+try {
+  if (Platform.OS !== 'web') {
+    const googleSignin = require('@react-native-google-signin/google-signin');
+    GoogleSignin = googleSignin.GoogleSignin;
+    statusCodes = googleSignin.statusCodes;
+  }
+} catch (error) {
+  console.log('Google Sign In native module not available, using web fallback');
+}
 
 // Google OAuth Configuration
 const GOOGLE_CONFIG = {
@@ -13,12 +27,20 @@ const GOOGLE_CONFIG = {
 // Configure Google Sign In
 export const configureGoogleSignIn = async () => {
   try {
-    GoogleSignin.configure({
-      webClientId: GOOGLE_CONFIG.webClientId,
-      iosClientId: GOOGLE_CONFIG.iosClientId,
-      offlineAccess: GOOGLE_CONFIG.offlineAccess,
-      forceCodeForRefreshToken: GOOGLE_CONFIG.forceCodeForRefreshToken,
-    });
+    if (Platform.OS === 'web') {
+      // Web configuration - no configuration needed for manual OAuth flow
+      console.log('Google Sign In configured for web');
+      return;
+    }
+    
+    if (GoogleSignin) {
+      GoogleSignin.configure({
+        webClientId: GOOGLE_CONFIG.webClientId,
+        iosClientId: GOOGLE_CONFIG.iosClientId,
+        offlineAccess: GOOGLE_CONFIG.offlineAccess,
+        forceCodeForRefreshToken: GOOGLE_CONFIG.forceCodeForRefreshToken,
+      });
+    }
   } catch (error) {
     console.error('Google SignIn configuration error:', error);
     throw error;
@@ -29,8 +51,20 @@ export const configureGoogleSignIn = async () => {
 export const useGoogleAuth = () => {
   const signIn = async () => {
     try {
+      if (Platform.OS === 'web') {
+        // For web, show a message that Google Sign In is not available in development
+        return { 
+          type: 'error', 
+          error: 'Google Sign In is not available in web development mode. Please use email/password login for testing.' 
+        };
+      }
+      
       // Configure Google SignIn if not already configured
       await configureGoogleSignIn();
+      
+      if (!GoogleSignin) {
+        return { type: 'error', error: 'Google Sign In not available' };
+      }
       
       // Check if device has Google Play Services (Android)
       await GoogleSignin.hasPlayServices();
@@ -46,11 +80,11 @@ export const useGoogleAuth = () => {
     } catch (error: any) {
       console.error('Google Sign In error:', error);
       
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+      if (statusCodes && error.code === statusCodes.SIGN_IN_CANCELLED) {
         return { type: 'cancelled' };
-      } else if (error.code === statusCodes.IN_PROGRESS) {
+      } else if (statusCodes && error.code === statusCodes.IN_PROGRESS) {
         return { type: 'in_progress' };
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      } else if (statusCodes && error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         return { type: 'play_services_not_available' };
       } else {
         return { type: 'error', error: error.message };
