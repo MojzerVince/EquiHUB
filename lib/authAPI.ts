@@ -748,7 +748,37 @@ export class AuthAPI {
       }
 
       const data = await response.json();
-      return { user: data.user, error: null };
+      console.log('✅ Google OAuth successful:', data.user.email, data.isNewUser ? '(new user)' : '(existing user)');
+      
+      // Store the Supabase user data in session
+      const supabaseUser = data.user;
+      
+      // Create a session token for the authenticated user
+      const sessionData = {
+        user: {
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          name: supabaseUser.name,
+          profile_image_url: supabaseUser.profile_image_url,
+          google_id: supabaseUser.google_id,
+          is_pro_member: supabaseUser.is_pro_member,
+          created_at: supabaseUser.created_at
+        },
+        isNewUser: data.isNewUser,
+        googleUser: data.googleUser
+      };
+      
+      // Store user data in AsyncStorage for session management
+      await SessionManager.storeLastLoginTime();
+      
+      // Store user ID for session tracking
+      const AsyncStorage = require('@react-native-async-storage/async-storage');
+      await AsyncStorage.setItem('google_oauth_user_id', supabaseUser.id);
+      await AsyncStorage.setItem('google_oauth_user_data', JSON.stringify(sessionData.user));
+      
+      console.log('✅ Google OAuth session stored successfully');
+      
+      return { user: sessionData, error: null };
       
     } catch (error) {
       console.error('Google OAuth error:', error);

@@ -144,7 +144,7 @@ export const useGoogleAuth = () => {
 const initiateWebGoogleAuth = async () => {
   try {
     const clientId = GOOGLE_CONFIG.webClientId;
-    const redirectUri = Platform.OS === 'web' ? `${window.location.origin}/auth/callback` : 'com.mojzi1969.equihub://oauth/callback';
+    const redirectUri = Platform.OS === 'web' ? `${window.location.origin}/auth/callback` : 'com.mojzi1969.EquiHUB://oauth/callback';
     
     // Create OAuth 2.0 authorization URL
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
