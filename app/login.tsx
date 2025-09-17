@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthAPI, LoginData } from "../lib/authAPI";
-import { fetchGoogleUserInfo, useGoogleAuth } from '../lib/googleAuth';
+import { useGoogleAuth } from '../lib/googleAuth';
 
 
 const LoginScreen = () => {
@@ -92,11 +92,11 @@ const LoginScreen = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const result = await promptAsync();
+      const result = await promptAsync() as any;
       
       if (result?.type === 'success') {
-        // Get user info from the result
-        const googleUser = await fetchGoogleUserInfo(result.user);
+        // The new OAuth flow returns user info directly from the server
+        const googleUser = result.user;
         
         // Sign in with Google through our API
         const { user, error } = await AuthAPI.signInWithGoogle(googleUser);

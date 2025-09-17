@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthAPI } from "../lib/authAPI";
-import { fetchGoogleUserInfo, GoogleUserInfo, useGoogleAuth } from "../lib/googleAuth";
+import { GoogleUserInfo, useGoogleAuth } from "../lib/googleAuth";
 import { SimpleStable, SimpleStableAPI } from "../lib/simpleStableAPI";
 
 const RegisterScreen = () => {
@@ -91,11 +91,11 @@ const RegisterScreen = () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
-      const result = await promptAsync();
+      const result = await promptAsync() as any;
       
       if (result?.type === 'success') {
-        // Get user info from the result
-        const userInfo = await fetchGoogleUserInfo(result.user);
+        // The new OAuth flow returns user info directly from the server
+        const userInfo = result.user;
         setGoogleUser(userInfo);
         
         // Pre-fill name if available
