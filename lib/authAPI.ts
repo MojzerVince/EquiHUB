@@ -716,4 +716,43 @@ export class AuthAPI {
       return { user: null, error: 'Google registration failed' };
     }
   }
+
+  // Google OAuth through secure server
+  static async googleOAuth(authorizationCode: string, redirectUri?: string): Promise<{ user: any | null; error: string | null }> {
+    try {
+      const serverUrl = process.env.EXPO_PUBLIC_API_SERVER_URL;
+      const apiSecret = process.env.EXPO_PUBLIC_API_SECRET;
+      
+      if (!serverUrl || !apiSecret) {
+        return { user: null, error: 'Server configuration missing' };
+      }
+
+      console.log('Exchanging Google authorization code via server...');
+      
+      const response = await fetch(`${serverUrl}/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-app-secret': apiSecret,
+        },
+        body: JSON.stringify({
+          code: authorizationCode,
+          redirectUri: redirectUri,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Network error' }));
+        console.error('Google OAuth server error:', errorData);
+        return { user: null, error: errorData.error || 'Google authentication failed' };
+      }
+
+      const data = await response.json();
+      return { user: data.user, error: null };
+      
+    } catch (error) {
+      console.error('Google OAuth error:', error);
+      return { user: null, error: 'Google authentication failed' };
+    }
+  }
 }

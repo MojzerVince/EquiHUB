@@ -266,6 +266,84 @@ app.get('/maps/places', validateApiSecret, async (req: Request, res: Response) =
 });
 
 /**
+ * Google OAuth endpoint
+ * Handles Google Sign In token exchange using client secret
+ */
+app.post('/auth/google', validateApiSecret, async (req: Request, res: Response) => {
+  try {
+    const { code, redirectUri } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code required' });
+    }
+
+    console.log('🔍 DEBUG: Google OAuth token exchange');
+    
+    // Exchange authorization code for access token
+    const tokenParams = new URLSearchParams({
+      client_id: process.env.GOOGLE_WEB_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: redirectUri || 'postmessage', // For mobile apps
+    });
+
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: tokenParams.toString(),
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      console.error('Google token exchange failed:', error);
+      return res.status(400).json({ error: 'Token exchange failed' });
+    }
+
+    const tokenData = await tokenResponse.json() as { access_token: string };
+    
+    // Get user info using the access token
+    const userResponse = await fetch(
+      `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenData.access_token}`
+    );
+
+    if (!userResponse.ok) {
+      const error = await userResponse.text();
+      console.error('Google user info fetch failed:', error);
+      return res.status(400).json({ error: 'Failed to get user info' });
+    }
+
+    const userInfo = await userResponse.json() as {
+      id: string;
+      email: string;
+      name: string;
+      given_name: string;
+      family_name: string;
+      picture: string;
+      locale: string;
+    };
+    
+    // Return user info (without exposing tokens to client)
+    res.json({
+      user: {
+        id: userInfo.id,
+        email: userInfo.email,
+        name: userInfo.name,
+        given_name: userInfo.given_name,
+        family_name: userInfo.family_name,
+        picture: userInfo.picture,
+        locale: userInfo.locale,
+      },
+    });
+  } catch (error) {
+    console.error('Google OAuth error:', error);
+    res.status(500).json({ error: 'OAuth service unavailable' });
+  }
+});
+
+/**
  * Health check endpoint
  */
 app.get('/health', (req: Request, res: Response) => {
@@ -303,6 +381,8 @@ const server = app.listen(PORT, HOST, () => {
     'SUPABASE_URL',
     'SUPABASE_ANON_KEY',
     'GOOGLE_MAPS_API_KEY',
+    'GOOGLE_WEB_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
   ];
 
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
