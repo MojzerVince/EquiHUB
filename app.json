@@ -82,6 +82,13 @@
           "color": "#ffffff",
           "defaultChannel": "default"
         }
+      ],
+      [
+        "expo-facebook",
+        {
+          "appId": "YOUR_FACEBOOK_APP_ID",
+          "displayName": "EquiHUB"
+        }
       ]
     ],
     "experiments": {

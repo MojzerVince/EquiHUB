@@ -1,22 +1,22 @@
 import { useDialog } from "@/contexts/DialogContext";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthAPI, LoginData } from "../lib/authAPI";
-import { useGoogleAuth } from '../lib/googleAuth';
 
+import OAuthButtons from "../components/OAuthButtons";
 
 const LoginScreen = () => {
   const router = useRouter();
@@ -33,15 +33,6 @@ const LoginScreen = () => {
 
   // Form validation
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
-  // Google Auth Setup
-  const { request, response, promptAsync } = useGoogleAuth();
-  const [googleLoading, setGoogleLoading] = useState(false);
-
-  // Handle Google Auth Response
-  useEffect(() => {
-    // No longer needed - the new implementation handles response directly
-  }, [response]);
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -87,61 +78,6 @@ const LoginScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    try {
-      const result = await promptAsync() as any;
-      
-      if (result?.type === 'success') {
-        // The new OAuth flow returns user info directly from the server
-        const googleUser = result.user;
-        
-        // Sign in with Google through our API
-        const { user, error } = await AuthAPI.signInWithGoogle(googleUser);
-
-        if (error === 'GOOGLE_USER_NOT_FOUND') {
-          // User needs to register first
-          showConfirm(
-            'Account Not Found',
-            'No account found with this Google account. Would you like to create a new account?',
-            () => {
-              router.push({
-                pathname: '/register',
-                params: { 
-                  googleUser: JSON.stringify(googleUser)
-                }
-              });
-            }
-          );
-          return;
-        }
-
-        if (error) {
-          showError(error);
-          return;
-        }
-
-        if (user) {
-          console.log("Google sign in successful, waiting for auth state to update...");
-        }
-      } else if (result?.type === 'cancelled') {
-        console.log('Google Sign In cancelled');
-      } else if (result?.type === 'error') {
-        showError(result.error || 'Google authentication failed');
-      }
-    } catch (error) {
-      console.error("Google sign in error:", error);
-      showError("Google sign in failed. Please try again.");
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    handleGoogleSignIn();
   };
 
   const handleForgotPassword = async () => {
@@ -306,24 +242,16 @@ const LoginScreen = () => {
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Google Sign In Button */}
-            <TouchableOpacity
-              style={[
-                styles.googleButton,
-                (googleLoading || !request) ? styles.disabledButton : null,
-              ]}
-              onPress={handleGoogleLogin}
-              disabled={googleLoading || !request}
-            >
-              {googleLoading ? (
-                <ActivityIndicator size="small" color="#666" />
-              ) : (
-                <>
-                  <Text style={styles.googleButtonIcon}>G</Text>
-                  <Text style={styles.googleButtonText}>Sign in with Google</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            {/* OAuth Sign In Buttons */}
+            <OAuthButtons
+              onSuccess={(user) => {
+                console.log("OAuth login successful:", user);
+                router.push("/(tabs)");
+              }}
+              onError={(error) => {
+                showError(error);
+              }}
+            />
 
             <TouchableOpacity
               style={styles.registerLinkContainer}
