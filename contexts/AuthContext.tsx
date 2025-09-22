@@ -186,6 +186,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         );
       }
 
+      // Check for Google OAuth session
+      console.log("🔍 Checking for Google OAuth session...");
+      const AsyncStorage = require('@react-native-async-storage/async-storage');
+      const googleUserData = await AsyncStorage.getItem('google_oauth_user_data');
+      
+      if (googleUserData) {
+        try {
+          const userData = JSON.parse(googleUserData);
+          console.log("✅ Found Google OAuth session for:", userData.email);
+          setUser(userData);
+          await SessionManager.markUserAsUsedApp();
+          setHasUserData(true);
+          return;
+        } catch (parseError) {
+          console.error("Error parsing Google OAuth user data:", parseError);
+          // Clear corrupted data
+          await AsyncStorage.removeItem('google_oauth_user_data');
+          await AsyncStorage.removeItem('google_oauth_user_id');
+        }
+      }
+
       // Fallback to REST API if client session check fails
       const { user, error } = await AuthAPI.getCurrentUser();
 
@@ -245,9 +266,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Use session manager to clear all session data
       await SessionManager.clearSessionData();
+      
+      // Clear Google OAuth session data
+      const AsyncStorage = require('@react-native-async-storage/async-storage');
+      await AsyncStorage.removeItem('google_oauth_user_data');
+      await AsyncStorage.removeItem('google_oauth_user_id');
+      
       // Reset the user data flag
       setHasUserData(false);
-      console.log("Cleared stored credentials");
+      console.log("Cleared stored credentials and Google OAuth data");
     } catch (error) {
       console.error("Error clearing stored credentials:", error);
     }
@@ -271,6 +298,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         SessionManager.hasUserUsedApp(),
         SessionManager.getLastLoginTime(),
         SessionManager.getUserPreferences(),
+        // Check for Google OAuth session data
+        import("@react-native-async-storage/async-storage").then(
+          async (AsyncStorage) => {
+            const googleData = await AsyncStorage.default.getItem('google_oauth_user_data');
+            return !!googleData;
+          }
+        ),
         // Check for vaccination reminders (user-specific data)
         import("@react-native-async-storage/async-storage").then(
           async (AsyncStorage) => {

@@ -16,6 +16,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthAPI, LoginData } from "../lib/authAPI";
 
+import OAuthButtons from "../components/OAuthButtons";
+
 const LoginScreen = () => {
   const router = useRouter();
   const { showError, showConfirm } = useDialog();
@@ -233,6 +235,24 @@ const LoginScreen = () => {
               )}
             </TouchableOpacity>
 
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* OAuth Sign In Buttons */}
+            <OAuthButtons
+              onSuccess={(user) => {
+                console.log("OAuth login successful:", user);
+                router.push("/(tabs)");
+              }}
+              onError={(error) => {
+                showError(error);
+              }}
+            />
+
             <TouchableOpacity
               style={styles.registerLinkContainer}
               onPress={() => {
@@ -426,6 +446,50 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     fontWeight: "600",
     color: "#fff",
+  },
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#333",
+  },
+  dividerText: {
+    marginHorizontal: 15,
+    fontSize: 16,
+    fontFamily: "Inder",
+    color: "#666",
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  googleButtonIcon: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#4285F4",
+    marginRight: 10,
+    fontFamily: "Inder",
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    color: "#333",
   },
 });
 

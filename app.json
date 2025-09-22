@@ -5,7 +5,7 @@
     "version": "0.7.1 - learning test",
     "orientation": "portrait",
     "icon": "./assets/icons/512x512.png",
-    "scheme": "equihub",
+    "scheme": "EquiHUB",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -26,7 +26,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
-      "versionCode": 34,
+      "versionCode": 35,
       "permissions": [
         "INTERNET",
         "FOREGROUND_SERVICE",
@@ -81,6 +81,13 @@
           "icon": "./assets/icons/512x512.png",
           "color": "#ffffff",
           "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-facebook",
+        {
+          "appId": "YOUR_FACEBOOK_APP_ID",
+          "displayName": "EquiHUB"
         }
       ]
     ],

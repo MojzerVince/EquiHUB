@@ -4,6 +4,7 @@
  * to keep API keys secure on the server side
  */
 
+import { createClient } from '@supabase/supabase-js';
 import cors from 'cors';
 import { config } from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
@@ -13,6 +14,113 @@ config();
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '8080', 10);
+
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL || 'https://grdsqxwghajehneksxik.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseServiceKey) {
+  console.error('❌ SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY is required');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Google User interface
+interface GoogleUser {
+  id: string;
+  email: string;
+  name: string;
+  given_name: string;
+  family_name: string;
+  picture: string;
+  locale: string;
+}
+
+/**
+ * Authenticates or creates a user in Supabase using Google credentials
+ */
+async function authenticateGoogleUser(googleUser: GoogleUser) {
+  try {
+    console.log('🔍 Authenticating Google user:', googleUser.email);
+    
+    // Check if user already exists by Google ID
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('google_id', googleUser.id)
+      .single();
+    
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      // PGRST116 is "not found" error, which is expected for new users
+      console.error('Error checking existing user:', fetchError);
+      throw fetchError;
+    }
+    
+    let user;
+    let isNewUser = false;
+    
+    if (existingUser) {
+      console.log('✅ Existing user found, updating profile');
+      
+      // Update existing user with latest Google info
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          email: googleUser.email,
+          name: googleUser.name,
+          profile_image_url: googleUser.picture,
+          updated_at: new Date().toISOString()
+        })
+        .eq('google_id', googleUser.id)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error('Error updating user:', updateError);
+        throw updateError;
+      }
+      
+      user = updatedUser;
+    } else {
+      console.log('🆕 New user, creating profile');
+      isNewUser = true;
+      
+      // Create new user record
+      const newUserData = {
+        email: googleUser.email,
+        name: googleUser.name,
+        google_id: googleUser.id,
+        profile_image_url: googleUser.picture,
+        age: 0, // Default value, user can update later
+        description: '', // Default empty description
+        experience: 0, // Default beginner level
+        is_pro_member: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const { data: createdUser, error: createError } = await supabase
+        .from('profiles')
+        .insert([newUserData])
+        .select()
+        .single();
+      
+      if (createError) {
+        console.error('Error creating user:', createError);
+        throw createError;
+      }
+      
+      user = createdUser;
+      console.log('✅ New user created successfully');
+    }
+    
+    return { user, isNewUser };
+  } catch (error) {
+    console.error('❌ Error in authenticateGoogleUser:', error);
+    throw error;
+  }
+}
 
 console.log('🔍 DEBUG: Railway PORT env var:', process.env.PORT);
 console.log('🔍 DEBUG: Using PORT:', PORT);
@@ -266,6 +374,85 @@ app.get('/maps/places', validateApiSecret, async (req: Request, res: Response) =
 });
 
 /**
+ * Google OAuth endpoint
+ * Handles Google Sign In token exchange using client secret
+ */
+app.post('/auth/google', validateApiSecret, async (req: Request, res: Response) => {
+  try {
+    const { code, redirectUri } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code required' });
+    }
+
+    console.log('🔍 DEBUG: Google OAuth token exchange');
+    
+    // Exchange authorization code for access token
+    const tokenParams = new URLSearchParams({
+      client_id: process.env.GOOGLE_WEB_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: redirectUri || 'postmessage', // For mobile apps
+    });
+
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: tokenParams.toString(),
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      console.error('Google token exchange failed:', error);
+      return res.status(400).json({ error: 'Token exchange failed' });
+    }
+
+    const tokenData = await tokenResponse.json() as { access_token: string };
+    
+    // Get user info using the access token
+    const userResponse = await fetch(
+      `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenData.access_token}`
+    );
+
+    if (!userResponse.ok) {
+      const error = await userResponse.text();
+      console.error('Google user info fetch failed:', error);
+      return res.status(400).json({ error: 'Failed to get user info' });
+    }
+
+    const userInfo = await userResponse.json() as GoogleUser;
+    
+    console.log('🔍 DEBUG: Google user info received:', userInfo.email);
+    
+    // Authenticate/create user in Supabase
+    const { user: supabaseUser, isNewUser } = await authenticateGoogleUser(userInfo);
+    
+    console.log('✅ User authenticated in Supabase:', supabaseUser.email, isNewUser ? '(new user)' : '(existing user)');
+    
+    // Return both Google user info and Supabase user data
+    res.json({
+      user: supabaseUser,
+      googleUser: {
+        id: userInfo.id,
+        email: userInfo.email,
+        name: userInfo.name,
+        given_name: userInfo.given_name,
+        family_name: userInfo.family_name,
+        picture: userInfo.picture,
+        locale: userInfo.locale,
+      },
+      isNewUser
+    });
+  } catch (error) {
+    console.error('Google OAuth error:', error);
+    res.status(500).json({ error: 'OAuth service unavailable' });
+  }
+});
+
+/**
  * Health check endpoint
  */
 app.get('/health', (req: Request, res: Response) => {
@@ -303,6 +490,8 @@ const server = app.listen(PORT, HOST, () => {
     'SUPABASE_URL',
     'SUPABASE_ANON_KEY',
     'GOOGLE_MAPS_API_KEY',
+    'GOOGLE_WEB_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
   ];
 
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);

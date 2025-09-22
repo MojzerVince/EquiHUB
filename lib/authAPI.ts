@@ -563,4 +563,226 @@ export class AuthAPI {
       };
     }
   }
+
+  // Google Sign In
+  static async signInWithGoogle(googleUser: any): Promise<{ user: AuthUser | null; error: string | null }> {
+    try {
+      console.log('Attempting Google sign in...');
+      
+      if (!googleUser.email) {
+        return { user: null, error: 'No email found in Google account' };
+      }
+
+      const supabase = getSupabase();
+
+      // Check if user already exists
+      const { data: existingUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', googleUser.email)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error checking existing user:', fetchError);
+        return { user: null, error: 'Database error occurred' };
+      }
+
+      if (existingUser) {
+        // User exists, store login time and return user
+        await SessionManager.storeLastLoginTime();
+        console.log('Google sign in successful for existing user');
+        return { 
+          user: {
+            id: existingUser.id,
+            email: existingUser.email,
+            created_at: existingUser.created_at
+          }, 
+          error: null 
+        };
+      } else {
+        // User doesn't exist, they need to register
+        return { user: null, error: 'GOOGLE_USER_NOT_FOUND' };
+      }
+
+    } catch (error) {
+      console.error('Google sign in error:', error);
+      return { user: null, error: 'Google sign in failed' };
+    }
+  }
+
+  // Google Registration (for new users)
+  static async registerWithGoogle(
+    googleUser: any, 
+    profileData: { name: string; age: number; description?: string; riding_experience?: number; stable_id?: string }
+  ): Promise<{ user: AuthUser | null; error: string | null }> {
+    try {
+      console.log('Attempting Google registration...');
+      
+      if (!googleUser.email) {
+        return { user: null, error: 'No email found in Google account' };
+      }
+
+      // Validate profile data
+      if (!profileData.name || !profileData.age) {
+        return { user: null, error: 'Name and age are required' };
+      }
+
+      if (profileData.age < 13 || profileData.age > 120) {
+        return { user: null, error: 'Age must be between 13 and 120' };
+      }
+
+      if (profileData.riding_experience !== undefined && (profileData.riding_experience < 0 || profileData.riding_experience > 80)) {
+        return { user: null, error: 'Riding experience must be between 0 and 80 years' };
+      }
+
+      const supabase = getSupabase();
+
+      // Check if user already exists
+      const { data: existingUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', googleUser.email)
+        .single();
+
+      if (existingUser) {
+        return { user: null, error: 'User already exists with this Google account. Please sign in instead.' };
+      }
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error checking existing user:', fetchError);
+        return { user: null, error: 'Database error occurred' };
+      }
+
+      // Create new user profile
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert([{
+          email: googleUser.email,
+          name: profileData.name,
+          age: profileData.age,
+          description: profileData.description || '',
+          riding_experience: profileData.riding_experience || 0,
+          auth_provider: 'google',
+          google_id: googleUser.id
+        }])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('User registration error:', insertError);
+        if (insertError.code === '23505') {
+          return { user: null, error: 'A user with this email already exists' };
+        }
+        return { user: null, error: 'Failed to create user account' };
+      }
+
+      // Join stable if provided
+      if (profileData.stable_id && newUser) {
+        try {
+          const { error: stableError } = await supabase
+            .from('stable_members')
+            .insert([{
+              stable_id: profileData.stable_id,
+              user_id: newUser.id,
+              role: 'member',
+              joined_at: new Date().toISOString()
+            }]);
+
+          if (stableError) {
+            console.error('Error joining stable:', stableError);
+            // Don't fail registration if stable join fails
+          }
+        } catch (stableJoinError) {
+          console.error('Stable join error:', stableJoinError);
+          // Don't fail registration if stable join fails
+        }
+      }
+
+      // Store last login time for session tracking
+      await SessionManager.storeLastLoginTime();
+
+      console.log('Google registration successful');
+      return { 
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          created_at: newUser.created_at
+        }, 
+        error: null 
+      };
+
+    } catch (error) {
+      console.error('Google registration error:', error);
+      return { user: null, error: 'Google registration failed' };
+    }
+  }
+
+  // Google OAuth through secure server
+  static async googleOAuth(authorizationCode: string, redirectUri?: string): Promise<{ user: any | null; error: string | null }> {
+    try {
+      const serverUrl = process.env.EXPO_PUBLIC_API_SERVER_URL;
+      const apiSecret = process.env.EXPO_PUBLIC_API_SECRET;
+      
+      if (!serverUrl || !apiSecret) {
+        return { user: null, error: 'Server configuration missing' };
+      }
+
+      console.log('Exchanging Google authorization code via server...');
+      
+      const response = await fetch(`${serverUrl}/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-app-secret': apiSecret,
+        },
+        body: JSON.stringify({
+          code: authorizationCode,
+          redirectUri: redirectUri,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Network error' }));
+        console.error('Google OAuth server error:', errorData);
+        return { user: null, error: errorData.error || 'Google authentication failed' };
+      }
+
+      const data = await response.json();
+      console.log('✅ Google OAuth successful:', data.user.email, data.isNewUser ? '(new user)' : '(existing user)');
+      
+      // Store the Supabase user data in session
+      const supabaseUser = data.user;
+      
+      // Create a session token for the authenticated user
+      const sessionData = {
+        user: {
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          name: supabaseUser.name,
+          profile_image_url: supabaseUser.profile_image_url,
+          google_id: supabaseUser.google_id,
+          is_pro_member: supabaseUser.is_pro_member,
+          created_at: supabaseUser.created_at
+        },
+        isNewUser: data.isNewUser,
+        googleUser: data.googleUser
+      };
+      
+      // Store user data in AsyncStorage for session management
+      await SessionManager.storeLastLoginTime();
+      
+      // Store user ID for session tracking
+      const AsyncStorage = require('@react-native-async-storage/async-storage');
+      await AsyncStorage.setItem('google_oauth_user_id', supabaseUser.id);
+      await AsyncStorage.setItem('google_oauth_user_data', JSON.stringify(sessionData.user));
+      
+      console.log('✅ Google OAuth session stored successfully');
+      
+      return { user: sessionData, error: null };
+      
+    } catch (error) {
+      console.error('Google OAuth error:', error);
+      return { user: null, error: 'Google authentication failed' };
+    }
+  }
 }
