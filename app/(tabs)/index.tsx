@@ -2154,126 +2154,47 @@ const MyHorsesScreen = () => {
 
               <View style={styles.horseContent}>
                 <View style={styles.horseInfo}>
-                  <Text
-                    style={[
-                      styles.horseName,
-                      {
-                        color: currentTheme.colors.text,
-                        fontSize: 20,
-                        fontWeight: "bold",
-                      },
-                    ]}
-                  >
-                    {horse.name || ""}
-                  </Text>
+                  <Text style={styles.horseName}>{horse.name || ""}</Text>
+                  <Text style={styles.horseBreed}>{horse.breed || ""}</Text>
                   <View style={styles.horseDetails}>
                     <View style={styles.detailRow}>
-                      <Text
-                        style={[
-                          styles.detailLabel,
-                          {
-                            color: currentTheme.colors.textSecondary,
-                            fontSize: 14,
-                          },
-                        ]}
-                      >
-                        Gender:
-                      </Text>
-                      <Text
-                        style={[
-                          styles.detailValue,
-                          { color: currentTheme.colors.text, fontSize: 14 },
-                        ]}
-                      >
-                        {horse.gender || ""}
-                      </Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Text
-                        style={[
-                          styles.detailLabel,
-                          {
-                            color: currentTheme.colors.textSecondary,
-                            fontSize: 14,
-                          },
-                        ]}
-                      >
-                        Born:
-                      </Text>
-                      <Text
-                        style={[
-                          styles.detailValue,
-                          { color: currentTheme.colors.text, fontSize: 14 },
-                        ]}
-                      >
+                      <View style={styles.detailLeft}>
+                        <Text style={styles.detailIcon}>📅</Text>
+                        <Text style={styles.detailLabel}>Born</Text>
+                      </View>
+                      <Text style={styles.detailValue}>
                         {horse.birth_date ? formatDate(horse.birth_date) : ""}
                       </Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Text
-                        style={[
-                          styles.detailLabel,
-                          {
-                            color: currentTheme.colors.textSecondary,
-                            fontSize: 14,
-                          },
-                        ]}
-                      >
-                        Height:
+                      <View style={styles.detailLeft}>
+                        <Text style={styles.detailIcon}>♀♂</Text>
+                        <Text style={styles.detailLabel}>Gender</Text>
+                      </View>
+                      <Text style={styles.detailValue}>
+                        {horse.gender || ""}
                       </Text>
-                      <Text
-                        style={[
-                          styles.detailValue,
-                          { color: currentTheme.colors.text, fontSize: 14 },
-                        ]}
-                      >
+                    </View>
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailLeft}>
+                        <Text style={styles.detailIcon}>📏</Text>
+                        <Text style={styles.detailLabel}>Height</Text>
+                      </View>
+                      <Text style={styles.detailValue}>
                         {formatHeight(horse.height || 0)}
                       </Text>
                     </View>
                     {horse.weight ? (
                       <View style={styles.detailRow}>
-                        <Text
-                          style={[
-                            styles.detailLabel,
-                            {
-                              color: currentTheme.colors.textSecondary,
-                              fontSize: 14,
-                            },
-                          ]}
-                        >
-                          Weight:
-                        </Text>
-                        <Text
-                          style={[
-                            styles.detailValue,
-                            { color: currentTheme.colors.text, fontSize: 14 },
-                          ]}
-                        >
+                        <View style={styles.detailLeft}>
+                          <Text style={styles.detailIcon}>⚖️</Text>
+                          <Text style={styles.detailLabel}>Weight</Text>
+                        </View>
+                        <Text style={styles.detailValue}>
                           {formatWeight(horse.weight || 0)}
                         </Text>
                       </View>
                     ) : null}
-                    <View style={styles.detailRow}>
-                      <Text
-                        style={[
-                          styles.detailLabel,
-                          {
-                            color: currentTheme.colors.textSecondary,
-                            fontSize: 14,
-                          },
-                        ]}
-                      >
-                        Breed:
-                      </Text>
-                      <Text
-                        style={[
-                          styles.detailValue,
-                          { color: currentTheme.colors.text, fontSize: 14 },
-                        ]}
-                      >
-                        {horse.breed || ""}
-                      </Text>
-                    </View>
                   </View>
 
                   {/* Vaccination Status Section */}
@@ -2330,23 +2251,12 @@ const MyHorsesScreen = () => {
 
                 <View style={styles.actionButtons}>
                   <TouchableOpacity
-                    style={[
-                      styles.actionButton,
-                      styles.vaccinationButton,
-                      {
-                        backgroundColor:
-                          getOverdueVaccinations(horse.id).length > 0
-                            ? "#FF6B6B" // Red for overdue
-                            : getUpcomingVaccinations(horse.id).length > 0
-                            ? "#4ECDC4" // Teal for upcoming
-                            : currentTheme.colors.primary, // Use theme color for normal
-                      },
-                    ]}
+                    style={styles.primaryActionButton}
                     onPress={() => openVaccinationModal(horse)}
-                    activeOpacity={0.9}
+                    activeOpacity={0.8}
                   >
-                    <Text style={[styles.vaccinationButtonText]}>
-                      Records
+                    <Text style={styles.primaryActionButtonText}>
+                      RECORDS
                       {(getOverdueVaccinations(horse.id).length > 0 ||
                         getUpcomingVaccinations(horse.id).length > 0) &&
                         ` (${
@@ -2358,38 +2268,34 @@ const MyHorsesScreen = () => {
 
                   <View style={styles.secondaryButtons}>
                     <TouchableOpacity
-                      style={[
-                        styles.actionButton,
-                        styles.editButton,
-                        {
-                          backgroundColor: currentTheme.colors.secondary,
-                          flex: 1,
-                        },
-                      ]}
+                      style={[styles.secondaryActionButton, styles.editButton]}
                       onPress={() => openEditModal(horse)}
+                      activeOpacity={0.7}
                     >
                       <Text
-                        style={[styles.editButtonText, { color: "#FFFFFF" }]}
+                        style={[styles.editButtonText, styles.actionButtonIcon]}
                       >
-                        ✏️ Edit
+                        ✏️
                       </Text>
+                      <Text style={styles.editButtonText}>Edit</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[
-                        styles.actionButton,
+                        styles.secondaryActionButton,
                         styles.deleteButton,
-                        {
-                          backgroundColor: currentTheme.colors.error,
-                          flex: 1,
-                        },
                       ]}
                       onPress={() => deleteHorse(horse)}
+                      activeOpacity={0.7}
                     >
                       <Text
-                        style={[styles.deleteButtonText, { color: "#FFFFFF" }]}
+                        style={[
+                          styles.deleteButtonText,
+                          styles.actionButtonIcon,
+                        ]}
                       >
-                        🗑️ Delete
+                        🗑️
                       </Text>
+                      <Text style={styles.deleteButtonText}>Delete</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -3408,21 +3314,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    // backgroundColor will be set dynamically based on theme
-    borderRadius: 20,
-    paddingVertical: 15,
-    paddingHorizontal: 25,
-    marginTop: 10, // Add this line
-    marginBottom: 20,
+    backgroundColor: "#4a5c6a",
+    borderRadius: 24,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    marginTop: 12,
+    marginBottom: 24,
+    marginHorizontal: 4,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 8,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    gap: 10,
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    gap: 12,
   },
   addHorseButtonIcon: {
     fontSize: 20,
@@ -3432,105 +3339,172 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "Inder",
     fontWeight: "600",
+    letterSpacing: 0.5,
   },
   horseCard: {
-    backgroundColor: "#E9F5F0",
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    padding: 24,
     marginBottom: 20,
+    marginHorizontal: 4,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 8,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
   },
   horseImageContainer: {
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 20,
   },
   horseImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    // borderColor applied dynamically with theme
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 0,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   horseContent: {
     flex: 1,
+    alignItems: "center",
   },
   horseInfo: {
-    marginBottom: 20,
+    alignItems: "center",
+    marginBottom: 24,
+    width: "100%",
   },
   horseName: {
-    fontSize: 24,
+    fontSize: 32,
     fontFamily: "Inder",
     fontWeight: "bold",
-    color: "#335C67",
+    color: "#2c3e50",
     textAlign: "center",
-    marginBottom: 15,
+    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
+  horseBreed: {
+    fontSize: 18,
+    fontFamily: "Inder",
+    color: "#7f8c8d",
+    textAlign: "center",
+    marginBottom: 24,
+    fontWeight: "500",
   },
   horseDetails: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 15,
+    width: "100%",
+    paddingHorizontal: 8,
   },
   detailRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
-    paddingBottom: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: "#f8f9fa",
+  },
+  detailLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  detailIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 12,
+    fontSize: 18,
+    textAlign: "center",
+    color: "#7f8c8d",
   },
   detailLabel: {
     fontSize: 16,
     fontFamily: "Inder",
-    color: "#666",
-    fontWeight: "600",
+    color: "#5a6c7d",
+    fontWeight: "500",
+    flex: 1,
   },
   detailValue: {
     fontSize: 16,
     fontFamily: "Inder",
-    color: "#335C67",
-    fontWeight: "500",
+    color: "#2c3e50",
+    fontWeight: "600",
+    textAlign: "right",
   },
   actionButtons: {
-    flexDirection: "column",
-    gap: 12,
-    marginTop: 8,
+    marginTop: 32,
+    width: "100%",
+  },
+  primaryActionButton: {
+    backgroundColor: "#4a5c6a",
+    borderRadius: 20,
+    paddingVertical: 16,
+    marginBottom: 12,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  primaryActionButtonText: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontFamily: "Inder",
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
   secondaryButtons: {
     flexDirection: "row",
-    gap: 10,
+    gap: 12,
+    marginTop: 8,
   },
-  actionButton: {
+  secondaryActionButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 15,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
     alignItems: "center",
-    minHeight: 50,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
   },
   editButton: {
-    backgroundColor: "#335C67",
+    backgroundColor: "#e3f2fd",
+    borderWidth: 1,
+    borderColor: "#bbdefb",
   },
   deleteButton: {
-    backgroundColor: "#FF6B6B",
+    backgroundColor: "#ffebee",
+    borderWidth: 1,
+    borderColor: "#ffcdd2",
   },
   editButtonText: {
-    color: "#fff",
-    fontSize: 16,
+    color: "#1565c0",
+    fontSize: 14,
     fontFamily: "Inder",
     fontWeight: "600",
   },
   deleteButtonText: {
-    color: "#fff",
-    fontSize: 16,
+    color: "#c62828",
+    fontSize: 14,
     fontFamily: "Inder",
     fontWeight: "600",
+  },
+  actionButtonIcon: {
+    fontSize: 16,
   },
   emptyState: {
     alignItems: "center",
