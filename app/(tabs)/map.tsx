@@ -154,9 +154,11 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     try {
       const trackingStatus = await AsyncStorage.getItem("is_tracking_active");
       const isTrackingActive = trackingStatus === "true";
-      
+
       if (!isTrackingActive) {
-        console.log("🚫 Tracking not active - skipping background location processing");
+        console.log(
+          "🚫 Tracking not active - skipping background location processing"
+        );
         return;
       }
     } catch (error) {
@@ -167,7 +169,9 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
     // Process all location updates, not just the first one
     if (locations && locations.length > 0) {
-      console.log(`🔄 Processing ${locations.length} background location(s) - tracking is active`);
+      console.log(
+        `🔄 Processing ${locations.length} background location(s) - tracking is active`
+      );
 
       const trackingPoints = locations.map((location: any, index: number) => ({
         latitude: location.coords.latitude,
@@ -188,43 +192,49 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
         // Enhanced filtering for GPS drift and accuracy
         const filteredPoints = [];
-        
+
         for (const point of trackingPoints) {
           // Filter by accuracy first (reject points with accuracy > 30m)
           if (point.accuracy && point.accuracy > 30) {
             continue; // Skip this point due to poor accuracy
           }
-          
+
           // Check movement threshold against last existing point
           if (existingPoints.length > 0) {
             const lastPoint = existingPoints[existingPoints.length - 1];
             const timeDiff = point.timestamp - lastPoint.timestamp;
-            
+
             // Calculate distance from last point using Haversine formula
             const R = 6371e3; // Earth's radius in meters
             const φ1 = (lastPoint.latitude * Math.PI) / 180;
             const φ2 = (point.latitude * Math.PI) / 180;
             const Δφ = ((point.latitude - lastPoint.latitude) * Math.PI) / 180;
-            const Δλ = ((point.longitude - lastPoint.longitude) * Math.PI) / 180;
-            
-            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                      Math.cos(φ1) * Math.cos(φ2) * 
-                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const Δλ =
+              ((point.longitude - lastPoint.longitude) * Math.PI) / 180;
+
+            const a =
+              Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             const distance = R * c; // Distance in meters
-            
+
             // Enhanced movement threshold based on accuracy
             const accuracyThreshold = Math.max(
               3, // Minimum 3m threshold
               (point.accuracy || 10) * 0.5 // Use half of GPS accuracy as threshold
             );
-            
+
             // Speed-based threshold adjustment
-            const speedBasedThreshold = (point.speed && point.speed > 1.5) ? 
-              Math.max(2, accuracyThreshold * 0.7) : accuracyThreshold;
-            
+            const speedBasedThreshold =
+              point.speed && point.speed > 1.5
+                ? Math.max(2, accuracyThreshold * 0.7)
+                : accuracyThreshold;
+
             // Require significant time AND movement to reduce GPS drift
-            if (timeDiff >= 3000 || (timeDiff >= 2000 && distance >= speedBasedThreshold)) {
+            if (
+              timeDiff >= 3000 ||
+              (timeDiff >= 2000 && distance >= speedBasedThreshold)
+            ) {
               filteredPoints.push(point);
             }
             // Skip point if it's too close or too recent (likely GPS drift)
@@ -572,12 +582,9 @@ const MapScreen = () => {
 
     if (isTracking && isUsingBackgroundLocation) {
       console.log("🔄 Starting background data sync timer");
-      syncInterval = setInterval(
-        async () => {
-          await syncBackgroundData();
-        },
-        2000
-      ); // Sync every 2 seconds
+      syncInterval = setInterval(async () => {
+        await syncBackgroundData();
+      }, 2000); // Sync every 2 seconds
     }
 
     return () => {
@@ -874,7 +881,11 @@ const MapScreen = () => {
             if (isTracking) {
               // Skip points with poor accuracy to prevent GPS drift inflation
               if (accuracy && accuracy > 25) {
-                console.log(`🚫 Skipping location update due to poor accuracy: ${accuracy.toFixed(1)}m`);
+                console.log(
+                  `🚫 Skipping location update due to poor accuracy: ${accuracy.toFixed(
+                    1
+                  )}m`
+                );
                 return; // Skip this location update
               }
 
@@ -905,12 +916,18 @@ const MapScreen = () => {
                     3, // Minimum 3m threshold
                     (accuracy || 10) * 0.5 // Use half of GPS accuracy as threshold, default 5m if no accuracy
                   );
-                  
+
                   // Require both time AND significant movement to reduce GPS drift
                   // Also consider speed - if moving fast, allow smaller distance threshold
-                  const speedBasedThreshold = (speed && speed > 1.5) ? Math.max(2, accuracyThreshold * 0.7) : accuracyThreshold;
-                  
-                  if (timeDiff >= 2000 || (timeDiff >= 1000 && distance >= speedBasedThreshold)) {
+                  const speedBasedThreshold =
+                    speed && speed > 1.5
+                      ? Math.max(2, accuracyThreshold * 0.7)
+                      : accuracyThreshold;
+
+                  if (
+                    timeDiff >= 2000 ||
+                    (timeDiff >= 1000 && distance >= speedBasedThreshold)
+                  ) {
                     const newPoints = [...prev, trackingPoint];
 
                     // Update real-time gait segments with new path
@@ -2386,7 +2403,7 @@ const MapScreen = () => {
 
       // Clear any existing tracking points in storage
       await AsyncStorage.removeItem("current_tracking_points");
-      
+
       // Set tracking status in AsyncStorage for background task
       await AsyncStorage.setItem("is_tracking_active", "true");
 
@@ -2497,7 +2514,7 @@ const MapScreen = () => {
 
       // Clean up storage
       await AsyncStorage.removeItem("current_tracking_points");
-      
+
       // Set tracking status to inactive in AsyncStorage
       await AsyncStorage.setItem("is_tracking_active", "false");
 
@@ -2964,8 +2981,6 @@ const MapScreen = () => {
     return segments;
   };
 
-
-
   // Restart location watcher with optimized settings for tracking
   const restartLocationWatcherForTracking = async () => {
     try {
@@ -3016,10 +3031,7 @@ const MapScreen = () => {
                 );
 
                 // During tracking, capture more frequent updates
-                if (
-                  timeDiff >= 500 ||
-                  distance >= 0.5
-                ) {
+                if (timeDiff >= 500 || distance >= 0.5) {
                   // Update current gait based on new tracking point
                   updateCurrentGait(trackingPoint);
 
@@ -3069,7 +3081,7 @@ const MapScreen = () => {
               onPress={() => router.push("/statistics")}
             >
               <Image
-                style={{ width: 36, height: 36 }}
+                style={{ width: 32, height: 32 }}
                 source={require("../../assets/in_app_icons/trends.png")}
               />
             </TouchableOpacity>
@@ -3126,17 +3138,17 @@ const MapScreen = () => {
             onPress={() => router.push("/statistics")}
           >
             <Image
-              style={{ width: 36, height: 36 }}
+              style={{ width: 40, height: 40 }}
               source={require("../../assets/in_app_icons/trends.png")}
             />
           </TouchableOpacity>
-          <Text style={styles.header}>Map</Text>
+          <Text style={[styles.header, { color: "#FFFFFF" }]}>Map</Text>
           <TouchableOpacity
             style={styles.historyButton}
             onPress={() => router.push("/sessions")}
           >
             <Image
-              style={{ width: 36, height: 36 }}
+              style={{ width: 40, height: 40 }}
               source={require("../../assets/in_app_icons/history.png")}
             />
           </TouchableOpacity>
@@ -3937,8 +3949,6 @@ const MapScreen = () => {
               </View>
             )}
 
-
-
             {/* Fall Detection Toggle - Hidden during tracking */}
             {!isTracking && (
               <View
@@ -4525,8 +4535,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: -55,
-    marginTop: -20,
+    position: "relative",
+    marginBottom: -45,
+    marginTop: -5,
   },
   header: {
     fontSize: 30,
@@ -4693,6 +4704,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   statisticsButton: {
+    position: "absolute",
+    left: 20,
     padding: 10,
     borderRadius: 20,
     minWidth: 40,
@@ -4700,8 +4713,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 10,
   },
   historyButton: {
+    position: "absolute",
+    right: 20,
     padding: 10,
     borderRadius: 20,
     minWidth: 40,
@@ -4709,6 +4725,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 10,
   },
   gpsContainer: {
     position: "absolute",
