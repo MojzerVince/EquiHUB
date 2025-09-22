@@ -2119,7 +2119,6 @@ const MyHorsesScreen = () => {
               style={[
                 styles.horseCard,
                 {
-                  backgroundColor: currentTheme.colors.background,
                   borderColor: currentTheme.colors.border,
                 },
               ]}
@@ -3408,7 +3407,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 16,
+    paddingVertical: 6,
     paddingHorizontal: 4,
   },
   detailLeft: {
@@ -3439,7 +3438,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   actionButtons: {
-    marginTop: 32,
     width: "100%",
   },
   primaryActionButton: {
