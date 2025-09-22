@@ -3410,8 +3410,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 16,
     paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f8f9fa",
   },
   detailLeft: {
     flexDirection: "row",
