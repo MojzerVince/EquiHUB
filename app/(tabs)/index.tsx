@@ -2299,6 +2299,10 @@ const MyHorsesScreen = () => {
                       style={[
                         styles.secondaryActionButton,
                         styles.deleteButton,
+                        {
+                          backgroundColor: `${currentTheme.colors.error}15`,
+                          borderColor: `${currentTheme.colors.error}40`,
+                        },
                       ]}
                       onPress={() => deleteHorse(horse)}
                       activeOpacity={0.7}
@@ -2311,7 +2315,14 @@ const MyHorsesScreen = () => {
                       >
                         🗑️
                       </Text>
-                      <Text style={styles.deleteButtonText}>Delete</Text>
+                      <Text
+                        style={[
+                          styles.deleteButtonText,
+                          { color: currentTheme.colors.error },
+                        ]}
+                      >
+                        Delete
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -3497,9 +3508,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   deleteButton: {
-    backgroundColor: "#ffebee",
     borderWidth: 1,
-    borderColor: "#ffcdd2",
   },
   editButtonText: {
     fontSize: 14,
@@ -3507,7 +3516,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   deleteButtonText: {
-    color: "#c62828",
     fontSize: 14,
     fontFamily: "Inder",
     fontWeight: "600",
