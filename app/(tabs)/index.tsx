@@ -2250,7 +2250,10 @@ const MyHorsesScreen = () => {
 
                 <View style={styles.actionButtons}>
                   <TouchableOpacity
-                    style={styles.primaryActionButton}
+                    style={[
+                      styles.primaryActionButton,
+                      { backgroundColor: currentTheme.colors.primary },
+                    ]}
                     onPress={() => openVaccinationModal(horse)}
                     activeOpacity={0.8}
                   >
@@ -2267,7 +2270,14 @@ const MyHorsesScreen = () => {
 
                   <View style={styles.secondaryButtons}>
                     <TouchableOpacity
-                      style={[styles.secondaryActionButton, styles.editButton]}
+                      style={[
+                        styles.secondaryActionButton,
+                        styles.editButton,
+                        {
+                          backgroundColor: `${currentTheme.colors.primary}15`,
+                          borderColor: `${currentTheme.colors.primary}40`,
+                        },
+                      ]}
                       onPress={() => openEditModal(horse)}
                       activeOpacity={0.7}
                     >
@@ -2276,7 +2286,14 @@ const MyHorsesScreen = () => {
                       >
                         ✏️
                       </Text>
-                      <Text style={styles.editButtonText}>Edit</Text>
+                      <Text
+                        style={[
+                          styles.editButtonText,
+                          { color: currentTheme.colors.primary },
+                        ]}
+                      >
+                        Edit
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[
@@ -3441,7 +3458,6 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   primaryActionButton: {
-    backgroundColor: "#4a5c6a",
     borderRadius: 20,
     paddingVertical: 16,
     marginBottom: 12,
@@ -3478,9 +3494,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   editButton: {
-    backgroundColor: "#e3f2fd",
     borderWidth: 1,
-    borderColor: "#bbdefb",
   },
   deleteButton: {
     backgroundColor: "#ffebee",
@@ -3488,7 +3502,6 @@ const styles = StyleSheet.create({
     borderColor: "#ffcdd2",
   },
   editButtonText: {
-    color: "#1565c0",
     fontSize: 14,
     fontFamily: "Inder",
     fontWeight: "600",
