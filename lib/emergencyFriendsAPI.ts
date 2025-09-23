@@ -96,13 +96,8 @@ export class EmergencyFriendsAPI {
       const key = `${this.STORAGE_KEY_PREFIX}${userId}`;
       await AsyncStorage.setItem(key, JSON.stringify(updatedFriends));
 
-      // Sync to database for push notification functionality
-      try {
-        await this.syncEmergencyFriendToDatabase(userId, newEmergencyFriend);
-      } catch (dbError) {
-        console.warn("Failed to sync emergency friend to database:", dbError);
-        // Don't fail the entire operation if database sync fails
-      }
+      // Emergency friend saved locally (friendships are already tracked in database)
+      console.log("✅ Emergency friend saved locally:", newEmergencyFriend.name);
 
       return { success: true };
     } catch (error) {
@@ -129,14 +124,9 @@ export class EmergencyFriendsAPI {
       const key = `${this.STORAGE_KEY_PREFIX}${userId}`;
       await AsyncStorage.setItem(key, JSON.stringify(updatedFriends));
 
-      // Remove from database if it exists
+      // Emergency friend removed locally
       if (friendToRemove) {
-        try {
-          await this.removeEmergencyFriendFromDatabase(userId, friendToRemove.friendId);
-        } catch (dbError) {
-          console.warn("Failed to remove emergency friend from database:", dbError);
-          // Don't fail the entire operation if database removal fails
-        }
+        console.log("✅ Emergency friend removed locally:", friendToRemove.name);
       }
 
       return true;
@@ -300,63 +290,9 @@ export class EmergencyFriendsAPI {
     }
   }
 
-  // Sync emergency friend to database for push notification functionality
-  private static async syncEmergencyFriendToDatabase(
-    userId: string,
-    emergencyFriend: EmergencyFriend
-  ): Promise<void> {
-    try {
-      const supabase = getSupabase();
 
-      const { error } = await supabase
-        .from('emergency_friends')
-        .upsert({
-          user_id: userId,
-          friend_id: emergencyFriend.friendId,
-          friend_name: emergencyFriend.name,
-          is_enabled: emergencyFriend.isEnabled,
-          created_at: new Date(emergencyFriend.addedAt).toISOString(),
-        });
 
-      if (error) {
-        console.error('Database sync error:', error);
-        throw error;
-      }
-
-      console.log('✅ Emergency friend synced to database:', emergencyFriend.name);
-    } catch (error) {
-      console.error('Failed to sync emergency friend to database:', error);
-      throw error;
-    }
-  }
-
-  // Remove emergency friend from database
-  private static async removeEmergencyFriendFromDatabase(
-    userId: string,
-    friendId: string
-  ): Promise<void> {
-    try {
-      const supabase = getSupabase();
-
-      const { error } = await supabase
-        .from('emergency_friends')
-        .delete()
-        .eq('user_id', userId)
-        .eq('friend_id', friendId);
-
-      if (error) {
-        console.error('Database removal error:', error);
-        throw error;
-      }
-
-      console.log('✅ Emergency friend removed from database:', friendId);
-    } catch (error) {
-      console.error('Failed to remove emergency friend from database:', error);
-      throw error;
-    }
-  }
-
-  // Log notification event to database for analytics and future push notification system
+  // Log notification event to database using existing notification_history table
   private static async logFallNotificationEvent(
     userId: string,
     notificationData: FallNotificationData,
@@ -365,51 +301,53 @@ export class EmergencyFriendsAPI {
     try {
       const supabase = getSupabase();
 
-      const { error } = await supabase
-        .from('emergency_notifications_log')
-        .insert({
-          user_id: userId,
-          rider_name: notificationData.riderName,
+      // Log to notification_history table for each friend
+      const notifications = notifiedFriends.map(friend => ({
+        recipient_user_id: friend.friendId,
+        sender_user_id: userId,
+        notification_type: notificationData.emergencyType,
+        title: notificationData.emergencyType === 'fall_detection' 
+          ? '🚨 Fall Detection Alert' 
+          : '🆘 Emergency Alert',
+        body: `${notificationData.riderName} may have fallen while riding. Tap to view location.`,
+        data: {
           emergency_type: notificationData.emergencyType,
           coordinates: notificationData.coordinates,
-          timestamp: new Date(notificationData.timestamp).toISOString(),
-          notified_friends: notifiedFriends.map(f => ({
-            friend_id: f.friendId,
-            friend_name: f.name,
-          })),
-          notification_method: 'local_notification',
-          success: true,
-        });
+          rider_name: notificationData.riderName,
+          rider_id: notificationData.riderId,
+          timestamp: notificationData.timestamp,
+        },
+        delivery_status: 'sent',
+      }));
+
+      const { error } = await supabase
+        .from('notification_history')
+        .insert(notifications);
 
       if (error) {
         console.error('Failed to log notification event:', error);
         throw error;
       }
 
-      console.log('✅ Notification event logged to database');
+      console.log(`✅ Logged ${notifications.length} emergency notifications to database`);
     } catch (error) {
       console.error('Failed to log notification event:', error);
       throw error;
     }
   }
 
-  // Sync all local emergency friends to database
-  static async syncAllEmergencyFriendsToDatabase(userId: string): Promise<void> {
+  // Get summary of emergency friends (local storage only)
+  static async getEmergencyFriendsSummary(userId: string): Promise<{ count: number; names: string[] }> {
     try {
       const localEmergencyFriends = await this.getEmergencyFriends(userId);
       
-      for (const friend of localEmergencyFriends) {
-        try {
-          await this.syncEmergencyFriendToDatabase(userId, friend);
-        } catch (error) {
-          console.warn(`Failed to sync emergency friend ${friend.name}:`, error);
-        }
-      }
-      
-      console.log(`✅ Synced ${localEmergencyFriends.length} emergency friends to database`);
+      return {
+        count: localEmergencyFriends.length,
+        names: localEmergencyFriends.map(f => f.name),
+      };
     } catch (error) {
-      console.error('Failed to sync emergency friends to database:', error);
-      throw error;
+      console.error('Failed to get emergency friends summary:', error);
+      return { count: 0, names: [] };
     }
   }
 }
