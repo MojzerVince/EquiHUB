@@ -4,14 +4,13 @@ import { MetricSystem, useMetric } from "@/contexts/MetricContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { AuthAPI } from "@/lib/authAPI";
 import {
-  EmergencyContact,
-  EmergencyContactsAPI,
-} from "@/lib/emergencyContactsAPI";
+  EmergencyFriend,
+  EmergencyFriendsAPI,
+} from "@/lib/emergencyFriendsAPI";
 import { FeedbackAPI } from "@/lib/feedbackAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
-import { SMSTestUtility } from "@/lib/smsTestUtility";
+import { UserSearchResult } from "@/lib/userAPI";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Contacts from "expo-contacts";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
@@ -59,7 +58,7 @@ const OptionsScreen = () => {
   useEffect(() => {
     loadHiddenPosts();
     loadEmergencyContacts();
-    checkContactsPermission();
+    loadUserFriends();
   }, [user?.id]);
 
   // Reload hidden posts when screen is focused
@@ -72,120 +71,87 @@ const OptionsScreen = () => {
     }, [user?.id])
   );
 
-  // Load emergency contacts from storage
+  // Load emergency friends from storage
   const loadEmergencyContacts = useCallback(async () => {
     if (!user?.id) {
-      setEmergencyContacts([]);
+      setEmergencyFriends([]);
       return;
     }
 
     setLoadingEmergencyContacts(true);
     try {
-      const contacts = await EmergencyContactsAPI.getEmergencyContacts(user.id);
-      setEmergencyContacts(contacts);
+      const friends = await EmergencyFriendsAPI.getEmergencyFriends(user.id);
+      setEmergencyFriends(friends);
     } catch (error) {
-      console.error("Error loading emergency contacts:", error);
-      setEmergencyContacts([]);
+      console.error("Error loading emergency friends:", error);
+      setEmergencyFriends([]);
     } finally {
       setLoadingEmergencyContacts(false);
     }
   }, [user?.id]);
 
-  // Check contacts permission status
-  const checkContactsPermission = useCallback(async () => {
-    try {
-      const status = await EmergencyContactsAPI.getContactsPermissionStatus();
-      setContactsPermissionStatus(status);
-    } catch (error) {
-      console.error("Error checking contacts permission:", error);
-      setContactsPermissionStatus({ granted: false, canAskAgain: true });
+  // Load user's friends for emergency contact selection
+  const loadUserFriends = useCallback(async () => {
+    if (!user?.id) {
+      setUserFriends([]);
+      return;
     }
-  }, []);
 
-  // Request contacts permission
-  const requestContactsPermission = async () => {
+    setLoadingFriends(true);
     try {
-      const status = await EmergencyContactsAPI.requestContactsPermission();
-      setContactsPermissionStatus(status);
-
-      if (status.granted) {
-        await loadDeviceContacts();
-        Alert.alert(
-          "Permission Granted",
-          "You can now access your contacts to add emergency contacts."
-        );
+      const { friends, error } = await EmergencyFriendsAPI.getUserFriends(
+        user.id
+      );
+      if (error) {
+        console.error("Error loading user friends:", error);
+        Alert.alert("Error", "Failed to load friends: " + error);
+        setUserFriends([]);
       } else {
-        Alert.alert(
-          "Permission Denied",
-          "To add emergency contacts from your phone, please grant contacts permission in your device settings."
-        );
+        setUserFriends(friends);
       }
     } catch (error) {
-      console.error("Error requesting contacts permission:", error);
-      Alert.alert(
-        "Error",
-        "Failed to request contacts permission. Please try again."
-      );
+      console.error("Error loading user friends:", error);
+      setUserFriends([]);
+      Alert.alert("Error", "Unable to load your friends. Please try again.");
+    } finally {
+      setLoadingFriends(false);
     }
-  };
+  }, [user?.id]);
 
-  // Load device contacts
-  const loadDeviceContacts = async () => {
-    try {
-      const contacts = await EmergencyContactsAPI.getDeviceContacts();
-      setDeviceContacts(contacts);
-    } catch (error) {
-      console.error("Error loading device contacts:", error);
-      Alert.alert(
-        "Error",
-        "Failed to load contacts. Please check your permissions."
-      );
-    }
-  };
-
-  // Add emergency contact
-  const handleAddEmergencyContact = async (
-    contact: Omit<EmergencyContact, "id" | "addedAt">
-  ) => {
+  // Add emergency friend
+  const handleAddEmergencyFriend = async (friend: UserSearchResult) => {
     if (!user?.id) return;
 
     try {
-      const result = await EmergencyContactsAPI.addEmergencyContact(
+      const result = await EmergencyFriendsAPI.addEmergencyFriend(
         user.id,
-        contact
+        friend
       );
 
       if (result.success) {
         await loadEmergencyContacts();
-        setShowAddContact(false);
+        setShowAddFriend(false);
         setSearchQuery("");
-        showConfirm(
+        Alert.alert(
           "✅ Success!",
-          "Emergency contact added successfully. They will now be notified in case of emergencies.",
-          () => {}
+          "Emergency friend added successfully. They will now be notified in case of emergencies."
         );
       } else {
-        Alert.alert(
-          "Error",
-          result.error || "Failed to add emergency contact."
-        );
+        Alert.alert("Error", result.error || "Failed to add emergency friend.");
       }
     } catch (error) {
-      console.error("Error adding emergency contact:", error);
-      Alert.alert(
-        "Error",
-        "Failed to add emergency contact. Please try again."
-      );
+      console.error("Error adding emergency friend:", error);
+      Alert.alert("Error", "Failed to add emergency friend. Please try again.");
     }
   };
 
-  // Remove emergency contact
-  const handleRemoveEmergencyContact = async (contactId: string) => {
+  // Remove emergency friend
+  const handleRemoveEmergencyFriend = async (friendId: string) => {
     if (!user?.id) return;
 
     Alert.alert(
-      "Remove Emergency Contact",
-      "Are you sure you want to remove this emergency contact?",
+      "Remove Emergency Friend",
+      "Are you sure you want to remove this emergency friend?",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -193,27 +159,27 @@ const OptionsScreen = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              const success = await EmergencyContactsAPI.removeEmergencyContact(
+              const success = await EmergencyFriendsAPI.removeEmergencyFriend(
                 user.id,
-                contactId
+                friendId
               );
               if (success) {
                 await loadEmergencyContacts();
                 Alert.alert(
                   "Success",
-                  "Emergency contact removed successfully."
+                  "Emergency friend removed successfully."
                 );
               } else {
                 Alert.alert(
                   "Error",
-                  "Failed to remove emergency contact. Please try again."
+                  "Failed to remove emergency friend. Please try again."
                 );
               }
             } catch (error) {
-              console.error("Error removing emergency contact:", error);
+              console.error("Error removing emergency friend:", error);
               Alert.alert(
                 "Error",
-                "Failed to remove emergency contact. Please try again."
+                "Failed to remove emergency friend. Please try again."
               );
             }
           },
@@ -222,17 +188,17 @@ const OptionsScreen = () => {
     );
   };
 
-  // Toggle emergency contact enabled status
-  const handleToggleEmergencyContact = async (
-    contactId: string,
+  // Toggle emergency friend enabled status
+  const handleToggleEmergencyFriend = async (
+    friendId: string,
     isEnabled: boolean
   ) => {
     if (!user?.id) return;
 
     try {
-      const success = await EmergencyContactsAPI.toggleEmergencyContact(
+      const success = await EmergencyFriendsAPI.toggleEmergencyFriend(
         user.id,
-        contactId,
+        friendId,
         isEnabled
       );
       if (success) {
@@ -240,48 +206,16 @@ const OptionsScreen = () => {
       } else {
         Alert.alert(
           "Error",
-          "Failed to update emergency contact. Please try again."
+          "Failed to update emergency friend. Please try again."
         );
       }
     } catch (error) {
-      console.error("Error toggling emergency contact:", error);
+      console.error("Error toggling emergency friend:", error);
       Alert.alert(
         "Error",
-        "Failed to update emergency contact. Please try again."
+        "Failed to update emergency friend. Please try again."
       );
     }
-  };
-
-  // Sync emergency contacts to database
-  const syncContactsToDatabase = async () => {
-    if (!user?.id) return;
-
-    Alert.alert(
-      "Sync Contacts to Database",
-      "This will sync your emergency contacts to the database for server SMS functionality. This is required for reliable emergency alerts.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sync Now",
-          onPress: async () => {
-            try {
-              await SMSTestUtility.syncContactsToDatabase(user.id);
-              showConfirm(
-                "✅ Sync Complete!",
-                "Emergency contacts have been successfully synced to the database. Server SMS alerts are now fully configured and ready to protect you during emergencies.",
-                () => {}
-              );
-            } catch (error) {
-              console.error("Error syncing contacts:", error);
-              Alert.alert(
-                "Error",
-                "Failed to sync contacts. Please try again."
-              );
-            }
-          },
-        },
-      ]
-    );
   };
 
   // Load hidden posts from storage
@@ -374,19 +308,16 @@ const OptionsScreen = () => {
   const [showHiddenPosts, setShowHiddenPosts] = useState(false);
   const [loadingHiddenPosts, setLoadingHiddenPosts] = useState(false);
 
-  // Emergency contacts state
-  const [emergencyContacts, setEmergencyContacts] = useState<
-    EmergencyContact[]
-  >([]);
+  // Emergency friends state
+  const [emergencyFriends, setEmergencyFriends] = useState<EmergencyFriend[]>(
+    []
+  );
   const [showEmergencyContacts, setShowEmergencyContacts] = useState(false);
-  const [showAddContact, setShowAddContact] = useState(false);
+  const [showAddFriend, setShowAddFriend] = useState(false);
   const [loadingEmergencyContacts, setLoadingEmergencyContacts] =
     useState(false);
-  const [deviceContacts, setDeviceContacts] = useState<Contacts.Contact[]>([]);
-  const [contactsPermissionStatus, setContactsPermissionStatus] = useState({
-    granted: false,
-    canAskAgain: true,
-  });
+  const [userFriends, setUserFriends] = useState<any[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Feedback state
@@ -701,7 +632,7 @@ const OptionsScreen = () => {
   const handleRequestAllPermissions = async () => {
     try {
       let permissionsGranted = 0;
-      let totalPermissions = 5; // Updated to include contacts
+      let totalPermissions = 4; // Camera, Media Library, Location, Notifications
       let permissionResults = [];
 
       // Request Camera permission
@@ -745,21 +676,7 @@ const OptionsScreen = () => {
         permissionResults.push("❌ Location permission failed");
       }
 
-      // Request Contacts permission
-      try {
-        const contactsResult =
-          await EmergencyContactsAPI.requestContactsPermission();
-        if (contactsResult.granted) {
-          permissionsGranted++;
-          permissionResults.push("✅ Contacts access granted");
-          // Update local state
-          setContactsPermissionStatus(contactsResult);
-        } else {
-          permissionResults.push("❌ Contacts access denied");
-        }
-      } catch (error) {
-        permissionResults.push("❌ Contacts permission failed");
-      }
+      // Note: Contacts permission removed - now using friends system instead
 
       // Request Notification permission
       try {
@@ -1179,7 +1096,7 @@ const OptionsScreen = () => {
               ]}
             >
               <ActionButton
-                title={`Emergency Contacts (${emergencyContacts.length}/1)`}
+                title={`Emergency Friends (${emergencyFriends.length}/1)`}
                 onPress={() => setShowEmergencyContacts(true)}
               />
             </View>
@@ -1289,10 +1206,7 @@ const OptionsScreen = () => {
                 { backgroundColor: currentTheme.colors.surface },
               ]}
             >
-              <ActionButton
-                title="About"
-                onPress={() => setShowAbout(true)}
-              />
+              <ActionButton title="About" onPress={() => setShowAbout(true)} />
               <ActionButton
                 title="Help & Support"
                 onPress={() => console.log("Help pressed")}
@@ -1657,48 +1571,19 @@ const OptionsScreen = () => {
             </View>
 
             <ScrollView style={styles.emergencyContactsContent}>
-              {/* Permission Status */}
-              {!contactsPermissionStatus.granted && (
-                <View style={styles.permissionBanner}>
-                  <Text
-                    style={[
-                      styles.permissionBannerText,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    📞 Grant contacts access to easily add emergency contacts
-                    from your phone
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.permissionBannerButton,
-                      { backgroundColor: currentTheme.colors.primary },
-                    ]}
-                    onPress={requestContactsPermission}
-                  >
-                    <Text style={styles.permissionBannerButtonText}>
-                      Grant Access
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {/* Add Contact Button - Only show if under limit */}
-              {emergencyContacts.length < 1 ? (
+              {/* Add Friend Button - Only show if under limit */}
+              {emergencyFriends.length < 1 ? (
                 <TouchableOpacity
                   style={[
                     styles.addContactButton,
                     { backgroundColor: currentTheme.colors.primary },
                   ]}
                   onPress={() => {
-                    if (contactsPermissionStatus.granted) {
-                      loadDeviceContacts();
-                    }
-                    setShowAddContact(true);
+                    setShowAddFriend(true);
                   }}
                 >
                   <Text style={styles.addContactButtonText}>
-                    + Add Emergency Contact
+                    + Add Emergency Friend
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -1709,28 +1594,12 @@ const OptionsScreen = () => {
                   ]}
                 >
                   <Text style={[styles.addContactButtonText, { opacity: 0.8 }]}>
-                    ✓ Emergency Contact Limit Reached (1/1)
+                    ✓ Emergency Friend Limit Reached (1/1)
                   </Text>
                 </View>
               )}
 
-              {/* Sync Contacts Button */}
-              <TouchableOpacity
-                style={[
-                  styles.addContactButton,
-                  {
-                    backgroundColor: currentTheme.colors.secondary,
-                    marginTop: 10,
-                  },
-                ]}
-                onPress={syncContactsToDatabase}
-              >
-                <Text style={styles.addContactButtonText}>
-                  🔄 Sync Contacts to Server
-                </Text>
-              </TouchableOpacity>
-
-              {/* Emergency Contacts List */}
+              {/* Emergency Friends List */}
               {loadingEmergencyContacts ? (
                 <View style={styles.emergencyContactsLoading}>
                   <ActivityIndicator
@@ -1746,10 +1615,10 @@ const OptionsScreen = () => {
                     Loading emergency contacts...
                   </Text>
                 </View>
-              ) : emergencyContacts.length > 0 ? (
-                emergencyContacts.map((contact) => (
+              ) : emergencyFriends.length > 0 ? (
+                emergencyFriends.map((friend) => (
                   <View
-                    key={contact.id}
+                    key={friend.id}
                     style={[
                       styles.emergencyContactItem,
                       { backgroundColor: currentTheme.colors.surface },
@@ -1762,7 +1631,7 @@ const OptionsScreen = () => {
                           { color: currentTheme.colors.text },
                         ]}
                       >
-                        {contact.name}
+                        {friend.name}
                       </Text>
                       <Text
                         style={[
@@ -1770,29 +1639,27 @@ const OptionsScreen = () => {
                           { color: currentTheme.colors.textSecondary },
                         ]}
                       >
-                        {EmergencyContactsAPI.formatPhoneNumber(
-                          contact.phoneNumber
-                        )}
+                        Emergency Friend
                       </Text>
                     </View>
                     <View style={styles.emergencyContactControls}>
                       <Switch
-                        value={contact.isEnabled}
+                        value={friend.isEnabled}
                         onValueChange={(value) =>
-                          handleToggleEmergencyContact(contact.id, value)
+                          handleToggleEmergencyFriend(friend.id, value)
                         }
                         trackColor={{
                           false: currentTheme.colors.accent,
                           true: currentTheme.colors.primary,
                         }}
-                        thumbColor={contact.isEnabled ? "#fff" : "#f4f3f4"}
+                        thumbColor={friend.isEnabled ? "#fff" : "#f4f3f4"}
                       />
                       <TouchableOpacity
                         style={[
                           styles.removeContactButton,
                           { backgroundColor: currentTheme.colors.error },
                         ]}
-                        onPress={() => handleRemoveEmergencyContact(contact.id)}
+                        onPress={() => handleRemoveEmergencyFriend(friend.id)}
                       >
                         <Text style={styles.removeContactButtonText}>
                           Remove
@@ -1829,10 +1696,10 @@ const OptionsScreen = () => {
 
       {/* Add Contact Modal */}
       <Modal
-        visible={showAddContact}
+        visible={showAddFriend}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setShowAddContact(false)}
+        onRequestClose={() => setShowAddFriend(false)}
       >
         <View style={styles.modalOverlay}>
           <View
@@ -1853,12 +1720,12 @@ const OptionsScreen = () => {
                   { color: currentTheme.colors.text },
                 ]}
               >
-                Add Emergency Contact
+                Add Emergency Friend
               </Text>
               <TouchableOpacity
                 style={styles.addContactCloseButton}
                 onPress={() => {
-                  setShowAddContact(false);
+                  setShowAddFriend(false);
                   setSearchQuery("");
                 }}
               >
@@ -1873,49 +1740,58 @@ const OptionsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {contactsPermissionStatus.granted ? (
-              <View style={styles.addContactContent}>
-                {/* Search Bar */}
-                <TextInput
-                  style={[
-                    styles.searchInput,
-                    {
-                      backgroundColor: currentTheme.colors.surface,
-                      color: currentTheme.colors.text,
-                      borderColor: currentTheme.colors.accent,
-                    },
-                  ]}
-                  placeholder="Search contacts..."
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
+            <View style={styles.addContactContent}>
+              {/* Search Bar */}
+              <TextInput
+                style={[
+                  styles.searchInput,
+                  {
+                    backgroundColor: currentTheme.colors.surface,
+                    color: currentTheme.colors.text,
+                    borderColor: currentTheme.colors.accent,
+                  },
+                ]}
+                placeholder="Search friends..."
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
 
-                {/* Contacts List */}
+              {/* Friends List */}
+              {loadingFriends ? (
+                <View style={styles.emergencyContactsLoading}>
+                  <ActivityIndicator
+                    color={currentTheme.colors.primary}
+                    size="small"
+                  />
+                  <Text
+                    style={[
+                      styles.emergencyContactsLoadingText,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Loading friends...
+                  </Text>
+                </View>
+              ) : (
                 <FlatList
-                  data={deviceContacts.filter(
-                    (contact) =>
-                      contact.name &&
-                      contact.name
-                        .toLowerCase()
+                  data={userFriends.filter(
+                    (friend) =>
+                      friend.name
+                        ?.toLowerCase()
+                        .includes(searchQuery.toLowerCase()) ||
+                      friend.username
+                        ?.toLowerCase()
                         .includes(searchQuery.toLowerCase())
                   )}
-                  keyExtractor={(item) => item.id || Math.random().toString()}
+                  keyExtractor={(item) => item.id}
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       style={[
                         styles.deviceContactItem,
                         { backgroundColor: currentTheme.colors.surface },
                       ]}
-                      onPress={() => {
-                        if (item.phoneNumbers && item.phoneNumbers[0]) {
-                          handleAddEmergencyContact({
-                            name: item.name || "Unknown",
-                            phoneNumber: item.phoneNumbers[0].number || "",
-                            isEnabled: true,
-                          });
-                        }
-                      }}
+                      onPress={() => handleAddEmergencyFriend(item)}
                     >
                       <View style={styles.deviceContactInfo}>
                         <Text
@@ -1924,7 +1800,7 @@ const OptionsScreen = () => {
                             { color: currentTheme.colors.text },
                           ]}
                         >
-                          {item.name}
+                          {item.name || item.username}
                         </Text>
                         <Text
                           style={[
@@ -1932,51 +1808,36 @@ const OptionsScreen = () => {
                             { color: currentTheme.colors.textSecondary },
                           ]}
                         >
-                          {item.phoneNumbers?.[0]?.number
-                            ? EmergencyContactsAPI.formatPhoneNumber(
-                                item.phoneNumbers[0].number
-                              )
-                            : "No phone number"}
+                          @{item.username}
                         </Text>
                       </View>
                     </TouchableOpacity>
                   )}
                   style={styles.contactsList}
                   showsVerticalScrollIndicator={false}
+                  ListEmptyComponent={
+                    <View style={styles.addContactNoPermission}>
+                      <Text
+                        style={[
+                          styles.addContactNoPermissionTitle,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        No friends found
+                      </Text>
+                      <Text
+                        style={[
+                          styles.addContactNoPermissionText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Try adjusting your search or add friends first.
+                      </Text>
+                    </View>
+                  }
                 />
-              </View>
-            ) : (
-              <View style={styles.addContactNoPermission}>
-                <Text
-                  style={[
-                    styles.addContactNoPermissionTitle,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Contacts Access Required
-                </Text>
-                <Text
-                  style={[
-                    styles.addContactNoPermissionText,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  To add contacts from your phone, please grant contacts
-                  permission first.
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.addContactPermissionButton,
-                    { backgroundColor: currentTheme.colors.primary },
-                  ]}
-                  onPress={requestContactsPermission}
-                >
-                  <Text style={styles.addContactPermissionButtonText}>
-                    Grant Contacts Access
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
+              )}
+            </View>
           </View>
         </View>
       </Modal>
@@ -2370,96 +2231,118 @@ const OptionsScreen = () => {
                 <Text style={styles.termsOfServiceSectionTitle}>
                   1. Acceptance of Terms{"\n"}
                 </Text>
-                By downloading, installing, or using EquiHUB, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our application.{"\n\n"}
-
+                By downloading, installing, or using EquiHUB, you agree to be
+                bound by these Terms of Service. If you do not agree to these
+                terms, please do not use our application.{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   2. Description of Service{"\n"}
                 </Text>
-                EquiHUB is a mobile application designed for equestrian enthusiasts to track horse training sessions, manage horse care, connect with the equestrian community, and access safety features including emergency contacts and first aid guidance.{"\n\n"}
-
+                EquiHUB is a mobile application designed for equestrian
+                enthusiasts to track horse training sessions, manage horse care,
+                connect with the equestrian community, and access safety
+                features including emergency contacts and first aid guidance.
+                {"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   3. User Accounts and Registration{"\n"}
                 </Text>
-                • You must provide accurate and complete information when creating an account{"\n"}
-                • You are responsible for maintaining the security of your account credentials{"\n"}
-                • You must be at least 13 years old to use EquiHUB{"\n"}
-                • One account per user is permitted{"\n\n"}
-
+                • You must provide accurate and complete information when
+                creating an account{"\n"}• You are responsible for maintaining
+                the security of your account credentials{"\n"}• You must be at
+                least 13 years old to use EquiHUB{"\n"}• One account per user is
+                permitted{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   4. User Conduct and Content{"\n"}
                 </Text>
-                You agree not to:{"\n"}
-                • Post inappropriate, offensive, or harmful content{"\n"}
-                • Harass, bully, or threaten other users{"\n"}
-                • Share false or misleading information{"\n"}
-                • Violate any applicable laws or regulations{"\n"}
-                • Attempt to hack, disrupt, or damage the application{"\n\n"}
-
+                You agree not to:{"\n"}• Post inappropriate, offensive, or
+                harmful content{"\n"}• Harass, bully, or threaten other users
+                {"\n"}• Share false or misleading information{"\n"}• Violate any
+                applicable laws or regulations{"\n"}• Attempt to hack, disrupt,
+                or damage the application{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   5. Privacy and Data Protection{"\n"}
                 </Text>
-                Your privacy is important to us. Please review our Privacy Policy to understand how we collect, use, and protect your information. By using EquiHUB, you consent to our data practices as described in our Privacy Policy.{"\n\n"}
-
+                Your privacy is important to us. Please review our Privacy
+                Policy to understand how we collect, use, and protect your
+                information. By using EquiHUB, you consent to our data practices
+                as described in our Privacy Policy.{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   6. Safety Features and Emergency Services{"\n"}
                 </Text>
-                • Emergency contact features are provided as a convenience but should not replace professional emergency services{"\n"}
-                • Always call local emergency services (911, 112, etc.) in case of serious emergencies{"\n"}
-                • First aid information is for educational purposes only and does not replace professional medical training{"\n"}
-                • EquiHUB is not responsible for the accuracy or effectiveness of emergency features{"\n\n"}
-
+                • Emergency contact features are provided as a convenience but
+                should not replace professional emergency services{"\n"}• Always
+                call local emergency services (911, 112, etc.) in case of
+                serious emergencies{"\n"}• First aid information is for
+                educational purposes only and does not replace professional
+                medical training{"\n"}• EquiHUB is not responsible for the
+                accuracy or effectiveness of emergency features{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   7. Location Services{"\n"}
                 </Text>
-                EquiHUB may use location services to provide tracking features and safety functionality. You can control location permissions through your device settings.{"\n\n"}
-
+                EquiHUB may use location services to provide tracking features
+                and safety functionality. You can control location permissions
+                through your device settings.{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   8. Subscription and Pro Features{"\n"}
                 </Text>
-                • Some features may require a paid subscription{"\n"}
-                • Subscription fees are charged according to your selected plan{"\n"}
-                • Cancellation policies apply as described in your app store{"\n"}
-                • Pro features may be modified or discontinued with notice{"\n\n"}
-
+                • Some features may require a paid subscription{"\n"}•
+                Subscription fees are charged according to your selected plan
+                {"\n"}• Cancellation policies apply as described in your app
+                store{"\n"}• Pro features may be modified or discontinued with
+                notice{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   9. Intellectual Property{"\n"}
                 </Text>
-                EquiHUB and its content are protected by copyright, trademark, and other intellectual property laws. You may not copy, distribute, or create derivative works without permission.{"\n\n"}
-
+                EquiHUB and its content are protected by copyright, trademark,
+                and other intellectual property laws. You may not copy,
+                distribute, or create derivative works without permission.
+                {"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   10. Limitation of Liability{"\n"}
                 </Text>
-                EquiHUB is provided "as is" without warranties. We are not liable for any damages arising from your use of the application, including but not limited to data loss, injury, or equipment damage.{"\n\n"}
-
+                EquiHUB is provided "as is" without warranties. We are not
+                liable for any damages arising from your use of the application,
+                including but not limited to data loss, injury, or equipment
+                damage.{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   11. Indemnification{"\n"}
                 </Text>
-                You agree to indemnify and hold EquiHUB harmless from any claims, damages, or expenses arising from your use of the application or violation of these terms.{"\n\n"}
-
+                You agree to indemnify and hold EquiHUB harmless from any
+                claims, damages, or expenses arising from your use of the
+                application or violation of these terms.{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   12. Termination{"\n"}
                 </Text>
-                We may suspend or terminate your account for violation of these terms. You may delete your account at any time through the application settings.{"\n\n"}
-
+                We may suspend or terminate your account for violation of these
+                terms. You may delete your account at any time through the
+                application settings.{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   13. Changes to Terms{"\n"}
                 </Text>
-                We reserve the right to modify these Terms of Service at any time. Users will be notified of significant changes through the application or email.{"\n\n"}
-
+                We reserve the right to modify these Terms of Service at any
+                time. Users will be notified of significant changes through the
+                application or email.{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   14. Governing Law{"\n"}
                 </Text>
-                These terms are governed by the laws of the jurisdiction where EquiHUB is operated, without regard to conflict of law principles.{"\n\n"}
-
+                These terms are governed by the laws of the jurisdiction where
+                EquiHUB is operated, without regard to conflict of law
+                principles.{"\n\n"}
                 <Text style={styles.termsOfServiceSectionTitle}>
                   15. Contact Information{"\n"}
                 </Text>
-                For questions about these Terms of Service, please contact us through the feedback feature in the application.{"\n\n"}
-
-                <Text style={[styles.termsOfServiceFooter, { color: currentTheme.colors.textSecondary }]}>
-                  Last Updated: {new Date().toLocaleDateString()}{"\n"}
+                For questions about these Terms of Service, please contact us
+                through the feedback feature in the application.{"\n\n"}
+                <Text
+                  style={[
+                    styles.termsOfServiceFooter,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Last Updated: {new Date().toLocaleDateString()}
+                  {"\n"}
                   Version 1.0{"\n\n"}
-                  Thank you for using EquiHUB and being part of our equestrian community!
+                  Thank you for using EquiHUB and being part of our equestrian
+                  community!
                 </Text>
               </Text>
             </ScrollView>
@@ -2488,10 +2371,7 @@ const OptionsScreen = () => {
               ]}
             >
               <Text
-                style={[
-                  styles.aboutTitle,
-                  { color: currentTheme.colors.text },
-                ]}
+                style={[styles.aboutTitle, { color: currentTheme.colors.text }]}
               >
                 About EquiHUB
               </Text>
@@ -2512,85 +2392,110 @@ const OptionsScreen = () => {
 
             <ScrollView style={styles.aboutContent}>
               <View style={styles.aboutLogoContainer}>
-                <Image 
+                <Image
                   source={require("../../assets/icons/512x512.png")}
                   style={styles.aboutAppIcon}
                 />
-                <Text style={[styles.aboutAppName, { color: currentTheme.colors.text }]}>
+                <Text
+                  style={[
+                    styles.aboutAppName,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
                   EquiHUB
                 </Text>
-                <Text style={[styles.aboutVersion, { color: currentTheme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.aboutVersion,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   Version {appConfig.expo.version}
                 </Text>
               </View>
 
               <Text
-                style={[
-                  styles.aboutText,
-                  { color: currentTheme.colors.text },
-                ]}
+                style={[styles.aboutText, { color: currentTheme.colors.text }]}
               >
                 <Text style={styles.aboutSectionTitle}>
                   Welcome to EquiHUB!{"\n"}
                 </Text>
-                EquiHUB is your comprehensive companion for all things equestrian. Whether you're a professional rider, a passionate enthusiast, or just starting your journey with horses, our app is designed to enhance your experience and keep you connected with the equestrian community.{"\n\n"}
-
+                EquiHUB is your comprehensive companion for all things
+                equestrian. Whether you're a professional rider, a passionate
+                enthusiast, or just starting your journey with horses, our app
+                is designed to enhance your experience and keep you connected
+                with the equestrian community.{"\n\n"}
                 <Text style={styles.aboutSectionTitle}>
                   🎯 Our Mission{"\n"}
                 </Text>
-                To empower equestrians with innovative tools that make horse care, training, and community connection easier, safer, and more enjoyable. We believe that technology can enhance the timeless bond between humans and horses.{"\n\n"}
-
+                To empower equestrians with innovative tools that make horse
+                care, training, and community connection easier, safer, and more
+                enjoyable. We believe that technology can enhance the timeless
+                bond between humans and horses.{"\n\n"}
                 <Text style={styles.aboutSectionTitle}>
                   ✨ Key Features{"\n"}
                 </Text>
                 <Text style={styles.aboutFeatureItem}>🐴 Horse Management</Text>
-                Comprehensive profiles for all your horses with health records, training progress, and care schedules.{"\n\n"}
-
-                <Text style={styles.aboutFeatureItem}>📊 Training Tracking</Text>
-                Record and analyze your riding sessions with detailed metrics, GPS tracking, and progress visualization.{"\n\n"}
-
-                <Text style={styles.aboutFeatureItem}>🏆 Community Challenges</Text>
-                Join global and stable-specific challenges to stay motivated and connect with fellow riders.{"\n\n"}
-
+                Comprehensive profiles for all your horses with health records,
+                training progress, and care schedules.{"\n\n"}
+                <Text style={styles.aboutFeatureItem}>
+                  📊 Training Tracking
+                </Text>
+                Record and analyze your riding sessions with detailed metrics,
+                GPS tracking, and progress visualization.{"\n\n"}
+                <Text style={styles.aboutFeatureItem}>
+                  🏆 Community Challenges
+                </Text>
+                Join global and stable-specific challenges to stay motivated and
+                connect with fellow riders.{"\n\n"}
                 <Text style={styles.aboutFeatureItem}>💬 Social Features</Text>
-                Share your achievements, connect with friends, and engage with the equestrian community.{"\n\n"}
-
+                Share your achievements, connect with friends, and engage with
+                the equestrian community.{"\n\n"}
                 <Text style={styles.aboutFeatureItem}>🚨 Safety First</Text>
-                Emergency contacts, first aid guidance, and safety features designed specifically for equestrians.{"\n\n"}
-
+                Emergency contacts, first aid guidance, and safety features
+                designed specifically for equestrians.{"\n\n"}
                 <Text style={styles.aboutFeatureItem}>📚 Tips & Guides</Text>
-                Expert advice, training tips, and educational content to improve your horsemanship skills.{"\n\n"}
-
+                Expert advice, training tips, and educational content to improve
+                your horsemanship skills.{"\n\n"}
                 <Text style={styles.aboutSectionTitle}>
                   🌟 Pro Features{"\n"}
                 </Text>
-                Unlock advanced analytics, unlimited horses, priority support, and exclusive content with EquiHUB Pro.{"\n\n"}
-
+                Unlock advanced analytics, unlimited horses, priority support,
+                and exclusive content with EquiHUB Pro.{"\n\n"}
                 <Text style={styles.aboutSectionTitle}>
                   🛡️ Safety & Privacy{"\n"}
                 </Text>
-                Your data security and privacy are our top priorities. We use industry-standard encryption and never share your personal information without your consent.{"\n\n"}
-
+                Your data security and privacy are our top priorities. We use
+                industry-standard encryption and never share your personal
+                information without your consent.{"\n\n"}
                 <Text style={styles.aboutSectionTitle}>
                   🤝 Community-Driven{"\n"}
                 </Text>
-                EquiHUB is built by equestrians, for equestrians. We listen to our community and continuously improve based on your feedback and needs.{"\n\n"}
-
+                EquiHUB is built by equestrians, for equestrians. We listen to
+                our community and continuously improve based on your feedback
+                and needs.{"\n\n"}
                 <Text style={styles.aboutSectionTitle}>
                   📧 Contact & Support{"\n"}
                 </Text>
-                Need help or have suggestions? Use the feedback feature in the app or visit our support resources. We're here to help you make the most of your equestrian journey.{"\n\n"}
-
+                Need help or have suggestions? Use the feedback feature in the
+                app or visit our support resources. We're here to help you make
+                the most of your equestrian journey.{"\n\n"}
                 <Text style={styles.aboutSectionTitle}>
                   🙏 Acknowledgments{"\n"}
                 </Text>
-                Special thanks to the equestrian community for their invaluable feedback, testing, and support in making EquiHUB the best it can be.{"\n\n"}
-
-                <Text style={[styles.aboutFooter, { color: currentTheme.colors.textSecondary }]}>
-                  Made with ❤️ for the equestrian community{"\n"}
-                  © 2025 EquiHUB. All rights reserved.{"\n\n"}
-                  
-                  Follow your passion. Track your progress. Connect with your community.{"\n"}
+                Special thanks to the equestrian community for their invaluable
+                feedback, testing, and support in making EquiHUB the best it can
+                be.{"\n\n"}
+                <Text
+                  style={[
+                    styles.aboutFooter,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Made with ❤️ for the equestrian community{"\n"}© 2025 EquiHUB.
+                  All rights reserved.{"\n\n"}
+                  Follow your passion. Track your progress. Connect with your
+                  community.{"\n"}
                   Happy riding! 🐎✨
                 </Text>
               </Text>
