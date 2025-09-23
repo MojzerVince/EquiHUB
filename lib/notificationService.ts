@@ -28,88 +28,141 @@ export interface NotificationData {
 
 export class NotificationService {
   static async registerForPushNotificationsAsync(): Promise<string | null> {
+    console.log('🔔 DEBUG: Starting registerForPushNotificationsAsync');
     let token = null;
     
+    console.log('🔔 DEBUG: Device check:', {
+      isDevice: Device.isDevice,
+      deviceName: Device.deviceName,
+      platform: Platform.OS,
+      osVersion: Device.osVersion
+    });
+    
     if (Platform.OS === 'android') {
+      console.log('🔔 DEBUG: Setting up Android notification channel...');
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
       });
+      console.log('✅ DEBUG: Android notification channel set up');
     }
 
     if (Device.isDevice) {
+      console.log('🔔 DEBUG: Device is physical device, checking permissions...');
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      console.log('🔔 DEBUG: Existing permission status:', existingStatus);
+      
       let finalStatus = existingStatus;
       
       if (existingStatus !== 'granted') {
+        console.log('🔔 DEBUG: Requesting notification permissions...');
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
+        console.log('🔔 DEBUG: Permission request result:', status);
       }
       
       if (finalStatus !== 'granted') {
-        console.log('Failed to get push token for push notification!');
+        console.log('❌ DEBUG: Failed to get push token - permissions not granted:', finalStatus);
         return null;
       }
       
       try {
         const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
-        token = (await Notifications.getExpoPushTokenAsync({
+        console.log('🔔 DEBUG: Getting Expo push token with project ID:', projectId);
+        
+        const tokenResponse = await Notifications.getExpoPushTokenAsync({
           projectId: projectId,
-        })).data;
-        console.log('Push token:', token);
+        });
+        
+        token = tokenResponse.data;
+        console.log('✅ DEBUG: Successfully got push token:', token);
+        console.log('🔔 DEBUG: Token response details:', {
+          type: tokenResponse.type,
+          data: tokenResponse.data
+        });
       } catch (error) {
-        console.log('Error getting push token:', error);
+        console.error('❌ DEBUG: Error getting push token:', error);
+        if (error instanceof Error) {
+          console.error('❌ DEBUG: Error details:', {
+            message: error.message,
+            stack: error.stack
+          });
+        }
       }
     } else {
-      console.log('Must use physical device for Push Notifications');
+      console.log('⚠️ DEBUG: Not a physical device - push notifications not available');
     }
 
+    console.log('🔔 DEBUG: registerForPushNotificationsAsync completed, token:', token ? 'RECEIVED' : 'NULL');
     return token;
   }
 
   static async savePushToken(userId: string, token: string): Promise<void> {
     try {
+      console.log('🔔 DEBUG: Starting savePushToken for user:', userId);
+      console.log('🔔 DEBUG: Token to save:', token.substring(0, 30) + '...');
+      
       // Get the initialized Supabase client
       const supabase = getSupabase();
       
-      // First, try to delete any existing tokens for this user and token combination
-      await supabase
+      // First, check if token already exists
+      console.log('🔍 DEBUG: Checking for existing token...');
+      const { data: existingTokens, error: checkError } = await supabase
+        .from('user_push_tokens')
+        .select('*')
+        .eq('user_id', userId);
+      
+      console.log('🔍 DEBUG: Existing tokens check result:', { 
+        count: existingTokens?.length || 0, 
+        error: checkError,
+        tokens: existingTokens?.map((t: any) => ({ id: t.id, token: t.push_token.substring(0, 20) + '...' }))
+      });
+      
+      // Delete any existing tokens for this user
+      console.log('🔄 DEBUG: Deleting existing tokens for user...');
+      const { error: deleteError } = await supabase
         .from('user_push_tokens')
         .delete()
-        .eq('user_id', userId)
-        .eq('push_token', token);
+        .eq('user_id', userId);
+      
+      if (deleteError) {
+        console.error('⚠️ DEBUG: Error deleting existing tokens:', deleteError);
+      } else {
+        console.log('✅ DEBUG: Existing tokens deleted successfully');
+      }
       
       // Then insert the new token
-      const { error } = await supabase
+      console.log('🔄 DEBUG: Inserting new token...');
+      const { data: insertData, error: insertError } = await supabase
         .from('user_push_tokens')
         .insert({
           user_id: userId,
           push_token: token,
           updated_at: new Date().toISOString(),
-        });
+        })
+        .select();
 
-      if (error) {
-        // If there's still a duplicate key error, try to update instead
-        if (error.code === '23505') {
-          const { error: updateError } = await supabase
-            .from('user_push_tokens')
-            .update({
-              updated_at: new Date().toISOString(),
-            })
-            .eq('user_id', userId)
-            .eq('push_token', token);
-          
-          if (updateError) {
-            console.error('Error updating push token:', updateError);
-          }
-        } else {
-          console.error('Error saving push token:', error);
-        }
+      console.log('🔔 DEBUG: Insert result:', { 
+        data: insertData, 
+        error: insertError,
+        success: !insertError
+      });
+
+      if (insertError) {
+        console.error('❌ DEBUG: Error inserting push token:', insertError);
+        console.error('❌ DEBUG: Insert error details:', {
+          code: insertError.code,
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint
+        });
+      } else {
+        console.log('✅ DEBUG: Push token saved successfully to database');
       }
     } catch (error) {
-      console.error('Error saving push token:', error);
+      console.error('❌ DEBUG: Exception in savePushToken:', error);
     }
   }
 

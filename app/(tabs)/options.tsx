@@ -11,6 +11,7 @@ import {
 } from "@/lib/emergencyFriendsAPI";
 import { FeedbackAPI } from "@/lib/feedbackAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
+import { NotificationService } from "@/lib/notificationService";
 import { UserSearchResult } from "@/lib/userAPI";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
@@ -338,6 +339,7 @@ const OptionsScreen = () => {
   // Debug state (only in development)
   const [isSimulatingFall, setIsSimulatingFall] = useState(false);
   const [isCheckingTokens, setIsCheckingTokens] = useState(false);
+  const [isManualTesting, setIsManualTesting] = useState(false);
 
   // Fall details modal state
   const [showFallDetailsModal, setShowFallDetailsModal] = useState(false);
@@ -951,6 +953,66 @@ ${friendsInfo || "No emergency friends found"}
     }
   };
 
+  // DEBUG ONLY: Manual push token registration test
+  const handleManualTokenTest = async () => {
+    if (!__DEV__) {
+      Alert.alert(
+        "Debug Only",
+        "This feature is only available in development mode."
+      );
+      return;
+    }
+
+    if (!user?.id) {
+      Alert.alert("Error", "User not logged in");
+      return;
+    }
+
+    setIsManualTesting(true);
+
+    try {
+      console.log("🧪 DEBUG: Starting manual push token test...");
+
+      // Test token registration
+      const token =
+        await NotificationService.registerForPushNotificationsAsync();
+
+      if (token) {
+        console.log("🧪 DEBUG: Got token, attempting to save...");
+        await NotificationService.savePushToken(user.id, token);
+
+        // Verify it was saved
+        const hasToken = await NotificationService.checkUserHasPushToken(
+          user.id
+        );
+
+        Alert.alert(
+          "🧪 Push Token Test Results",
+          `✅ Token received: ${token.substring(0, 30)}...
+✅ Token saved: ${hasToken ? "YES" : "NO"}
+📱 Check console logs for detailed debug info`,
+          [{ text: "OK", style: "default" }]
+        );
+      } else {
+        Alert.alert(
+          "🧪 Push Token Test Results",
+          "❌ No token received\n📱 Check console logs for detailed debug info",
+          [{ text: "OK", style: "default" }]
+        );
+      }
+    } catch (error) {
+      console.error("🧪 DEBUG: Manual token test error:", error);
+      Alert.alert(
+        "Debug Error",
+        `Manual token test failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsManualTesting(false);
+    }
+  };
+
   const SettingItem = ({
     title,
     subtitle,
@@ -1334,6 +1396,27 @@ ${friendsInfo || "No emergency friends found"}
                       backgroundColor: isCheckingTokens
                         ? currentTheme.colors.textSecondary
                         : currentTheme.colors.primary,
+                      marginTop: 10,
+                    },
+                  ]}
+                  textStyle={{ color: "#fff", fontWeight: "bold" }}
+                />
+
+                <ActionButton
+                  title={
+                    isManualTesting
+                      ? "Testing Token..."
+                      : "🧪 Manual Token Test"
+                  }
+                  onPress={handleManualTokenTest}
+                  disabled={isManualTesting}
+                  showLoading={isManualTesting}
+                  style={[
+                    styles.actionButton,
+                    {
+                      backgroundColor: isManualTesting
+                        ? currentTheme.colors.textSecondary
+                        : "#FF6B35",
                       marginTop: 10,
                     },
                   ]}
