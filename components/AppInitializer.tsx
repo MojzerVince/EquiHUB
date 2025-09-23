@@ -6,11 +6,11 @@
 import Constants from "expo-constants";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { configureGoogleSignIn } from "../lib/googleAuth";
 import { initializeSupabase } from "../lib/supabase";
@@ -75,7 +75,10 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
           console.log("ℹ️ Google Sign In will use web OAuth fallback");
         }
       } catch (error) {
-        console.log("⚠️ Google Sign In configuration failed, will use web fallback:", error);
+        console.log(
+          "⚠️ Google Sign In configuration failed, will use web fallback:",
+          error
+        );
       }
 
       setIsInitialized(true);

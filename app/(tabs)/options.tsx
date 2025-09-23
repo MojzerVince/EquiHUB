@@ -1,3 +1,4 @@
+import { FallDetailsModal } from "@/components/FallDetailsModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDialog } from "@/contexts/DialogContext";
 import { MetricSystem, useMetric } from "@/contexts/MetricContext";
@@ -6,6 +7,7 @@ import { AuthAPI } from "@/lib/authAPI";
 import {
   EmergencyFriend,
   EmergencyFriendsAPI,
+  FallNotificationData,
 } from "@/lib/emergencyFriendsAPI";
 import { FeedbackAPI } from "@/lib/feedbackAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
@@ -335,6 +337,12 @@ const OptionsScreen = () => {
 
   // Debug state (only in development)
   const [isSimulatingFall, setIsSimulatingFall] = useState(false);
+  const [isCheckingTokens, setIsCheckingTokens] = useState(false);
+
+  // Fall details modal state
+  const [showFallDetailsModal, setShowFallDetailsModal] = useState(false);
+  const [fallNotificationData, setFallNotificationData] =
+    useState<FallNotificationData | null>(null);
 
   // Load notification settings when component mounts
   useEffect(() => {
@@ -367,11 +375,30 @@ const OptionsScreen = () => {
   const setupNotificationResponseListener = () => {
     const subscription = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        const { type } = response.notification.request.content.data || {};
+        const data = response.notification.request.content.data || {};
+        const { type } = data;
 
         if (type === "weekly_summary" || type === "monthly_summary") {
           // Navigate to statistics page
           router.push("/statistics");
+        } else if (type === "emergency_alert") {
+          // Handle emergency alert tap - show fall details modal
+          console.log("Emergency alert notification tapped:", data);
+
+          const fallData: FallNotificationData = {
+            riderName:
+              (data as any).rider_name || (data as any).senderName || "Unknown",
+            riderId: (data as any).rider_id || (data as any).senderId || "",
+            coordinates: (data as any).coordinates || {
+              latitude: 0,
+              longitude: 0,
+            },
+            timestamp: (data as any).timestamp || Date.now(),
+            emergencyType: (data as any).emergency_type || "fall_detection",
+          };
+
+          setFallNotificationData(fallData);
+          setShowFallDetailsModal(true);
         }
       }
     );
@@ -853,6 +880,77 @@ ${
     }
   };
 
+  // DEBUG ONLY: Check push token status for emergency friends
+  const handleCheckPushTokens = async () => {
+    if (!__DEV__) {
+      Alert.alert(
+        "Debug Only",
+        "This feature is only available in development mode."
+      );
+      return;
+    }
+
+    if (!user?.id) {
+      Alert.alert("Error", "User not logged in");
+      return;
+    }
+
+    setIsCheckingTokens(true);
+
+    try {
+      const result = await EmergencyFriendsAPI.checkEmergencyFriendsPushTokens(
+        user.id
+      );
+
+      // Create detailed debug message
+      const friendsInfo = result.friends
+        .map(
+          (f) =>
+            `${f.hasPushToken ? "✅" : "❌"} ${f.name} (${f.friendId.substring(
+              0,
+              8
+            )}...)`
+        )
+        .join("\n");
+
+      // Check if we're in Expo Go
+      const isExpoGo = __DEV__ && !process.env.EAS_BUILD;
+      const expoGoNote = isExpoGo
+        ? "\n\n⚠️ NOTE: Running in Expo Go - push notifications have limitations.\n💡 Use a development build for full testing."
+        : "";
+
+      const debugMessage = `
+🔔 PUSH TOKEN STATUS CHECK:
+
+📊 Summary:
+• Total Emergency Friends: ${result.summary.total}
+• With Push Tokens: ${result.summary.withTokens}
+• Without Push Tokens: ${result.summary.withoutTokens}
+
+👥 Friends Details:
+${friendsInfo || "No emergency friends found"}
+
+💡 Note: Friends need to open the app to register their push tokens.${expoGoNote}
+      `.trim();
+
+      Alert.alert("🔔 Push Token Status", debugMessage, [
+        { text: "OK", style: "default" },
+      ]);
+
+      console.log("🧪 DEBUG: Push token check completed:", result);
+    } catch (error) {
+      console.error("🧪 DEBUG: Push token check error:", error);
+      Alert.alert(
+        "Debug Error",
+        `Push token check failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsCheckingTokens(false);
+    }
+  };
+
   const SettingItem = ({
     title,
     subtitle,
@@ -1216,6 +1314,27 @@ ${
                       backgroundColor: isSimulatingFall
                         ? currentTheme.colors.textSecondary
                         : currentTheme.colors.warning,
+                    },
+                  ]}
+                  textStyle={{ color: "#fff", fontWeight: "bold" }}
+                />
+
+                <ActionButton
+                  title={
+                    isCheckingTokens
+                      ? "Checking Tokens..."
+                      : "🔔 Check Push Tokens"
+                  }
+                  onPress={handleCheckPushTokens}
+                  disabled={isCheckingTokens}
+                  showLoading={isCheckingTokens}
+                  style={[
+                    styles.actionButton,
+                    {
+                      backgroundColor: isCheckingTokens
+                        ? currentTheme.colors.textSecondary
+                        : currentTheme.colors.primary,
+                      marginTop: 10,
                     },
                   ]}
                   textStyle={{ color: "#fff", fontWeight: "bold" }}
@@ -2625,6 +2744,18 @@ ${
           </View>
         </View>
       </Modal>
+
+      {/* Fall Details Modal */}
+      {fallNotificationData && (
+        <FallDetailsModal
+          visible={showFallDetailsModal}
+          fallData={fallNotificationData}
+          onClose={() => {
+            setShowFallDetailsModal(false);
+            setFallNotificationData(null);
+          }}
+        />
+      )}
     </View>
   );
 };

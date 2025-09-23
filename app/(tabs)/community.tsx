@@ -749,21 +749,7 @@ export default function CommunityScreen() {
     let responseListener: Notifications.Subscription;
 
     const setupNotifications = async () => {
-      if (user?.id) {
-        try {
-          // Register for push notifications and get token
-          const token =
-            await NotificationService.registerForPushNotificationsAsync();
-
-          if (token) {
-            // Save the token to the database
-            await NotificationService.savePushToken(user.id, token);
-            console.log("Push notification token registered successfully");
-          }
-        } catch (error) {
-          console.error("Error setting up push notifications:", error);
-        }
-      }
+      // Note: Push token registration now happens globally in AppInitializer
 
       // Listen for notifications received while app is running
       notificationListener = Notifications.addNotificationReceivedListener(

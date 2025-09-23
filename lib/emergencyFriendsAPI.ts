@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
-import { getSupabase } from "./supabase";
+import { NotificationService } from "./notificationService";
 import { UserAPI, UserSearchResult } from "./userAPI";
 
 export interface EmergencyFriend {
@@ -201,11 +201,11 @@ export class EmergencyFriendsAPI {
         trigger: null, // Send immediately
       });
 
-      // Log notification event to database for future push notification system
+      // Send push notifications to emergency friends' devices
       try {
-        await this.logFallNotificationEvent(userId, notificationData, enabledFriends);
-      } catch (logError) {
-        console.warn("Failed to log notification event:", logError);
+        await this.sendPushNotificationsToFriends(userId, notificationData, enabledFriends);
+      } catch (pushError) {
+        console.warn("Failed to send push notifications:", pushError);
       }
 
       console.log(`✅ Fall detection notification sent to ${enabledFriends.length} emergency friends`);
@@ -268,11 +268,11 @@ export class EmergencyFriendsAPI {
         trigger: null, // Send immediately
       });
 
-      // Log notification event to database
+      // Send push notifications to emergency friends' devices
       try {
-        await this.logFallNotificationEvent(userId, notificationData, enabledFriends);
-      } catch (logError) {
-        console.warn("Failed to log notification event:", logError);
+        await this.sendPushNotificationsToFriends(userId, notificationData, enabledFriends);
+      } catch (pushError) {
+        console.warn("Failed to send push notifications:", pushError);
       }
 
       console.log(`✅ Manual emergency notification sent to ${enabledFriends.length} emergency friends`);
@@ -292,47 +292,78 @@ export class EmergencyFriendsAPI {
 
 
 
-  // Log notification event to database using existing notification_history table
-  private static async logFallNotificationEvent(
+  // Send push notifications to emergency friends' devices
+  private static async sendPushNotificationsToFriends(
     userId: string,
     notificationData: FallNotificationData,
     notifiedFriends: EmergencyFriend[]
   ): Promise<void> {
     try {
-      const supabase = getSupabase();
+      // Set up emergency notification channel if not already done
+      await this.setupEmergencyNotificationChannel();
 
-      // Log to notification_history table for each friend
-      const notifications = notifiedFriends.map(friend => ({
-        recipient_user_id: friend.friendId,
-        sender_user_id: userId,
-        notification_type: notificationData.emergencyType,
-        title: notificationData.emergencyType === 'fall_detection' 
-          ? '🚨 Fall Detection Alert' 
-          : '🆘 Emergency Alert',
-        body: `${notificationData.riderName} may have fallen while riding. Tap to view location.`,
-        data: {
-          emergency_type: notificationData.emergencyType,
-          coordinates: notificationData.coordinates,
-          rider_name: notificationData.riderName,
-          rider_id: notificationData.riderId,
-          timestamp: notificationData.timestamp,
-        },
-        delivery_status: 'sent',
-      }));
+      // Prepare notification content
+      const title = notificationData.emergencyType === 'fall_detection' 
+        ? '🚨 Fall Detection Alert' 
+        : '🆘 Emergency Alert';
+      
+      const body = `${notificationData.riderName} may have fallen while riding. Tap to view location.`;
 
-      const { error } = await supabase
-        .from('notification_history')
-        .insert(notifications);
+      // Send push notifications to each emergency friend
+      let successCount = 0;
+      for (const friend of notifiedFriends) {
+        try {
+          const success = await NotificationService.sendPushNotification(
+            friend.friendId,
+            title,
+            body,
+            {
+              type: 'emergency_alert',
+              senderId: userId,
+              senderName: notificationData.riderName,
+              message: body,
+              emergency_type: notificationData.emergencyType,
+              coordinates: notificationData.coordinates,
+              rider_id: notificationData.riderId,
+              timestamp: notificationData.timestamp,
+            }
+          );
 
-      if (error) {
-        console.error('Failed to log notification event:', error);
-        throw error;
+          if (success) {
+            successCount++;
+            console.log(`✅ Emergency notification sent to ${friend.name}`);
+          } else {
+            console.warn(`⚠️ Failed to send emergency notification to ${friend.name}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error sending notification to ${friend.name}:`, error);
+        }
       }
 
-      console.log(`✅ Logged ${notifications.length} emergency notifications to database`);
+      console.log(`📱 Successfully sent emergency notifications to ${successCount}/${notifiedFriends.length} friends`);
     } catch (error) {
-      console.error('Failed to log notification event:', error);
+      console.error('Failed to send push notifications:', error);
       throw error;
+    }
+  }
+
+  // Set up emergency notification channel for high priority alerts
+  private static async setupEmergencyNotificationChannel(): Promise<void> {
+    try {
+      await Notifications.setNotificationChannelAsync('emergency-alerts', {
+        name: 'Emergency Alerts',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250, 250, 250],
+        lightColor: '#FF0000',
+        sound: 'default',
+        enableVibrate: true,
+        enableLights: true,
+        bypassDnd: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        showBadge: true,
+      });
+    } catch (error) {
+      console.warn('Failed to set up emergency notification channel:', error);
     }
   }
 
@@ -348,6 +379,80 @@ export class EmergencyFriendsAPI {
     } catch (error) {
       console.error('Failed to get emergency friends summary:', error);
       return { count: 0, names: [] };
+    }
+  }
+
+  // DEBUG ONLY: Check push token status for emergency friends
+  static async checkEmergencyFriendsPushTokens(userId: string): Promise<{
+    friends: Array<{
+      name: string;
+      friendId: string;
+      hasPushToken: boolean;
+      error?: string;
+    }>;
+    summary: {
+      total: number;
+      withTokens: number;
+      withoutTokens: number;
+    };
+  }> {
+    if (!__DEV__) {
+      return {
+        friends: [],
+        summary: { total: 0, withTokens: 0, withoutTokens: 0 }
+      };
+    }
+
+    try {
+      const emergencyFriends = await this.getEmergencyFriends(userId);
+      const friendsStatus = [];
+      let withTokens = 0;
+      let withoutTokens = 0;
+
+      for (const friend of emergencyFriends) {
+        try {
+          // Check if friend has a push token (using the same method as sendPushNotification)
+          const hasToken = await NotificationService.checkUserHasPushToken(friend.friendId);
+          
+          friendsStatus.push({
+            name: friend.name,
+            friendId: friend.friendId,
+            hasPushToken: hasToken,
+          });
+
+          if (hasToken) {
+            withTokens++;
+          } else {
+            withoutTokens++;
+          }
+        } catch (error) {
+          friendsStatus.push({
+            name: friend.name,
+            friendId: friend.friendId,
+            hasPushToken: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          withoutTokens++;
+        }
+      }
+
+      const result = {
+        friends: friendsStatus,
+        summary: {
+          total: emergencyFriends.length,
+          withTokens,
+          withoutTokens,
+        }
+      };
+
+      console.log('🧪 DEBUG: Emergency Friends Push Token Status:', result);
+      return result;
+    } catch (error) {
+      console.error('Failed to check emergency friends push tokens:', error);
+      return {
+        friends: [],
+        summary: { total: 0, withTokens: 0, withoutTokens: 0 }
+      };
     }
   }
 

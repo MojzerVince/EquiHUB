@@ -12,6 +12,7 @@ import "react-native-reanimated";
 
 import AppInitializer from "@/components/AppInitializer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import PushNotificationSetup from "@/components/PushNotificationSetup";
 import CustomSplashScreen from "@/components/SplashScreen";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DialogProvider } from "@/contexts/DialogContext";
@@ -115,68 +116,74 @@ const AppContent = () => {
               <ThemeProvider
                 value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
               >
-              <ProtectedRoute splashActive={false}>
-                <Stack
-                  screenOptions={{ headerShown: false, animation: "none" }}
-                >
-                  <Stack.Screen name="index" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen name="login" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="register"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="sessions"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="statistics"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="session-details"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="session-summary"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="subscription"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="pro-features"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="session-share"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="user-profile"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="user-friends"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="user-horses"
-                    options={{ headerShown: false }}
-                  />
-                </Stack>
-              </ProtectedRoute>
-            </ThemeProvider>
-          </TrackingProvider>
-        </SubscriptionProvider>
-      </DialogProvider>
-    </MetricProvider>
-  </CustomThemeProvider>
+                <ProtectedRoute splashActive={false}>
+                  <Stack
+                    screenOptions={{ headerShown: false, animation: "none" }}
+                  >
+                    <Stack.Screen
+                      name="index"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="(tabs)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="login"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="register"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="sessions"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="statistics"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="session-details"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="session-summary"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="subscription"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="pro-features"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="session-share"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="user-profile"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="user-friends"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="user-horses"
+                      options={{ headerShown: false }}
+                    />
+                  </Stack>
+                </ProtectedRoute>
+              </ThemeProvider>
+            </TrackingProvider>
+          </SubscriptionProvider>
+        </DialogProvider>
+      </MetricProvider>
+    </CustomThemeProvider>
   );
 };
 
@@ -184,7 +191,9 @@ export default function RootLayout() {
   return (
     <AppInitializer>
       <AuthProvider>
-        <AppContent />
+        <PushNotificationSetup>
+          <AppContent />
+        </PushNotificationSetup>
       </AuthProvider>
     </AppInitializer>
   );

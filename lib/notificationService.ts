@@ -15,10 +15,15 @@ Notifications.setNotificationHandler({
 });
 
 export interface NotificationData {
-  type: 'friend_request' | 'post_like' | 'post_comment';
+  type: 'friend_request' | 'post_like' | 'post_comment' | 'emergency_alert';
   senderId: string;
   senderName: string;
   message: string;
+  // Emergency alert specific data
+  emergency_type?: 'fall_detection' | 'manual_emergency';
+  coordinates?: { latitude: number; longitude: number };
+  rider_id?: string;
+  timestamp?: number;
 }
 
 export class NotificationService {
@@ -105,6 +110,23 @@ export class NotificationService {
       }
     } catch (error) {
       console.error('Error saving push token:', error);
+    }
+  }
+
+  // Check if user has a push token registered
+  static async checkUserHasPushToken(userId: string): Promise<boolean> {
+    try {
+      const supabase = getSupabase();
+      const { data: tokenData, error } = await supabase
+        .from('user_push_tokens')
+        .select('push_token')
+        .eq('user_id', userId)
+        .single();
+
+      return !error && !!tokenData?.push_token;
+    } catch (error) {
+      console.error(`Error checking push token for user: ${userId}`, error);
+      return false;
     }
   }
 
@@ -233,6 +255,12 @@ export const handleNotificationResponse = (response: NotificationResponse) => {
     case 'post_comment':
       // Navigate to the specific post
       console.log('Post comment notification tapped:', data);
+      break;
+    case 'emergency_alert':
+      // Handle emergency alert tap - show fall details modal
+      console.log('Emergency alert notification tapped:', data);
+      // This will be handled by the app's notification response listener
+      // to show the FallDetailsModal with the emergency data
       break;
     default:
       console.log('Unknown notification type:', data);
