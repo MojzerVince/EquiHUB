@@ -350,4 +350,82 @@ export class EmergencyFriendsAPI {
       return { count: 0, names: [] };
     }
   }
+
+  // DEBUG ONLY: Simulate a fall detection for testing notifications
+  static async simulateFallDetection(
+    userId: string,
+    riderName: string,
+    testCoordinates?: { latitude: number; longitude: number }
+  ): Promise<{ 
+    success: boolean; 
+    notifiedCount: number; 
+    error?: string;
+    debugInfo: {
+      emergencyFriendsFound: number;
+      enabledFriends: number;
+      testLocation: { latitude: number; longitude: number };
+      timestamp: number;
+    };
+  }> {
+    // Only allow in development mode
+    if (__DEV__) {
+      console.log("🧪 DEBUG: Simulating fall detection...");
+
+      const emergencyFriends = await this.getEmergencyFriends(userId);
+      const enabledFriends = emergencyFriends.filter((f) => f.isEnabled);
+
+      // Use test coordinates or default test location
+      const testLocation = testCoordinates || {
+        latitude: 47.6062, // Seattle coordinates for testing
+        longitude: -122.3321
+      };
+
+      const debugInfo = {
+        emergencyFriendsFound: emergencyFriends.length,
+        enabledFriends: enabledFriends.length,
+        testLocation,
+        timestamp: Date.now(),
+      };
+
+      console.log("🧪 DEBUG Info:", debugInfo);
+
+      if (enabledFriends.length === 0) {
+        console.log("🧪 DEBUG: No enabled emergency friends found for testing");
+        return {
+          success: false,
+          notifiedCount: 0,
+          error: "No enabled emergency friends found (this is a test)",
+          debugInfo,
+        };
+      }
+
+      // Send the actual fall detection notification using the real method
+      const result = await this.sendFallDetectionNotification(
+        userId,
+        `${riderName} (TEST)`,
+        testLocation
+      );
+
+      console.log("🧪 DEBUG: Fall simulation completed");
+      console.log("🧪 DEBUG Result:", result);
+
+      return {
+        ...result,
+        debugInfo,
+      };
+    } else {
+      console.warn("🧪 DEBUG: Fall simulation only available in development mode");
+      return {
+        success: false,
+        notifiedCount: 0,
+        error: "Debug features only available in development mode",
+        debugInfo: {
+          emergencyFriendsFound: 0,
+          enabledFriends: 0,
+          testLocation: { latitude: 0, longitude: 0 },
+          timestamp: Date.now(),
+        },
+      };
+    }
+  }
 }

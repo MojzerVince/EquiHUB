@@ -333,6 +333,9 @@ const OptionsScreen = () => {
   // About state
   const [showAbout, setShowAbout] = useState(false);
 
+  // Debug state (only in development)
+  const [isSimulatingFall, setIsSimulatingFall] = useState(false);
+
   // Load notification settings when component mounts
   useEffect(() => {
     loadNotificationSettings();
@@ -770,6 +773,86 @@ const OptionsScreen = () => {
     }
   };
 
+  // DEBUG ONLY: Simulate fall detection for testing
+  const handleSimulateFallDetection = async () => {
+    if (!__DEV__) {
+      Alert.alert(
+        "Debug Only",
+        "This feature is only available in development mode."
+      );
+      return;
+    }
+
+    if (!user?.id) {
+      Alert.alert("Error", "User not logged in");
+      return;
+    }
+
+    setIsSimulatingFall(true);
+
+    try {
+      // Get current location for testing (optional)
+      let testLocation = undefined;
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status === "granted") {
+          const location = await Location.getCurrentPositionAsync({});
+          testLocation = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
+        }
+      } catch (locationError) {
+        console.log("Could not get location for test, using default");
+      }
+
+      const result = await EmergencyFriendsAPI.simulateFallDetection(
+        user.id,
+        user.email?.split("@")[0] || "Test User",
+        testLocation
+      );
+
+      // Show detailed debug information
+      const debugMessage = `
+🧪 DEBUG FALL SIMULATION RESULTS:
+
+✓ Emergency Friends Found: ${result.debugInfo.emergencyFriendsFound}
+✓ Enabled Friends: ${result.debugInfo.enabledFriends}
+✓ Test Location: ${result.debugInfo.testLocation.latitude.toFixed(
+        4
+      )}, ${result.debugInfo.testLocation.longitude.toFixed(4)}
+✓ Notification Sent: ${result.success ? "YES" : "NO"}
+✓ Friends Notified: ${result.notifiedCount}
+
+${
+  result.error ? `❌ Error: ${result.error}` : "✅ Test completed successfully!"
+}
+
+${
+  result.success
+    ? "Check your notifications to see the fall detection alert!"
+    : "Add some emergency friends first to test notifications."
+}
+      `.trim();
+
+      Alert.alert("🧪 Fall Detection Test", debugMessage, [
+        { text: "OK", style: "default" },
+      ]);
+
+      console.log("🧪 DEBUG: Fall simulation completed:", result);
+    } catch (error) {
+      console.error("🧪 DEBUG: Fall simulation error:", error);
+      Alert.alert(
+        "Debug Error",
+        `Fall simulation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsSimulatingFall(false);
+    }
+  };
+
   const SettingItem = ({
     title,
     subtitle,
@@ -1101,6 +1184,45 @@ const OptionsScreen = () => {
               />
             </View>
           </View>
+
+          {/* Debug Section - Only visible in development */}
+          {__DEV__ && (
+            <View style={styles.section}>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                🧪 Debug Tools (Development Only)
+              </Text>
+              <View
+                style={[
+                  styles.sectionContent,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <ActionButton
+                  title={
+                    isSimulatingFall
+                      ? "Simulating Fall..."
+                      : "🚨 Test Fall Detection"
+                  }
+                  onPress={handleSimulateFallDetection}
+                  disabled={isSimulatingFall}
+                  showLoading={isSimulatingFall}
+                  style={[
+                    {
+                      backgroundColor: isSimulatingFall
+                        ? currentTheme.colors.textSecondary
+                        : currentTheme.colors.warning,
+                    },
+                  ]}
+                  textStyle={{ color: "#fff", fontWeight: "bold" }}
+                />
+              </View>
+            </View>
+          )}
 
           {/* Privacy Settings Section */}
           <View style={styles.section}>
