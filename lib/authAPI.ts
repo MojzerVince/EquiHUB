@@ -577,7 +577,7 @@ export class AuthAPI {
 
       // Check if user already exists
       const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*')
         .eq('email', googleUser.email)
         .single();
@@ -639,7 +639,7 @@ export class AuthAPI {
 
       // Check if user already exists
       const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*')
         .eq('email', googleUser.email)
         .single();
@@ -655,7 +655,7 @@ export class AuthAPI {
 
       // Create new user profile
       const { data: newUser, error: insertError } = await supabase
-        .from('users')
+        .from('profiles')
         .insert([{
           email: googleUser.email,
           name: profileData.name,

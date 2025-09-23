@@ -190,62 +190,88 @@ export class OAuthService {
       const supabase = getSupabase();
       
       // First, check if user exists
+      console.log("🔍 OAuth: Checking for existing user with email:", user.email);
       const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*')
         .eq('email', user.email)
         .single();
 
+      console.log("🔍 OAuth: Query result:", { existingUser, fetchError });
+
       if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error fetching user:', fetchError);
-        return { success: false, error: 'Failed to check existing user' };
+        console.error('❌ OAuth: Error fetching user from profiles table:', fetchError);
+        console.error('❌ OAuth: Error details:', {
+          code: fetchError.code,
+          message: fetchError.message,
+          details: fetchError.details,
+          hint: fetchError.hint,
+          table: 'profiles',
+          query: 'SELECT * FROM profiles WHERE email = ?',
+          email: user.email
+        });
+        return { success: false, error: `Failed to check existing user: ${fetchError.message}` };
       }
 
       let userData;
 
       if (existingUser) {
         // Update existing user
+        console.log("✅ OAuth: Existing user found, updating profile");
         const { data: updatedUser, error: updateError } = await supabase
-          .from('users')
+          .from('profiles')
           .update({
             name: user.name,
             avatar_url: user.avatar_url,
-            last_sign_in_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           })
           .eq('id', existingUser.id)
           .select()
           .single();
 
         if (updateError) {
-          console.error('Error updating user:', updateError);
-          return { success: false, error: 'Failed to update user profile' };
+          console.error('❌ OAuth: Error updating user:', updateError);
+          console.error('❌ OAuth: Update error details:', {
+            code: updateError.code,
+            message: updateError.message,
+            details: updateError.details
+          });
+          return { success: false, error: `Failed to update user profile: ${updateError.message}` };
         }
 
         userData = updatedUser;
+        console.log("✅ OAuth: User profile updated successfully");
       } else {
         // Create new user
+        console.log("🆕 OAuth: Creating new user");
         const { data: newUser, error: insertError } = await supabase
-          .from('users')
+          .from('profiles')
           .insert({
-            id: user.id,
             email: user.email,
             name: user.name,
             avatar_url: user.avatar_url,
-            provider: user.provider,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            last_sign_in_at: new Date().toISOString(),
+            auth_provider: user.provider,
+            google_id: user.provider === 'google' ? user.id : null,
+            apple_id: user.provider === 'apple' ? user.id : null,
+            facebook_id: user.provider === 'facebook' ? user.id : null,
+            age: 25, // Default age, user can update later
+            description: '',
+            riding_experience: 0
           })
           .select()
           .single();
 
         if (insertError) {
-          console.error('Error creating user:', insertError);
-          return { success: false, error: 'Failed to create user profile' };
+          console.error('❌ OAuth: Error creating user:', insertError);
+          console.error('❌ OAuth: Insert error details:', {
+            code: insertError.code,
+            message: insertError.message,
+            details: insertError.details
+          });
+          return { success: false, error: `Failed to create user profile: ${insertError.message}` };
         }
 
         userData = newUser;
+        console.log("✅ OAuth: New user created successfully");
       }
 
       return {
@@ -259,8 +285,9 @@ export class OAuthService {
         },
       };
     } catch (error: any) {
-      console.error('Supabase save error:', error);
-      return { success: false, error: 'Failed to save user data' };
+      console.error('❌ OAuth: Supabase save error:', error);
+      console.error('❌ OAuth: Error stack:', error.stack);
+      return { success: false, error: `Failed to save user data: ${error.message || 'Unknown error'}` };
     }
   }
 
