@@ -26,6 +26,7 @@
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
       "versionCode": 39,
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "INTERNET",
         "FOREGROUND_SERVICE",
@@ -78,6 +79,13 @@
           "icon": "./assets/icons/512x512.png",
           "color": "#ffffff",
           "defaultChannel": "default"
+        }
+      ],
+      "@react-native-firebase/app",
+      [
+        "@react-native-firebase/messaging",
+        {
+          "iosDisplayName": "EquiHUB Emergency Notifications"
         }
       ]
     ],

@@ -28,8 +28,26 @@ export interface NotificationData {
 
 export class NotificationService {
   static async registerForPushNotificationsAsync(): Promise<string | null> {
-    console.log('🔔 DEBUG: Starting registerForPushNotificationsAsync');
-    let token = null;
+    console.log('🔔 DEBUG: Starting registerForPushNotificationsAsync with Firebase');
+    
+    try {
+      // Use Firebase notification service for proper FCM integration
+      const { FirebaseNotificationService } = await import('./firebaseNotificationService');
+      const token = await FirebaseNotificationService.initialize();
+      
+      if (token) {
+        console.log('✅ DEBUG: Firebase FCM token obtained successfully');
+        return token;
+      } else {
+        console.log('❌ DEBUG: Failed to get Firebase FCM token');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ DEBUG: Error initializing Firebase notifications:', error);
+      console.log('💡 Falling back to legacy Expo registration...');
+      
+      // Fallback to legacy Expo registration
+      let token = null;
     
     console.log('🔔 DEBUG: Device check:', {
       isDevice: Device.isDevice,
@@ -71,6 +89,7 @@ export class NotificationService {
       try {
         const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
         console.log('🔔 DEBUG: Getting Expo push token with project ID:', projectId);
+        console.log('⚠️ WARNING: This will fail without Firebase FCM configuration');
         
         const tokenResponse = await Notifications.getExpoPushTokenAsync({
           projectId: projectId,
@@ -83,7 +102,8 @@ export class NotificationService {
           data: tokenResponse.data
         });
       } catch (error) {
-        console.error('❌ DEBUG: Error getting push token:', error);
+        console.error('❌ DEBUG: Error getting push token (Firebase FCM required):', error);
+        console.log('💡 SOLUTION: Either configure Firebase FCM or use local notifications only');
         if (error instanceof Error) {
           console.error('❌ DEBUG: Error details:', {
             message: error.message,
@@ -95,8 +115,9 @@ export class NotificationService {
       console.log('⚠️ DEBUG: Not a physical device - push notifications not available');
     }
 
-    console.log('🔔 DEBUG: registerForPushNotificationsAsync completed, token:', token ? 'RECEIVED' : 'NULL');
-    return token;
+      console.log('🔔 DEBUG: registerForPushNotificationsAsync completed, token:', token ? 'RECEIVED' : 'NULL');
+      return token;
+    }
   }
 
   static async savePushToken(userId: string, token: string): Promise<void> {
@@ -190,53 +211,20 @@ export class NotificationService {
     data?: NotificationData
   ): Promise<boolean> {
     try {
-      // Get the initialized Supabase client
-      const supabase = getSupabase();
-      
-      // Get the recipient's push token from the database
-      const { data: tokenData, error } = await supabase
-        .from('user_push_tokens')
-        .select('push_token')
-        .eq('user_id', recipientUserId)
-        .single();
-
-      if (error || !tokenData?.push_token) {
-        console.log('No push token found for user:', recipientUserId);
-        return false;
-      }
-
-      // Send the push notification using Expo's push service
-      const message = {
-        to: tokenData.push_token,
-        sound: 'default',
-        title: title,
-        body: body,
-        data: data || {},
-        channelId: 'default',
-      };
-
-      const response = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Accept-encoding': 'gzip, deflate',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message),
-      });
-
-      const result = await response.json();
-      
-      if (result.data?.status === 'ok') {
-        console.log('Push notification sent successfully');
-        return true;
-      } else {
-        console.error('Failed to send push notification:', result);
-        return false;
-      }
+      // Use the Firebase notification service for reliable push notifications
+      const { FirebaseNotificationService } = await import('./firebaseNotificationService');
+      return await FirebaseNotificationService.sendPushNotification(recipientUserId, title, body, data);
     } catch (error) {
-      console.error('Error sending push notification:', error);
-      return false;
+      console.error('Error sending push notification via Firebase:', error);
+      
+      // Fallback to local notification if Firebase fails
+      console.log('Falling back to local notification...');
+      try {
+        await this.scheduleLocalNotification(title, body, data);
+        return true;
+      } catch {
+        return false;
+      }
     }
   }
 

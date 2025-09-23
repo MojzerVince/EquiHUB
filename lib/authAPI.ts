@@ -575,11 +575,11 @@ export class AuthAPI {
 
       const supabase = getSupabase();
 
-      // Check if user already exists
+      // Check if user already exists by Google ID
       const { data: existingUser, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('email', googleUser.email)
+        .eq('google_id', googleUser.id)
         .single();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
@@ -637,11 +637,11 @@ export class AuthAPI {
 
       const supabase = getSupabase();
 
-      // Check if user already exists
+      // Check if user already exists by Google ID
       const { data: existingUser, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('email', googleUser.email)
+        .eq('google_id', googleUser.id)
         .single();
 
       if (existingUser) {
@@ -657,13 +657,14 @@ export class AuthAPI {
       const { data: newUser, error: insertError } = await supabase
         .from('profiles')
         .insert([{
-          email: googleUser.email,
           name: profileData.name,
           age: profileData.age,
           description: profileData.description || '',
-          riding_experience: profileData.riding_experience || 0,
+          experience: profileData.riding_experience || 0, // Use 'experience' instead of 'riding_experience'
           auth_provider: 'google',
-          google_id: googleUser.id
+          google_id: googleUser.id,
+          social_provider_id: googleUser.id,
+          profile_image_url: googleUser.picture || null
         }])
         .select()
         .single();
