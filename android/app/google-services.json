@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "645905000706",
+    "project_id": "equihub-468611",
+    "storage_bucket": "equihub-468611.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:645905000706:android:b53f07082d3174c3effa1b",
+        "android_client_info": {
+          "package_name": "com.mojzi1969.EquiHUB"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "645905000706-r5d9rejr3lakueqrhl1tk7ldmpv2jt2v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mojzi1969.EquiHUB",
+            "certificate_hash": "18b2ac7c023384b478659c7ba7d090149d2a35cc"
+          }
+        },
+        {
+          "client_id": "645905000706-84poben7qoa735imq8ukp765ho5k0d97.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1e4kBwPkVtMZsnTA2dvLW6v3sgaRQfsM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "645905000706-84poben7qoa735imq8ukp765ho5k0d97.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
