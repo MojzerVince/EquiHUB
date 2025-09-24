@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
+import { NotificationService } from "./notificationService";
 import { getSupabase } from "./supabase";
 import { UserAPI, UserSearchResult } from "./userAPI";
 
@@ -189,12 +190,40 @@ export class EmergencyFriendsAPI {
         emergencyType: 'fall_detection',
       };
 
-      // Send local notification (this will be seen by the current user's friends if they have the app)
+      // Send push notifications to each emergency friend's device
+      let notificationsSent = 0;
+      for (const friend of enabledFriends) {
+        try {
+          const success = await NotificationService.sendPushNotification(
+            friend.friendId,
+            "🚨 Fall Detection Alert",
+            `${riderName} may have fallen while riding. Tap to view location.`,
+            {
+              type: 'emergency_alert',
+              senderId: userId,
+              senderName: riderName,
+              message: `${riderName} may have fallen while riding. Tap to view location.`,
+              emergencyData: notificationData,
+            } as any
+          );
+
+          if (success) {
+            notificationsSent++;
+            console.log(`✅ Emergency notification sent to ${friend.name} (${friend.friendId})`);
+          } else {
+            console.warn(`❌ Failed to send emergency notification to ${friend.name} (${friend.friendId})`);
+          }
+        } catch (error) {
+          console.error(`❌ Error sending notification to ${friend.name}:`, error);
+        }
+      }
+
+      // Also send a local confirmation notification to the fallen user
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "🚨 Fall Detection Alert",
-          body: `${riderName} may have fallen while riding. Tap to view location.`,
-          data: notificationData as any,
+          title: "🚨 Emergency Alert Sent",
+          body: `Emergency notification sent to ${notificationsSent} friend${notificationsSent !== 1 ? 's' : ''}.`,
+          data: { type: 'emergency_confirmation' } as any,
           sound: true,
           priority: Notifications.AndroidNotificationPriority.MAX,
         },
@@ -208,10 +237,10 @@ export class EmergencyFriendsAPI {
         console.warn("Failed to log notification event:", logError);
       }
 
-      console.log(`✅ Fall detection notification sent to ${enabledFriends.length} emergency friends`);
+      console.log(`✅ Fall detection notification sent to ${notificationsSent}/${enabledFriends.length} emergency friends`);
       return {
-        success: true,
-        notifiedCount: enabledFriends.length,
+        success: notificationsSent > 0,
+        notifiedCount: notificationsSent,
       };
     } catch (error) {
       console.error("❌ Error sending fall detection notification:", error);
@@ -256,12 +285,40 @@ export class EmergencyFriendsAPI {
         emergencyType: 'manual_emergency',
       };
 
-      // Send local notification
+      // Send push notifications to each emergency friend's device
+      let notificationsSent = 0;
+      for (const friend of enabledFriends) {
+        try {
+          const success = await NotificationService.sendPushNotification(
+            friend.friendId,
+            "🆘 Emergency Alert",
+            `${riderName}: ${message}`,
+            {
+              type: 'emergency_alert',
+              senderId: userId,
+              senderName: riderName,
+              message: `${riderName}: ${message}`,
+              emergencyData: notificationData,
+            } as any
+          );
+
+          if (success) {
+            notificationsSent++;
+            console.log(`✅ Manual emergency notification sent to ${friend.name} (${friend.friendId})`);
+          } else {
+            console.warn(`❌ Failed to send manual emergency notification to ${friend.name} (${friend.friendId})`);
+          }
+        } catch (error) {
+          console.error(`❌ Error sending notification to ${friend.name}:`, error);
+        }
+      }
+
+      // Also send a local confirmation notification to the sender
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "🆘 Emergency Alert",
-          body: `${riderName}: ${message}`,
-          data: notificationData as any,
+          title: "🆘 Emergency Alert Sent",
+          body: `Emergency notification sent to ${notificationsSent} friend${notificationsSent !== 1 ? 's' : ''}.`,
+          data: { type: 'emergency_confirmation' } as any,
           sound: true,
           priority: Notifications.AndroidNotificationPriority.MAX,
         },
@@ -275,10 +332,10 @@ export class EmergencyFriendsAPI {
         console.warn("Failed to log notification event:", logError);
       }
 
-      console.log(`✅ Manual emergency notification sent to ${enabledFriends.length} emergency friends`);
+      console.log(`✅ Manual emergency notification sent to ${notificationsSent}/${enabledFriends.length} emergency friends`);
       return {
-        success: true,
-        notifiedCount: enabledFriends.length,
+        success: notificationsSent > 0,
+        notifiedCount: notificationsSent,
       };
     } catch (error) {
       console.error("❌ Error sending manual emergency notification:", error);
