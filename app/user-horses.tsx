@@ -213,6 +213,23 @@ const UserHorsesScreen = () => {
           { backgroundColor: currentTheme.colors.surface },
         ]}
       >
+        {/* Temporary Settings Button - Only show for own profile */}
+        {isOwnProfile && (
+          <View style={styles.tempButtonContainer}>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/options")}
+              style={[
+                styles.tempSettingsButton,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
+            >
+              <Text style={styles.tempButtonText}>
+                ⚙️ Go to Settings (Debug)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {error ? (
           <View style={styles.centered}>
             <Text
@@ -373,6 +390,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inder",
     marginBottom: 2,
+  },
+  // Temporary styles for settings button
+  tempButtonContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 5,
+  },
+  tempSettingsButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tempButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
   },
 });
 
