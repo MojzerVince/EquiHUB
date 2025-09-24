@@ -11,7 +11,9 @@ import {
   Alert,
   Linking,
   Platform,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -75,7 +77,7 @@ export default function EmergencyNotificationScreen() {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, [params.data]); // Only depend on params.data, not the entire params object
 
   const openInGoogleMaps = () => {
     if (!emergencyData?.latitude || !emergencyData?.longitude) {
@@ -151,135 +153,149 @@ export default function EmergencyNotificationScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={[styles.container, { backgroundColor }]}>
-        <ActivityIndicator size="large" color={dangerColor} />
-        <ThemedText style={styles.loadingText}>
-          Loading emergency information...
-        </ThemedText>
-      </ThemedView>
+      <SafeAreaView style={[styles.container, { backgroundColor }]}>
+        <ThemedView style={[styles.container, { backgroundColor }]}>
+          <ActivityIndicator size="large" color={dangerColor} />
+          <ThemedText style={styles.loadingText}>
+            Loading emergency information...
+          </ThemedText>
+        </ThemedView>
+      </SafeAreaView>
     );
   }
 
   if (!emergencyData) {
     return (
-      <ThemedView style={[styles.container, { backgroundColor }]}>
-        <MaterialIcons name="error-outline" size={64} color={dangerColor} />
-        <ThemedText style={styles.errorText}>
-          Unable to load emergency data
-        </ThemedText>
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={() => router.back()}
-        >
-          <ThemedText style={styles.buttonText}>Go Back</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
+      <SafeAreaView style={[styles.container, { backgroundColor }]}>
+        <ThemedView style={[styles.container, { backgroundColor }]}>
+          <MaterialIcons name="error-outline" size={64} color={dangerColor} />
+          <ThemedText style={styles.errorText}>
+            Unable to load emergency data
+          </ThemedText>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => router.back()}
+          >
+            <ThemedText style={styles.buttonText}>Go Back</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ThemedView style={[styles.container, { backgroundColor }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Emergency Header */}
-        <View
-          style={[styles.emergencyHeader, { backgroundColor: dangerColor }]}
-        >
-          <MaterialIcons name="warning" size={48} color="white" />
-          <Text style={styles.emergencyTitle}>EMERGENCY ALERT</Text>
-          <Text style={styles.emergencySubtitle}>Fall Detected</Text>
-        </View>
-
-        {/* Rider Information */}
-        <View style={[styles.card, { backgroundColor: cardColor }]}>
-          <View style={styles.cardHeader}>
-            <MaterialIcons name="person" size={24} color={textColor} />
-            <ThemedText style={styles.cardTitle}>Rider Information</ThemedText>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
+      <ThemedView style={[styles.container, { backgroundColor }]}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Emergency Header */}
+          <View
+            style={[styles.emergencyHeader, { backgroundColor: dangerColor }]}
+          >
+            <MaterialIcons name="warning" size={48} color="white" />
+            <Text style={styles.emergencyTitle}>EMERGENCY ALERT</Text>
+            <Text style={styles.emergencySubtitle}>Fall Detected</Text>
           </View>
-          <ThemedText style={styles.riderName}>
-            {emergencyData.riderName}
-          </ThemedText>
-          <ThemedText style={styles.timestamp}>
-            Alert Time: {formatTime(emergencyData.timestamp)}
-          </ThemedText>
-        </View>
 
-        {/* Emergency Message */}
-        <View style={[styles.card, { backgroundColor: cardColor }]}>
-          <View style={styles.cardHeader}>
-            <MaterialIcons name="message" size={24} color={textColor} />
-            <ThemedText style={styles.cardTitle}>Emergency Details</ThemedText>
-          </View>
-          <ThemedText style={styles.emergencyMessage}>
-            {emergencyData.message}
-          </ThemedText>
-        </View>
-
-        {/* Location Information */}
-        {emergencyData.latitude && emergencyData.longitude ? (
+          {/* Rider Information */}
           <View style={[styles.card, { backgroundColor: cardColor }]}>
             <View style={styles.cardHeader}>
-              <MaterialIcons name="location-on" size={24} color={textColor} />
-              <ThemedText style={styles.cardTitle}>Location</ThemedText>
+              <MaterialIcons name="person" size={24} color={textColor} />
+              <ThemedText style={styles.cardTitle}>
+                Rider Information
+              </ThemedText>
             </View>
-            <ThemedText style={styles.coordinates}>
-              {formatCoordinates(
-                emergencyData.latitude,
-                emergencyData.longitude
-              )}
+            <ThemedText style={styles.riderName}>
+              {emergencyData.riderName}
             </ThemedText>
+            <ThemedText style={styles.timestamp}>
+              Alert Time: {formatTime(emergencyData.timestamp)}
+            </ThemedText>
+          </View>
+
+          {/* Emergency Message */}
+          <View style={[styles.card, { backgroundColor: cardColor }]}>
+            <View style={styles.cardHeader}>
+              <MaterialIcons name="message" size={24} color={textColor} />
+              <ThemedText style={styles.cardTitle}>
+                Emergency Details
+              </ThemedText>
+            </View>
+            <ThemedText style={styles.emergencyMessage}>
+              {emergencyData.message}
+            </ThemedText>
+          </View>
+
+          {/* Location Information */}
+          {emergencyData.latitude && emergencyData.longitude ? (
+            <View style={[styles.card, { backgroundColor: cardColor }]}>
+              <View style={styles.cardHeader}>
+                <MaterialIcons name="location-on" size={24} color={textColor} />
+                <ThemedText style={styles.cardTitle}>Location</ThemedText>
+              </View>
+              <ThemedText style={styles.coordinates}>
+                {formatCoordinates(
+                  emergencyData.latitude,
+                  emergencyData.longitude
+                )}
+              </ThemedText>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.primaryButton,
+                  { backgroundColor: primaryColor },
+                ]}
+                onPress={openInGoogleMaps}
+              >
+                <MaterialIcons name="map" size={20} color="white" />
+                <Text style={styles.buttonTextWhite}>Open in Maps</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={[styles.card, { backgroundColor: cardColor }]}>
+              <View style={styles.cardHeader}>
+                <MaterialIcons
+                  name="location-off"
+                  size={24}
+                  color={textColor}
+                />
+                <ThemedText style={styles.cardTitle}>Location</ThemedText>
+              </View>
+              <ThemedText style={styles.noLocation}>
+                Location data not available
+              </ThemedText>
+            </View>
+          )}
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[
                 styles.button,
-                styles.primaryButton,
-                { backgroundColor: primaryColor },
+                styles.emergencyButton,
+                { backgroundColor: dangerColor },
               ]}
-              onPress={openInGoogleMaps}
+              onPress={callEmergencyServices}
             >
-              <MaterialIcons name="map" size={20} color="white" />
-              <Text style={styles.buttonTextWhite}>Open in Maps</Text>
+              <MaterialIcons name="phone" size={20} color="white" />
+              <Text style={styles.buttonTextWhite}>Call 911</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.button,
+                styles.secondaryButton,
+                { borderColor: textColor },
+              ]}
+              onPress={() => router.back()}
+            >
+              <ThemedText style={[styles.buttonText, { color: textColor }]}>
+                Close
+              </ThemedText>
             </TouchableOpacity>
           </View>
-        ) : (
-          <View style={[styles.card, { backgroundColor: cardColor }]}>
-            <View style={styles.cardHeader}>
-              <MaterialIcons name="location-off" size={24} color={textColor} />
-              <ThemedText style={styles.cardTitle}>Location</ThemedText>
-            </View>
-            <ThemedText style={styles.noLocation}>
-              Location data not available
-            </ThemedText>
-          </View>
-        )}
-
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.emergencyButton,
-              { backgroundColor: dangerColor },
-            ]}
-            onPress={callEmergencyServices}
-          >
-            <MaterialIcons name="phone" size={20} color="white" />
-            <Text style={styles.buttonTextWhite}>Call 911</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.secondaryButton,
-              { borderColor: textColor },
-            ]}
-            onPress={() => router.back()}
-          >
-            <ThemedText style={[styles.buttonText, { color: textColor }]}>
-              Close
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </ThemedView>
+        </ScrollView>
+      </ThemedView>
+    </SafeAreaView>
   );
 }
 
@@ -289,6 +305,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
+    paddingTop: StatusBar.currentHeight,
+    paddingBottom: 40,
   },
   loadingText: {
     textAlign: "center",
