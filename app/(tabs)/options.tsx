@@ -9,6 +9,7 @@ import {
 } from "@/lib/emergencyFriendsAPI";
 import { FeedbackAPI } from "@/lib/feedbackAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
+import { NotificationService } from "@/lib/notificationService";
 import { UserSearchResult } from "@/lib/userAPI";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
@@ -333,8 +334,9 @@ const OptionsScreen = () => {
   // About state
   const [showAbout, setShowAbout] = useState(false);
 
-  // Debug state (only in development)
+  // Debug state (publicly available for token testing)
   const [isSimulatingFall, setIsSimulatingFall] = useState(false);
+  const [isRetryingPushToken, setIsRetryingPushToken] = useState(false);
 
   // Load notification settings when component mounts
   useEffect(() => {
@@ -845,6 +847,71 @@ ${
     }
   };
 
+  // Retry push token registration
+  const handleRetryPushToken = async () => {
+    if (!user?.id) {
+      Alert.alert("Error", "User not logged in");
+      return;
+    }
+
+    setIsRetryingPushToken(true);
+
+    try {
+      console.log("🔄 DEBUG: Retrying push token registration...");
+
+      // Get push token
+      const token =
+        await NotificationService.registerForPushNotificationsAsync();
+
+      if (token) {
+        // Store token in Supabase
+        await NotificationService.savePushToken(user.id, token);
+
+        const debugMessage = `
+🔄 PUSH TOKEN RETRY RESULTS:
+
+✓ Token Generated: ${token ? "YES" : "NO"}
+✓ Token Length: ${token ? token.length : 0}
+✓ Token Prefix: ${token ? token.substring(0, 20) + "..." : "NO_TOKEN"}
+✓ Database Storage: SUCCESS
+✓ User ID: ${user.id}
+
+✅ Token registration completed successfully!
+
+${
+  token
+    ? "Your device should now receive push notifications!"
+    : "Token registration failed - check device settings."
+}
+        `.trim();
+
+        Alert.alert("🔄 Push Token Retry", debugMessage, [
+          { text: "OK", style: "default" },
+        ]);
+
+        console.log("🔄 DEBUG: Push token retry completed:", {
+          token: token?.substring(0, 20) + "...",
+        });
+      } else {
+        Alert.alert(
+          "Push Token Failed",
+          "Could not get push token. Please check:\n• App permissions\n• Device settings\n• Network connection"
+        );
+        console.log("🔄 DEBUG: No push token received");
+      }
+    } catch (error) {
+      console.error("🔄 DEBUG: Push token retry error:", error);
+      Alert.alert(
+        "Retry Error",
+        `Push token retry failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsRetryingPushToken(false);
+    }
+  };
+
   const SettingItem = ({
     title,
     subtitle,
@@ -1204,6 +1271,24 @@ ${
                     backgroundColor: isSimulatingFall
                       ? currentTheme.colors.textSecondary
                       : currentTheme.colors.warning,
+                  },
+                ]}
+                textStyle={{ color: "#fff", fontWeight: "bold" }}
+              />
+              <ActionButton
+                title={
+                  isRetryingPushToken
+                    ? "Retrying Push Token..."
+                    : "🔄 Retry Push Token Registration"
+                }
+                onPress={handleRetryPushToken}
+                disabled={isRetryingPushToken}
+                showLoading={isRetryingPushToken}
+                style={[
+                  {
+                    backgroundColor: isRetryingPushToken
+                      ? currentTheme.colors.textSecondary
+                      : currentTheme.colors.primary,
                   },
                 ]}
                 textStyle={{ color: "#fff", fontWeight: "bold" }}
