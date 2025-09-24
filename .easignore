@@ -1,0 +1,42 @@
+# Node modules - EAS úgyis telepíti
+node_modules
+
+# Build output
+android/build
+android/.gradle
+ios/build
+web-build
+dist
+
+# Expo cache
+.expo
+.expo-shared
+
+# Git
+.git
+.gitignore
+
+# Logs
+*.log
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Gradle caches
+.gradle
+**/.gradle
+**/build
+
+assets/**/*.mp4
+assets/**/*.mov
+assets/**/*.zip
+
+
+# Teljes android mappa build outputja
+android/.gradle
+android/build
+android/app/build
+
+# Ha nagyon biztosra akarsz menni
+**/build
+**/.gradle
