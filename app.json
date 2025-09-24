@@ -25,7 +25,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
-      "versionCode": 40,
+      "versionCode": 41,
       "permissions": [
         "INTERNET",
         "FOREGROUND_SERVICE",
