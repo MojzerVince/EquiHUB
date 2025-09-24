@@ -83,6 +83,15 @@ export class NotificationService {
       
       console.log(`🔔 DEBUG: Device info:`, deviceInfo);
       
+      // Debug: Let's see ALL tokens in the database
+      const { data: allTokensInDB } = await supabase
+        .from('user_push_tokens')
+        .select('user_id, push_token, is_active, created_at')
+        .order('created_at', { ascending: false });
+      
+      console.log(`🔔 DEBUG: ALL tokens in database:`, allTokensInDB);
+      console.log(`🔔 DEBUG: Looking for user_id: ${userId}`);
+      
       // First, check if this exact combination already exists
       const { data: existingToken } = await supabase
         .from('user_push_tokens')
@@ -154,6 +163,10 @@ export class NotificationService {
       // Get the initialized Supabase client
       const supabase = getSupabase();
       
+      // Debug: Check current auth context
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log(`🔔 DEBUG: Current auth session user:`, session?.user?.id || 'No session');
+      
       // First, let's check all tokens for this user (with debug info)
       const { data: allTokens, error: debugError } = await supabase
         .from('user_push_tokens')
@@ -161,6 +174,16 @@ export class NotificationService {
         .eq('user_id', recipientUserId);
       
       console.log(`🔔 DEBUG: Found ${allTokens?.length || 0} total tokens for user ${recipientUserId}:`, allTokens);
+      console.log(`🔔 DEBUG: Debug query error:`, debugError);
+      
+      // Let's also try to get tokens without user_id filter to see if RLS is blocking
+      const { data: allTokensNoFilter, error: noFilterError } = await supabase
+        .from('user_push_tokens')
+        .select('user_id, push_token, is_active')
+        .limit(10);
+      
+      console.log(`🔔 DEBUG: All tokens in DB (no filter):`, allTokensNoFilter);
+      console.log(`🔔 DEBUG: No filter query error:`, noFilterError);
       
       // Also check if this user exists in profiles table
       const { data: profileData } = await supabase
@@ -178,20 +201,19 @@ export class NotificationService {
         .eq('user_id', recipientUserId)
         .eq('is_active', true)
         .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
       if (error) {
         console.error('🔔 DEBUG: Database error getting push token:', error);
         return false;
       }
 
-      if (!tokenData?.push_token) {
+      if (!tokenData || tokenData.length === 0) {
         console.log('🔔 DEBUG: No active push token found for user:', recipientUserId);
         return false;
       }
 
-      const pushToken = tokenData.push_token;
+      const pushToken = tokenData[0].push_token;
       console.log(`🔔 DEBUG: Found push token: ${pushToken.substring(0, 20)}...`);
 
       // Validate token format (Expo push tokens should start with ExponentPushToken)
