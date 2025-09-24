@@ -775,14 +775,6 @@ const OptionsScreen = () => {
 
   // DEBUG ONLY: Simulate fall detection for testing
   const handleSimulateFallDetection = async () => {
-    if (!__DEV__) {
-      Alert.alert(
-        "Debug Only",
-        "This feature is only available in development mode."
-      );
-      return;
-    }
-
     if (!user?.id) {
       Alert.alert("Error", "User not logged in");
       return;
@@ -1185,44 +1177,39 @@ ${
             </View>
           </View>
 
-          {/* Debug Section - Only visible in development */}
-          {__DEV__ && (
-            <View style={styles.section}>
-              <Text
+          {/* Debug Section - Token debugging temporarily available to all users */}
+          <View style={styles.section}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              🧪 Debug Tools (Token Testing)
+            </Text>
+            <View
+              style={[
+                styles.sectionContent,
+                { backgroundColor: currentTheme.colors.surface },
+              ]}
+            >
+              <ActionButton
+                title={
+                  isSimulatingFall
+                    ? "Simulating Fall..."
+                    : "🚨 Test Fall Detection"
+                }
+                onPress={handleSimulateFallDetection}
+                disabled={isSimulatingFall}
+                showLoading={isSimulatingFall}
                 style={[
-                  styles.sectionTitle,
-                  { color: currentTheme.colors.text },
+                  {
+                    backgroundColor: isSimulatingFall
+                      ? currentTheme.colors.textSecondary
+                      : currentTheme.colors.warning,
+                  },
                 ]}
-              >
-                🧪 Debug Tools (Development Only)
-              </Text>
-              <View
-                style={[
-                  styles.sectionContent,
-                  { backgroundColor: currentTheme.colors.surface },
-                ]}
-              >
-                <ActionButton
-                  title={
-                    isSimulatingFall
-                      ? "Simulating Fall..."
-                      : "🚨 Test Fall Detection"
-                  }
-                  onPress={handleSimulateFallDetection}
-                  disabled={isSimulatingFall}
-                  showLoading={isSimulatingFall}
-                  style={[
-                    {
-                      backgroundColor: isSimulatingFall
-                        ? currentTheme.colors.textSecondary
-                        : currentTheme.colors.warning,
-                    },
-                  ]}
-                  textStyle={{ color: "#fff", fontWeight: "bold" }}
-                />
-              </View>
+                textStyle={{ color: "#fff", fontWeight: "bold" }}
+              />
             </View>
-          )}
+          </View>
 
           {/* Privacy Settings Section */}
           <View style={styles.section}>
