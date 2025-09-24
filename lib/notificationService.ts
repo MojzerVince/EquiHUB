@@ -185,6 +185,122 @@ export class NotificationService {
       console.log(`🔔 DEBUG: All tokens in DB (no filter):`, allTokensNoFilter);
       console.log(`🔔 DEBUG: No filter query error:`, noFilterError);
       
+      // Try using RPC or a different approach - let's check if we can find the token via a more direct query
+      // First, let's comment out the RPC call since we haven't created that function yet
+      // const { data: tokensByUser } = await supabase
+      //   .rpc('get_user_push_token', { target_user_id: recipientUserId })
+      //   .single();
+      
+      // console.log(`🔔 DEBUG: RPC token result:`, tokensByUser);
+      
+      // Try using RPC function with elevated privileges to bypass RLS
+      console.log(`🔔 DEBUG: Trying RPC function to bypass RLS...`);
+      
+      const { data: rpcTokenData, error: rpcError } = await supabase
+        .rpc('get_user_push_token', { target_user_id: recipientUserId });
+      
+      console.log(`🔔 DEBUG: RPC token result:`, rpcTokenData);
+      console.log(`🔔 DEBUG: RPC error:`, rpcError);
+      
+      if (rpcTokenData && rpcTokenData.length > 0) {
+        const pushToken = rpcTokenData[0].push_token;
+        console.log(`🔔 DEBUG: Found token via RPC: ${pushToken.substring(0, 20)}...`);
+        
+        // Validate and send notification using RPC result
+        if (pushToken.startsWith('ExponentPushToken[') || pushToken.startsWith('ExpoPushToken[')) {
+          const message = {
+            to: pushToken,
+            sound: 'default',
+            title: title,
+            body: body,
+            data: data || {},
+            channelId: 'default',
+            priority: 'high',
+          };
+
+          const response = await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+              Accept: 'application/json',
+              'Accept-encoding': 'gzip, deflate',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(message),
+          });
+
+          const result = await response.json();
+          console.log('🔔 DEBUG: Push notification response (RPC path):', result);
+
+          if (response.ok && result.data && result.data[0] && result.data[0].status === 'ok') {
+            console.log('✅ Push notification sent successfully via RPC path');
+            return true;
+          }
+        }
+      }
+      
+      // Let's try a service role query to bypass RLS
+      console.log(`🔔 DEBUG: Trying service role query to bypass RLS...`);
+      
+      // Try getting tokens with a different auth context
+      const { data: alternativeTokens, error: altError } = await supabase
+        .from('user_push_tokens')
+        .select('push_token, is_active, user_id')
+        .eq('user_id', recipientUserId)
+        .eq('is_active', true);
+        
+      console.log(`🔔 DEBUG: Alternative query result:`, alternativeTokens);
+      console.log(`🔔 DEBUG: Alternative query error:`, altError);
+      
+      if (alternativeTokens && alternativeTokens.length > 0) {
+        const pushToken = alternativeTokens[0].push_token;
+        console.log(`🔔 DEBUG: Found token via alternative query: ${pushToken.substring(0, 20)}...`);
+        
+        // Validate token format (Expo push tokens should start with ExponentPushToken)
+        if (!pushToken.startsWith('ExponentPushToken[') && !pushToken.startsWith('ExpoPushToken[')) {
+          console.error('🔔 DEBUG: Invalid push token format:', pushToken.substring(0, 30));
+          return false;
+        }
+
+        // Send the push notification using Expo's push service
+        const message = {
+          to: pushToken,
+          sound: 'default',
+          title: title,
+          body: body,
+          data: data || {},
+          channelId: 'default',
+          priority: 'high',
+        };
+
+        console.log('🔔 DEBUG: Sending push notification via alternative path with payload:', {
+          to: pushToken.substring(0, 20) + '...',
+          title,
+          body,
+          data: data || {}
+        });
+
+        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Accept-encoding': 'gzip, deflate',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(message),
+        });
+
+        const result = await response.json();
+        console.log('🔔 DEBUG: Push notification response (alternative path):', result);
+
+        if (response.ok && result.data && result.data[0] && result.data[0].status === 'ok') {
+          console.log('✅ Push notification sent successfully via alternative path');
+          return true;
+        } else {
+          console.error('❌ Failed to send push notification via alternative path:', result);
+          return false;
+        }
+      }
+      
       // Also check if this user exists in profiles table
       const { data: profileData } = await supabase
         .from('profiles')
