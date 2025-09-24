@@ -422,17 +422,46 @@ export class BackgroundFallDetectionAPI {
         return true; // Default to allowing
       }
 
-      // Calculate total distance in the relevant time window
+      // Calculate total distance in the relevant time window with GPS filtering
       let totalDistance = 0;
-      for (let i = 1; i < relevantLocations.length; i++) {
-        const point1 = relevantLocations[i - 1];
-        const point2 = relevantLocations[i];
+      let validPoints = [];
+      
+      // First, filter out poor quality GPS points
+      for (let i = 0; i < relevantLocations.length; i++) {
+        const point = relevantLocations[i];
+        const previousPoint = i > 0 ? validPoints[validPoints.length - 1] : null;
+        
+        if (MovementTracker.isValidLocationPoint(point, previousPoint)) {
+          validPoints.push(point);
+        }
+      }
+
+      if (validPoints.length < 2) {
+        console.log("Background pre-fall: Insufficient valid GPS points after filtering");
+        return true; // Default to allowing if insufficient valid data
+      }
+
+      // Calculate distance using filtered points
+      for (let i = 1; i < validPoints.length; i++) {
+        const point1 = validPoints[i - 1];
+        const point2 = validPoints[i];
         const distance = MovementTracker.calculateDistance(point1, point2);
         totalDistance += distance;
       }
 
-      console.log(`Background pre-fall movement check: ${totalDistance.toFixed(1)}m in past 15 seconds`);
-      return totalDistance > 25;
+      // Calculate average GPS accuracy for adaptive threshold
+      const accuracySum = validPoints
+        .filter(p => p.accuracy !== undefined)
+        .reduce((sum, p) => sum + (p.accuracy || 0), 0);
+      const averageAccuracy = validPoints.length > 0 ? accuracySum / validPoints.length : undefined;
+      
+      // Use adaptive threshold based on GPS accuracy
+      const adaptiveThreshold = MovementTracker.getAdaptiveThreshold(averageAccuracy, 25);
+      const signalQuality = MovementTracker.getGPSSignalQuality(averageAccuracy);
+
+      console.log(`Background pre-fall movement check: ${totalDistance.toFixed(1)}m vs ${adaptiveThreshold.toFixed(1)}m threshold (GPS: ${signalQuality})`);
+      
+      return totalDistance > adaptiveThreshold;
 
     } catch (error) {
       console.error("Error checking background pre-fall movement:", error);
@@ -729,15 +758,15 @@ export class BackgroundFallDetectionAPI {
       const now = Date.now();
       const monitoringDuration = now - monitoringStartTime;
 
-      // Get movement data from the monitoring period
-      const movementDistance = await this.calculateMovementDuringPeriod(monitoringStartTime, now);
+      // Get movement data from the monitoring period with adaptive thresholds
+      const movementResult = await this.calculateMovementDuringPeriodAdaptive(monitoringStartTime, now, 25);
       
-      console.log(`📊 Background post-fall movement analysis: ${movementDistance.toFixed(1)}m in ${monitoringDuration/1000}s`);
+      console.log(`📊 Background post-fall movement analysis: ${movementResult.distance.toFixed(1)}m vs ${movementResult.threshold.toFixed(1)}m adaptive threshold`);
 
-      // Decide based on movement
-      if (movementDistance < 25) {
-        // Little to no movement - confirmed fall, send alert
-        console.log("🚨 BACKGROUND FALL CONFIRMED: Movement < 25m - sending emergency alert");
+      // Decide based on adaptive movement threshold
+      if (!movementResult.exceeded) {
+        // Movement below adaptive threshold - confirmed fall, send alert
+        console.log(`🚨 BACKGROUND FALL CONFIRMED: Movement ${movementResult.distance.toFixed(1)}m < ${movementResult.threshold.toFixed(1)}m adaptive threshold - sending emergency alert`);
         const sensorData = {
           accelerometer: { x: 0, y: 0, z: 0 },
           gyroscope: { x: 0, y: 0, z: 0 },
@@ -747,15 +776,15 @@ export class BackgroundFallDetectionAPI {
         };
         await this.processBackgroundConfirmedFall(userId, sensorData);
       } else {
-        // Significant movement - rider likely recovered, dismiss alert
-        console.log("✅ BACKGROUND FALL DISMISSED: Movement >= 25m - rider appears to have recovered");
+        // Movement above adaptive threshold - rider likely recovered, dismiss alert
+        console.log(`✅ BACKGROUND FALL DISMISSED: Movement ${movementResult.distance.toFixed(1)}m >= ${movementResult.threshold.toFixed(1)}m adaptive threshold - rider appears to have recovered`);
         await this.resetBackgroundState();
         
         // Send recovery notification
         await Notifications.scheduleNotificationAsync({
           content: {
             title: "Fall Alert Dismissed",
-            body: "Rider appears to have recovered (significant movement detected)",
+            body: `Rider recovered (movement ${movementResult.distance.toFixed(1)}m above ${movementResult.threshold.toFixed(1)}m threshold)`,
             sound: false,
           },
           trigger: null,
@@ -801,6 +830,77 @@ export class BackgroundFallDetectionAPI {
     } catch (error) {
       console.error("Error calculating movement during period:", error);
       return 0;
+    }
+  }
+
+  // Calculate movement during a specific time period with adaptive threshold based on GPS accuracy
+  private static async calculateMovementDuringPeriodAdaptive(
+    startTime: number, 
+    endTime: number, 
+    baseThreshold: number
+  ): Promise<{distance: number, threshold: number, exceeded: boolean}> {
+    try {
+      const movementHistoryData = await AsyncStorage.getItem("movement_tracker_history");
+      if (!movementHistoryData) {
+        console.warn("No movement history available for adaptive period calculation");
+        return { distance: 0, threshold: baseThreshold, exceeded: false };
+      }
+
+      const locationHistory = JSON.parse(movementHistoryData);
+      const relevantLocations = locationHistory.filter(
+        (loc: any) => loc.timestamp >= startTime && loc.timestamp <= endTime
+      );
+
+      if (relevantLocations.length < 2) {
+        return { distance: 0, threshold: baseThreshold, exceeded: false };
+      }
+
+      // Filter out poor quality GPS points
+      let validPoints = [];
+      for (let i = 0; i < relevantLocations.length; i++) {
+        const point = relevantLocations[i];
+        const previousPoint = i > 0 ? validPoints[validPoints.length - 1] : null;
+        
+        if (MovementTracker.isValidLocationPoint(point, previousPoint)) {
+          validPoints.push(point);
+        }
+      }
+
+      if (validPoints.length < 2) {
+        console.log("Background adaptive: Insufficient valid GPS points after filtering");
+        return { distance: 0, threshold: baseThreshold, exceeded: false };
+      }
+
+      // Calculate total distance using filtered points
+      let totalDistance = 0;
+      for (let i = 1; i < validPoints.length; i++) {
+        const point1 = validPoints[i - 1];
+        const point2 = validPoints[i];
+        const distance = MovementTracker.calculateDistance(point1, point2);
+        totalDistance += distance;
+      }
+
+      // Calculate average GPS accuracy for adaptive threshold
+      const accuracySum = validPoints
+        .filter(p => p.accuracy !== undefined)
+        .reduce((sum, p) => sum + (p.accuracy || 0), 0);
+      const averageAccuracy = validPoints.length > 0 ? accuracySum / validPoints.length : undefined;
+      
+      // Use adaptive threshold based on GPS accuracy
+      const adaptiveThreshold = MovementTracker.getAdaptiveThreshold(averageAccuracy, baseThreshold);
+      const signalQuality = MovementTracker.getGPSSignalQuality(averageAccuracy);
+
+      console.log(`Background adaptive calculation: ${totalDistance.toFixed(1)}m vs ${adaptiveThreshold.toFixed(1)}m threshold (GPS: ${signalQuality})`);
+
+      return {
+        distance: totalDistance,
+        threshold: adaptiveThreshold,
+        exceeded: totalDistance > adaptiveThreshold
+      };
+
+    } catch (error) {
+      console.error("Error calculating adaptive movement during period:", error);
+      return { distance: 0, threshold: baseThreshold, exceeded: false };
     }
   }
 }

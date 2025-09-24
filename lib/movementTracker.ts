@@ -22,6 +22,112 @@ export class MovementTracker {
   private static isTracking = false;
   private static locationSubscription: any = null;
 
+  // GPS accuracy thresholds and adaptive parameters
+  private static readonly GOOD_ACCURACY_THRESHOLD = 10; // meters - good GPS signal
+  private static readonly FAIR_ACCURACY_THRESHOLD = 25; // meters - fair GPS signal
+  private static readonly POOR_ACCURACY_THRESHOLD = 50; // meters - poor GPS signal
+  private static readonly MIN_DISTANCE_FILTER = 5; // meters - minimum movement to consider
+
+  /**
+   * Get adaptive movement threshold based on GPS accuracy
+   * @param accuracy GPS accuracy in meters
+   * @param baseThreshold Base threshold (e.g., 25m)
+   * @returns Adjusted threshold accounting for GPS drift
+   */
+  static getAdaptiveThreshold(accuracy: number | undefined, baseThreshold: number): number {
+    if (!accuracy) {
+      // No accuracy data - assume poor signal, increase threshold significantly
+      return baseThreshold * 2.5;
+    }
+
+    if (accuracy <= this.GOOD_ACCURACY_THRESHOLD) {
+      // Good GPS signal - use base threshold
+      return baseThreshold;
+    } else if (accuracy <= this.FAIR_ACCURACY_THRESHOLD) {
+      // Fair GPS signal - increase threshold by 50%
+      return baseThreshold * 1.5;
+    } else if (accuracy <= this.POOR_ACCURACY_THRESHOLD) {
+      // Poor GPS signal - double the threshold
+      return baseThreshold * 2.0;
+    } else {
+      // Very poor GPS signal - triple the threshold
+      return baseThreshold * 3.0;
+    }
+  }
+
+  /**
+   * Filter out GPS points with poor accuracy or likely drift
+   * @param newPoint New location point to validate
+   * @param previousPoint Previous location point for drift detection
+   * @returns true if point should be kept, false if it should be filtered out
+   */
+  static isValidLocationPoint(newPoint: LocationPoint, previousPoint?: LocationPoint): boolean {
+    // Filter 1: Check GPS accuracy
+    if (newPoint.accuracy && newPoint.accuracy > this.POOR_ACCURACY_THRESHOLD * 2) {
+      console.log(`📍 Filtering location due to very poor accuracy: ${newPoint.accuracy.toFixed(1)}m`);
+      return false;
+    }
+
+    // Filter 2: Check for unrealistic movement speed (drift detection)
+    if (previousPoint) {
+      const distance = this.calculateDistance(previousPoint, newPoint);
+      const timeDiff = (newPoint.timestamp - previousPoint.timestamp) / 1000; // seconds
+      
+      if (timeDiff > 0) {
+        const speed = distance / timeDiff; // m/s
+        const maxRealisticSpeed = 25; // 25 m/s = 90 km/h (reasonable max for equestrian activities)
+        
+        if (speed > maxRealisticSpeed) {
+          console.log(`📍 Filtering location due to unrealistic speed: ${speed.toFixed(1)} m/s (${(speed * 3.6).toFixed(1)} km/h)`);
+          return false;
+        }
+      }
+
+      // Filter 3: Check for minimal movement with poor accuracy (drift)
+      if (newPoint.accuracy && newPoint.accuracy > this.FAIR_ACCURACY_THRESHOLD) {
+        if (distance < this.MIN_DISTANCE_FILTER) {
+          console.log(`📍 Filtering location due to minimal movement with poor accuracy: ${distance.toFixed(1)}m, accuracy: ${newPoint.accuracy.toFixed(1)}m`);
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Get average GPS accuracy from recent location points
+   * @param timeWindowMs Time window to consider (default: 60 seconds)
+   * @returns Average accuracy in meters, or undefined if no data
+   */
+  static getRecentGPSAccuracy(timeWindowMs: number = 60000): number | undefined {
+    const now = Date.now();
+    const recentPoints = this.locationHistory.filter(
+      point => (now - point.timestamp) <= timeWindowMs && point.accuracy !== undefined
+    );
+
+    if (recentPoints.length === 0) {
+      return undefined;
+    }
+
+    const totalAccuracy = recentPoints.reduce((sum, point) => sum + (point.accuracy || 0), 0);
+    return totalAccuracy / recentPoints.length;
+  }
+
+  /**
+   * Get GPS signal quality description
+   * @param accuracy GPS accuracy in meters
+   * @returns Human-readable signal quality
+   */
+  static getGPSSignalQuality(accuracy: number | undefined): string {
+    if (!accuracy) return "Unknown";
+    
+    if (accuracy <= this.GOOD_ACCURACY_THRESHOLD) return "Excellent";
+    if (accuracy <= this.FAIR_ACCURACY_THRESHOLD) return "Good";
+    if (accuracy <= this.POOR_ACCURACY_THRESHOLD) return "Fair";
+    return "Poor";
+  }
+
   /**
    * Calculate distance between two GPS coordinates using Haversine formula
    * Returns distance in meters
@@ -46,9 +152,24 @@ export class MovementTracker {
   }
 
   /**
-   * Add a new location point to the history
+   * Add a new location point to the history with GPS drift filtering
    */
   static addLocationPoint(location: LocationPoint): void {
+    // Get the previous location point for drift detection
+    const previousPoint = this.locationHistory.length > 0 
+      ? this.locationHistory[this.locationHistory.length - 1]
+      : undefined;
+
+    // Validate the new location point
+    if (!this.isValidLocationPoint(location, previousPoint)) {
+      console.log(`📍 Filtered out location point due to poor quality/drift`);
+      return;
+    }
+
+    // Log GPS quality for monitoring
+    const quality = this.getGPSSignalQuality(location.accuracy);
+    console.log(`📍 Added location point - Accuracy: ${location.accuracy?.toFixed(1) || 'N/A'}m (${quality})`);
+
     this.locationHistory.push(location);
     
     // Maintain history size
@@ -113,12 +234,24 @@ export class MovementTracker {
 
   /**
    * Check if rider was moving more than specified distance in the past timeWindow
+   * Uses adaptive thresholds based on GPS accuracy to account for drift
    * @param minDistance Minimum distance in meters (e.g., 25)
    * @param timeWindowMs Time window in milliseconds (e.g., 15000)
    */
   static wasMovingDistance(minDistance: number, timeWindowMs: number): boolean {
     const movementData = this.getMovementInTimeWindow(timeWindowMs);
-    return movementData.totalDistance > minDistance;
+    
+    // Get average GPS accuracy for the time window
+    const averageAccuracy = this.getRecentGPSAccuracy(timeWindowMs);
+    
+    // Calculate adaptive threshold based on GPS signal quality
+    const adaptiveThreshold = this.getAdaptiveThreshold(averageAccuracy, minDistance);
+    
+    const signalQuality = this.getGPSSignalQuality(averageAccuracy);
+    
+    console.log(`📍 Movement check: ${movementData.totalDistance.toFixed(1)}m measured, ${adaptiveThreshold.toFixed(1)}m required (GPS: ${signalQuality}, accuracy: ${averageAccuracy?.toFixed(1) || 'N/A'}m)`);
+    
+    return movementData.totalDistance > adaptiveThreshold;
   }
 
   /**
@@ -170,6 +303,33 @@ export class MovementTracker {
         }
       }, 2000); // Check every 2 seconds during monitoring
     });
+  }
+
+  /**
+   * Monitor movement for a specific duration and check if it exceeds adaptive threshold
+   * @param durationMs Duration to monitor in milliseconds
+   * @param baseThreshold Base threshold in meters (e.g., 25)
+   * @returns Promise<{distance: number, threshold: number, exceeded: boolean}>
+   */
+  static async monitorMovementWithAdaptiveThreshold(
+    durationMs: number, 
+    baseThreshold: number
+  ): Promise<{distance: number, threshold: number, exceeded: boolean}> {
+    const distance = await this.monitorMovementFor(durationMs);
+    
+    // Get average GPS accuracy during the monitoring period
+    const averageAccuracy = this.getRecentGPSAccuracy(durationMs);
+    const adaptiveThreshold = this.getAdaptiveThreshold(averageAccuracy, baseThreshold);
+    
+    const signalQuality = this.getGPSSignalQuality(averageAccuracy);
+    
+    console.log(`📍 Adaptive movement monitoring: ${distance.toFixed(1)}m measured vs ${adaptiveThreshold.toFixed(1)}m threshold (GPS: ${signalQuality})`);
+    
+    return {
+      distance,
+      threshold: adaptiveThreshold,
+      exceeded: distance > adaptiveThreshold
+    };
   }
 
   /**

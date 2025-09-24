@@ -378,23 +378,23 @@ export class FallDetectionAPI {
     this.isMonitoringPostFall = true;
     this.hasPendingAlert = true; // Prevent new detections during monitoring
     
-    console.log("⏳ Starting 15-second post-fall movement monitoring...");
+    console.log("⏳ Starting 15-second post-fall movement monitoring with adaptive GPS thresholds...");
 
-    // Monitor movement for 15 seconds
+    // Monitor movement for 15 seconds with adaptive thresholds
     try {
-      const movementDistance = await MovementTracker.monitorMovementFor(15000); // 15 seconds
+      const movementResult = await MovementTracker.monitorMovementWithAdaptiveThreshold(15000, 25); // 15 seconds, 25m base
       
-      console.log(`📊 Post-fall movement analysis: ${movementDistance.toFixed(1)}m in 15 seconds`);
+      console.log(`📊 Post-fall movement analysis: ${movementResult.distance.toFixed(1)}m measured vs ${movementResult.threshold.toFixed(1)}m adaptive threshold`);
 
-      // STEP 3: Decide based on post-fall movement
-      if (movementDistance < 25) {
-        // Little to no movement - confirmed fall, send alert
-        console.log("🚨 FALL CONFIRMED: Movement < 25m - sending emergency alert");
+      // STEP 3: Decide based on adaptive post-fall movement
+      if (!movementResult.exceeded) {
+        // Movement below adaptive threshold - confirmed fall, send alert
+        console.log(`🚨 FALL CONFIRMED: Movement ${movementResult.distance.toFixed(1)}m < ${movementResult.threshold.toFixed(1)}m adaptive threshold - sending emergency alert`);
         await this.processConfirmedFall(userId, magnitude, timestamp, hasRotation);
       } else {
-        // Significant movement - rider likely recovered, dismiss alert
-        console.log("✅ FALL DISMISSED: Movement >= 25m - rider appears to have recovered");
-        await this.dismissFallAlert("Rider recovered (significant movement detected)");
+        // Movement above adaptive threshold - rider likely recovered, dismiss alert
+        console.log(`✅ FALL DISMISSED: Movement ${movementResult.distance.toFixed(1)}m >= ${movementResult.threshold.toFixed(1)}m adaptive threshold - rider appears to have recovered`);
+        await this.dismissFallAlert(`Rider recovered (movement ${movementResult.distance.toFixed(1)}m above ${movementResult.threshold.toFixed(1)}m adaptive threshold)`);
       }
 
     } catch (error) {
