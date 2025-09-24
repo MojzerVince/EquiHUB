@@ -22,11 +22,12 @@ export class MovementTracker {
   private static isTracking = false;
   private static locationSubscription: any = null;
 
-  // GPS accuracy thresholds and adaptive parameters
+  // GPS accuracy thresholds and adaptive parameters (more realistic values)
+  private static readonly EXCELLENT_ACCURACY_THRESHOLD = 5; // meters - excellent GPS signal
   private static readonly GOOD_ACCURACY_THRESHOLD = 10; // meters - good GPS signal
-  private static readonly FAIR_ACCURACY_THRESHOLD = 25; // meters - fair GPS signal
-  private static readonly POOR_ACCURACY_THRESHOLD = 50; // meters - poor GPS signal
-  private static readonly MIN_DISTANCE_FILTER = 5; // meters - minimum movement to consider
+  private static readonly FAIR_ACCURACY_THRESHOLD = 20; // meters - fair GPS signal
+  private static readonly POOR_ACCURACY_THRESHOLD = 40; // meters - poor GPS signal
+  private static readonly MIN_DISTANCE_FILTER = 3; // meters - minimum movement to consider
 
   /**
    * Get adaptive movement threshold based on GPS accuracy
@@ -37,20 +38,23 @@ export class MovementTracker {
   static getAdaptiveThreshold(accuracy: number | undefined, baseThreshold: number): number {
     if (!accuracy) {
       // No accuracy data - assume poor signal, increase threshold significantly
-      return baseThreshold * 2.5;
+      return baseThreshold * 2.0;
     }
 
-    if (accuracy <= this.GOOD_ACCURACY_THRESHOLD) {
-      // Good GPS signal - use base threshold
+    if (accuracy <= this.EXCELLENT_ACCURACY_THRESHOLD) {
+      // Excellent GPS signal - use base threshold
       return baseThreshold;
+    } else if (accuracy <= this.GOOD_ACCURACY_THRESHOLD) {
+      // Good GPS signal - slight increase
+      return baseThreshold * 1.2;
     } else if (accuracy <= this.FAIR_ACCURACY_THRESHOLD) {
-      // Fair GPS signal - increase threshold by 50%
-      return baseThreshold * 1.5;
+      // Fair GPS signal - moderate increase
+      return baseThreshold * 1.6;
     } else if (accuracy <= this.POOR_ACCURACY_THRESHOLD) {
-      // Poor GPS signal - double the threshold
-      return baseThreshold * 2.0;
+      // Poor GPS signal - significant increase
+      return baseThreshold * 2.2;
     } else {
-      // Very poor GPS signal - triple the threshold
+      // Very poor GPS signal - major increase
       return baseThreshold * 3.0;
     }
   }
@@ -106,12 +110,20 @@ export class MovementTracker {
       point => (now - point.timestamp) <= timeWindowMs && point.accuracy !== undefined
     );
 
+    console.log(`📍 GPS ACCURACY CHECK: Found ${recentPoints.length} points with accuracy data in last ${timeWindowMs/1000}s`);
+    
     if (recentPoints.length === 0) {
+      console.log(`📍 GPS ACCURACY: No points with accuracy data - returning undefined`);
       return undefined;
     }
 
     const totalAccuracy = recentPoints.reduce((sum, point) => sum + (point.accuracy || 0), 0);
-    return totalAccuracy / recentPoints.length;
+    const averageAccuracy = totalAccuracy / recentPoints.length;
+    
+    console.log(`📍 GPS ACCURACY: Average ${averageAccuracy.toFixed(1)}m from ${recentPoints.length} points`);
+    console.log(`📍 GPS ACCURACY: Individual values: [${recentPoints.map(p => p.accuracy?.toFixed(1) || 'N/A').join(', ')}]`);
+    
+    return averageAccuracy;
   }
 
   /**
@@ -122,10 +134,11 @@ export class MovementTracker {
   static getGPSSignalQuality(accuracy: number | undefined): string {
     if (!accuracy) return "Unknown";
     
-    if (accuracy <= this.GOOD_ACCURACY_THRESHOLD) return "Excellent";
-    if (accuracy <= this.FAIR_ACCURACY_THRESHOLD) return "Good";
-    if (accuracy <= this.POOR_ACCURACY_THRESHOLD) return "Fair";
-    return "Poor";
+    if (accuracy <= this.EXCELLENT_ACCURACY_THRESHOLD) return "Excellent";
+    if (accuracy <= this.GOOD_ACCURACY_THRESHOLD) return "Good";
+    if (accuracy <= this.FAIR_ACCURACY_THRESHOLD) return "Fair";
+    if (accuracy <= this.POOR_ACCURACY_THRESHOLD) return "Poor";
+    return "Very Poor";
   }
 
   /**
@@ -342,6 +355,8 @@ export class MovementTracker {
         timeInterval: 1000, // Update every second during monitoring
       });
 
+      console.log(`📍 GET LOCATION: accuracy=${location.coords.accuracy?.toFixed(1) || 'N/A'}m, lat=${location.coords.latitude.toFixed(6)}, lon=${location.coords.longitude.toFixed(6)}`);
+
       return {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -384,6 +399,8 @@ export class MovementTracker {
             timestamp: Date.now(),
             accuracy: location.coords.accuracy || undefined,
           };
+          
+          console.log(`📍 GPS UPDATE: accuracy=${location.coords.accuracy?.toFixed(1) || 'N/A'}m, lat=${location.coords.latitude.toFixed(6)}, lon=${location.coords.longitude.toFixed(6)}`);
           
           this.addLocationPoint(locationPoint);
         }
@@ -485,5 +502,30 @@ export class MovementTracker {
     return this.locationHistory.length > 0
       ? this.locationHistory[this.locationHistory.length - 1]
       : null;
+  }
+
+  /**
+   * Debug method to test GPS accuracy detection
+   */
+  static debugGPSAccuracy(): void {
+    console.log(`📍 DEBUG GPS ACCURACY THRESHOLDS:`);
+    console.log(`  Excellent: ≤${this.EXCELLENT_ACCURACY_THRESHOLD}m`);
+    console.log(`  Good: ≤${this.GOOD_ACCURACY_THRESHOLD}m`);
+    console.log(`  Fair: ≤${this.FAIR_ACCURACY_THRESHOLD}m`);
+    console.log(`  Poor: ≤${this.POOR_ACCURACY_THRESHOLD}m`);
+    console.log(`  Very Poor: >${this.POOR_ACCURACY_THRESHOLD}m`);
+    console.log(`📍 Current location history: ${this.locationHistory.length} points`);
+    
+    const recentAccuracy = this.getRecentGPSAccuracy(60000);
+    console.log(`📍 Recent GPS accuracy: ${recentAccuracy?.toFixed(1) || 'N/A'}m (${this.getGPSSignalQuality(recentAccuracy)})`);
+    
+    // Test different accuracy values
+    const testValues = [3, 7, 12, 18, 35, 55, 100];
+    console.log(`📍 Test accuracy classifications:`);
+    testValues.forEach(accuracy => {
+      const quality = this.getGPSSignalQuality(accuracy);
+      const threshold = this.getAdaptiveThreshold(accuracy, 25);
+      console.log(`  ${accuracy}m → ${quality} (threshold: ${threshold.toFixed(1)}m)`);
+    });
   }
 }

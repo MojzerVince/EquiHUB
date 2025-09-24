@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useMetric } from "../contexts/MetricContext";
 import { useTheme } from "../contexts/ThemeContext";
+import { MovementTracker } from "../lib/movementTracker";
 
 // Training session interface to match map.tsx
 interface TrainingSession {
@@ -520,6 +521,30 @@ const StatisticsScreen = () => {
     }
   };
 
+  const debugGPSAccuracy = async () => {
+    try {
+      console.log("🧪 Starting GPS accuracy debug test...");
+      MovementTracker.debugGPSAccuracy();
+
+      // Try to get current location to trigger accuracy updates
+      const location = await MovementTracker.getCurrentLocation();
+      if (location) {
+        console.log(`📍 Current GPS reading: accuracy=${location.accuracy}m`);
+      }
+
+      Alert.alert(
+        "GPS Debug Test",
+        "GPS accuracy debug information has been logged to console. Check the debug output for accuracy thresholds and current GPS signal quality.",
+        [{ text: "OK" }]
+      );
+    } catch (error) {
+      console.error("GPS debug test failed:", error);
+      Alert.alert("GPS Debug Error", `Failed to run GPS debug test: ${error}`, [
+        { text: "OK" },
+      ]);
+    }
+  };
+
   const currentStats = getCurrentStats();
 
   if (loading) {
@@ -594,7 +619,12 @@ const StatisticsScreen = () => {
             />
           </TouchableOpacity>
           <Text style={styles.header}>Statistics</Text>
-          <View style={styles.placeholder} />
+          <TouchableOpacity
+            style={styles.debugButton}
+            onPress={debugGPSAccuracy}
+          >
+            <Text style={styles.debugButtonText}>GPS</Text>
+          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -1076,6 +1106,21 @@ const styles = StyleSheet.create({
   noDataText: {
     fontSize: 16,
     textAlign: "center",
+  },
+  debugButton: {
+    padding: 8,
+    borderRadius: 15,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  debugButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
   },
 });
 
