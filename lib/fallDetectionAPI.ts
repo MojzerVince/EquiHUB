@@ -1,6 +1,7 @@
 import * as Location from "expo-location";
 import { Accelerometer, Gyroscope } from "expo-sensors";
 import { BackgroundFallDetectionAPI } from "./backgroundFallDetectionAPI";
+import { MovementTracker } from "./movementTracker";
 import { ServerSMSAPI } from "./serverSMSAPI";
 
 export interface SensorData {
@@ -55,6 +56,8 @@ export class FallDetectionAPI {
   private static lastResetTime: number = 0; // Track when the last reset happened
   private static currentVelocity: number = 0; // Track current estimated velocity (m/s)
   private static lastAcceleration: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
+  private static isMonitoringPostFall: boolean = false; // Track if we're monitoring after a potential fall
+  private static postFallMonitoringTimeout: NodeJS.Timeout | null = null; // Timeout for post-fall monitoring
 
   // Default configuration
   private static config: FallDetectionConfig = {
@@ -104,6 +107,14 @@ export class FallDetectionAPI {
       this.potentialFallStartTime = null;
       this.lastStableTime = Date.now();
 
+      // Start movement tracking for intelligent fall detection
+      const movementTrackingStarted = await MovementTracker.startLocationTracking();
+      if (!movementTrackingStarted) {
+        console.warn("⚠️ Movement tracking failed to start - fall detection will work but without movement validation");
+      } else {
+        console.log("📍 Movement tracking started for fall detection");
+      }
+
       // Start background monitoring if enabled and app supports it
       if (enableBackground) {
         console.log("🔍 Starting background fall detection monitoring");
@@ -146,10 +157,20 @@ export class FallDetectionAPI {
     // Stop background monitoring
     await BackgroundFallDetectionAPI.stopBackgroundMonitoring();
 
+    // Stop movement tracking
+    await MovementTracker.stopLocationTracking();
+
+    // Clear any ongoing post-fall monitoring
+    if (this.postFallMonitoringTimeout) {
+      clearTimeout(this.postFallMonitoringTimeout);
+      this.postFallMonitoringTimeout = null;
+    }
+
     this.isMonitoring = false;
+    this.isMonitoringPostFall = false;
     this.sensorHistory = [];
     this.potentialFallStartTime = null;
-    console.log("🔍 Fall detection monitoring stopped (foreground + background)");
+    console.log("🔍 Fall detection monitoring stopped (foreground + background + movement)");
   }
 
   // Process accelerometer data
@@ -320,7 +341,7 @@ export class FallDetectionAPI {
     }
   }
 
-  // Handle potential fall event
+  // Handle potential fall event with movement validation
   private static async handlePotentialFall(
     userId: string,
     magnitude: number,
@@ -331,8 +352,8 @@ export class FallDetectionAPI {
       return;
     }
 
-    // Check if there's already a pending alert
-    if (this.hasPendingAlert) {
+    // Check if there's already a pending alert or post-fall monitoring
+    if (this.hasPendingAlert || this.isMonitoringPostFall) {
       return;
     }
 
@@ -341,24 +362,61 @@ export class FallDetectionAPI {
       return;
     }
 
-    const timeSinceStable = timestamp - this.lastStableTime;
-    const isSevereImpact = Math.abs(magnitude - 1.0) > (this.config.accelerationThreshold * 1.5);
+    console.log("🚨 POTENTIAL FALL DETECTED - Starting movement validation...");
 
-    // Trigger alert if:
-    // 1. Recovery timeout has passed, OR
-    // 2. Severe impact detected, OR  
-    // 3. Rotation detected (indicates tumbling)
-    const shouldTrigger = 
-      timeSinceStable >= this.config.recoveryTimeout || 
-      isSevereImpact || 
-      hasRotation;
+    // STEP 1: Check if rider was moving before the fall (pre-fall validation)
+    const preFallMovement = MovementTracker.wasMovingDistance(25, 15000); // 25m in past 15 seconds
+    if (!preFallMovement) {
+      console.log("❌ Pre-fall validation failed: Rider was not moving >25m in past 15 seconds - ignoring potential fall");
+      this.resetFallDetectionState();
+      return;
+    }
 
-    if (shouldTrigger) {
-      console.log("🚨 FALL CONFIRMED - TRIGGERING EMERGENCY ALERT");
+    console.log("✅ Pre-fall validation passed: Rider was moving >25m in past 15 seconds");
 
-      // Set pending alert flag to prevent multiple triggers
-      this.hasPendingAlert = true;
+    // STEP 2: Start post-fall movement monitoring
+    this.isMonitoringPostFall = true;
+    this.hasPendingAlert = true; // Prevent new detections during monitoring
+    
+    console.log("⏳ Starting 15-second post-fall movement monitoring...");
 
+    // Monitor movement for 15 seconds
+    try {
+      const movementDistance = await MovementTracker.monitorMovementFor(15000); // 15 seconds
+      
+      console.log(`📊 Post-fall movement analysis: ${movementDistance.toFixed(1)}m in 15 seconds`);
+
+      // STEP 3: Decide based on post-fall movement
+      if (movementDistance < 25) {
+        // Little to no movement - confirmed fall, send alert
+        console.log("🚨 FALL CONFIRMED: Movement < 25m - sending emergency alert");
+        await this.processConfirmedFall(userId, magnitude, timestamp, hasRotation);
+      } else {
+        // Significant movement - rider likely recovered, dismiss alert
+        console.log("✅ FALL DISMISSED: Movement >= 25m - rider appears to have recovered");
+        await this.dismissFallAlert("Rider recovered (significant movement detected)");
+      }
+
+    } catch (error) {
+      console.error("❌ Error during post-fall monitoring:", error);
+      // In case of error, err on the side of safety and send alert
+      console.log("⚠️ Sending alert due to monitoring error");
+      await this.processConfirmedFall(userId, magnitude, timestamp, hasRotation);
+    }
+
+    // Reset monitoring state
+    this.isMonitoringPostFall = false;
+    this.resetFallDetectionState();
+  }
+
+  // Send confirmed fall alert (after movement validation)
+  private static async processConfirmedFall(
+    userId: string,
+    magnitude: number,
+    timestamp: number,
+    hasRotation: boolean = false
+  ): Promise<void> {
+    try {
       // Get current location
       let location: { latitude: number; longitude: number } | undefined;
       try {
@@ -371,6 +429,14 @@ export class FallDetectionAPI {
         };
       } catch (error) {
         console.error("❌ Could not get location for fall alert:", error);
+        // Use latest location from movement tracker as fallback
+        const latestLocation = MovementTracker.getLatestLocation();
+        if (latestLocation) {
+          location = {
+            latitude: latestLocation.latitude,
+            longitude: latestLocation.longitude,
+          };
+        }
       }
 
       // Create fall event
@@ -383,15 +449,29 @@ export class FallDetectionAPI {
         alertSent: false,
       };
 
-      // Don't send SMS immediately - notify listeners for confirmation
+      console.log("🚨 SENDING FALL ALERT after movement validation");
+
+      // Notify listeners for immediate action (e.g., emergency notifications)
       this.notifyFallEventListeners(fallEvent);
 
-      // Reset detection state
-      this.potentialFallStartTime = null;
-      this.lastStableTime = Date.now();
-    } else {
-      // Fall not confirmed yet - continuing monitoring
+    } catch (error) {
+      console.error("❌ Error sending confirmed fall alert:", error);
     }
+  }
+
+  // Dismiss fall alert with reason
+  private static async dismissFallAlert(reason: string): Promise<void> {
+    console.log(`✅ Fall alert dismissed: ${reason}`);
+    
+    // Could send a local notification for debugging
+    // await Notifications.scheduleNotificationAsync({
+    //   content: {
+    //     title: "Fall Alert Dismissed",
+    //     body: reason,
+    //     sound: false,
+    //   },
+    //   trigger: null,
+    // });
   }
 
   // Send emergency alert for fall detection
@@ -526,12 +606,21 @@ Check safety!`;
   // Reset the fall detection state (public method)
   static resetFallDetectionState(): void {
     console.log("🔄 Resetting fall detection state");
+    
+    // Clear any post-fall monitoring
+    if (this.postFallMonitoringTimeout) {
+      clearTimeout(this.postFallMonitoringTimeout);
+      this.postFallMonitoringTimeout = null;
+    }
+    
     this.hasPendingAlert = false;
+    this.isMonitoringPostFall = false;
     this.potentialFallStartTime = null;
     this.lastStableTime = Date.now();
     this.lastResetTime = Date.now();
     this.currentVelocity = 0;
     this.lastAcceleration = { x: 0, y: 0, z: 0 };
+    
     console.log("✅ Fall detection state reset - hasPendingAlert:", this.hasPendingAlert);
     
     // Also reset background fall detection state

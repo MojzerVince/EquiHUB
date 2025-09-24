@@ -20,6 +20,7 @@ import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { ThemeProvider as CustomThemeProvider } from "@/contexts/ThemeContext";
 import { TrackingProvider } from "@/contexts/TrackingContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { BackgroundFallDetectionAPI } from "@/lib/backgroundFallDetectionAPI";
 import { handleNotificationResponse } from "@/lib/notificationService";
 import { useRouter } from "expo-router";
 
@@ -66,7 +67,7 @@ const AppContent = () => {
 
       // Listen for notification responses (when user taps on notification)
       responseListener = Notifications.addNotificationResponseReceivedListener(
-        (response) => {
+        async (response) => {
           // Handle navigation based on notification type
           const data = response.notification.request.content.data as any;
 
@@ -94,6 +95,14 @@ const AppContent = () => {
                   }),
               },
             });
+          } else if (data?.type === "post_fall_monitoring_complete") {
+            // Handle post-fall monitoring completion automatically
+            console.log(
+              "⏰ Post-fall monitoring notification received, processing..."
+            );
+            await BackgroundFallDetectionAPI.handlePostFallMonitoringComplete(
+              data
+            );
           }
 
           // Call the main handler
