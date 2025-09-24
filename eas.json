@@ -11,7 +11,8 @@
         "buildType": "apk",
         "image": "latest",
         "env": {
-          "GRADLE_OPTS": "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false"
+          "GRADLE_OPTS": "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false",
+          "ANDROID_GRADLE_PLUGIN_VERSION": "8.5.1"
         }
       }
     },
@@ -21,7 +22,8 @@
         "buildType": "apk",
         "image": "latest",
         "env": {
-          "GRADLE_OPTS": "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false"
+          "GRADLE_OPTS": "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false",
+          "ANDROID_GRADLE_PLUGIN_VERSION": "8.3.2"
         }
       }
     },
@@ -32,7 +34,8 @@
         "gradleCommand": ":app:bundleRelease",
         "image": "latest",
         "env": {
-          "GRADLE_OPTS": "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false"
+          "GRADLE_OPTS": "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false",
+          "ANDROID_GRADLE_PLUGIN_VERSION": "8.3.2"
         }
       }
     }

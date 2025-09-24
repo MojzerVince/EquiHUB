@@ -82,12 +82,7 @@
         }
       ],
       "@react-native-firebase/app",
-      [
-        "@react-native-firebase/messaging",
-        {
-          "iosDisplayName": "EquiHUB Emergency Notifications"
-        }
-      ]
+      "@react-native-firebase/messaging"
     ],
     "experiments": {
       "typedRoutes": true
