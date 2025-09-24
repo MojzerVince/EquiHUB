@@ -13,7 +13,6 @@ import {
   Platform,
   SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -305,8 +304,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingTop: StatusBar.currentHeight,
-    paddingBottom: 40,
+    paddingBottom: 80,
+    paddingTop: 80,
   },
   loadingText: {
     textAlign: "center",

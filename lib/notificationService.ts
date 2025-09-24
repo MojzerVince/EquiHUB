@@ -231,9 +231,13 @@ export class NotificationService {
           const result = await response.json();
           console.log('🔔 DEBUG: Push notification response (RPC path):', result);
 
-          if (response.ok && result.data && result.data[0] && result.data[0].status === 'ok') {
-            console.log('✅ Push notification sent successfully via RPC path');
-            return true;
+          // Check for success - handle both array and single object responses
+          if (response.ok && result.data) {
+            const data = Array.isArray(result.data) ? result.data[0] : result.data;
+            if (data && (data.status === 'ok' || data.id)) { // Success if status is ok OR we have an ID
+              console.log('✅ Push notification sent successfully via RPC path');
+              return true;
+            }
           }
         }
       }
@@ -292,11 +296,18 @@ export class NotificationService {
         const result = await response.json();
         console.log('🔔 DEBUG: Push notification response (alternative path):', result);
 
-        if (response.ok && result.data && result.data[0] && result.data[0].status === 'ok') {
-          console.log('✅ Push notification sent successfully via alternative path');
-          return true;
+        // Check for success - handle both array and single object responses
+        if (response.ok && result.data) {
+          const data = Array.isArray(result.data) ? result.data[0] : result.data;
+          if (data && (data.status === 'ok' || data.id)) { // Success if status is ok OR we have an ID
+            console.log('✅ Push notification sent successfully via alternative path');
+            return true;
+          } else {
+            console.error('❌ Failed to send push notification via alternative path:', result);
+            return false;
+          }
         } else {
-          console.error('❌ Failed to send push notification via alternative path:', result);
+          console.error('❌ HTTP error sending push notification via alternative path:', response.status);
           return false;
         }
       }

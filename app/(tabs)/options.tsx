@@ -1264,7 +1264,7 @@ ${
               ]}
             >
               <ActionButton
-                title={`Emergency Friends (${emergencyFriends.length}/1)`}
+                title={`Emergency Friends (${emergencyFriends.length}/3)`}
                 onPress={() => setShowEmergencyContacts(true)}
               />
             </View>
@@ -1802,7 +1802,7 @@ ${
 
             <ScrollView style={styles.emergencyContactsContent}>
               {/* Add Friend Button - Only show if under limit */}
-              {emergencyFriends.length < 1 ? (
+              {emergencyFriends.length < 3 ? (
                 <TouchableOpacity
                   style={[
                     styles.addContactButton,
@@ -1824,7 +1824,7 @@ ${
                   ]}
                 >
                   <Text style={[styles.addContactButtonText, { opacity: 0.8 }]}>
-                    ✓ Emergency Friend Limit Reached (1/1)
+                    ✓ Emergency Friend Limit Reached (3/3)
                   </Text>
                 </View>
               )}

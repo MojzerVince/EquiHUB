@@ -3,7 +3,7 @@ import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import { Accelerometer, Gyroscope } from "expo-sensors";
 import * as TaskManager from "expo-task-manager";
-import { ServerSMSAPI } from "./serverSMSAPI";
+import { EmergencyFriendsAPI } from "./emergencyFriendsAPI";
 
 // Background task name for fall detection
 export const BACKGROUND_FALL_DETECTION_TASK = "background-fall-detection-task";
@@ -362,9 +362,9 @@ export class BackgroundFallDetectionAPI {
     state: any
   ): Promise<void> {
     try {
-      // Check if we already have a pending alert to prevent multiple SMS sends
+      // Check if we already have a pending alert to prevent multiple notifications
       if (state.hasPendingAlert) {
-        console.log("🚫 Background fall detection: SMS already sent, skipping duplicate alert");
+        console.log("🚫 Background fall detection: Notifications already sent, skipping duplicate alert");
         return;
       }
 
@@ -374,7 +374,7 @@ export class BackgroundFallDetectionAPI {
       if (timeSinceStable >= config.recoveryTimeout) {
         console.log("🚨 Background fall confirmed - triggering emergency alert");
 
-        // Set pending alert flag to prevent multiple SMS sends
+        // Set pending alert flag to prevent multiple notifications
         state.hasPendingAlert = true;
         await AsyncStorage.setItem("background_fall_state", JSON.stringify(state));
 
@@ -422,34 +422,33 @@ export class BackgroundFallDetectionAPI {
   // Send emergency alert for background fall detection
   private static async sendBackgroundFallAlert(userId: string, fallEvent: BackgroundFallEvent): Promise<void> {
     try {
-      const alertMessage = `🚨 FALL DETECTED (Background) 🚨
-EquiHUB: Fall during ride
-Time: ${new Date(fallEvent.timestamp).toLocaleTimeString()}
-Impact: ${fallEvent.accelerationMagnitude.toFixed(1)}g
-Check rider safety immediately!`;
+      console.log("🚨 Background fall detected - sending emergency notifications");
 
-      const alertResult = await ServerSMSAPI.sendFallAlert(
+      // Send emergency notifications using the new friends-based system
+      const notificationResult = await EmergencyFriendsAPI.sendFallDetectionNotification(
         userId,
-        fallEvent.accelerationMagnitude,
-        fallEvent.location,
-        "Background Rider" // Default name for background detections
+        "Background Detection", // Default name for background detections
+        fallEvent.location
       );
 
-      if (alertResult.success) {
+      if (notificationResult.success) {
         fallEvent.alertSent = true;
         fallEvent.alertSentAt = Date.now();
-        console.log(`✅ Background fall alert sent to ${alertResult.sentCount} emergency contacts`);
+        console.log(`✅ Background fall alert sent to ${notificationResult.notifiedCount} emergency friends`);
         
         // Send local notification to inform user about the fall detection
-        await this.sendBackgroundFallNotification(fallEvent, alertResult.sentCount);
+        await this.sendBackgroundFallNotification(fallEvent, notificationResult.notifiedCount);
       } else {
-        console.error("❌ Failed to send background fall alert:", alertResult.error);
+        console.error("❌ Failed to send background fall alert:", notificationResult.error);
         
-        // Send notification about failed SMS sending
-        await this.sendBackgroundFallNotification(fallEvent, 0, true);
+        // Send notification about failed notification sending
+        await this.sendBackgroundFallNotification(fallEvent, 0, true, notificationResult.error);
       }
     } catch (error) {
       console.error("Error sending background fall alert:", error);
+      
+      // Send notification about the error
+      await this.sendBackgroundFallNotification(fallEvent, 0, true, "Unknown error occurred");
     }
   }
 
@@ -457,13 +456,14 @@ Check rider safety immediately!`;
   private static async sendBackgroundFallNotification(
     fallEvent: BackgroundFallEvent, 
     sentCount: number, 
-    isFailed: boolean = false
+    isFailed: boolean = false,
+    errorMessage?: string
   ): Promise<void> {
     try {
-      const title = isFailed ? "⚠️ Fall Detected - SMS Failed" : "🚨 Fall Detected";
+      const title = isFailed ? "⚠️ Fall Detected - Notifications Failed" : "🚨 Fall Detected";
       const body = isFailed 
-        ? `Fall detected at ${new Date(fallEvent.timestamp).toLocaleTimeString()}. Failed to send SMS alerts. Please check your emergency contacts manually.`
-        : `Fall detected at ${new Date(fallEvent.timestamp).toLocaleTimeString()}. Emergency SMS sent to ${sentCount} contacts.`;
+        ? `Fall detected at ${new Date(fallEvent.timestamp).toLocaleTimeString()}. Failed to send emergency notifications${errorMessage ? `: ${errorMessage}` : ''}. Please check your emergency friends manually.`
+        : `Fall detected at ${new Date(fallEvent.timestamp).toLocaleTimeString()}. Emergency notifications sent to ${sentCount} friend${sentCount !== 1 ? 's' : ''}.`;
 
       await Notifications.scheduleNotificationAsync({
         content: {
