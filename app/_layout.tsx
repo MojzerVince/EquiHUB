@@ -73,6 +73,27 @@ const AppContent = () => {
           if (data?.type === "friend_request") {
             // Navigate to community screen when friend request notification is tapped
             router.push("/(tabs)/community");
+          } else if (data?.type === "emergency_alert") {
+            // Navigate to emergency notification screen
+            console.log(
+              "🚨 Emergency notification tapped, navigating to emergency screen"
+            );
+            console.log("Emergency data:", data);
+
+            // Navigate to the emergency notification screen with data
+            router.push({
+              pathname: "/emergency-notification",
+              params: {
+                data:
+                  data.data ||
+                  JSON.stringify({
+                    riderId: data.senderId,
+                    riderName: data.senderName,
+                    message: data.message,
+                    timestamp: Date.now(),
+                  }),
+              },
+            });
           }
 
           // Call the main handler
@@ -115,68 +136,74 @@ const AppContent = () => {
               <ThemeProvider
                 value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
               >
-              <ProtectedRoute splashActive={false}>
-                <Stack
-                  screenOptions={{ headerShown: false, animation: "none" }}
-                >
-                  <Stack.Screen name="index" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen name="login" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="register"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="sessions"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="statistics"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="session-details"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="session-summary"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="subscription"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="pro-features"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="session-share"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="user-profile"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="user-friends"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="user-horses"
-                    options={{ headerShown: false }}
-                  />
-                </Stack>
-              </ProtectedRoute>
-            </ThemeProvider>
-          </TrackingProvider>
-        </SubscriptionProvider>
-      </DialogProvider>
-    </MetricProvider>
-  </CustomThemeProvider>
+                <ProtectedRoute splashActive={false}>
+                  <Stack
+                    screenOptions={{ headerShown: false, animation: "none" }}
+                  >
+                    <Stack.Screen
+                      name="index"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="(tabs)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="login"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="register"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="sessions"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="statistics"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="session-details"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="session-summary"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="subscription"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="pro-features"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="session-share"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="user-profile"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="user-friends"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="user-horses"
+                      options={{ headerShown: false }}
+                    />
+                  </Stack>
+                </ProtectedRoute>
+              </ThemeProvider>
+            </TrackingProvider>
+          </SubscriptionProvider>
+        </DialogProvider>
+      </MetricProvider>
+    </CustomThemeProvider>
   );
 };
 

@@ -204,6 +204,16 @@ export class EmergencyFriendsAPI {
               senderName: riderName,
               message: `${riderName} may have fallen while riding. Tap to view location.`,
               emergencyData: notificationData,
+              // Navigation data for the emergency notification screen
+              screen: 'emergency-notification',
+              data: JSON.stringify({
+                riderId: userId,
+                riderName: riderName,
+                latitude: userLocation?.latitude,
+                longitude: userLocation?.longitude,
+                timestamp: Date.now(),
+                message: `${riderName} may have fallen while riding. Immediate assistance may be required!`,
+              })
             } as any
           );
 

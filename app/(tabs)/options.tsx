@@ -912,6 +912,32 @@ ${
     }
   };
 
+  // DEBUG ONLY: Test emergency notification screen
+  const handleTestEmergencyScreen = () => {
+    if (!user?.id) {
+      Alert.alert("Error", "User not logged in");
+      return;
+    }
+
+    console.log("🧪 DEBUG: Testing emergency notification screen...");
+
+    // Navigate to emergency notification screen with test data
+    router.push({
+      pathname: "/emergency-notification",
+      params: {
+        data: JSON.stringify({
+          riderId: user.id,
+          riderName: user.email?.split("@")[0] || "Test User",
+          latitude: 47.6062, // Seattle coordinates for testing
+          longitude: -122.3321,
+          timestamp: Date.now(),
+          message:
+            "This is a test emergency notification. The rider may have fallen while riding.",
+        }),
+      },
+    });
+  };
+
   const SettingItem = ({
     title,
     subtitle,
@@ -1289,6 +1315,16 @@ ${
                     backgroundColor: isRetryingPushToken
                       ? currentTheme.colors.textSecondary
                       : currentTheme.colors.primary,
+                  },
+                ]}
+                textStyle={{ color: "#fff", fontWeight: "bold" }}
+              />
+              <ActionButton
+                title="📱 Test Emergency Screen"
+                onPress={handleTestEmergencyScreen}
+                style={[
+                  {
+                    backgroundColor: "#dc3545", // Red color for emergency
                   },
                 ]}
                 textStyle={{ color: "#fff", fontWeight: "bold" }}
