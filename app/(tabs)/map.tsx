@@ -2650,6 +2650,26 @@ const MapScreen = () => {
       // Stop tracking notification first
       await stopTrackingNotification();
 
+      // Clear all tracking intervals
+      if (trackingIntervalRef.current) {
+        clearInterval(trackingIntervalRef.current);
+        trackingIntervalRef.current = null;
+        console.log("⏹️ Cleared tracking interval");
+      }
+
+      // Clear notification interval (additional safety check)
+      if (notificationIntervalRef.current) {
+        clearInterval(notificationIntervalRef.current);
+        notificationIntervalRef.current = null;
+        console.log("⏹️ Cleared notification interval");
+      }
+
+      // Cancel all scheduled notifications
+      await Notifications.cancelAllScheduledNotificationsAsync();
+
+      // Dismiss all notifications (including persistent ones)
+      await Notifications.dismissAllNotificationsAsync();
+
       // Stop foreground location tracking
       if (locationSubscriptionRef.current) {
         locationSubscriptionRef.current.remove();
@@ -3480,8 +3500,9 @@ const MapScreen = () => {
               rotateEnabled={true}
               mapType={mapType}
             >
-              {/* Show tracking path with gait-based colors */}
-              {realTimeGaitSegments.length > 0 &&
+              {/* Show tracking path with gait-based colors - only during active tracking */}
+              {isTracking &&
+                realTimeGaitSegments.length > 0 &&
                 realTimeGaitSegments.map((segment, index) => (
                   <Polyline
                     key={`gait-segment-${index}-${trackingPoints.length}`}
