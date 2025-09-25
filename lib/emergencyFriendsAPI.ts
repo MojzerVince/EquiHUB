@@ -368,12 +368,14 @@ export class EmergencyFriendsAPI {
     try {
       const supabase = getSupabase();
 
-      // Log to notification_history table for each friend
-      // Note: Using upsert and handling RLS policy constraints
+      // Log emergency event as sender (current user) - this should work with RLS
+      // We'll create records where the sender_user_id is the current user (who has permission)
+      // and recipient_user_id is each friend
+      
       for (const friend of notifiedFriends) {
         const notificationRecord = {
           recipient_user_id: friend.friendId,
-          sender_user_id: userId,
+          sender_user_id: userId, // Current user sending the emergency alert
           notification_type: notificationData.emergencyType,
           title: notificationData.emergencyType === 'fall_detection' 
             ? '🚨 Fall Detection Alert' 
@@ -389,21 +391,63 @@ export class EmergencyFriendsAPI {
           delivery_status: 'sent',
         };
 
-        // Try to insert the notification record
-        const { error } = await supabase
+        // Insert with explicit select to validate RLS compliance
+        const { data, error } = await supabase
           .from('notification_history')
-          .insert([notificationRecord]);
+          .insert([notificationRecord])
+          .select('id, recipient_user_id, sender_user_id')
+          .single();
 
         if (error) {
-          console.warn(`Failed to log notification event for friend ${friend.friendId}:`, error);
-          // Don't throw error - continue with other notifications
+          // Log detailed error information for debugging
+          console.warn(`Failed to log notification event for friend ${friend.friendId}:`, {
+            error,
+            userId,
+            friendId: friend.friendId,
+            errorCode: error.code,
+            errorMessage: error.message
+          });
+          
+          // Try alternative approach: Use upsert with conflict resolution
+          const { error: upsertError } = await supabase
+            .from('notification_history')
+            .upsert([{
+              ...notificationRecord,
+              id: `emergency_${userId}_${friend.friendId}_${Date.now()}`
+            }], {
+              onConflict: 'id',
+              ignoreDuplicates: true
+            });
+            
+          if (upsertError) {
+            console.warn(`Upsert also failed for friend ${friend.friendId}:`, upsertError);
+            
+            // Final fallback: Log locally for debugging and manual review
+            console.warn(`Emergency notification logging failed - storing locally for review:`, {
+              recipient: friend.friendId,
+              sender: userId,
+              timestamp: Date.now(),
+              emergencyType: notificationData.emergencyType
+            });
+          } else {
+            console.log(`✅ Logged emergency notification via upsert for friend: ${friend.name}`);
+          }
         } else {
-          console.log(`✅ Logged emergency notification to database for friend: ${friend.name}`);
+          console.log(`✅ Logged emergency notification to database for friend: ${friend.name} (ID: ${data.id})`);
         }
       }
     } catch (error) {
       console.warn('Failed to log notification event:', error);
       // Don't throw error - this is just logging, shouldn't stop the emergency process
+      
+      // Log the emergency event locally for manual review/debugging
+      console.warn('Emergency notification logging failed - details for manual review:', {
+        userId,
+        friendCount: notifiedFriends.length,
+        emergencyType: notificationData.emergencyType,
+        timestamp: Date.now(),
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 
