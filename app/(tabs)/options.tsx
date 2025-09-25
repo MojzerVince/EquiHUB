@@ -923,7 +923,7 @@ ${
 
     // Navigate to emergency notification screen with test data
     router.push({
-      pathname: "/emergency-notification",
+      pathname: "/emergency-notification" as any,
       params: {
         data: JSON.stringify({
           riderId: user.id,
