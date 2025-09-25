@@ -31,6 +31,7 @@ import { useDialog } from "../../contexts/DialogContext";
 import { useMetric } from "../../contexts/MetricContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { ChallengeStorageService } from "../../lib/challengeStorage";
+import { EmergencyFriendsAPI } from "../../lib/emergencyFriendsAPI";
 import {
   FallDetectionAPI,
   FallDetectionConfig,
@@ -626,9 +627,33 @@ const MapScreen = () => {
   // Initialize fall detection system
   // Handle fall confirmation response
   const handleFallConfirmation = async (
-    sendSMS: boolean,
+    sendNotification: boolean,
     isTimeout: boolean = false
   ) => {
+    // Immediate debug notification to verify function is called
+    console.log("🚨 FUNCTION CALLED: handleFallConfirmation");
+
+    try {
+      // Schedule immediate debug notification
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "DEBUG: Function Called",
+          body: `handleFallConfirmation called with sendNotification: ${sendNotification}`,
+          sound: true,
+        },
+        trigger: null,
+      });
+    } catch (debugError) {
+      console.log("Debug notification error:", debugError);
+    }
+
+    console.log("🔍 DEBUG: handleFallConfirmation called with:", {
+      sendNotification,
+      isTimeout,
+      userLoggedIn: !!user?.id,
+      pendingConfirmation: !!pendingFallConfirmation,
+    });
+
     try {
       // Clear timeout if it exists
       if (fallConfirmationTimeoutRef.current) {
@@ -636,50 +661,189 @@ const MapScreen = () => {
         fallConfirmationTimeoutRef.current = null;
       }
 
-      if (!pendingFallConfirmation) return;
+      if (!pendingFallConfirmation) {
+        console.log("🔍 DEBUG: No pending fall confirmation found");
+
+        // If we're supposed to send notifications but don't have pending confirmation,
+        // still try to send emergency notifications with basic fall data
+        if (sendNotification) {
+          console.log(
+            "🔍 DEBUG: Attempting to send emergency notification anyway..."
+          );
+
+          try {
+            // Get current location if available
+            const location = userLocation;
+            console.log("🔍 DEBUG: Using location:", location);
+
+            // Send emergency notifications with user ID and name
+            const riderName = user?.email?.split("@")[0] || "Rider";
+            const result =
+              await EmergencyFriendsAPI.sendFallDetectionNotification(
+                user?.id || "",
+                riderName,
+                location || undefined
+              );
+
+            console.log("🔍 DEBUG: Emergency notification result:", result);
+
+            if (result.success) {
+              console.log("✅ Emergency notifications sent successfully");
+
+              // Show success notification
+              await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: "Emergency Alert Sent",
+                  body: `Your emergency friends have been notified of your fall. ${result.notifiedCount} friends notified.`,
+                  sound: true,
+                },
+                trigger: null,
+              });
+            } else {
+              throw new Error(result.error || "Failed to send notifications");
+            }
+          } catch (error) {
+            console.error("❌ Error sending emergency notification:", error);
+
+            // Show error notification
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: "Emergency Alert Failed",
+                body: `Failed to send emergency notifications: ${
+                  error instanceof Error ? error.message : "Unknown error"
+                }`,
+                sound: true,
+              },
+              trigger: null,
+            });
+          }
+        }
+
+        return;
+      }
 
       const { event: fallEvent } = pendingFallConfirmation;
+      console.log("🔍 DEBUG: Processing fall event:", fallEvent);
 
-      if (sendSMS) {
+      if (sendNotification) {
         console.log(
           isTimeout
-            ? "⏰ Auto-sending SMS due to timeout"
-            : "📱 Sending SMS per user confirmation"
+            ? "⏰ Auto-sending emergency notifications due to timeout"
+            : "📱 Sending emergency notifications per user confirmation"
         );
 
         // Add to recent events
         setRecentFallEvents((prev) => [fallEvent, ...prev.slice(0, 9)]);
 
-        // Send alert using the new confirmed fall alert method
+        // Send emergency notifications using the new friends-based system
         if (user?.id) {
-          await FallDetectionAPI.sendConfirmedFallAlert(
-            user.id,
-            fallEvent,
-            userProfile?.name
+          const riderName =
+            userProfile?.name || user.email?.split("@")[0] || "Unknown Rider";
+
+          console.log(
+            "📱 Sending fall detection notifications to emergency friends..."
           );
 
-          // Send notification AFTER SMS is sent
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: "Emergency Alert Sent",
-              body: `SMS sent to emergency contacts for fall at ${new Date(
-                fallEvent.timestamp
-              ).toLocaleTimeString()}`,
-              sound: true,
-            },
-            trigger: null, // Send immediately
+          // Send notifications to emergency friends - adding debug logging
+          console.log("🔍 DEBUG: Fall detection params:", {
+            userId: user.id,
+            riderName: riderName,
+            fallLocation: fallEvent.location,
           });
+
+          // Check emergency friends setup before sending
+          try {
+            const emergencyFriends =
+              await EmergencyFriendsAPI.getEmergencyFriends(user.id);
+            console.log("🔍 DEBUG: Emergency friends found:", emergencyFriends);
+            console.log(
+              "🔍 DEBUG: Enabled friends:",
+              emergencyFriends.filter((f) => f.isEnabled)
+            );
+
+            const notificationResult =
+              await EmergencyFriendsAPI.sendFallDetectionNotification(
+                user.id,
+                riderName,
+                fallEvent.location
+              );
+
+            console.log(
+              "🔍 DEBUG: Fall notification result:",
+              notificationResult
+            );
+
+            if (notificationResult.success) {
+              console.log(
+                `✅ Emergency notifications sent to ${notificationResult.notifiedCount} friends`
+              );
+
+              // Send local notification to confirm notifications were sent
+              await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: "Emergency Alert Sent",
+                  body: `Notifications sent to ${
+                    notificationResult.notifiedCount
+                  } emergency friend${
+                    notificationResult.notifiedCount !== 1 ? "s" : ""
+                  } for fall at ${new Date(
+                    fallEvent.timestamp
+                  ).toLocaleTimeString()}`,
+                  sound: true,
+                },
+                trigger: null, // Send immediately
+              });
+            } else {
+              console.error(
+                "❌ Failed to send emergency notifications:",
+                notificationResult.error
+              );
+
+              // Show error notification
+              await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: "Emergency Alert Failed",
+                  body:
+                    notificationResult.error ||
+                    "Failed to send emergency notifications",
+                  sound: true,
+                },
+                trigger: null,
+              });
+            }
+          } catch (friendsError) {
+            console.error(
+              "🔍 DEBUG: Error in emergency friends API:",
+              friendsError
+            );
+
+            // Show debug error notification
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: "Debug Error",
+                body: `Emergency friends API error: ${
+                  friendsError instanceof Error
+                    ? friendsError.message
+                    : "Unknown error"
+                }`,
+                sound: true,
+              },
+              trigger: null,
+            });
+          }
+        } else {
+          console.log("🔍 DEBUG: No user ID found - cannot send notifications");
         }
 
         Alert.alert(
           "Emergency Alert Sent",
           isTimeout
-            ? "No response detected. Emergency contact has been notified automatically."
-            : "Emergency contact has been notified.",
+            ? "No response detected. Emergency friends have been notified automatically."
+            : "Emergency friends have been notified.",
           [{ text: "OK" }]
         );
       } else {
-        console.log("✅ User confirmed they are okay - no SMS sent");
+        console.log("✅ User confirmed they are okay - no notifications sent");
         Alert.alert("Good to hear!", "No emergency alert will be sent.", [
           { text: "OK" },
         ]);
@@ -692,6 +856,20 @@ const MapScreen = () => {
       console.log("🔄 Fall detection state reset - ready for new detections");
     } catch (error) {
       console.error("❌ Error handling fall confirmation:", error);
+      console.log("🔍 DEBUG: Full error details:", error);
+
+      // Show error notification to user
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Fall Confirmation Error",
+          body: `Error processing fall confirmation: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          sound: true,
+        },
+        trigger: null,
+      });
+
       setPendingFallConfirmation(null);
       FallDetectionAPI.resetFallDetectionState();
     }
@@ -727,7 +905,7 @@ const MapScreen = () => {
         // Show confirmation dialog
         Alert.alert(
           "Fall Detected",
-          `Are you okay? SMS will be sent to your emergency contact if you don't respond within 20 seconds.\n\nTime: ${new Date(
+          `Are you okay? Emergency notifications will be sent to your emergency friends if you don't respond within 20 seconds.\n\nTime: ${new Date(
             fallEvent.timestamp
           ).toLocaleTimeString()}\nImpact: ${fallEvent.accelerationMagnitude.toFixed(
             1
@@ -739,7 +917,7 @@ const MapScreen = () => {
               style: "default",
             },
             {
-              text: "I Fell - Send SMS",
+              text: "I Fell - Send Notifications",
               onPress: () => handleFallConfirmation(true),
               style: "destructive",
             },
@@ -749,9 +927,11 @@ const MapScreen = () => {
           }
         );
 
-        // Set timeout to auto-send SMS if no response
+        // Set timeout to auto-send notifications if no response
         fallConfirmationTimeoutRef.current = setTimeout(() => {
-          console.log("⏰ Fall confirmation timeout - auto-sending SMS");
+          console.log(
+            "⏰ Fall confirmation timeout - auto-sending emergency notifications"
+          );
           handleFallConfirmation(true, true); // true for auto-send due to timeout
         }, 20000); // 20 seconds
       };
@@ -2470,6 +2650,26 @@ const MapScreen = () => {
       // Stop tracking notification first
       await stopTrackingNotification();
 
+      // Clear all tracking intervals
+      if (trackingIntervalRef.current) {
+        clearInterval(trackingIntervalRef.current);
+        trackingIntervalRef.current = null;
+        console.log("⏹️ Cleared tracking interval");
+      }
+
+      // Clear notification interval (additional safety check)
+      if (notificationIntervalRef.current) {
+        clearInterval(notificationIntervalRef.current);
+        notificationIntervalRef.current = null;
+        console.log("⏹️ Cleared notification interval");
+      }
+
+      // Cancel all scheduled notifications
+      await Notifications.cancelAllScheduledNotificationsAsync();
+
+      // Dismiss all notifications (including persistent ones)
+      await Notifications.dismissAllNotificationsAsync();
+
       // Stop foreground location tracking
       if (locationSubscriptionRef.current) {
         locationSubscriptionRef.current.remove();
@@ -3300,8 +3500,9 @@ const MapScreen = () => {
               rotateEnabled={true}
               mapType={mapType}
             >
-              {/* Show tracking path with gait-based colors */}
-              {realTimeGaitSegments.length > 0 &&
+              {/* Show tracking path with gait-based colors - only during active tracking */}
+              {isTracking &&
+                realTimeGaitSegments.length > 0 &&
                 realTimeGaitSegments.map((segment, index) => (
                   <Polyline
                     key={`gait-segment-${index}-${trackingPoints.length}`}
@@ -4448,8 +4649,8 @@ const MapScreen = () => {
                 {fallDetectionConfig.gyroscopeThreshold} rad/s threshold)
                 {"\n"}• Waits {fallDetectionConfig.recoveryTimeout / 1000}{" "}
                 seconds for recovery before alerting
-                {"\n"}• Automatically sends SMS with location to emergency
-                contacts
+                {"\n"}• Automatically sends push notifications with location to
+                emergency friends
                 {"\n"}• ✅ Background monitoring: Works when screen is off or
                 app is backgrounded
                 {"\n"}• 🔋 Optimized for battery efficiency during background
