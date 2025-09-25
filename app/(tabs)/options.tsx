@@ -334,7 +334,7 @@ const OptionsScreen = () => {
   // About state
   const [showAbout, setShowAbout] = useState(false);
 
-  // Debug state (publicly available for token testing)
+  // Debug state (only available in development)
   const [isSimulatingFall, setIsSimulatingFall] = useState(false);
   const [isRetryingPushToken, setIsRetryingPushToken] = useState(false);
 
@@ -777,6 +777,8 @@ const OptionsScreen = () => {
 
   // DEBUG ONLY: Simulate fall detection for testing
   const handleSimulateFallDetection = async () => {
+    if (!__DEV__) return;
+    
     if (!user?.id) {
       Alert.alert("Error", "User not logged in");
       return;
@@ -849,6 +851,8 @@ ${
 
   // Retry push token registration
   const handleRetryPushToken = async () => {
+    if (!__DEV__) return;
+    
     if (!user?.id) {
       Alert.alert("Error", "User not logged in");
       return;
@@ -914,6 +918,8 @@ ${
 
   // DEBUG ONLY: Test emergency notification screen
   const handleTestEmergencyScreen = () => {
+    if (!__DEV__) return;
+    
     if (!user?.id) {
       Alert.alert("Error", "User not logged in");
       return;
@@ -1271,66 +1277,68 @@ ${
           </View>
 
           {/* Debug Section - Token debugging temporarily available to all users */}
-          <View style={styles.section}>
-            <Text
-              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
-            >
-              🧪 Debug Tools (Token Testing)
-            </Text>
-            <View
-              style={[
-                styles.sectionContent,
-                { backgroundColor: currentTheme.colors.surface },
-              ]}
-            >
-              <ActionButton
-                title={
-                  isSimulatingFall
-                    ? "Simulating Fall..."
-                    : "🚨 Test Fall Detection"
-                }
-                onPress={handleSimulateFallDetection}
-                disabled={isSimulatingFall}
-                showLoading={isSimulatingFall}
+          {__DEV__ && (
+            <View style={styles.section}>
+              <Text
+                style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+              >
+                🧪 Debug Tools (Token Testing)
+              </Text>
+              <View
                 style={[
-                  {
-                    backgroundColor: isSimulatingFall
-                      ? currentTheme.colors.textSecondary
-                      : currentTheme.colors.warning,
-                  },
+                  styles.sectionContent,
+                  { backgroundColor: currentTheme.colors.surface },
                 ]}
-                textStyle={{ color: "#fff", fontWeight: "bold" }}
-              />
-              <ActionButton
-                title={
-                  isRetryingPushToken
-                    ? "Retrying Push Token..."
-                    : "🔄 Retry Push Token Registration"
-                }
-                onPress={handleRetryPushToken}
-                disabled={isRetryingPushToken}
-                showLoading={isRetryingPushToken}
-                style={[
-                  {
-                    backgroundColor: isRetryingPushToken
-                      ? currentTheme.colors.textSecondary
-                      : currentTheme.colors.primary,
-                  },
-                ]}
-                textStyle={{ color: "#fff", fontWeight: "bold" }}
-              />
-              <ActionButton
-                title="📱 Test Emergency Screen"
-                onPress={handleTestEmergencyScreen}
-                style={[
-                  {
-                    backgroundColor: "#dc3545", // Red color for emergency
-                  },
-                ]}
-                textStyle={{ color: "#fff", fontWeight: "bold" }}
-              />
+              >
+                <ActionButton
+                  title={
+                    isSimulatingFall
+                      ? "Simulating Fall..."
+                      : "🚨 Test Fall Detection"
+                  }
+                  onPress={handleSimulateFallDetection}
+                  disabled={isSimulatingFall}
+                  showLoading={isSimulatingFall}
+                  style={[
+                    {
+                      backgroundColor: isSimulatingFall
+                        ? currentTheme.colors.textSecondary
+                        : currentTheme.colors.warning,
+                    },
+                  ]}
+                  textStyle={{ color: "#fff", fontWeight: "bold" }}
+                />
+                <ActionButton
+                  title={
+                    isRetryingPushToken
+                      ? "Retrying Push Token..."
+                      : "🔄 Retry Push Token Registration"
+                  }
+                  onPress={handleRetryPushToken}
+                  disabled={isRetryingPushToken}
+                  showLoading={isRetryingPushToken}
+                  style={[
+                    {
+                      backgroundColor: isRetryingPushToken
+                        ? currentTheme.colors.textSecondary
+                        : currentTheme.colors.primary,
+                    },
+                  ]}
+                  textStyle={{ color: "#fff", fontWeight: "bold" }}
+                />
+                <ActionButton
+                  title="📱 Test Emergency Screen"
+                  onPress={handleTestEmergencyScreen}
+                  style={[
+                    {
+                      backgroundColor: "#dc3545", // Red color for emergency
+                    },
+                  ]}
+                  textStyle={{ color: "#fff", fontWeight: "bold" }}
+                />
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Privacy Settings Section */}
           <View style={styles.section}>
