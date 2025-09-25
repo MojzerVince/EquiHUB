@@ -622,11 +622,10 @@ const SessionsScreen = () => {
               currentWeekOffset <= getWeekOffsetFromDate(earliestSessionDate)
             }
           >
-            <Text
-              style={[styles.weekNavText, { color: currentTheme.colors.text }]}
-            >
-              ←
-            </Text>
+            <Image
+              source={require("../assets/in_app_icons/arrow.png")}
+              style={[styles.backIcon, { transform: [{ rotate: "180deg" }] }]}
+            />
           </TouchableOpacity>
 
           <View style={styles.weekDisplayContainer}>
@@ -651,11 +650,10 @@ const SessionsScreen = () => {
             onPress={handleNextWeek}
             disabled={currentWeekOffset >= 0}
           >
-            <Text
-              style={[styles.weekNavText, { color: currentTheme.colors.text }]}
-            >
-              →
-            </Text>
+            <Image
+              source={require("../assets/in_app_icons/arrow.png")}
+              style={[styles.backIcon]}
+            />
           </TouchableOpacity>
         </View>
 
@@ -873,8 +871,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   backIcon: {
-    width: 26,
-    height: 26,
+    width: 30,
+    height: 30,
   },
   header: {
     fontSize: 30,
