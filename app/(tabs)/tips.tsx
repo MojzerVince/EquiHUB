@@ -82,7 +82,7 @@ const CoachScreen = () => {
   // Performance tracking state (real data only)
   const [totalTimeSpent, setTotalTimeSpent] = useState(0); // Total hours spent learning
   const [totalLessonsCompleted, setTotalLessonsCompleted] = useState(0); // Total lessons completed
-  
+
   // Performance counter animation state
   const [displayTimeSpent, setDisplayTimeSpent] = useState(0);
   const [displayLessonsCompleted, setDisplayLessonsCompleted] = useState(0);
@@ -95,8 +95,10 @@ const CoachScreen = () => {
       id: "started-basic-first-aid",
       tutorialId: "basic-first-aid",
       title: "Basic Horse First Aid",
-      description: "Learn essential first aid techniques for common horse injuries and emergencies",
-      imageUrl: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=400&h=200&fit=crop",
+      description:
+        "Learn essential first aid techniques for common horse injuries and emergencies",
+      imageUrl:
+        "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=400&h=200&fit=crop",
       lessonCount: 2,
       completedLessons: 2, // Both lessons completed
       duration: "20 min",
@@ -293,7 +295,14 @@ const CoachScreen = () => {
       description: "Immediate steps for suspected colic",
       urgency: "Critical",
       icon: "🚨",
-      keywords: ["colic", "stomach", "pain", "rolling", "lying down", "sweating"],
+      keywords: [
+        "colic",
+        "stomach",
+        "pain",
+        "rolling",
+        "lying down",
+        "sweating",
+      ],
       steps: [
         "Remove all food and water immediately",
         "Call your veterinarian - this is an emergency",
@@ -301,8 +310,8 @@ const CoachScreen = () => {
         "Do NOT allow the horse to roll or lie down",
         "Monitor vital signs (temperature, pulse, respiration)",
         "Note symptoms and time of onset for the vet",
-        "Stay calm but act quickly"
-      ]
+        "Stay calm but act quickly",
+      ],
     },
     {
       id: "cuts-wounds",
@@ -319,8 +328,8 @@ const CoachScreen = () => {
         "Apply sterile bandage if possible",
         "Call veterinarian for wounds deeper than skin level",
         "Monitor for signs of shock",
-        "Keep wound covered and horse calm"
-      ]
+        "Keep wound covered and horse calm",
+      ],
     },
     {
       id: "choking",
@@ -328,7 +337,13 @@ const CoachScreen = () => {
       description: "When horse cannot swallow or breathe properly",
       urgency: "Critical",
       icon: "🫁",
-      keywords: ["choking", "coughing", "gagging", "difficulty swallowing", "feed"],
+      keywords: [
+        "choking",
+        "coughing",
+        "gagging",
+        "difficulty swallowing",
+        "feed",
+      ],
       steps: [
         "Remove all food and water immediately",
         "Call veterinarian immediately",
@@ -336,8 +351,8 @@ const CoachScreen = () => {
         "Do NOT attempt to remove object manually",
         "Gently massage throat area (external only)",
         "Monitor breathing closely",
-        "Stay with the horse until help arrives"
-      ]
+        "Stay with the horse until help arrives",
+      ],
     },
     {
       id: "lameness",
@@ -345,7 +360,14 @@ const CoachScreen = () => {
       description: "Acute limb injury or pain",
       urgency: "Urgent",
       icon: "🦵",
-      keywords: ["lameness", "limping", "leg", "hoof", "pain", "not weight bearing"],
+      keywords: [
+        "lameness",
+        "limping",
+        "leg",
+        "hoof",
+        "pain",
+        "not weight bearing",
+      ],
       steps: [
         "Stop all activity immediately",
         "Confine horse to prevent further injury",
@@ -354,8 +376,8 @@ const CoachScreen = () => {
         "Do NOT give pain medication without vet approval",
         "Call veterinarian for assessment",
         "Keep detailed notes on symptoms",
-        "Provide soft, level footing"
-      ]
+        "Provide soft, level footing",
+      ],
     },
     {
       id: "eye-injury",
@@ -363,7 +385,14 @@ const CoachScreen = () => {
       description: "Trauma or foreign object in eye",
       urgency: "Urgent",
       icon: "👁️",
-      keywords: ["eye", "injury", "swollen", "discharge", "squinting", "foreign object"],
+      keywords: [
+        "eye",
+        "injury",
+        "swollen",
+        "discharge",
+        "squinting",
+        "foreign object",
+      ],
       steps: [
         "Do NOT touch or rub the affected eye",
         "Rinse gently with clean saline solution only",
@@ -371,8 +400,8 @@ const CoachScreen = () => {
         "Keep horse in darkened area",
         "Call veterinarian immediately",
         "Prevent horse from rubbing eye",
-        "Note any discharge or changes in appearance"
-      ]
+        "Note any discharge or changes in appearance",
+      ],
     },
     {
       id: "heat-exhaustion",
@@ -380,7 +409,14 @@ const CoachScreen = () => {
       description: "Signs of overheating and dehydration",
       urgency: "Urgent",
       icon: "🌡️",
-      keywords: ["heat", "exhaustion", "overheating", "hot", "sweating", "dehydration"],
+      keywords: [
+        "heat",
+        "exhaustion",
+        "overheating",
+        "hot",
+        "sweating",
+        "dehydration",
+      ],
       steps: [
         "Move horse to shade immediately",
         "Apply cool (not cold) water to neck, chest, and legs",
@@ -389,8 +425,8 @@ const CoachScreen = () => {
         "Monitor temperature every 15 minutes",
         "Call vet if temperature exceeds 103°F (39.4°C)",
         "Continue cooling until temperature normalizes",
-        "Watch for signs of shock"
-      ]
+        "Watch for signs of shock",
+      ],
     },
     {
       id: "vital-signs",
@@ -398,7 +434,13 @@ const CoachScreen = () => {
       description: "Essential monitoring techniques",
       urgency: "Important",
       icon: "💓",
-      keywords: ["vital signs", "temperature", "pulse", "heart rate", "breathing"],
+      keywords: [
+        "vital signs",
+        "temperature",
+        "pulse",
+        "heart rate",
+        "breathing",
+      ],
       steps: [
         "Temperature: Use digital thermometer rectally (normal: 99-101°F)",
         "Pulse: Find artery under jaw or behind elbow (normal: 28-44 bpm)",
@@ -406,8 +448,8 @@ const CoachScreen = () => {
         "Capillary refill: Press gum, should return to pink in 2 seconds",
         "Record all measurements with time",
         "Note any abnormal findings",
-        "Compare to horse's normal baseline values"
-      ]
+        "Compare to horse's normal baseline values",
+      ],
     },
     {
       id: "poisoning",
@@ -415,7 +457,14 @@ const CoachScreen = () => {
       description: "Toxic plant or substance ingestion",
       urgency: "Critical",
       icon: "☠️",
-      keywords: ["poisoning", "toxic", "plants", "chemicals", "drooling", "seizures"],
+      keywords: [
+        "poisoning",
+        "toxic",
+        "plants",
+        "chemicals",
+        "drooling",
+        "seizures",
+      ],
       steps: [
         "Remove horse from source immediately",
         "Call veterinarian and poison control if available",
@@ -424,9 +473,9 @@ const CoachScreen = () => {
         "Note time of exposure and amount if known",
         "Monitor breathing and heart rate closely",
         "Keep horse calm and still",
-        "Provide supportive care as directed by vet"
-      ]
-    }
+        "Provide supportive care as directed by vet",
+      ],
+    },
   ];
 
   // Counter animation effect for performance metrics
@@ -436,20 +485,20 @@ const CoachScreen = () => {
       const steps = 60; // 60 frames for smooth animation
       const timeIncrement = totalTimeSpent / steps;
       const lessonsIncrement = totalLessonsCompleted / steps;
-      
+
       let currentStep = 0;
       const timer = setInterval(() => {
         currentStep++;
         setDisplayTimeSpent(timeIncrement * currentStep);
         setDisplayLessonsCompleted(Math.floor(lessonsIncrement * currentStep));
-        
+
         if (currentStep >= steps) {
           clearInterval(timer);
           setDisplayTimeSpent(totalTimeSpent);
           setDisplayLessonsCompleted(totalLessonsCompleted);
         }
       }, duration / steps);
-      
+
       return timer;
     };
 
@@ -461,14 +510,18 @@ const CoachScreen = () => {
   useEffect(() => {
     const calculatePerformance = () => {
       // Calculate total lessons completed across all started tutorials (REAL DATA ONLY)
-      const completedCount = startedLessons.reduce((sum, lesson) => sum + lesson.completedLessons, 0);
-      
+      const completedCount = startedLessons.reduce(
+        (sum, lesson) => sum + lesson.completedLessons,
+        0
+      );
+
       // Calculate total time spent based on actual lessons completed (REAL DATA ONLY)
       const timeSpent = startedLessons.reduce((sum, lesson) => {
-        const durationMinutes = parseInt(lesson.duration.replace(' min', ''));
+        const durationMinutes = parseInt(lesson.duration.replace(" min", ""));
         const lessonDuration = durationMinutes / lesson.lessonCount; // minutes per lesson
-        const timeForCompletedLessons = lesson.completedLessons * lessonDuration;
-        return sum + (timeForCompletedLessons / 60); // convert to hours
+        const timeForCompletedLessons =
+          lesson.completedLessons * lessonDuration;
+        return sum + timeForCompletedLessons / 60; // convert to hours
       }, 0);
 
       // Use only real data - no base values
@@ -505,36 +558,45 @@ const CoachScreen = () => {
     }
   };
 
-  const filteredEmergencySteps = emergencySteps.filter(step =>
-    step.title.toLowerCase().includes(emergencySearchQuery.toLowerCase()) ||
-    step.description.toLowerCase().includes(emergencySearchQuery.toLowerCase()) ||
-    step.keywords.some(keyword => 
-      keyword.toLowerCase().includes(emergencySearchQuery.toLowerCase())
-    )
+  const filteredEmergencySteps = emergencySteps.filter(
+    (step) =>
+      step.title.toLowerCase().includes(emergencySearchQuery.toLowerCase()) ||
+      step.description
+        .toLowerCase()
+        .includes(emergencySearchQuery.toLowerCase()) ||
+      step.keywords.some((keyword) =>
+        keyword.toLowerCase().includes(emergencySearchQuery.toLowerCase())
+      )
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
     // In a real app, you would fetch updated progress from an API
     // For now, just refresh the data without making changes
-    
+
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
   };
 
-  const updateLessonProgress = (tutorialId: string, completedLessons: number) => {
-    setStartedLessons(prevLessons => 
-      prevLessons.map(lesson => 
-        lesson.tutorialId === tutorialId 
-          ? {
-              ...lesson,
-              completedLessons,
-              progressPercentage: Math.round((completedLessons / lesson.lessonCount) * 100),
-              lastAccessedDate: new Date().toISOString().split('T')[0]
-            }
-          : lesson
-      )
+  const updateLessonProgress = (
+    tutorialId: string,
+    completedLessons: number
+  ) => {
+    setStartedLessons(
+      (prevLessons) =>
+        prevLessons.map((lesson) =>
+          lesson.tutorialId === tutorialId
+            ? {
+                ...lesson,
+                completedLessons,
+                progressPercentage: Math.round(
+                  (completedLessons / lesson.lessonCount) * 100
+                ),
+                lastAccessedDate: new Date().toISOString().split("T")[0],
+              }
+            : lesson
+        )
       // Keep completed lessons in the list for "Continue Learning" section
       // They will show as completed and allow review
     );
@@ -542,22 +604,31 @@ const CoachScreen = () => {
 
   // Function to complete a specific lesson (would be called from lesson completion)
   const completeLessonById = (tutorialId: string, lessonIndex: number) => {
-    const tutorial = tutorialCategories.flatMap(cat => cat.tutorials).find(t => t.id === tutorialId);
+    const tutorial = tutorialCategories
+      .flatMap((cat) => cat.tutorials)
+      .find((t) => t.id === tutorialId);
     if (!tutorial) return;
 
-    setStartedLessons(prevLessons => {
-      const existingLesson = prevLessons.find(lesson => lesson.tutorialId === tutorialId);
-      
+    setStartedLessons((prevLessons) => {
+      const existingLesson = prevLessons.find(
+        (lesson) => lesson.tutorialId === tutorialId
+      );
+
       if (existingLesson) {
         // Update existing lesson progress
-        const newCompleted = Math.min(existingLesson.completedLessons + 1, tutorial.lessonCount);
-        return prevLessons.map(lesson => 
-          lesson.tutorialId === tutorialId 
+        const newCompleted = Math.min(
+          existingLesson.completedLessons + 1,
+          tutorial.lessonCount
+        );
+        return prevLessons.map((lesson) =>
+          lesson.tutorialId === tutorialId
             ? {
                 ...lesson,
                 completedLessons: newCompleted,
-                progressPercentage: Math.round((newCompleted / lesson.lessonCount) * 100),
-                lastAccessedDate: new Date().toISOString().split('T')[0]
+                progressPercentage: Math.round(
+                  (newCompleted / lesson.lessonCount) * 100
+                ),
+                lastAccessedDate: new Date().toISOString().split("T")[0],
               }
             : lesson
         );
@@ -574,7 +645,7 @@ const CoachScreen = () => {
           duration: tutorial.duration,
           difficulty: tutorial.difficulty,
           category: tutorial.category,
-          lastAccessedDate: new Date().toISOString().split('T')[0],
+          lastAccessedDate: new Date().toISOString().split("T")[0],
           progressPercentage: Math.round((1 / tutorial.lessonCount) * 100),
         };
         return [...prevLessons, newStartedLesson];
@@ -584,8 +655,10 @@ const CoachScreen = () => {
 
   const addToStartedLessons = (tutorial: Tutorial) => {
     // Check if tutorial is already in started lessons
-    const isAlreadyStarted = startedLessons.some(lesson => lesson.tutorialId === tutorial.id);
-    
+    const isAlreadyStarted = startedLessons.some(
+      (lesson) => lesson.tutorialId === tutorial.id
+    );
+
     if (!isAlreadyStarted) {
       const newStartedLesson: StartedLesson = {
         id: `started-${tutorial.id}`,
@@ -598,11 +671,11 @@ const CoachScreen = () => {
         duration: tutorial.duration,
         difficulty: tutorial.difficulty,
         category: tutorial.category,
-        lastAccessedDate: new Date().toISOString().split('T')[0],
+        lastAccessedDate: new Date().toISOString().split("T")[0],
         progressPercentage: 0,
       };
-      
-      setStartedLessons(prev => [...prev, newStartedLesson]);
+
+      setStartedLessons((prev) => [...prev, newStartedLesson]);
     }
   };
 
@@ -665,10 +738,12 @@ const CoachScreen = () => {
     const isProOnlyAndNotMember = tutorial.proOnly && !isProMember;
     const isAccessible =
       !tutorial.isLocked && !(tutorial.proOnly && !isProMember);
-    
+
     // Check if this tutorial is completed
     const completedLesson = startedLessons.find(
-      lesson => lesson.tutorialId === tutorial.id && lesson.completedLessons >= lesson.lessonCount
+      (lesson) =>
+        lesson.tutorialId === tutorial.id &&
+        lesson.completedLessons >= lesson.lessonCount
     );
     const isCompleted = !!completedLesson;
 
@@ -768,7 +843,9 @@ const CoachScreen = () => {
               {tutorial.lessonCount} lessons
             </Text>
             {isCompleted ? (
-              <View style={[styles.completedBadge, { backgroundColor: "#4CAF50" }]}>
+              <View
+                style={[styles.completedBadge, { backgroundColor: "#4CAF50" }]}
+              >
                 <Text style={styles.completedBadgeText}>✓ Completed</Text>
               </View>
             ) : isProOnlyAndNotMember ? (
@@ -791,35 +868,75 @@ const CoachScreen = () => {
         onPress={() => handleStartTutorial(lesson.tutorialId, lesson.title)}
       >
         <View style={styles.startedLessonIcon}>
-          <View style={[styles.startedLessonIconContainer, { backgroundColor: theme.primary }]}>
+          <View
+            style={[
+              styles.startedLessonIconContainer,
+              { backgroundColor: theme.primary },
+            ]}
+          >
             <Text style={styles.startedLessonIconText}>
-              {lesson.completedLessons >= lesson.lessonCount ? '✓' : '▶'}
+              {lesson.completedLessons >= lesson.lessonCount ? "✓" : "▶"}
             </Text>
           </View>
         </View>
-        
+
         <View style={styles.startedLessonContent}>
           <View style={styles.startedLessonHeader}>
-            <Text style={[styles.startedLessonTitle, { color: theme.text }]} numberOfLines={1}>
+            <Text
+              style={[styles.startedLessonTitle, { color: theme.text }]}
+              numberOfLines={1}
+            >
               {lesson.title}
             </Text>
-            <View style={[styles.startedLessonDifficulty, { backgroundColor: getDifficultyColor(lesson.difficulty) }]}>
-              <Text style={styles.startedLessonDifficultyText}>{lesson.difficulty}</Text>
+            <View
+              style={[
+                styles.startedLessonDifficulty,
+                { backgroundColor: getDifficultyColor(lesson.difficulty) },
+              ]}
+            >
+              <Text style={styles.startedLessonDifficultyText}>
+                {lesson.difficulty}
+              </Text>
             </View>
-            <Text style={[styles.startedLessonDuration, { color: theme.textSecondary }]}>
+            <Text
+              style={[
+                styles.startedLessonDuration,
+                { color: theme.textSecondary },
+              ]}
+            >
               {lesson.duration}
             </Text>
           </View>
-          
-          <Text style={[styles.startedLessonDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+
+          <Text
+            style={[
+              styles.startedLessonDescription,
+              { color: theme.textSecondary },
+            ]}
+            numberOfLines={1}
+          >
             {lesson.description}
           </Text>
-          
+
           <View style={styles.startedLessonFooter}>
-            <Text style={[styles.startedLessonProgress, { color: theme.textSecondary }]}>
-              {lesson.completedLessons >= lesson.lessonCount ? 'Review' : `${lesson.completedLessons}/${lesson.lessonCount} lessons completed`}
+            <Text
+              style={[
+                styles.startedLessonProgress,
+                { color: theme.textSecondary },
+              ]}
+            >
+              {lesson.completedLessons >= lesson.lessonCount
+                ? "Review"
+                : `${lesson.completedLessons}/${lesson.lessonCount} lessons completed`}
             </Text>
-            <Text style={[styles.startedLessonArrow, { color: theme.textSecondary }]}>→</Text>
+            <Text
+              style={[
+                styles.startedLessonArrow,
+                { color: theme.textSecondary },
+              ]}
+            >
+              →
+            </Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -838,7 +955,9 @@ const CoachScreen = () => {
       onRequestClose={() => setShowEmergencyModal(false)}
     >
       <View style={[styles.container, { backgroundColor: theme.primary }]}>
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.primary }]}>
+        <SafeAreaView
+          style={[styles.safeArea, { backgroundColor: theme.primary }]}
+        >
           <View style={styles.headerContainer}>
             <View style={styles.headerWithBack}>
               <TouchableOpacity
@@ -854,14 +973,22 @@ const CoachScreen = () => {
             </View>
           </View>
         </SafeAreaView>
-        
+
         <ScrollView
-          style={[styles.viewPort, { backgroundColor: currentTheme.colors.background }]}
+          style={[
+            styles.viewPort,
+            { backgroundColor: currentTheme.colors.background },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.contentContainer}>
             {/* Search Bar */}
-            <View style={[styles.searchContainer, { backgroundColor: theme.surface }]}>
+            <View
+              style={[
+                styles.searchContainer,
+                { backgroundColor: theme.surface },
+              ]}
+            >
               <Text style={styles.searchIcon}>🔍</Text>
               <TextInput
                 style={[styles.searchInput, { color: theme.text }]}
@@ -878,7 +1005,8 @@ const CoachScreen = () => {
                 ⚠️ EMERGENCY PROTOCOL
               </Text>
               <Text style={[styles.emergencySubtitle, { color: theme.text }]}>
-                In any life-threatening situation, call your veterinarian immediately!
+                In any life-threatening situation, call your veterinarian
+                immediately!
               </Text>
             </View>
 
@@ -887,34 +1015,52 @@ const CoachScreen = () => {
               {filteredEmergencySteps.map((step) => (
                 <View
                   key={step.id}
-                  style={[styles.emergencyCard, { backgroundColor: theme.surface }]}
+                  style={[
+                    styles.emergencyCard,
+                    { backgroundColor: theme.surface },
+                  ]}
                 >
                   <View style={styles.emergencyHeader}>
                     <View style={styles.emergencyTitleContainer}>
                       <Text style={styles.emergencyIcon}>{step.icon}</Text>
                       <View style={styles.emergencyInfo}>
-                        <Text style={[styles.emergencyCardTitle, { color: theme.text }]}>
+                        <Text
+                          style={[
+                            styles.emergencyCardTitle,
+                            { color: theme.text },
+                          ]}
+                        >
                           {step.title}
                         </Text>
-                        <Text style={[styles.emergencyDescription, { color: theme.textSecondary }]}>
+                        <Text
+                          style={[
+                            styles.emergencyDescription,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
                           {step.description}
                         </Text>
                       </View>
                       <View
                         style={[
                           styles.urgencyBadge,
-                          { backgroundColor: getUrgencyColor(step.urgency) }
+                          { backgroundColor: getUrgencyColor(step.urgency) },
                         ]}
                       >
                         <Text style={styles.urgencyText}>{step.urgency}</Text>
                       </View>
                     </View>
                   </View>
-                  
+
                   <View style={styles.emergencySteps}>
                     {step.steps.map((stepText, index) => (
                       <View key={index} style={styles.emergencyStep}>
-                        <View style={[styles.stepNumber, { backgroundColor: theme.primary }]}>
+                        <View
+                          style={[
+                            styles.stepNumber,
+                            { backgroundColor: theme.primary },
+                          ]}
+                        >
                           <Text style={styles.stepNumberText}>{index + 1}</Text>
                         </View>
                         <Text style={[styles.stepText, { color: theme.text }]}>
@@ -929,11 +1075,16 @@ const CoachScreen = () => {
 
             {filteredEmergencySteps.length === 0 && (
               <View style={styles.noResultsContainer}>
-                <Text style={[styles.noResultsText, { color: theme.textSecondary }]}>
+                <Text
+                  style={[styles.noResultsText, { color: theme.textSecondary }]}
+                >
                   No emergency procedures found for "{emergencySearchQuery}"
                 </Text>
-                <Text style={[styles.noResultsTip, { color: theme.textSecondary }]}>
-                  Try searching for terms like "colic", "wound", "lameness", or "choking"
+                <Text
+                  style={[styles.noResultsTip, { color: theme.textSecondary }]}
+                >
+                  Try searching for terms like "colic", "wound", "lameness", or
+                  "choking"
                 </Text>
               </View>
             )}
@@ -1039,15 +1190,23 @@ const CoachScreen = () => {
 
             <View style={styles.featuredSection}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                {startedLessons.filter(lesson => lesson.completedLessons < lesson.lessonCount).length > 0 ? "Continue Learning" : "Featured Tutorials"}
+                {startedLessons.filter(
+                  (lesson) => lesson.completedLessons < lesson.lessonCount
+                ).length > 0
+                  ? "Continue Learning"
+                  : "Featured Tutorials"}
               </Text>
               <View style={styles.featuredTutorials}>
-                {startedLessons.filter(lesson => lesson.completedLessons < lesson.lessonCount).length > 0 ? (
-                  startedLessons.filter(lesson => lesson.completedLessons < lesson.lessonCount).map(renderStartedLessonCard)
-                ) : (
-                  tutorialCategories[0]?.tutorials[0] &&
-                  renderTutorialCard(tutorialCategories[0].tutorials[0])
-                )}
+                {startedLessons.filter(
+                  (lesson) => lesson.completedLessons < lesson.lessonCount
+                ).length > 0
+                  ? startedLessons
+                      .filter(
+                        (lesson) => lesson.completedLessons < lesson.lessonCount
+                      )
+                      .map(renderStartedLessonCard)
+                  : tutorialCategories[0]?.tutorials[0] &&
+                    renderTutorialCard(tutorialCategories[0].tutorials[0])}
               </View>
             </View>
 
@@ -1063,38 +1222,78 @@ const CoachScreen = () => {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 My Performance
               </Text>
-              
+
               <View style={styles.performanceCards}>
                 {/* Time Spent Card */}
-                <View style={[styles.performanceCard, { backgroundColor: theme.surface }]}>
+                <View
+                  style={[
+                    styles.performanceCard,
+                    { backgroundColor: theme.surface },
+                  ]}
+                >
                   <View style={styles.performanceIcon}>
-                    <View style={[styles.performanceIconContainer, { backgroundColor: theme.primary }]}>
+                    <View
+                      style={[
+                        styles.performanceIconContainer,
+                        { backgroundColor: theme.primary },
+                      ]}
+                    >
                       <Text style={styles.performanceIconText}>⏱️</Text>
                     </View>
                   </View>
                   <View style={styles.performanceContent}>
                     <Text style={styles.performanceLabel}>TIME SPENT</Text>
-                    <Text style={[styles.performanceValue, { color: theme.text }]}>
+                    <Text
+                      style={[styles.performanceValue, { color: theme.text }]}
+                    >
                       {displayTimeSpent.toFixed(1)} hours
                     </Text>
                   </View>
-                  <Text style={[styles.performanceArrow, { color: theme.textSecondary }]}>›</Text>
+                  <Text
+                    style={[
+                      styles.performanceArrow,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    ›
+                  </Text>
                 </View>
 
                 {/* Lessons Completed Card */}
-                <View style={[styles.performanceCard, { backgroundColor: theme.surface }]}>
+                <View
+                  style={[
+                    styles.performanceCard,
+                    { backgroundColor: theme.surface },
+                  ]}
+                >
                   <View style={styles.performanceIcon}>
-                    <View style={[styles.performanceIconContainer, { backgroundColor: theme.accent }]}>
+                    <View
+                      style={[
+                        styles.performanceIconContainer,
+                        { backgroundColor: theme.accent },
+                      ]}
+                    >
                       <Text style={styles.performanceIconText}>🎯</Text>
                     </View>
                   </View>
                   <View style={styles.performanceContent}>
-                    <Text style={styles.performanceLabel}>LESSONS COMPLETED</Text>
-                    <Text style={[styles.performanceValue, { color: theme.text }]}>
+                    <Text style={styles.performanceLabel}>
+                      LESSONS COMPLETED
+                    </Text>
+                    <Text
+                      style={[styles.performanceValue, { color: theme.text }]}
+                    >
                       {displayLessonsCompleted} lessons
                     </Text>
                   </View>
-                  <Text style={[styles.performanceArrow, { color: theme.textSecondary }]}>›</Text>
+                  <Text
+                    style={[
+                      styles.performanceArrow,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    ›
+                  </Text>
                 </View>
               </View>
             </View>
@@ -1181,7 +1380,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 10,
+    marginTop: 20,
     paddingBottom: 130,
   },
   introSection: {
@@ -1490,8 +1689,8 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 6,
     marginBottom: 20,
     elevation: 2,
     shadowColor: "#000",
@@ -1641,81 +1840,81 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
   },
-  
+
   // My Performance section styles
   performanceSection: {
     marginTop: 20,
     marginBottom: 20,
   },
-  
+
   performanceCards: {
     gap: 12,
   },
-  
+
   performanceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 12,
     marginBottom: 12,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  
+
   performanceIcon: {
     marginRight: 16,
   },
-  
+
   performanceIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
-  
+
   performanceIconText: {
     fontSize: 20,
   },
-  
+
   performanceContent: {
     flex: 1,
   },
-  
+
   performanceLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: "600",
+    color: "#666",
     marginBottom: 4,
     fontFamily: "Inder",
     letterSpacing: 0.5,
   },
-  
+
   performanceValue: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: "Inder",
   },
-  
+
   performanceArrow: {
     fontSize: 18,
-    fontWeight: '300',
+    fontWeight: "300",
   },
-  
+
   // Started Lesson Card Styles (compact horizontal design)
   startedLessonCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 16,
     marginVertical: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
+    borderColor: "rgba(0,0,0,0.08)",
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -1729,28 +1928,28 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   startedLessonIconText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: "Inder",
   },
   startedLessonContent: {
     flex: 1,
   },
   startedLessonHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 6,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   startedLessonTitle: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: "Inder",
     marginRight: 8,
     minWidth: 0, // Allows text to shrink if needed
@@ -1763,9 +1962,9 @@ const styles = StyleSheet.create({
   },
   startedLessonDifficultyText: {
     fontSize: 10,
-    fontWeight: '600',
-    color: 'white',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    color: "white",
+    textTransform: "uppercase",
     fontFamily: "Inder",
   },
   startedLessonDuration: {
@@ -1778,9 +1977,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   startedLessonFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   startedLessonProgress: {
     fontSize: 12,
@@ -1790,19 +1989,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inder",
   },
-  
+
   // Completed badge styles
   completedBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   completedBadgeText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: "Inder",
   },
 });
