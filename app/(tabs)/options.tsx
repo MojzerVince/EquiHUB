@@ -620,7 +620,7 @@ const OptionsScreen = () => {
   };
 
   const handlePrivacyPolicy = async () => {
-    const url = "https://sites.google.com/view/equihub-privacy/f%C5%91oldal";
+    const url = "https://equihubapp.com/privacy";
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) {
