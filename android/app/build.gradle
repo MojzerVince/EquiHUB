@@ -92,7 +92,7 @@ android {
         applicationId 'com.mojzi1969.EquiHUB'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 42
+        versionCode 43
         versionName "0.8.0"
         missingDimensionStrategy 'store', 'play'
     }
