@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { SessionManager } from './sessionManager';
 import { getSupabase } from './supabase';
 
@@ -575,32 +576,25 @@ export class AuthAPI {
 
       const supabase = getSupabase();
 
-      // Check if user already exists
-      const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', googleUser.email)
-        .single();
-
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Error checking existing user:', fetchError);
-        return { user: null, error: 'Database error occurred' };
-      }
-
-      if (existingUser) {
-        // User exists, store login time and return user
+      // Use Supabase Auth to check if user exists by trying to get user data
+      // Since we can't directly query auth.users, we'll try to sign them in
+      // and handle accordingly based on the result
+      const { data: { user }, error: getSessionError } = await supabase.auth.getUser();
+      
+      if (user && user.email === googleUser.email) {
+        // User is already signed in
         await SessionManager.storeLastLoginTime();
         console.log('Google sign in successful for existing user');
         return { 
           user: {
-            id: existingUser.id,
-            email: existingUser.email,
-            created_at: existingUser.created_at
+            id: user.id,
+            email: user.email,
+            created_at: user.created_at
           }, 
           error: null 
         };
       } else {
-        // User doesn't exist, they need to register
+        // User needs to authenticate or doesn't exist
         return { user: null, error: 'GOOGLE_USER_NOT_FOUND' };
       }
 
@@ -610,19 +604,14 @@ export class AuthAPI {
     }
   }
 
-  // Google Registration (for new users)
-  static async registerWithGoogle(
-    googleUser: any, 
+  // Google Registration (for new users) - Modified to work like email registration
+  static async registerWithGoogleOAuth(
     profileData: { name: string; age: number; description?: string; riding_experience?: number; stable_id?: string }
-  ): Promise<{ user: AuthUser | null; error: string | null }> {
+  ): Promise<{ user: AuthUser | null; error: string | null; requiresOAuth?: boolean }> {
     try {
-      console.log('Attempting Google registration...');
+      console.log('Starting Google OAuth registration...');
       
-      if (!googleUser.email) {
-        return { user: null, error: 'No email found in Google account' };
-      }
-
-      // Validate profile data
+      // Validate profile data first
       if (!profileData.name || !profileData.age) {
         return { user: null, error: 'Name and age are required' };
       }
@@ -637,83 +626,129 @@ export class AuthAPI {
 
       const supabase = getSupabase();
 
-      // Check if user already exists
-      const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', googleUser.email)
-        .single();
-
-      if (existingUser) {
-        return { user: null, error: 'User already exists with this Google account. Please sign in instead.' };
-      }
-
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Error checking existing user:', fetchError);
-        return { user: null, error: 'Database error occurred' };
-      }
-
-      // Create new user profile
-      const { data: newUser, error: insertError } = await supabase
-        .from('users')
-        .insert([{
-          email: googleUser.email,
-          name: profileData.name,
-          age: profileData.age,
-          description: profileData.description || '',
-          riding_experience: profileData.riding_experience || 0,
-          auth_provider: 'google',
-          google_id: googleUser.id
-        }])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('User registration error:', insertError);
-        if (insertError.code === '23505') {
-          return { user: null, error: 'A user with this email already exists' };
-        }
-        return { user: null, error: 'Failed to create user account' };
-      }
-
-      // Join stable if provided
-      if (profileData.stable_id && newUser) {
-        try {
-          const { error: stableError } = await supabase
-            .from('stable_members')
-            .insert([{
-              stable_id: profileData.stable_id,
-              user_id: newUser.id,
-              role: 'member',
-              joined_at: new Date().toISOString()
-            }]);
-
-          if (stableError) {
-            console.error('Error joining stable:', stableError);
-            // Don't fail registration if stable join fails
+      // Initiate Google OAuth - this will redirect the user to Google
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: Platform.OS === 'web' 
+            ? `${window.location.origin}/auth/google-callback` 
+            : 'com.mojzi1969.EquiHUB://oauth/google-callback',
+          // Store profile data in the state parameter to retrieve after OAuth
+          queryParams: {
+            state: btoa(JSON.stringify(profileData)) // Base64 encode the profile data
           }
-        } catch (stableJoinError) {
-          console.error('Stable join error:', stableJoinError);
-          // Don't fail registration if stable join fails
         }
+      });
+
+      if (error) {
+        console.error('Google OAuth initiation error:', error);
+        return { user: null, error: error.message };
       }
 
-      // Store last login time for session tracking
-      await SessionManager.storeLastLoginTime();
+      if (data.url) {
+        // Return special flag indicating OAuth is required
+        return { 
+          user: null, 
+          error: null, 
+          requiresOAuth: true 
+        };
+      }
 
-      console.log('Google registration successful');
-      return { 
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          created_at: newUser.created_at
-        }, 
-        error: null 
-      };
+      return { user: null, error: 'Failed to initiate Google OAuth' };
 
     } catch (error) {
       console.error('Google registration error:', error);
       return { user: null, error: 'Google registration failed' };
+    }
+  }
+
+  // Handle Google OAuth callback after user returns from Google
+  static async handleGoogleOAuthCallback(url: string): Promise<{ user: AuthUser | null; error: string | null }> {
+    try {
+      console.log('Handling Google OAuth callback...');
+      const supabase = getSupabase();
+
+      // Get session from the callback URL
+      const { data, error } = await supabase.auth.getSessionFromUrl();
+
+      if (error) {
+        console.error('OAuth callback error:', error);
+        return { user: null, error: error.message };
+      }
+
+      if (!data.session?.user) {
+        return { user: null, error: 'No user data received from Google' };
+      }
+
+      const authUser = data.session.user;
+      
+      // Check if this is a new user by looking at creation time vs last sign in
+      const isNewUser = new Date(authUser.created_at).getTime() === new Date(authUser.last_sign_in_at || authUser.created_at).getTime();
+      
+      if (isNewUser) {
+        // Extract profile data from state parameter if available
+        try {
+          const urlObj = new URL(url);
+          const state = urlObj.searchParams.get('state');
+          if (state) {
+            const profileData = JSON.parse(atob(state));
+            
+            // Update the user metadata with profile data
+            const { error: updateError } = await supabase.auth.updateUser({
+              data: {
+                name: profileData.name,
+                age: profileData.age,
+                description: profileData.description || 'Equestrian enthusiast',
+                riding_experience: profileData.riding_experience || 0,
+                stable_id: profileData.stable_id || null
+              }
+            });
+
+            if (updateError) {
+              console.error('Error updating user metadata:', updateError);
+            }
+
+            // Also create profile in profiles table if needed
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .insert([{
+                id: authUser.id,
+                name: profileData.name,
+                age: profileData.age,
+                description: profileData.description || '',
+                experience: profileData.riding_experience || 0,
+                profile_image_url: authUser.user_metadata?.avatar_url,
+                google_id: authUser.user_metadata?.provider_id,
+                auth_provider: 'google',
+                is_pro_member: false,
+                stable_id: profileData.stable_id
+              }]);
+
+            if (profileError && profileError.code !== '23505') {
+              console.error('Error creating profile:', profileError);
+            }
+          }
+        } catch (stateError) {
+          console.error('Error parsing state parameter:', stateError);
+        }
+      }
+
+      // Store last login time
+      await SessionManager.storeLastLoginTime();
+
+      console.log('Google OAuth registration/login successful');
+      return {
+        user: {
+          id: authUser.id,
+          email: authUser.email!,
+          created_at: authUser.created_at!
+        },
+        error: null
+      };
+
+    } catch (error) {
+      console.error('Google OAuth callback error:', error);
+      return { user: null, error: 'Failed to complete Google authentication' };
     }
   }
 

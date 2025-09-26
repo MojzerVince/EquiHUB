@@ -15,19 +15,23 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AuthAPI } from "../lib/authAPI";
+import { useGoogleRegistration } from "../lib/useGoogleRegistration";
 
 import { SimpleStable, SimpleStableAPI } from "../lib/simpleStableAPI";
-import OAuthButtons from '../components/OAuthButtons';
 
 const RegisterScreen = () => {
   const router = useRouter();
   const { showError, showConfirm } = useDialog();
+  const {
+    getGoogleUserInfo,
+    completeRegistration,
+    loading: googleLoading,
+  } = useGoogleRegistration();
 
   // Registration flow state
-  const [step, setStep] = useState(1); // 1 = OAuth Auth, 2 = Profile Form  
+  const [step, setStep] = useState(1); // 1 = OAuth Auth, 2 = Profile Form
   const [oauthUser, setOauthUser] = useState<any | null>(null);
-  
+
   // Form state (only profile data, no email/password)
   const [formData, setFormData] = useState({
     name: "",
@@ -83,34 +87,25 @@ const RegisterScreen = () => {
   };
 
   const handleGoogleAuth = async () => {
-    setGoogleLoading(true);
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      
-      const result = await promptAsync() as any;
-      
-      if (result?.type === 'success') {
-        // The new OAuth flow returns user info directly from the server
-        const userInfo = result.user;
-        setGoogleUser(userInfo);
-        
+      const result = await getGoogleUserInfo();
+
+      if (result.success && result.userInfo) {
+        setOauthUser(result.userInfo);
+
         // Pre-fill name if available
-        if (userInfo.name) {
-          setFormData(prev => ({ ...prev, name: userInfo.name }));
+        if (result.userInfo.name) {
+          setFormData((prev) => ({ ...prev, name: result.userInfo.name }));
         }
-        
+
         // Move to profile form step
         setStep(2);
-      } else if (result?.type === 'cancelled') {
-        console.log('Google auth cancelled');
-      } else if (result?.type === 'error') {
-        showError(result.error || 'Google authentication failed');
+      } else {
+        showError(result.error || "Google authentication failed");
       }
     } catch (error) {
       console.error("Google auth error:", error);
       showError("Failed to authenticate with Google");
-    } finally {
-      setGoogleLoading(false);
     }
   };
 
@@ -120,42 +115,37 @@ const RegisterScreen = () => {
       return;
     }
 
-    if (!googleUser) {
+    if (!oauthUser) {
       showError("Google authentication required");
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
     setErrors({});
 
     try {
-      // Register with Google auth
-      const { user, error } = await AuthAPI.registerWithGoogle(
-        googleUser,
-        {
-          name: formData.name,
-          age: formData.age,
-          description: formData.description,
-          riding_experience: formData.riding_experience,
-          stable_id: selectedStable?.id
-        }
-      );
+      // Complete Google registration using the new hook
+      const result = await completeRegistration(oauthUser, {
+        name: formData.name,
+        age: formData.age,
+        description: formData.description,
+        riding_experience: formData.riding_experience,
+        stable_id: selectedStable?.id,
+      });
 
-      if (error) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        showError(error);
+      if (!result.success) {
+        showError(result.error || "Registration failed");
         return;
       }
 
-      if (user) {
+      if (result.user) {
         // Handle stable creation after successful registration
         try {
           if (newStableData) {
             // Create new stable
             const createResult = await SimpleStableAPI.createStable({
               ...newStableData,
-              creator_id: user.id,
+              creator_id: result.user.id,
             });
 
             if (createResult.error) {
@@ -192,10 +182,7 @@ const RegisterScreen = () => {
     }
   };
 
-  const handleInputChange = (
-    field: string,
-    value: string | number
-  ) => {
+  const handleInputChange = (field: string, value: string | number) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -262,13 +249,13 @@ const RegisterScreen = () => {
               {step === 1 ? "Join EquiHUB" : "Complete Your Profile"}
             </Text>
             <Text style={styles.subtitle}>
-              {step === 1 
-                ? "Sign up with your Google account to get started" 
+              {step === 1
+                ? "Sign up with your Google account to get started"
                 : "Tell us about yourself"}
             </Text>
-            {step === 2 && googleUser && (
+            {step === 2 && oauthUser && (
               <View style={styles.googleUserInfo}>
-                <Text style={styles.googleUserEmail}>{googleUser.email}</Text>
+                <Text style={styles.googleUserEmail}>{oauthUser.email}</Text>
               </View>
             )}
           </View>
@@ -278,20 +265,29 @@ const RegisterScreen = () => {
             {step === 1 ? (
               // Step 1: Google Authentication
               <View style={styles.googleAuthContainer}>
-                <OAuthButtons 
-                  onSuccess={(user) => {
-                    console.log('OAuth registration successful:', user);
-                    // If it's a complete registration, go to tabs
-                    router.push('/(tabs)');
-                  }}
-                  onError={(error) => {
-                    showError(error);
-                  }}
-                  isSignUp={true}
-                />
-                
+                {/* Custom Google Sign-in Button */}
+                <TouchableOpacity
+                  style={styles.googleButton}
+                  onPress={handleGoogleAuth}
+                  disabled={googleLoading}
+                  activeOpacity={0.8}
+                >
+                  {googleLoading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Text style={styles.googleButtonIcon}>🔍</Text>
+                      <Text style={styles.googleButtonText}>
+                        Sign up with Google
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
                 <View style={styles.loginPrompt}>
-                  <Text style={styles.loginPromptText}>Already have an account?</Text>
+                  <Text style={styles.loginPromptText}>
+                    Already have an account?
+                  </Text>
                   <TouchableOpacity
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -306,195 +302,202 @@ const RegisterScreen = () => {
             ) : (
               // Step 2: Profile Form
               <View style={styles.profileFormContainer}>
-            {/* Name Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <TextInput
-                style={[
-                  styles.textInput,
-                  errors.name ? styles.inputError : null,
-                ]}
-                value={formData.name}
-                onChangeText={(text) => handleInputChange("name", text)}
-                placeholder="Enter your full name"
-                placeholderTextColor="#999"
-                autoCapitalize="words"
-                autoCorrect={false}
-                maxLength={50}
-              />
-              {errors.name ? (
-                <Text style={styles.errorText}>{errors.name}</Text>
-              ) : null}
-            </View>
-
-            {/* Age Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Age</Text>
-              <TextInput
-                style={[
-                  styles.textInput,
-                  errors.age ? styles.inputError : null,
-                ]}
-                value={formData.age.toString()}
-                onChangeText={(text) => {
-                  const age = parseInt(text) || 0;
-                  handleInputChange("age", age);
-                }}
-                placeholder="Enter your age"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-                maxLength={3}
-              />
-              {errors.age ? (
-                <Text style={styles.errorText}>{errors.age}</Text>
-              ) : null}
-            </View>
-
-            {/* Riding Experience Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Riding Experience (Years)</Text>
-              <TextInput
-                style={[
-                  styles.textInput,
-                  errors.riding_experience ? styles.inputError : null,
-                ]}
-                value={formData.riding_experience?.toString() || "0"}
-                onChangeText={(text) => {
-                  const experience = parseInt(text) || 0;
-                  handleInputChange("riding_experience", experience);
-                }}
-                placeholder="Years of riding experience"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-                maxLength={2}
-              />
-              {errors.riding_experience ? (
-                <Text style={styles.errorText}>{errors.riding_experience}</Text>
-              ) : null}
-            </View>
-
-
-
-
-
-            {/* Description Input (Optional) */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>About You (Optional)</Text>
-              <TextInput
-                style={[styles.textArea]}
-                value={formData.description}
-                onChangeText={(text) => handleInputChange("description", text)}
-                placeholder="Tell us a bit about yourself and your equestrian interests..."
-                placeholderTextColor="#999"
-                multiline={true}
-                numberOfLines={4}
-                maxLength={500}
-                textAlignVertical="top"
-              />
-              <Text style={styles.characterCount}>
-                {formData.description?.length || 0}/500
-              </Text>
-            </View>
-
-            {/* Stable Selection */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Stable/Ranch (Optional)</Text>
-              <Text style={styles.inputDescription}>
-                Choose a stable to associate with or skip to set this later
-              </Text>
-
-              {selectedStable ? (
-                <View style={styles.selectedStableContainer}>
-                  <View style={styles.selectedStableInfo}>
-                    <Text style={styles.selectedStableName}>
-                      {selectedStable.name}
-                    </Text>
-                    <Text style={styles.selectedStableLocation}>
-                      {selectedStable.city && selectedStable.state_province
-                        ? `${selectedStable.city}, ${selectedStable.state_province}`
-                        : selectedStable.location || "Location not specified"}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.changeStableButton}
-                    onPress={() => setShowStableSelection(true)}
-                  >
-                    <Text style={styles.changeStableButtonText}>Change</Text>
-                  </TouchableOpacity>
+                {/* Name Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Full Name</Text>
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      errors.name ? styles.inputError : null,
+                    ]}
+                    value={formData.name}
+                    onChangeText={(text) => handleInputChange("name", text)}
+                    placeholder="Enter your full name"
+                    placeholderTextColor="#999"
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    maxLength={50}
+                  />
+                  {errors.name ? (
+                    <Text style={styles.errorText}>{errors.name}</Text>
+                  ) : null}
                 </View>
-              ) : newStableData ? (
-                <View style={styles.selectedStableContainer}>
-                  <View style={styles.selectedStableInfo}>
-                    <Text style={styles.selectedStableName}>
-                      {newStableData.name}
-                    </Text>
-                    <Text style={styles.selectedStableLocation}>
-                      New stable - you'll be the owner
-                    </Text>
-                    {newStableData.city && newStableData.state_province && (
-                      <Text style={styles.selectedStableMembers}>
-                        {newStableData.city}, {newStableData.state_province}
-                      </Text>
-                    )}
-                  </View>
-                  <TouchableOpacity
-                    style={styles.changeStableButton}
-                    onPress={() => setShowStableSelection(true)}
-                  >
-                    <Text style={styles.changeStableButtonText}>Change</Text>
-                  </TouchableOpacity>
+
+                {/* Age Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Age</Text>
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      errors.age ? styles.inputError : null,
+                    ]}
+                    value={formData.age.toString()}
+                    onChangeText={(text) => {
+                      const age = parseInt(text) || 0;
+                      handleInputChange("age", age);
+                    }}
+                    placeholder="Enter your age"
+                    placeholderTextColor="#999"
+                    keyboardType="numeric"
+                    maxLength={3}
+                  />
+                  {errors.age ? (
+                    <Text style={styles.errorText}>{errors.age}</Text>
+                  ) : null}
                 </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.selectStableButton}
-                  onPress={() => setShowStableSelection(true)}
-                >
-                  <Text style={styles.selectStableButtonText}>
-                    Choose a Stable
+
+                {/* Riding Experience Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>
+                    Riding Experience (Years)
                   </Text>
-                </TouchableOpacity>
-              )}
-            </View>
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      errors.riding_experience ? styles.inputError : null,
+                    ]}
+                    value={formData.riding_experience?.toString() || "0"}
+                    onChangeText={(text) => {
+                      const experience = parseInt(text) || 0;
+                      handleInputChange("riding_experience", experience);
+                    }}
+                    placeholder="Years of riding experience"
+                    placeholderTextColor="#999"
+                    keyboardType="numeric"
+                    maxLength={2}
+                  />
+                  {errors.riding_experience ? (
+                    <Text style={styles.errorText}>
+                      {errors.riding_experience}
+                    </Text>
+                  ) : null}
+                </View>
+
+                {/* Description Input (Optional) */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>About You (Optional)</Text>
+                  <TextInput
+                    style={[styles.textArea]}
+                    value={formData.description}
+                    onChangeText={(text) =>
+                      handleInputChange("description", text)
+                    }
+                    placeholder="Tell us a bit about yourself and your equestrian interests..."
+                    placeholderTextColor="#999"
+                    multiline={true}
+                    numberOfLines={4}
+                    maxLength={500}
+                    textAlignVertical="top"
+                  />
+                  <Text style={styles.characterCount}>
+                    {formData.description?.length || 0}/500
+                  </Text>
+                </View>
+
+                {/* Stable Selection */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Stable/Ranch (Optional)</Text>
+                  <Text style={styles.inputDescription}>
+                    Choose a stable to associate with or skip to set this later
+                  </Text>
+
+                  {selectedStable ? (
+                    <View style={styles.selectedStableContainer}>
+                      <View style={styles.selectedStableInfo}>
+                        <Text style={styles.selectedStableName}>
+                          {selectedStable.name}
+                        </Text>
+                        <Text style={styles.selectedStableLocation}>
+                          {selectedStable.city && selectedStable.state_province
+                            ? `${selectedStable.city}, ${selectedStable.state_province}`
+                            : selectedStable.location ||
+                              "Location not specified"}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.changeStableButton}
+                        onPress={() => setShowStableSelection(true)}
+                      >
+                        <Text style={styles.changeStableButtonText}>
+                          Change
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : newStableData ? (
+                    <View style={styles.selectedStableContainer}>
+                      <View style={styles.selectedStableInfo}>
+                        <Text style={styles.selectedStableName}>
+                          {newStableData.name}
+                        </Text>
+                        <Text style={styles.selectedStableLocation}>
+                          New stable - you'll be the owner
+                        </Text>
+                        {newStableData.city && newStableData.state_province && (
+                          <Text style={styles.selectedStableMembers}>
+                            {newStableData.city}, {newStableData.state_province}
+                          </Text>
+                        )}
+                      </View>
+                      <TouchableOpacity
+                        style={styles.changeStableButton}
+                        onPress={() => setShowStableSelection(true)}
+                      >
+                        <Text style={styles.changeStableButtonText}>
+                          Change
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.selectStableButton}
+                      onPress={() => setShowStableSelection(true)}
+                    >
+                      <Text style={styles.selectStableButtonText}>
+                        Choose a Stable
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             )}
           </View>
 
           {/* Buttons - only show for step 2 */}
           {step === 2 && (
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.registerButton,
-                loading ? styles.disabledButton : null,
-              ]}
-              onPress={handleProfileSubmit}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              {loading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color="#fff" />
-                  <Text style={styles.loadingText}>Creating Account...</Text>
-                </View>
-              ) : (
-                <Text style={styles.registerButtonText}>Create Account</Text>
-              )}
-            </TouchableOpacity>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.registerButton,
+                  loading ? styles.disabledButton : null,
+                ]}
+                onPress={handleProfileSubmit}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                {loading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#fff" />
+                    <Text style={styles.loadingText}>Creating Account...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.registerButtonText}>Create Account</Text>
+                )}
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.loginLinkContainer}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.replace("/login");
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.loginLinkText}>
-                Already have an account?{" "}
-              </Text>
-              <Text style={styles.loginLink}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={styles.loginLinkContainer}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.replace("/login");
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.loginLinkText}>
+                  Already have an account?{" "}
+                </Text>
+                <Text style={styles.loginLink}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Terms - show for both steps */}

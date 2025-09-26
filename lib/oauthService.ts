@@ -189,78 +189,67 @@ export class OAuthService {
     try {
       const supabase = getSupabase();
       
-      // First, check if user exists
-      const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
+      // Instead of manually managing users, use Supabase Auth's built-in OAuth
+      // For now, we'll just return the user data since auth is handled by Supabase
+      console.log('User authenticated via OAuth:', user.email);
+
+      // Create or update user profile in the profiles table
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
         .select('*')
-        .eq('email', user.email)
+        .eq('google_id', user.id)
         .single();
 
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error fetching user:', fetchError);
-        return { success: false, error: 'Failed to check existing user' };
-      }
+      let profileData;
 
-      let userData;
-
-      if (existingUser) {
-        // Update existing user
-        const { data: updatedUser, error: updateError } = await supabase
-          .from('users')
+      if (existingProfile) {
+        // Update existing profile
+        const { data: updatedProfile, error: updateError } = await supabase
+          .from('profiles')
           .update({
             name: user.name,
-            avatar_url: user.avatar_url,
-            last_sign_in_at: new Date().toISOString(),
+            profile_image_url: user.avatar_url,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', existingUser.id)
+          .eq('google_id', user.id)
           .select()
           .single();
 
         if (updateError) {
-          console.error('Error updating user:', updateError);
-          return { success: false, error: 'Failed to update user profile' };
+          console.error('Error updating profile:', updateError);
+        } else {
+          profileData = updatedProfile;
         }
-
-        userData = updatedUser;
       } else {
-        // Create new user
-        const { data: newUser, error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            avatar_url: user.avatar_url,
-            provider: user.provider,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            last_sign_in_at: new Date().toISOString(),
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('Error creating user:', insertError);
-          return { success: false, error: 'Failed to create user profile' };
+        // For new users, we'll need to create a profile during registration flow
+        // This is just for existing users
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          console.error('Error checking profile:', fetchError);
         }
-
-        userData = newUser;
       }
 
       return {
         success: true,
         user: {
-          id: userData.id,
-          email: userData.email,
-          name: userData.name,
-          avatar_url: userData.avatar_url,
-          provider: userData.provider,
+          id: profileData?.id || user.id,
+          email: user.email,
+          name: user.name,
+          avatar_url: user.avatar_url,
+          provider: user.provider,
         },
       };
     } catch (error: any) {
-      console.error('Supabase save error:', error);
-      return { success: false, error: 'Failed to save user data' };
+      console.error('Profile update error:', error);
+      return { 
+        success: true, // Don't fail auth if profile update fails
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar_url: user.avatar_url,
+          provider: user.provider,
+        },
+      };
     }
   }
 
