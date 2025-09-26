@@ -48,9 +48,9 @@ const initializeGoogleSignInModule = () => {
 
 // Google OAuth Configuration - Using environment variables
 const GOOGLE_CONFIG = {
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '645905000706-84poben7qoa735imq8ukp765ho5k0d97.apps.googleusercontent.com',
-  androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '645905000706-r5d9rejr3lakueqrhl1tk7ldmpv2jt2v.apps.googleusercontent.com',
-  iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com', // Your iOS Client ID (when you have one)
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  //iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
   offlineAccess: true,
   forceCodeForRefreshToken: true,
   scopes: ['openid', 'profile', 'email'],
@@ -69,12 +69,20 @@ export const configureGoogleSignIn = async () => {
     const isAvailable = initializeGoogleSignInModule();
     
     if (isAvailable && GoogleSignin) {
-      GoogleSignin.configure({
+      const config = {
         webClientId: GOOGLE_CONFIG.webClientId,
-        iosClientId: GOOGLE_CONFIG.iosClientId,
+        //iosClientId: GOOGLE_CONFIG.iosClientId,
+        androidClientId: GOOGLE_CONFIG.androidClientId,
         offlineAccess: GOOGLE_CONFIG.offlineAccess,
         forceCodeForRefreshToken: GOOGLE_CONFIG.forceCodeForRefreshToken,
-      });
+      };
+
+      // Check if required client ID is available
+      if (!config.webClientId) {
+        console.warn('Google Web Client ID not configured, Google Sign In may not work properly');
+      }
+
+      GoogleSignin.configure(config);
       console.log('Google Sign In configured for native platform');
       return true;
     } else {
@@ -144,6 +152,11 @@ export const useGoogleAuth = () => {
 const initiateWebGoogleAuth = async () => {
   try {
     const clientId = GOOGLE_CONFIG.webClientId;
+    
+    if (!clientId) {
+      throw new Error('Google Web Client ID not configured. Please check your environment variables.');
+    }
+    
     const redirectUri = Platform.OS === 'web' ? `${window.location.origin}/auth/callback` : 'com.mojzi1969.EquiHUB://oauth/callback';
     
     // Create OAuth 2.0 authorization URL
