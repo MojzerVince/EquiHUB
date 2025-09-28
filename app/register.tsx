@@ -22,12 +22,35 @@ const RegisterScreen = () => {
 
   const handleGoogleRegister = async () => {
     try {
-      // Step 1: Get Google user info (doesn't create Supabase account yet)
+      // FOR DEVELOPMENT: Check if we're in Expo Go or development environment
+      const isDevelopment = __DEV__ || process.env.NODE_ENV === "development";
+
+      if (isDevelopment) {
+        console.log("Development mode: Simulating Google auth");
+
+        // Simulate Google user data for development
+        const mockGoogleUser = {
+          id: "dev_google_123456",
+          email: "developer@test.com",
+          name: "Test Developer",
+          picture: null,
+        };
+
+        // Navigate directly to registration form with mock data
+        router.push({
+          pathname: "/register-complex-backup",
+          params: {
+            googleUser: JSON.stringify(mockGoogleUser),
+          },
+        });
+        return;
+      }
+
+      // Production: Try real Google authentication
       const result = await getGoogleUserInfo();
 
       if (result.success && result.userInfo) {
         // Store Google user info and navigate to registration form
-        // We'll pass the Google user info via navigation params
         router.push({
           pathname: "/register-complex-backup",
           params: {
@@ -35,11 +58,34 @@ const RegisterScreen = () => {
           },
         });
       } else {
-        showError(result.error || "Google authentication failed");
+        // If Google auth fails, show error with fallback option
+        showError(
+          result.error ||
+            "Google authentication failed. Please try again or contact support."
+        );
       }
     } catch (error) {
       console.error("Google auth error:", error);
-      showError("Failed to authenticate with Google");
+
+      // Development fallback: If Google auth completely fails, offer mock data
+      if (__DEV__) {
+        console.log("Google auth failed in development, using mock data");
+        const mockGoogleUser = {
+          id: "dev_fallback_789",
+          email: "fallback@test.com",
+          name: "Development User",
+          picture: null,
+        };
+
+        router.push({
+          pathname: "/register-complex-backup",
+          params: {
+            googleUser: JSON.stringify(mockGoogleUser),
+          },
+        });
+      } else {
+        showError("Failed to authenticate with Google. Please try again.");
+      }
     }
   };
 
@@ -81,6 +127,33 @@ const RegisterScreen = () => {
                   </>
                 )}
               </TouchableOpacity>
+
+              {/* Development Only: Direct access to registration form */}
+              {__DEV__ && (
+                <TouchableOpacity
+                  style={styles.devButton}
+                  onPress={() => {
+                    const mockGoogleUser = {
+                      id: "dev_direct_999",
+                      email: "direct@test.com",
+                      name: "Direct Test User",
+                      picture: null,
+                    };
+
+                    router.push({
+                      pathname: "/register-complex-backup",
+                      params: {
+                        googleUser: JSON.stringify(mockGoogleUser),
+                      },
+                    });
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.devButtonText}>
+                    🛠️ DEV: Skip to Registration Form
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             <View style={styles.loginPrompt}>
@@ -184,6 +257,21 @@ const styles = StyleSheet.create({
   loginLinkText: {
     fontSize: 16,
     color: "#3498db",
+    fontWeight: "600",
+  },
+  devButton: {
+    backgroundColor: "#ff6b35",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ff8c69",
+  },
+  devButtonText: {
+    color: "#fff",
+    fontSize: 14,
     fontWeight: "600",
   },
 });

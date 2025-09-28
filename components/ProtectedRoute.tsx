@@ -27,7 +27,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       return;
     }
 
-    const inAuthGroup = segments[0] === "login" || segments[0] === "register";
+    const inAuthGroup =
+      segments[0] === "login" ||
+      segments[0] === "register" ||
+      (segments[0] && segments[0].startsWith("register"));
     const onWelcome = !segments[0]; // Root level (welcome page)
     const inTabsGroup = segments[0] === "(tabs)";
 
