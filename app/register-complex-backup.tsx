@@ -38,8 +38,11 @@ const RegisterScreen = () => {
     name: "",
     age: 18,
     description: "",
-    riding_experience: 0,
+    riding_experience: "", // Changed to string to allow empty state
   });
+
+  // Separate state to track the actual numeric value for validation
+  const [ridingExperienceValue, setRidingExperienceValue] = useState(0);
 
   const [loading, setLoading] = useState(false);
 
@@ -96,10 +99,7 @@ const RegisterScreen = () => {
     }
 
     // Riding experience validation
-    if (
-      formData.riding_experience !== undefined &&
-      (formData.riding_experience < 0 || formData.riding_experience > 80)
-    ) {
+    if (ridingExperienceValue < 0 || ridingExperienceValue > 80) {
       newErrors.riding_experience =
         "Riding experience must be between 0 and 80 years";
     }
@@ -151,7 +151,7 @@ const RegisterScreen = () => {
         name: formData.name,
         age: formData.age,
         description: formData.description,
-        riding_experience: formData.riding_experience,
+        riding_experience: ridingExperienceValue, // Use numeric value
         stable_id: selectedStable?.id,
       });
 
@@ -384,12 +384,33 @@ const RegisterScreen = () => {
                         styles.textInput,
                         errors.riding_experience ? styles.inputError : null,
                       ]}
-                      value={formData.riding_experience?.toString() || "0"}
+                      value={formData.riding_experience}
                       onChangeText={(text) => {
-                        const experience = parseInt(text) || 0;
-                        handleInputChange("riding_experience", experience);
+                        // Allow empty string and only numeric input
+                        if (text === "" || /^\d+$/.test(text)) {
+                          handleInputChange("riding_experience", text);
+                        }
                       }}
-                      placeholder="Years of riding experience"
+                      onFocus={() => {
+                        // When user focuses, if the value is "0", clear it for better UX
+                        if (formData.riding_experience === "0") {
+                          handleInputChange("riding_experience", "");
+                        }
+                      }}
+                      onBlur={() => {
+                        // When user finishes editing, convert to number and validate
+                        const numValue =
+                          formData.riding_experience === ""
+                            ? 0
+                            : parseInt(formData.riding_experience, 10);
+                        setRidingExperienceValue(numValue);
+
+                        // If field is empty, keep it empty for display
+                        if (formData.riding_experience === "") {
+                          handleInputChange("riding_experience", "");
+                        }
+                      }}
+                      placeholder="0"
                       placeholderTextColor="#999"
                       keyboardType="numeric"
                       maxLength={2}
