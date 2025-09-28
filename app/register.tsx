@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,11 +13,35 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import OAuthButtons from "../components/OAuthButtons";
+import { useGoogleRegistration } from "../lib/useGoogleRegistration";
 
 const RegisterScreen = () => {
   const router = useRouter();
   const { showError } = useDialog();
+  const { getGoogleUserInfo, loading: googleLoading } = useGoogleRegistration();
+
+  const handleGoogleRegister = async () => {
+    try {
+      // Step 1: Get Google user info (doesn't create Supabase account yet)
+      const result = await getGoogleUserInfo();
+
+      if (result.success && result.userInfo) {
+        // Store Google user info and navigate to registration form
+        // We'll pass the Google user info via navigation params
+        router.push({
+          pathname: "/register-complex-backup",
+          params: {
+            googleUser: JSON.stringify(result.userInfo),
+          },
+        });
+      } else {
+        showError(result.error || "Google authentication failed");
+      }
+    } catch (error) {
+      console.error("Google auth error:", error);
+      showError("Failed to authenticate with Google");
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -34,18 +59,28 @@ const RegisterScreen = () => {
               Join EquiHUB and connect with the equestrian community
             </Text>
 
-            {/* OAuth Sign Up Buttons */}
+            {/* Custom Google Sign Up Button */}
             <View style={styles.oauthContainer}>
-              <OAuthButtons
-                onSuccess={(user) => {
-                  console.log("OAuth registration successful:", user);
-                  router.push("/(tabs)");
-                }}
-                onError={(error) => {
-                  showError(error);
-                }}
-                isSignUp={true}
-              />
+              <TouchableOpacity
+                style={[
+                  styles.googleButton,
+                  googleLoading && styles.disabledButton,
+                ]}
+                onPress={handleGoogleRegister}
+                disabled={googleLoading}
+                activeOpacity={0.8}
+              >
+                {googleLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Text style={styles.googleButtonIcon}>🔍</Text>
+                    <Text style={styles.googleButtonText}>
+                      Get Started with Google
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
 
             <View style={styles.loginPrompt}>
@@ -105,6 +140,33 @@ const styles = StyleSheet.create({
   },
   oauthContainer: {
     marginBottom: 30,
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4285F4",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  disabledButton: {
+    backgroundColor: "#999",
+  },
+  googleButtonIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  googleButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
   loginPrompt: {
     flexDirection: "row",

@@ -1,8 +1,8 @@
 import SimpleStableSelection from "@/components/SimpleStableSelection";
 import { useDialog } from "@/contexts/DialogContext";
 import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,14 +22,15 @@ import { SimpleStable, SimpleStableAPI } from "../lib/simpleStableAPI";
 const RegisterScreen = () => {
   const router = useRouter();
   const { showError, showConfirm } = useDialog();
+  const params = useLocalSearchParams();
   const {
     getGoogleUserInfo,
     completeRegistration,
     loading: googleLoading,
   } = useGoogleRegistration();
 
-  // Registration flow state
-  const [step, setStep] = useState(1); // 1 = OAuth Auth, 2 = Profile Form
+  // Registration flow state - start at step 2 if Google user data is provided
+  const [step, setStep] = useState(params.googleUser ? 2 : 1);
   const [oauthUser, setOauthUser] = useState<any | null>(null);
 
   // Form state (only profile data, no email/password)
@@ -41,6 +42,27 @@ const RegisterScreen = () => {
   });
 
   const [loading, setLoading] = useState(false);
+
+  // Initialize with Google user data if provided via navigation params
+  useEffect(() => {
+    if (params.googleUser && typeof params.googleUser === "string") {
+      try {
+        const googleUserData = JSON.parse(params.googleUser);
+        setOauthUser(googleUserData);
+
+        // Pre-fill name if available
+        if (googleUserData.name) {
+          setFormData((prev) => ({ ...prev, name: googleUserData.name }));
+        }
+
+        // Ensure we're on step 2
+        setStep(2);
+      } catch (error) {
+        console.error("Error parsing Google user data:", error);
+        showError("Invalid Google user data received");
+      }
+    }
+  }, [params.googleUser]);
   // Stable selection state
   const [selectedStable, setSelectedStable] = useState<SimpleStable | null>(
     null
