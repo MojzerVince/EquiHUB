@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -237,30 +238,36 @@ const RegisterScreen = () => {
     setNewStableData(isNewStable ? stableData : null);
   };
 
-  const handleTermsPress = (type: "terms" | "privacy") => {
+  const handleTermsPress = async (type: "terms" | "privacy") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const title = type === "terms" ? "Terms of Service" : "Privacy Policy";
-    const message =
+    const url =
       type === "terms"
-        ? "Our Terms of Service outline the rules and regulations for using EquiHUB. This would typically open a detailed terms page or web view."
-        : "Our Privacy Policy explains how we collect, use, and protect your personal information. This would typically open a detailed privacy page or web view.";
+        ? "https://equihubapp.com/terms"
+        : "https://equihubapp.com/privacy";
 
-    showConfirm(
-      title,
-      message,
-      () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        // TODO: In a real app, this would open a web view or navigate to a dedicated page
-        showConfirm(
-          "Coming Soon",
-          "Full document viewer will be available in a future update."
+    try {
+      // Check if the URL can be opened
+      const supported = await Linking.canOpenURL(url);
+
+      if (supported) {
+        // Open the URL in the default browser
+        await Linking.openURL(url);
+      } else {
+        showError(
+          `Cannot open ${
+            type === "terms" ? "Terms of Service" : "Privacy Policy"
+          } page`
         );
-      },
-      () => {
-        // User closed the dialog
       }
-    );
+    } catch (error) {
+      console.error(`Error opening ${type} URL:`, error);
+      showError(
+        `Failed to open ${
+          type === "terms" ? "Terms of Service" : "Privacy Policy"
+        } page`
+      );
+    }
   };
 
   return (
