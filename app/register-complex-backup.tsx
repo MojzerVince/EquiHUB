@@ -36,7 +36,7 @@ const RegisterScreen = () => {
   // Form state (only profile data, no email/password)
   const [formData, setFormData] = useState({
     name: "",
-    age: 18,
+    age: "", // Changed to empty string to show placeholder
     description: "",
     riding_experience: "", // Changed to string to allow empty state
   });
@@ -94,14 +94,23 @@ const RegisterScreen = () => {
     }
 
     // Age validation
-    if (!formData.age || formData.age < 13 || formData.age > 120) {
-      newErrors.age = "Age must be between 13 and 120";
+    if (!formData.age || formData.age.trim() === "") {
+      newErrors.age = "Age is required";
+    } else {
+      const ageNum = parseInt(formData.age, 10);
+      if (isNaN(ageNum) || ageNum < 13 || ageNum > 100) {
+        newErrors.age = "Age must be a valid age";
+      }
     }
 
-    // Riding experience validation
-    if (ridingExperienceValue < 0 || ridingExperienceValue > 80) {
-      newErrors.riding_experience =
-        "Riding experience must be between 0 and 80 years";
+    // Riding experience validation - now mandatory
+    if (
+      !formData.riding_experience ||
+      formData.riding_experience.trim() === ""
+    ) {
+      newErrors.riding_experience = "Riding experience is required";
+    } else if (ridingExperienceValue < 0 || ridingExperienceValue > 80) {
+      newErrors.riding_experience = "Riding experience must be valid";
     }
 
     setErrors(newErrors);
@@ -149,7 +158,7 @@ const RegisterScreen = () => {
       // Complete Google registration using the new hook
       const result = await completeRegistration(oauthUser, {
         name: formData.name,
-        age: formData.age,
+        age: parseInt(formData.age, 10), // Convert string to number
         description: formData.description,
         riding_experience: ridingExperienceValue, // Use numeric value
         stable_id: selectedStable?.id,
@@ -359,10 +368,12 @@ const RegisterScreen = () => {
                         styles.textInput,
                         errors.age ? styles.inputError : null,
                       ]}
-                      value={formData.age.toString()}
+                      value={formData.age}
                       onChangeText={(text) => {
-                        const age = parseInt(text) || 0;
-                        handleInputChange("age", age);
+                        // Allow empty string and only numeric input
+                        if (text === "" || /^\d+$/.test(text)) {
+                          handleInputChange("age", text);
+                        }
                       }}
                       placeholder="Enter your age"
                       placeholderTextColor="#999"
@@ -377,7 +388,7 @@ const RegisterScreen = () => {
                   {/* Riding Experience Input */}
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>
-                      Riding Experience (Years)
+                      Riding Experience (Years) *
                     </Text>
                     <TextInput
                       style={[
@@ -410,7 +421,7 @@ const RegisterScreen = () => {
                           handleInputChange("riding_experience", "");
                         }
                       }}
-                      placeholder="0"
+                      placeholder="Enter years (required)"
                       placeholderTextColor="#999"
                       keyboardType="numeric"
                       maxLength={2}
