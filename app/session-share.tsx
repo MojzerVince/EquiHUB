@@ -312,9 +312,18 @@ export default function SessionShareScreen() {
       return;
     }
 
-    // Validate required session data
+    // Enhanced validation for session data
     if (!sessionId || !session) {
       Alert.alert("Error", "Missing session information. Please try again.");
+      return;
+    }
+
+    // Validate that we have meaningful session data
+    if (!session.horseName && !session.duration && !session.distance) {
+      Alert.alert(
+        "Incomplete Session",
+        "This session appears to be incomplete. Please ensure your session has recorded data before sharing."
+      );
       return;
     }
 
@@ -324,19 +333,21 @@ export default function SessionShareScreen() {
       // Add delay to show loading state
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Prepare session data with validation using session object
+      // Enhanced session data preparation with better formatting
       const sessionData = {
         horse_name: session.horseName || "Unknown Horse",
         duration: session.duration
           ? formatDuration(session.duration)
-          : "Unknown",
+          : "Not recorded",
         distance: session.distance
-          ? `${(session.distance / 1000).toFixed(1)} km`
-          : "Unknown",
+          ? formatDistance(session.distance)
+          : "Not recorded",
         avg_speed: session.averageSpeed
-          ? `${(session.averageSpeed * 3.6).toFixed(1)} km/h`
-          : "Unknown",
+          ? formatSpeed(session.averageSpeed)
+          : "Not recorded",
         session_id: sessionId,
+        training_type: session.trainingType || "Training Session",
+        session_date: new Date(session.startTime).toLocaleDateString(),
       };
 
       // Get selected media item (single selection)
@@ -344,78 +355,84 @@ export default function SessionShareScreen() {
         ? mediaItems.find((item) => item.id === selectedMedia)
         : null;
 
-      // Use the best available image for the post
-      // NOTE: We should NOT mix uploaded session images with horse profile images
-      // - image_base64: Only for uploaded session photos
-      // - image_url: Only for horse profile pictures
       let imageBase64: string | undefined;
 
       // Convert selected image to base64 if available (uploaded session photo)
       if (selectedMediaItem?.uri) {
         try {
-          // Converting selected image to base64
+          console.log("Converting selected image to base64...");
           imageBase64 = await convertImageToBase64(selectedMediaItem.uri);
-          // Image converted to base64 successfully
+          console.log("Image converted to base64 successfully");
         } catch (error) {
           console.error(
             "❌ [SessionShare] Failed to convert image to base64:",
             error
           );
+          Alert.alert(
+            "Image Processing",
+            "Failed to process selected image. Continuing without image."
+          );
           // Continue without base64 if conversion fails
         }
       }
 
-      // Store selected media info in session_data for future use
+      // Enhanced media info tracking
       const mediaInfo = selectedMediaItem
         ? {
             selected_media_id: selectedMediaItem.id,
             selected_media_type: selectedMediaItem.type,
             has_base64: !!imageBase64,
+            media_timestamp: selectedMediaItem.timestamp,
           }
         : {};
 
-      console.log("Creating post with data:", {
+      console.log("Creating post with enhanced data:", {
         sessionData,
         hasSelectedMedia: !!selectedMediaItem,
         hasBase64: !!imageBase64,
-        horseImageUrl: !!horse?.image_url, // Log boolean instead of full URL
+        hasHorseImage: !!horse?.image_url,
         mediaInfo,
-        contentLength: postText.trim().length, // Log length instead of full content
+        contentLength: postText.trim().length,
       });
 
-      // Create post in database with separated image logic:
-      // - image_url: ONLY horse profile picture (never uploaded session images)
-      // - image_base64: ONLY uploaded session photos
+      // Create post in database with core session data
       const result = await CommunityAPI.createPost(user.id, {
         content: postText.trim(),
         image_url: horse?.image_url || undefined, // ONLY horse profile picture
         image_base64: imageBase64, // ONLY uploaded session photo
         session_data: {
           ...sessionData,
-          ...mediaInfo, // Include media info in session data
-          horse_image_url: horse?.image_url || undefined, // Add horse image URL
+          horse_image_url: horse?.image_url || undefined,
         },
       });
 
-      // Post creation completed - check for errors
+      console.log("Post created with additional media info:", mediaInfo);
 
+      // Enhanced error handling for post creation
       const { post, error } = result;
 
       if (error) {
         console.error("Post creation failed:", error);
-        Alert.alert("Error", error);
+        Alert.alert(
+          "Sharing Failed",
+          `Unable to share your session: ${error}. Please try again.`
+        );
         return;
       }
 
       if (!post) {
         console.error("Post creation returned no post");
-        Alert.alert("Error", "Failed to create post. Please try again.");
+        Alert.alert(
+          "Sharing Failed",
+          "Failed to create post. Please check your connection and try again."
+        );
         return;
       }
 
+      // Success feedback with enhanced options
       Alert.alert(
         "Success! 🎉",
-        "Your training session has been shared to the community feed!",
+        "Your training session has been shared with the EquiHub community!",
         [
           {
             text: "View in Community",
@@ -424,10 +441,21 @@ export default function SessionShareScreen() {
             },
           },
           {
-            text: "OK",
+            text: "Share Another",
+            onPress: () => {
+              // Reset form for another share
+              setPostText(
+                `Amazing training session with ${session.horseName}! 🐴`
+              );
+              setSelectedMedia(null);
+            },
+          },
+          {
+            text: "Done",
             onPress: () => {
               router.back();
             },
+            style: "default",
           },
         ]
       );
@@ -435,7 +463,10 @@ export default function SessionShareScreen() {
       console.error("Error sharing session:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
-      Alert.alert("Error", `Failed to share your session: ${errorMessage}`);
+      Alert.alert(
+        "Sharing Failed",
+        `Failed to share your session: ${errorMessage}. Please check your connection and try again.`
+      );
     } finally {
       setIsSharing(false);
     }
@@ -445,22 +476,22 @@ export default function SessionShareScreen() {
     try {
       setIsSharing(true);
 
-      // Check if Instagram is available for sharing
+      // Validate session data
+      if (!session) {
+        Alert.alert("Error", "Session data not available for sharing.");
+        return;
+      }
+
+      // Check if Instagram sharing is available
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
         Alert.alert("Error", "Sharing is not available on this device.");
         return;
       }
 
-      // Check if we have session data
-      if (!session) {
-        Alert.alert("Error", "Session data not available for sharing.");
-        return;
-      }
-
       console.log("Creating Instagram story image using ViewShot...");
 
-      // Check if ViewShot ref is available
+      // Validate ViewShot ref
       if (!instagramViewRef.current) {
         Alert.alert(
           "Error",
@@ -469,30 +500,29 @@ export default function SessionShareScreen() {
         return;
       }
 
-      // Wait a moment for the view to be fully rendered
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Wait for view to be fully rendered
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       try {
         console.log("Attempting to capture Instagram view...");
 
-        // Capture the entire view using ViewShot's capture method
+        // Capture the view using ViewShot
         if (!instagramViewRef.current?.capture) {
           throw new Error("ViewShot capture method not available");
         }
 
         const imageUri = await instagramViewRef.current.capture();
-
         console.log("Instagram view captured successfully:", imageUri);
 
-        // Share the captured image to Instagram
+        // Enhanced sharing with better metadata
         await Sharing.shareAsync(imageUri, {
           mimeType: "image/jpeg",
-          dialogTitle: "Share to Instagram Story",
+          dialogTitle: "Share Training Session to Instagram Story",
           UTI: "public.jpeg",
         });
 
         Alert.alert(
-          "Shared Successfully! �",
+          "Shared Successfully! 🎉",
           "Your training session has been shared to Instagram Story!",
           [{ text: "OK", style: "default" }]
         );
@@ -517,7 +547,7 @@ export default function SessionShareScreen() {
 
         Alert.alert(
           "Capture Failed",
-          `Failed to create Instagram story image: ${errorMessage}`
+          `Failed to create Instagram story image: ${errorMessage}. Please try again.`
         );
         return;
       }
@@ -618,13 +648,15 @@ export default function SessionShareScreen() {
             }}
             style={[
               styles.backButton,
-              { backgroundColor: "rgba(255, 255, 255, 0.1)", borderRadius: 25 },
+              { backgroundColor: "rgba(255, 255, 255, 0.2)", borderRadius: 20 },
             ]}
             disabled={isSharing}
           >
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.header}>Share Session</Text>
+          <Text style={[styles.header, { color: "#FFFFFF" }]}>
+            Share Session
+          </Text>
           <View style={styles.backButton} /> {/* Spacer for centering */}
         </View>
       </SafeAreaView>
@@ -637,53 +669,111 @@ export default function SessionShareScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!isSharing}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
       >
         {/* Session Stats Cards */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons name="time-outline" size={24} color="#007AFF" />
+          <View
+            style={[
+              styles.statCard,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+          >
+            <View
+              style={[
+                styles.statIconContainer,
+                { backgroundColor: theme.accent + "20" },
+              ]}
+            >
+              <Ionicons name="time-outline" size={24} color={theme.primary} />
             </View>
-            <Text style={styles.statValue}>
+            <Text style={[styles.statValue, { color: theme.text }]}>
               {session?.duration !== undefined && session?.duration !== null
                 ? formatDuration(session.duration)
                 : "N/A"}
             </Text>
-            <Text style={styles.statLabel}>Duration</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+              Duration
+            </Text>
           </View>
 
-          <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons name="navigate-outline" size={24} color="#007AFF" />
+          <View
+            style={[
+              styles.statCard,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+          >
+            <View
+              style={[
+                styles.statIconContainer,
+                { backgroundColor: theme.accent + "20" },
+              ]}
+            >
+              <Ionicons
+                name="navigate-outline"
+                size={24}
+                color={theme.primary}
+              />
             </View>
-            <Text style={styles.statValue}>
+            <Text style={[styles.statValue, { color: theme.text }]}>
               {session?.distance !== undefined && session?.distance !== null
                 ? formatDistance(session.distance)
                 : "N/A"}
             </Text>
-            <Text style={styles.statLabel}>Distance</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+              Distance
+            </Text>
           </View>
 
-          <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons name="speedometer-outline" size={24} color="#007AFF" />
+          <View
+            style={[
+              styles.statCard,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+          >
+            <View
+              style={[
+                styles.statIconContainer,
+                { backgroundColor: theme.accent + "20" },
+              ]}
+            >
+              <Ionicons
+                name="speedometer-outline"
+                size={24}
+                color={theme.primary}
+              />
             </View>
-            <Text style={styles.statValue}>
+            <Text style={[styles.statValue, { color: theme.text }]}>
               {session?.averageSpeed !== undefined &&
               session?.averageSpeed !== null
                 ? formatSpeed(session.averageSpeed)
                 : "N/A"}
             </Text>
-            <Text style={styles.statLabel}>Avg Speed</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+              Avg Speed
+            </Text>
           </View>
 
-          <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons name="person-outline" size={24} color="#007AFF" />
+          <View
+            style={[
+              styles.statCard,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+          >
+            <View
+              style={[
+                styles.statIconContainer,
+                { backgroundColor: theme.accent + "20" },
+              ]}
+            >
+              <Ionicons name="person-outline" size={24} color={theme.primary} />
             </View>
-            <Text style={styles.statValue}>{session?.horseName || "N/A"}</Text>
-            <Text style={styles.statLabel}>Horse</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>
+              {session?.horseName || "N/A"}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+              Horse
+            </Text>
           </View>
         </View>
 
@@ -695,8 +785,13 @@ export default function SessionShareScreen() {
           ]}
         >
           <View style={styles.postContentHeader}>
-            <View style={styles.postIconContainer}>
-              <Ionicons name="create-outline" size={24} color="#007AFF" />
+            <View
+              style={[
+                styles.postIconContainer,
+                { backgroundColor: theme.accent + "20" },
+              ]}
+            >
+              <Ionicons name="create-outline" size={24} color={theme.primary} />
             </View>
             <Text style={[styles.postContentTitle, { color: theme.text }]}>
               Post Content
@@ -763,8 +858,17 @@ export default function SessionShareScreen() {
             ]}
           >
             <View style={styles.mediaContentHeader}>
-              <View style={styles.mediaIconContainer}>
-                <Ionicons name="images-outline" size={24} color="#007AFF" />
+              <View
+                style={[
+                  styles.mediaIconContainer,
+                  { backgroundColor: theme.accent + "20" },
+                ]}
+              >
+                <Ionicons
+                  name="images-outline"
+                  size={24}
+                  color={theme.primary}
+                />
               </View>
               <Text style={[styles.mediaContentTitle, { color: theme.text }]}>
                 Session Media ({mediaItems.length})
@@ -780,10 +884,10 @@ export default function SessionShareScreen() {
                 <Ionicons
                   name="checkmark-circle"
                   size={16}
-                  color={theme.accent}
+                  color={theme.primary}
                 />
                 <Text
-                  style={[styles.selectedCountText, { color: theme.accent }]}
+                  style={[styles.selectedCountText, { color: theme.primary }]}
                 >
                   1 photo selected
                 </Text>
@@ -1119,112 +1223,86 @@ export default function SessionShareScreen() {
         </View>
       </ScrollView>
 
-      {/* Bottom Share Buttons - Redesigned */}
+      {/* Fixed Bottom Share Section */}
       <View
-        style={[styles.bottomContainerNew, { backgroundColor: theme.surface }]}
+        style={[
+          styles.bottomShareContainer,
+          { backgroundColor: theme.surface },
+        ]}
       >
-        {/* Action Header */}
-        <View style={styles.actionHeader}>
-          <Text style={[styles.actionTitle, { color: theme.text }]}>
+        <View style={styles.shareHeader}>
+          <Text style={[styles.shareTitle, { color: theme.text }]}>
             Share Your Session
           </Text>
-          <Text style={[styles.actionSubtitle, { color: theme.textSecondary }]}>
+          <Text style={[styles.shareSubtitle, { color: theme.textSecondary }]}>
             Choose how you'd like to share your training
           </Text>
         </View>
 
-        {/* Share Options */}
-        <View style={styles.shareOptionsContainer}>
-          {/* Instagram Story Option */}
+        <View style={styles.shareButtonsRow}>
+          {/* Instagram Story Button */}
           <TouchableOpacity
             onPress={shareToInstagramStory}
             style={[
-              styles.shareOptionCard,
-              { backgroundColor: theme.background, borderColor: theme.border },
+              styles.shareButton,
+              styles.instagramShareButton,
+              { backgroundColor: "#E1306C", borderColor: "#E1306C" },
               isSharing && styles.disabledButton,
             ]}
             disabled={isSharing}
           >
-            <View style={styles.shareOptionContent}>
-              <View
-                style={[
-                  styles.shareIconContainer,
-                  { backgroundColor: "#E1306C20" },
-                ]}
-              >
-                <Ionicons name="logo-instagram" size={24} color="#E1306C" />
-              </View>
-              <View style={styles.shareOptionText}>
-                <Text style={[styles.shareOptionTitle, { color: theme.text }]}>
-                  Instagram Story
+            <View style={styles.shareButtonContent}>
+              <Ionicons name="logo-instagram" size={24} color="#FFFFFF" />
+              <View style={styles.shareButtonText}>
+                <Text style={[styles.shareButtonTitle, { color: "#FFFFFF" }]}>
+                  Instagram
                 </Text>
                 <Text
                   style={[
-                    styles.shareOptionDesc,
-                    { color: theme.textSecondary },
+                    styles.shareButtonDesc,
+                    { color: "rgba(255,255,255,0.8)" },
                   ]}
                 >
-                  Share route map as story
+                  Story
                 </Text>
-              </View>
-              <View style={styles.shareArrow}>
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color={theme.textSecondary}
-                />
               </View>
             </View>
             {isSharing && (
-              <View style={styles.loadingOverlayCard}>
-                <ActivityIndicator size="small" color="#E1306C" />
+              <View style={styles.shareButtonLoading}>
+                <ActivityIndicator size="small" color="#FFFFFF" />
               </View>
             )}
           </TouchableOpacity>
 
-          {/* Community Share Option */}
+          {/* Community Feed Button */}
           <TouchableOpacity
             onPress={sharePost}
             style={[
-              styles.shareOptionCard,
-              styles.primaryShareCard,
+              styles.shareButton,
+              styles.communityShareButton,
               { backgroundColor: theme.accent, borderColor: theme.accent },
               isSharing && styles.disabledButton,
             ]}
             disabled={isSharing}
           >
-            <View style={styles.shareOptionContent}>
-              <View
-                style={[
-                  styles.shareIconContainer,
-                  { backgroundColor: "rgba(255,255,255,0.2)" },
-                ]}
-              >
-                <Ionicons name="people" size={24} color="#FFFFFF" />
-              </View>
-              <View style={styles.shareOptionText}>
-                <Text style={[styles.shareOptionTitle, { color: "#FFFFFF" }]}>
-                  Community Feed
+            <View style={styles.shareButtonContent}>
+              <Ionicons name="people" size={24} color="#FFFFFF" />
+              <View style={styles.shareButtonText}>
+                <Text style={[styles.shareButtonTitle, { color: "#FFFFFF" }]}>
+                  Community
                 </Text>
                 <Text
                   style={[
-                    styles.shareOptionDesc,
+                    styles.shareButtonDesc,
                     { color: "rgba(255,255,255,0.8)" },
                   ]}
                 >
-                  Share with EquiHub riders
+                  Feed
                 </Text>
-              </View>
-              <View style={styles.shareArrow}>
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color="rgba(255,255,255,0.8)"
-                />
               </View>
             </View>
             {isSharing && (
-              <View style={styles.loadingOverlayCard}>
+              <View style={styles.shareButtonLoading}>
                 <ActivityIndicator size="small" color="#FFFFFF" />
               </View>
             )}
@@ -1233,31 +1311,26 @@ export default function SessionShareScreen() {
       </View>
 
       {/* Full Screen Loading Overlay */}
-      {(() => {
-        if (isSharing) {
-          return (
-            <View
-              style={[
-                styles.loadingOverlay,
-                { backgroundColor: theme.background + "CC" },
-              ]}
-            >
-              <View
-                style={[
-                  styles.loadingContainer,
-                  { backgroundColor: theme.surface },
-                ]}
-              >
-                <ActivityIndicator size="large" color={theme.accent} />
-                <Text style={[styles.loadingText, { color: theme.text }]}>
-                  Sharing to Community...
-                </Text>
-              </View>
-            </View>
-          );
-        }
-        return null;
-      })()}
+      {isSharing && (
+        <View
+          style={[
+            styles.loadingOverlay,
+            { backgroundColor: theme.background + "CC" },
+          ]}
+        >
+          <View
+            style={[
+              styles.loadingContainer,
+              { backgroundColor: theme.surface },
+            ]}
+          >
+            <ActivityIndicator size="large" color={theme.accent} />
+            <Text style={[styles.loadingText, { color: theme.text }]}>
+              Preparing your session...
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -1267,7 +1340,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   safeArea: {
-    backgroundColor: "#335C67",
+    // backgroundColor applied dynamically
   },
   headerContainer: {
     flexDirection: "row",
@@ -1282,7 +1355,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: "Inder",
     fontWeight: "600",
-    color: "#FFFFFF",
     flex: 1,
     textAlign: "center",
   },
@@ -1329,7 +1401,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 12,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: "rgba(248, 249, 250, 0.5)",
   },
   videoIcon: {
     position: "absolute",
@@ -2102,7 +2174,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statCard: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     width: "48%",
@@ -2114,13 +2185,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
   },
   statIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "rgba(0, 122, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
@@ -2128,20 +2197,17 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1a1a1a",
     textAlign: "center",
     marginBottom: 4,
     fontFamily: "Inder",
   },
   statLabel: {
     fontSize: 12,
-    color: "#666",
     textAlign: "center",
     fontWeight: "500",
   },
   // Post Content Card Styles
   postContentCard: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 16,
@@ -2152,7 +2218,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
   },
   postContentHeader: {
     flexDirection: "row",
@@ -2163,7 +2228,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(0, 122, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -2189,7 +2253,6 @@ const styles = StyleSheet.create({
   },
   // Media Content Card Styles
   mediaContentCard: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 16,
@@ -2200,7 +2263,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.05)",
   },
   mediaContentHeader: {
     flexDirection: "row",
@@ -2211,7 +2273,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(0, 122, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -2471,5 +2532,91 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     textAlign: "center",
     opacity: 0.8,
+  },
+
+  // Redesigned Bottom Share Section
+  bottomShareContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 40,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  shareHeader: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  shareTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  shareSubtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    opacity: 0.8,
+  },
+  shareButtonsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  shareButton: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 2,
+    overflow: "hidden",
+    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  instagramShareButton: {
+    // Instagram-specific styles applied via backgroundColor prop
+  },
+  communityShareButton: {
+    // Community-specific styles applied via backgroundColor prop
+  },
+  shareButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+  },
+  shareButtonText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  shareButtonTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    fontFamily: "Inder",
+    marginBottom: 2,
+  },
+  shareButtonDesc: {
+    fontSize: 12,
+    fontWeight: "500",
+    opacity: 0.9,
+  },
+  shareButtonLoading: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 16,
   },
 });
