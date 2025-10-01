@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -120,7 +121,10 @@ const RegisterScreen = () => {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Text style={styles.googleButtonIcon}>🔍</Text>
+                    <Image
+                      source={require("../assets/in_app_icons/google.png")}
+                      style={styles.googleButtonIcon}
+                    />
                     <Text style={styles.googleButtonText}>
                       Get Started with Google
                     </Text>
@@ -218,7 +222,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#4285F4",
+    backgroundColor: "#000000ff",
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -232,7 +236,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#999",
   },
   googleButtonIcon: {
-    fontSize: 20,
+    width: 24,
+    height: 24,
     marginRight: 12,
   },
   googleButtonText: {

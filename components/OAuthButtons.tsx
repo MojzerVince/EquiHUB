@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Platform,
   StyleSheet,
   Text,
@@ -107,7 +108,10 @@ export const OAuthButtons: React.FC<OAuthButtonsProps> = ({
           <ActivityIndicator size="small" color="#fff" />
         ) : (
           <>
-            <Text style={styles.oauthButtonIcon}>🔍</Text>
+            <Image
+              source={require("../assets/in_app_icons/google.png")}
+              style={styles.oauthButtonIcon}
+            />
             <Text style={styles.oauthButtonText}>
               {isSignUp ? "Sign up with Google" : "Continue with Google"}
             </Text>
@@ -126,7 +130,10 @@ export const OAuthButtons: React.FC<OAuthButtonsProps> = ({
             <ActivityIndicator size="small" color="#fff" />
           ) : (
             <>
-              <Text style={styles.oauthButtonIcon}>🍎</Text>
+              <Image
+                source={require("../assets/in_app_icons/apple.png")}
+                style={styles.oauthButtonIcon}
+              />
               <Text style={styles.oauthButtonText}>
                 {isSignUp ? "Sign up with Apple" : "Continue with Apple"}
               </Text>
@@ -144,7 +151,10 @@ export const OAuthButtons: React.FC<OAuthButtonsProps> = ({
         ]}
         disabled={true}
       >
-        <Text style={styles.oauthButtonIcon}>📘</Text>
+        <Image
+          style={styles.oauthButtonIcon}
+          source={require("../assets/in_app_icons/facebook.png")}
+        />
         <Text style={[styles.oauthButtonText, styles.disabledText]}>
           {isSignUp
             ? "Sign up with Facebook (Coming Soon)"
@@ -170,12 +180,12 @@ const styles = StyleSheet.create({
     minHeight: 56,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 3,
   },
   googleButton: {
-    backgroundColor: "#4285F4",
+    backgroundColor: "#000000ff",
   },
   appleButton: {
     backgroundColor: "#000000",
@@ -188,7 +198,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   oauthButtonIcon: {
-    fontSize: 20,
+    width: 24,
+    height: 24,
     marginRight: 12,
   },
   oauthButtonText: {
