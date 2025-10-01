@@ -1,11 +1,12 @@
 import SimpleStableSelection from "@/components/SimpleStableSelection";
 import { useDialog } from "@/contexts/DialogContext";
 import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -22,25 +23,50 @@ import { SimpleStable, SimpleStableAPI } from "../lib/simpleStableAPI";
 const RegisterScreen = () => {
   const router = useRouter();
   const { showError, showConfirm } = useDialog();
+  const params = useLocalSearchParams();
   const {
     getGoogleUserInfo,
     completeRegistration,
     loading: googleLoading,
   } = useGoogleRegistration();
 
-  // Registration flow state
-  const [step, setStep] = useState(1); // 1 = OAuth Auth, 2 = Profile Form
+  // Registration flow state - start at step 2 if Google user data is provided
+  const [step, setStep] = useState(params.googleUser ? 2 : 1);
   const [oauthUser, setOauthUser] = useState<any | null>(null);
 
   // Form state (only profile data, no email/password)
   const [formData, setFormData] = useState({
     name: "",
-    age: 18,
+    age: "", // Changed to empty string to show placeholder
     description: "",
-    riding_experience: 0,
+    riding_experience: "", // Changed to string to allow empty state
   });
 
+  // Separate state to track the actual numeric value for validation
+  const [ridingExperienceValue, setRidingExperienceValue] = useState(0);
+
   const [loading, setLoading] = useState(false);
+
+  // Initialize with Google user data if provided via navigation params
+  useEffect(() => {
+    if (params.googleUser && typeof params.googleUser === "string") {
+      try {
+        const googleUserData = JSON.parse(params.googleUser);
+        setOauthUser(googleUserData);
+
+        // Pre-fill name if available
+        if (googleUserData.name) {
+          setFormData((prev) => ({ ...prev, name: googleUserData.name }));
+        }
+
+        // Ensure we're on step 2
+        setStep(2);
+      } catch (error) {
+        console.error("Error parsing Google user data:", error);
+        showError("Invalid Google user data received");
+      }
+    }
+  }, [params.googleUser]);
   // Stable selection state
   const [selectedStable, setSelectedStable] = useState<SimpleStable | null>(
     null
@@ -69,17 +95,23 @@ const RegisterScreen = () => {
     }
 
     // Age validation
-    if (!formData.age || formData.age < 13 || formData.age > 120) {
-      newErrors.age = "Age must be between 13 and 120";
+    if (!formData.age || formData.age.trim() === "") {
+      newErrors.age = "Age is required";
+    } else {
+      const ageNum = parseInt(formData.age, 10);
+      if (isNaN(ageNum) || ageNum < 13 || ageNum > 100) {
+        newErrors.age = "Age must be a valid age";
+      }
     }
 
-    // Riding experience validation
+    // Riding experience validation - now mandatory
     if (
-      formData.riding_experience !== undefined &&
-      (formData.riding_experience < 0 || formData.riding_experience > 80)
+      !formData.riding_experience ||
+      formData.riding_experience.trim() === ""
     ) {
-      newErrors.riding_experience =
-        "Riding experience must be between 0 and 80 years";
+      newErrors.riding_experience = "Riding experience is required";
+    } else if (ridingExperienceValue < 0 || ridingExperienceValue > 80) {
+      newErrors.riding_experience = "Riding experience must be valid";
     }
 
     setErrors(newErrors);
@@ -127,9 +159,9 @@ const RegisterScreen = () => {
       // Complete Google registration using the new hook
       const result = await completeRegistration(oauthUser, {
         name: formData.name,
-        age: formData.age,
+        age: parseInt(formData.age, 10), // Convert string to number
         description: formData.description,
-        riding_experience: formData.riding_experience,
+        riding_experience: ridingExperienceValue, // Use numeric value
         stable_id: selectedStable?.id,
       });
 
@@ -206,321 +238,367 @@ const RegisterScreen = () => {
     setNewStableData(isNewStable ? stableData : null);
   };
 
-  const handleTermsPress = (type: "terms" | "privacy") => {
+  const handleTermsPress = async (type: "terms" | "privacy") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const title = type === "terms" ? "Terms of Service" : "Privacy Policy";
-    const message =
+    const url =
       type === "terms"
-        ? "Our Terms of Service outline the rules and regulations for using EquiHUB. This would typically open a detailed terms page or web view."
-        : "Our Privacy Policy explains how we collect, use, and protect your personal information. This would typically open a detailed privacy page or web view.";
+        ? "https://equihubapp.com/terms"
+        : "https://equihubapp.com/privacy";
 
-    showConfirm(
-      title,
-      message,
-      () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        // TODO: In a real app, this would open a web view or navigate to a dedicated page
-        showConfirm(
-          "Coming Soon",
-          "Full document viewer will be available in a future update."
+    try {
+      // Check if the URL can be opened
+      const supported = await Linking.canOpenURL(url);
+
+      if (supported) {
+        // Open the URL in the default browser
+        await Linking.openURL(url);
+      } else {
+        showError(
+          `Cannot open ${
+            type === "terms" ? "Terms of Service" : "Privacy Policy"
+          } page`
         );
-      },
-      () => {
-        // User closed the dialog
       }
-    );
+    } catch (error) {
+      console.error(`Error opening ${type} URL:`, error);
+      showError(
+        `Failed to open ${
+          type === "terms" ? "Terms of Service" : "Privacy Policy"
+        } page`
+      );
+    }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoid}
+      >
         <ScrollView
-          style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
-          <View style={styles.headerContainer}>
-            <Text style={styles.title}>
-              {step === 1 ? "Join EquiHUB" : "Complete Your Profile"}
-            </Text>
-            <Text style={styles.subtitle}>
-              {step === 1
-                ? "Sign up with your Google account to get started"
-                : "Tell us about yourself"}
-            </Text>
-            {step === 2 && oauthUser && (
-              <View style={styles.googleUserInfo}>
-                <Text style={styles.googleUserEmail}>{oauthUser.email}</Text>
-              </View>
-            )}
-          </View>
+          <View style={styles.content}>
+            {/* Header */}
+            <View style={styles.headerContainer}>
+              <Text style={styles.title}>
+                {step === 1 ? "Join EquiHUB" : "Complete Your Profile"}
+              </Text>
+              <Text style={styles.subtitle}>
+                {step === 1
+                  ? "Sign up with your Google account to get started"
+                  : "Tell us about yourself to personalize your experience"}
+              </Text>
+              {step === 2 && oauthUser && (
+                <View style={styles.googleUserInfo}>
+                  <Text style={styles.googleUserEmail}>
+                    📧 {oauthUser.email}
+                  </Text>
+                </View>
+              )}
+            </View>
 
-          {/* Step-based Form */}
-          <View style={styles.formContainer}>
-            {step === 1 ? (
-              // Step 1: Google Authentication
-              <View style={styles.googleAuthContainer}>
-                {/* Custom Google Sign-in Button */}
+            {/* Step-based Form */}
+            <View style={styles.formContainer}>
+              {step === 1 ? (
+                // Step 1: Google Authentication
+                <View style={styles.googleAuthContainer}>
+                  {/* Custom Google Sign-in Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.googleButton,
+                      googleLoading && styles.disabledButton,
+                    ]}
+                    onPress={handleGoogleAuth}
+                    disabled={googleLoading}
+                    activeOpacity={0.8}
+                  >
+                    {googleLoading ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Text style={styles.googleButtonIcon}>🔍</Text>
+                        <Text style={styles.googleButtonText}>
+                          Sign up with Google
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  <View style={styles.loginPrompt}>
+                    <Text style={styles.loginPromptText}>
+                      Already have an account?
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.replace("/login");
+                      }}
+                      style={styles.loginLink}
+                    >
+                      <Text style={styles.loginLinkText}>Sign In</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                // Step 2: Profile Form
+                <View style={styles.profileFormContainer}>
+                  {/* Name Input */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Name *</Text>
+                    <TextInput
+                      style={[
+                        styles.textInput,
+                        errors.name ? styles.inputError : null,
+                      ]}
+                      value={formData.name}
+                      onChangeText={(text) => handleInputChange("name", text)}
+                      placeholder="Enter your full name"
+                      placeholderTextColor="#999"
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                      maxLength={50}
+                    />
+                    {errors.name ? (
+                      <Text style={styles.errorText}>{errors.name}</Text>
+                    ) : null}
+                  </View>
+
+                  {/* Age Input */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Age *</Text>
+                    <TextInput
+                      style={[
+                        styles.textInput,
+                        errors.age ? styles.inputError : null,
+                      ]}
+                      value={formData.age}
+                      onChangeText={(text) => {
+                        // Allow empty string and only numeric input
+                        if (text === "" || /^\d+$/.test(text)) {
+                          handleInputChange("age", text);
+                        }
+                      }}
+                      placeholder="Enter your age"
+                      placeholderTextColor="#999"
+                      keyboardType="numeric"
+                      maxLength={3}
+                    />
+                    {errors.age ? (
+                      <Text style={styles.errorText}>{errors.age}</Text>
+                    ) : null}
+                  </View>
+
+                  {/* Riding Experience Input */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>
+                      Riding Experience (Years) *
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.textInput,
+                        errors.riding_experience ? styles.inputError : null,
+                      ]}
+                      value={formData.riding_experience}
+                      onChangeText={(text) => {
+                        // Allow empty string and only numeric input
+                        if (text === "" || /^\d+$/.test(text)) {
+                          handleInputChange("riding_experience", text);
+                        }
+                      }}
+                      onFocus={() => {
+                        // When user focuses, if the value is "0", clear it for better UX
+                        if (formData.riding_experience === "0") {
+                          handleInputChange("riding_experience", "");
+                        }
+                      }}
+                      onBlur={() => {
+                        // When user finishes editing, convert to number and validate
+                        const numValue =
+                          formData.riding_experience === ""
+                            ? 0
+                            : parseInt(formData.riding_experience, 10);
+                        setRidingExperienceValue(numValue);
+
+                        // If field is empty, keep it empty for display
+                        if (formData.riding_experience === "") {
+                          handleInputChange("riding_experience", "");
+                        }
+                      }}
+                      placeholder="Enter years (required)"
+                      placeholderTextColor="#999"
+                      keyboardType="numeric"
+                      maxLength={2}
+                    />
+                    {errors.riding_experience ? (
+                      <Text style={styles.errorText}>
+                        {errors.riding_experience}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  {/* Description Input (Optional) */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>About You (Optional)</Text>
+                    <TextInput
+                      style={[styles.textArea]}
+                      value={formData.description}
+                      onChangeText={(text) =>
+                        handleInputChange("description", text)
+                      }
+                      placeholder="Tell us a bit about yourself and your equestrian interests..."
+                      placeholderTextColor="#999"
+                      multiline={true}
+                      numberOfLines={4}
+                      maxLength={500}
+                      textAlignVertical="top"
+                    />
+                    <Text style={styles.characterCount}>
+                      {formData.description?.length || 0}/500
+                    </Text>
+                  </View>
+
+                  {/* Stable Selection */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>
+                      Stable/Ranch (Optional)
+                    </Text>
+                    <Text style={styles.inputDescription}>
+                      Choose a stable to associate with or skip to set this
+                      later
+                    </Text>
+
+                    {selectedStable ? (
+                      <View style={styles.selectedStableContainer}>
+                        <View style={styles.selectedStableInfo}>
+                          <Text style={styles.selectedStableName}>
+                            {selectedStable.name}
+                          </Text>
+                          <Text style={styles.selectedStableLocation}>
+                            {selectedStable.city &&
+                            selectedStable.state_province
+                              ? `${selectedStable.city}, ${selectedStable.state_province}`
+                              : selectedStable.location ||
+                                "Location not specified"}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.changeStableButton}
+                          onPress={() => setShowStableSelection(true)}
+                        >
+                          <Text style={styles.changeStableButtonText}>
+                            Change
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : newStableData ? (
+                      <View style={styles.selectedStableContainer}>
+                        <View style={styles.selectedStableInfo}>
+                          <Text style={styles.selectedStableName}>
+                            {newStableData.name}
+                          </Text>
+                          <Text style={styles.selectedStableLocation}>
+                            New stable - you'll be the owner
+                          </Text>
+                          {newStableData.city &&
+                            newStableData.state_province && (
+                              <Text style={styles.selectedStableMembers}>
+                                {newStableData.city},{" "}
+                                {newStableData.state_province}
+                              </Text>
+                            )}
+                        </View>
+                        <TouchableOpacity
+                          style={styles.changeStableButton}
+                          onPress={() => setShowStableSelection(true)}
+                        >
+                          <Text style={styles.changeStableButtonText}>
+                            Change
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.selectStableButton}
+                        onPress={() => setShowStableSelection(true)}
+                      >
+                        <Text style={styles.selectStableButtonText}>
+                          Choose a Stable
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* Buttons - only show for step 2 */}
+            {step === 2 && (
+              <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                  style={styles.googleButton}
-                  onPress={handleGoogleAuth}
-                  disabled={googleLoading}
+                  style={[
+                    styles.registerButton,
+                    loading ? styles.disabledButton : null,
+                  ]}
+                  onPress={handleProfileSubmit}
+                  disabled={loading}
                   activeOpacity={0.8}
                 >
-                  {googleLoading ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Text style={styles.googleButtonIcon}>🔍</Text>
-                      <Text style={styles.googleButtonText}>
-                        Sign up with Google
+                  {loading ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color="#fff" />
+                      <Text style={styles.loadingText}>
+                        Creating Account...
                       </Text>
-                    </>
+                    </View>
+                  ) : (
+                    <Text style={styles.registerButtonText}>
+                      Create Account
+                    </Text>
                   )}
                 </TouchableOpacity>
 
-                <View style={styles.loginPrompt}>
-                  <Text style={styles.loginPromptText}>
-                    Already have an account?
+                <TouchableOpacity
+                  style={styles.loginLinkContainer}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.replace("/login");
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.loginLinkText}>
+                    Already have an account?{" "}
                   </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.replace("/login");
-                    }}
-                    style={styles.googleLoginLink}
-                  >
-                    <Text style={styles.googleLoginLinkText}>Sign In</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              // Step 2: Profile Form
-              <View style={styles.profileFormContainer}>
-                {/* Name Input */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Full Name</Text>
-                  <TextInput
-                    style={[
-                      styles.textInput,
-                      errors.name ? styles.inputError : null,
-                    ]}
-                    value={formData.name}
-                    onChangeText={(text) => handleInputChange("name", text)}
-                    placeholder="Enter your full name"
-                    placeholderTextColor="#999"
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    maxLength={50}
-                  />
-                  {errors.name ? (
-                    <Text style={styles.errorText}>{errors.name}</Text>
-                  ) : null}
-                </View>
-
-                {/* Age Input */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Age</Text>
-                  <TextInput
-                    style={[
-                      styles.textInput,
-                      errors.age ? styles.inputError : null,
-                    ]}
-                    value={formData.age.toString()}
-                    onChangeText={(text) => {
-                      const age = parseInt(text) || 0;
-                      handleInputChange("age", age);
-                    }}
-                    placeholder="Enter your age"
-                    placeholderTextColor="#999"
-                    keyboardType="numeric"
-                    maxLength={3}
-                  />
-                  {errors.age ? (
-                    <Text style={styles.errorText}>{errors.age}</Text>
-                  ) : null}
-                </View>
-
-                {/* Riding Experience Input */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>
-                    Riding Experience (Years)
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.textInput,
-                      errors.riding_experience ? styles.inputError : null,
-                    ]}
-                    value={formData.riding_experience?.toString() || "0"}
-                    onChangeText={(text) => {
-                      const experience = parseInt(text) || 0;
-                      handleInputChange("riding_experience", experience);
-                    }}
-                    placeholder="Years of riding experience"
-                    placeholderTextColor="#999"
-                    keyboardType="numeric"
-                    maxLength={2}
-                  />
-                  {errors.riding_experience ? (
-                    <Text style={styles.errorText}>
-                      {errors.riding_experience}
-                    </Text>
-                  ) : null}
-                </View>
-
-                {/* Description Input (Optional) */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>About You (Optional)</Text>
-                  <TextInput
-                    style={[styles.textArea]}
-                    value={formData.description}
-                    onChangeText={(text) =>
-                      handleInputChange("description", text)
-                    }
-                    placeholder="Tell us a bit about yourself and your equestrian interests..."
-                    placeholderTextColor="#999"
-                    multiline={true}
-                    numberOfLines={4}
-                    maxLength={500}
-                    textAlignVertical="top"
-                  />
-                  <Text style={styles.characterCount}>
-                    {formData.description?.length || 0}/500
-                  </Text>
-                </View>
-
-                {/* Stable Selection */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Stable/Ranch (Optional)</Text>
-                  <Text style={styles.inputDescription}>
-                    Choose a stable to associate with or skip to set this later
-                  </Text>
-
-                  {selectedStable ? (
-                    <View style={styles.selectedStableContainer}>
-                      <View style={styles.selectedStableInfo}>
-                        <Text style={styles.selectedStableName}>
-                          {selectedStable.name}
-                        </Text>
-                        <Text style={styles.selectedStableLocation}>
-                          {selectedStable.city && selectedStable.state_province
-                            ? `${selectedStable.city}, ${selectedStable.state_province}`
-                            : selectedStable.location ||
-                              "Location not specified"}
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.changeStableButton}
-                        onPress={() => setShowStableSelection(true)}
-                      >
-                        <Text style={styles.changeStableButtonText}>
-                          Change
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : newStableData ? (
-                    <View style={styles.selectedStableContainer}>
-                      <View style={styles.selectedStableInfo}>
-                        <Text style={styles.selectedStableName}>
-                          {newStableData.name}
-                        </Text>
-                        <Text style={styles.selectedStableLocation}>
-                          New stable - you'll be the owner
-                        </Text>
-                        {newStableData.city && newStableData.state_province && (
-                          <Text style={styles.selectedStableMembers}>
-                            {newStableData.city}, {newStableData.state_province}
-                          </Text>
-                        )}
-                      </View>
-                      <TouchableOpacity
-                        style={styles.changeStableButton}
-                        onPress={() => setShowStableSelection(true)}
-                      >
-                        <Text style={styles.changeStableButtonText}>
-                          Change
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.selectStableButton}
-                      onPress={() => setShowStableSelection(true)}
-                    >
-                      <Text style={styles.selectStableButtonText}>
-                        Choose a Stable
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+                  <Text style={styles.loginLink}>Sign In</Text>
+                </TouchableOpacity>
               </View>
             )}
-          </View>
 
-          {/* Buttons - only show for step 2 */}
-          {step === 2 && (
-            <View style={styles.buttonContainer}>
+            {/* Terms - show for both steps */}
+            <View style={styles.termsContainer}>
+              <Text style={styles.termsText}>
+                By creating an account, you agree to our{" "}
+              </Text>
               <TouchableOpacity
-                style={[
-                  styles.registerButton,
-                  loading ? styles.disabledButton : null,
-                ]}
-                onPress={handleProfileSubmit}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                {loading ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color="#fff" />
-                    <Text style={styles.loadingText}>Creating Account...</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.registerButtonText}>Create Account</Text>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.loginLinkContainer}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.replace("/login");
-                }}
+                onPress={() => handleTermsPress("terms")}
                 activeOpacity={0.7}
               >
-                <Text style={styles.loginLinkText}>
-                  Already have an account?{" "}
-                </Text>
-                <Text style={styles.loginLink}>Sign In</Text>
+                <Text style={styles.termsLink}>Terms of Service</Text>
+              </TouchableOpacity>
+              <Text style={styles.termsText}> and </Text>
+              <TouchableOpacity
+                onPress={() => handleTermsPress("privacy")}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.termsLink}>Privacy Policy</Text>
               </TouchableOpacity>
             </View>
-          )}
-
-          {/* Terms - show for both steps */}
-          <View style={styles.termsContainer}>
-            <Text style={styles.termsText}>
-              By creating an account, you agree to our{" "}
-            </Text>
-            <TouchableOpacity
-              onPress={() => handleTermsPress("terms")}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.termsLink}>Terms of Service</Text>
-            </TouchableOpacity>
-            <Text style={styles.termsText}> and </Text>
-            <TouchableOpacity
-              onPress={() => handleTermsPress("privacy")}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.termsLink}>Privacy Policy</Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </KeyboardAvoidingView>
 
       {/* Stable Selection Modal */}
       <SimpleStableSelection
@@ -529,129 +607,195 @@ const RegisterScreen = () => {
         onSelect={handleStableSelection}
         selectedStable={selectedStable}
       />
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#335C67",
+    backgroundColor: "#f8f9fa",
   },
-  safeArea: {
-    flex: 1,
-  },
-  scrollContainer: {
+  keyboardAvoid: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+  },
+  content: {
+    flex: 1,
+    maxWidth: 400,
+    alignSelf: "center",
+    width: "100%",
   },
   headerContainer: {
-    paddingHorizontal: 30,
-    paddingTop: 20,
-    paddingBottom: 10,
+    paddingVertical: 40,
     alignItems: "center",
   },
   title: {
-    fontSize: 36,
-    fontFamily: "Inder",
+    fontSize: 32,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#2c3e50",
+    textAlign: "center",
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 18,
-    fontFamily: "Inder",
-    color: "#B8D4DA",
+    fontSize: 16,
+    color: "#7f8c8d",
     textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  googleUserInfo: {
+    marginTop: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: "#e8f4fd",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#bee5eb",
+  },
+  googleUserEmail: {
+    fontSize: 14,
+    color: "#495057",
+    textAlign: "center",
+    fontWeight: "500",
   },
   formContainer: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingHorizontal: 30,
-    paddingTop: 40,
-    flex: 1,
-  },
-  inputGroup: {
-    marginBottom: 25,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontFamily: "Inder",
-    fontWeight: "600",
-    color: "#335C67",
-    marginBottom: 8,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: "Inder",
-    backgroundColor: "#f9f9f9",
-    color: "#333",
-    minHeight: 50,
-  },
-  textArea: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: "Inder",
-    backgroundColor: "#f9f9f9",
-    color: "#333",
-    minHeight: 100,
-  },
-
-  inputError: {
-    borderColor: "#FF6B6B",
-    backgroundColor: "#FFF5F5",
-  },
-  errorText: {
-    color: "#FF6B6B",
-    fontSize: 14,
-    fontFamily: "Inder",
-    marginTop: 5,
-  },
-  characterCount: {
-    fontSize: 12,
-    color: "#999",
-    textAlign: "right",
-    marginTop: 5,
-    fontFamily: "Inder",
-  },
-  buttonContainer: {
-    paddingHorizontal: 30,
-    paddingTop: 20,
-  },
-  registerButton: {
-    backgroundColor: "#335C67",
-    borderRadius: 15,
-    paddingVertical: 18,
-    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 24,
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  googleAuthContainer: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4285F4",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    marginBottom: 30,
+    minWidth: 280,
+  },
+  googleButtonIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    color: "#ffffff",
+  },
+  googleButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
   disabledButton: {
     backgroundColor: "#999",
   },
-  registerButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontFamily: "Inder",
+  loginPrompt: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loginPromptText: {
+    fontSize: 16,
+    color: "#7f8c8d",
+  },
+  loginLink: {
+    marginLeft: 5,
+  },
+  loginLinkText: {
+    fontSize: 16,
+    color: "#3498db",
     fontWeight: "600",
+  },
+  profileFormContainer: {
+    flex: 1,
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2c3e50",
+    marginBottom: 8,
+  },
+  textInput: {
+    borderWidth: 2,
+    borderColor: "#e9ecef",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    backgroundColor: "#f8f9fa",
+    color: "#2c3e50",
+    fontWeight: "500",
+  },
+  textArea: {
+    borderWidth: 2,
+    borderColor: "#e9ecef",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    backgroundColor: "#f8f9fa",
+    color: "#2c3e50",
+    fontWeight: "500",
+    minHeight: 100,
+    textAlignVertical: "top",
+  },
+  inputError: {
+    borderColor: "#e74c3c",
+    backgroundColor: "#fdf2f2",
+  },
+  errorText: {
+    color: "#e74c3c",
+    fontSize: 14,
+    marginTop: 6,
+    fontWeight: "500",
+  },
+  characterCount: {
+    fontSize: 12,
+    color: "#6c757d",
+    textAlign: "right",
+    marginTop: 6,
+  },
+  buttonContainer: {
+    paddingVertical: 20,
+  },
+  registerButton: {
+    backgroundColor: "#2c3e50",
+    paddingVertical: 18,
+    borderRadius: 20,
+    alignItems: "center",
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  registerButtonText: {
+    color: "#ffffff",
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   loadingContainer: {
     flexDirection: "row",
@@ -659,65 +803,49 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   loadingText: {
-    color: "#fff",
+    color: "#ffffff",
     fontSize: 16,
-    fontFamily: "Inder",
+    fontWeight: "600",
     marginLeft: 10,
   },
   loginLinkContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  loginLinkText: {
-    fontSize: 18,
-    fontFamily: "Inder",
-    color: "#fff",
-  },
-  loginLink: {
-    fontSize: 18,
-    fontFamily: "Inder",
-    fontWeight: "600",
-    color: "#fff",
+    paddingVertical: 12,
   },
   termsContainer: {
-    paddingHorizontal: 30,
-    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
     alignItems: "center",
   },
   termsText: {
-    fontSize: 16,
-    fontFamily: "Inder",
-    color: "#fff",
-    lineHeight: 22,
+    fontSize: 14,
+    color: "#6c757d",
+    lineHeight: 20,
   },
   termsLink: {
-    fontSize: 16,
-    fontFamily: "Inder",
-    color: "#fff",
+    fontSize: 14,
+    color: "#3498db",
     fontWeight: "600",
     textDecorationLine: "underline",
   },
   // Stable selection styles
   inputDescription: {
     fontSize: 14,
-    fontFamily: "Inder",
-    color: "#666",
+    color: "#6c757d",
     marginBottom: 12,
     lineHeight: 18,
   },
   selectedStableContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f8ff",
-    borderWidth: 1,
-    borderColor: "#335C67",
+    backgroundColor: "#e8f4fd",
+    borderWidth: 2,
+    borderColor: "#3498db",
     borderRadius: 12,
     padding: 16,
   },
@@ -726,116 +854,43 @@ const styles = StyleSheet.create({
   },
   selectedStableName: {
     fontSize: 16,
-    fontFamily: "Inder",
     fontWeight: "600",
-    color: "#335C67",
+    color: "#2c3e50",
     marginBottom: 4,
   },
   selectedStableLocation: {
     fontSize: 14,
-    fontFamily: "Inder",
-    color: "#666",
+    color: "#6c757d",
     marginBottom: 2,
   },
   selectedStableMembers: {
     fontSize: 12,
-    fontFamily: "Inder",
-    color: "#999",
+    color: "#6c757d",
   },
   changeStableButton: {
-    backgroundColor: "#335C67",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: "#3498db",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   changeStableButtonText: {
-    color: "#fff",
+    color: "#ffffff",
     fontSize: 14,
-    fontFamily: "Inder",
     fontWeight: "600",
   },
   selectStableButton: {
-    backgroundColor: "#f9f9f9",
-    borderWidth: 1,
-    borderColor: "#ddd",
+    backgroundColor: "#f8f9fa",
+    borderWidth: 2,
+    borderColor: "#e9ecef",
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 20,
     alignItems: "center",
     borderStyle: "dashed",
   },
   selectStableButtonText: {
-    color: "#335C67",
+    color: "#3498db",
     fontSize: 16,
-    fontFamily: "Inder",
     fontWeight: "600",
-  },
-  googleUserInfo: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: "#f0f8ff",
-    borderRadius: 8,
-  },
-  googleUserEmail: {
-    fontSize: 14,
-    fontFamily: "Inder",
-    color: "#666",
-    textAlign: "center",
-  },
-  googleAuthContainer: {
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  googleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 30,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    minWidth: 250,
-  },
-  googleButtonIcon: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#4285F4",
-    marginRight: 10,
-    fontFamily: "Inder",
-  },
-  googleButtonText: {
-    fontSize: 16,
-    fontFamily: "Inder",
-    fontWeight: "600",
-    color: "#333",
-  },
-  loginPrompt: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loginPromptText: {
-    fontSize: 16,
-    fontFamily: "Inder",
-    color: "#666",
-    marginRight: 5,
-  },
-  googleLoginLink: {
-    padding: 5,
-  },
-  googleLoginLinkText: {
-    fontSize: 16,
-    fontFamily: "Inder",
-    fontWeight: "600",
-    color: "#335C67",
-  },
-  profileFormContainer: {
-    paddingVertical: 20,
   },
 });
 
