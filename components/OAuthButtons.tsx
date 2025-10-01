@@ -135,31 +135,22 @@ export const OAuthButtons: React.FC<OAuthButtonsProps> = ({
         </TouchableOpacity>
       )}
 
-      {/* Facebook Sign-In - Available on both platforms (when implemented) */}
+      {/* Facebook Sign-In - Disabled */}
       <TouchableOpacity
-        style={[styles.oauthButton, styles.facebookButton]}
-        onPress={handleFacebookSignIn}
-        disabled={isAnyLoading()}
+        style={[
+          styles.oauthButton,
+          styles.facebookButton,
+          styles.disabledButton,
+        ]}
+        disabled={true}
       >
-        {isButtonLoading("facebook") ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <>
-            <Text style={styles.oauthButtonIcon}>📘</Text>
-            <Text style={styles.oauthButtonText}>
-              {isSignUp ? "Sign up with Facebook" : "Continue with Facebook"}
-            </Text>
-          </>
-        )}
-      </TouchableOpacity>
-
-      {/* Platform indicator for development */}
-      {__DEV__ && (
-        <Text style={styles.platformIndicator}>
-          Platform: {Platform.OS} • Apple Sign-In:{" "}
-          {Platform.OS === "ios" ? "Available" : "iOS Only"}
+        <Text style={styles.oauthButtonIcon}>📘</Text>
+        <Text style={[styles.oauthButtonText, styles.disabledText]}>
+          {isSignUp
+            ? "Sign up with Facebook (Coming Soon)"
+            : "Continue with Facebook (Coming Soon)"}
         </Text>
-      )}
+      </TouchableOpacity>
     </View>
   );
 };
@@ -192,6 +183,10 @@ const styles = StyleSheet.create({
   facebookButton: {
     backgroundColor: "#1877F2",
   },
+  disabledButton: {
+    backgroundColor: "#999",
+    opacity: 0.6,
+  },
   oauthButtonIcon: {
     fontSize: 20,
     marginRight: 12,
@@ -202,12 +197,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.5,
   },
-  platformIndicator: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
-    marginTop: 8,
-    fontStyle: "italic",
+  disabledText: {
+    color: "#cccccc",
   },
 });
 
