@@ -3281,7 +3281,7 @@ const MapScreen = () => {
               onPress={() => router.push("/statistics")}
             >
               <Image
-                style={{ width: 32, height: 32 }}
+                style={{ width: 28, height: 28 }}
                 source={require("../../assets/in_app_icons/trends.png")}
               />
             </TouchableOpacity>
