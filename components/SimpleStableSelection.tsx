@@ -87,11 +87,45 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
   const handleCreateStable = () => {
     if (!newStableName.trim()) return;
 
+    // Function to normalize accented characters
+    const normalizeText = (text: string): string => {
+      return text
+        .normalize("NFD") // Decompose characters
+        .replace(/[\u0300-\u036f]/g, "") // Remove diacritical marks
+        .replace(/[^\x00-\x7F]/g, (char) => {
+          // Additional character mappings for common special characters
+          const charMap: { [key: string]: string } = {
+            ß: "ss",
+            æ: "ae",
+            œ: "oe",
+            ø: "o",
+            đ: "d",
+            ł: "l",
+            ñ: "n",
+            ç: "c",
+            Ç: "C",
+            Ñ: "N",
+            Ł: "L",
+            Đ: "D",
+            Ø: "O",
+            Æ: "AE",
+            Œ: "OE",
+          };
+          return charMap[char] || char;
+        });
+    };
+
     const newStableData = {
-      name: newStableName.trim(),
-      location: newStableLocation.trim() || undefined,
-      city: newStableCity.trim() || undefined,
-      state_province: newStableState.trim() || undefined,
+      name: normalizeText(newStableName.trim()),
+      location: newStableLocation.trim()
+        ? normalizeText(newStableLocation.trim())
+        : undefined,
+      city: newStableCity.trim()
+        ? normalizeText(newStableCity.trim())
+        : undefined,
+      state_province: newStableState.trim()
+        ? normalizeText(newStableState.trim())
+        : undefined,
     };
 
     onSelect(null, true, newStableData);
