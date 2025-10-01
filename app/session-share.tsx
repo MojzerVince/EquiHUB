@@ -600,7 +600,10 @@ export default function SessionShareScreen() {
               onPress={() => router.back()}
               style={styles.backButton}
             >
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              <Image
+                style={{ width: 24, height: 24 }}
+                source={require("../assets/in_app_icons/back.png")}
+              />
             </TouchableOpacity>
             <Text style={styles.header}>Share Session</Text>
             <View style={styles.backButton} /> {/* Spacer for centering */}
@@ -646,13 +649,13 @@ export default function SessionShareScreen() {
             onPress={() => {
               router.back();
             }}
-            style={[
-              styles.backButton,
-              { backgroundColor: "rgba(255, 255, 255, 0.2)", borderRadius: 20 },
-            ]}
+            style={styles.backButton}
             disabled={isSharing}
           >
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            <Image
+              style={{ width: 24, height: 24 }}
+              source={require("../assets/in_app_icons/back.png")}
+            />
           </TouchableOpacity>
           <Text style={[styles.header, { color: "#FFFFFF" }]}>
             Share Session
@@ -1363,12 +1366,13 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   viewPort: {
+    backgroundColor: "#FFFFFF",
     flex: 1,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
-    marginTop: 5,
-    paddingTop: 20,
-    paddingHorizontal: 16,
+    marginTop: -8,
+    paddingTop: 0,
+    marginBottom: 100,
   },
   scrollContent: {
     paddingBottom: 20,
