@@ -103,9 +103,9 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
       key={stable.id}
       style={[
         styles.stableItem,
-        { backgroundColor: currentTheme.colors.surface },
+        { backgroundColor: "#f9fafb" },
         selectedStable?.id === stable.id && {
-          borderColor: currentTheme.colors.primary,
+          borderColor: "#3b82f6",
           borderWidth: 2,
         },
       ]}
@@ -114,9 +114,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
     >
       <View style={styles.stableInfo}>
         <View style={styles.stableNameContainer}>
-          <Text
-            style={[styles.stableName, { color: currentTheme.colors.text }]}
-          >
+          <Text style={[styles.stableName, { color: "#1f2937" }]}>
             {stable.name}
           </Text>
           {stable.is_verified && (
@@ -125,23 +123,13 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
             </View>
           )}
         </View>
-        <Text
-          style={[
-            styles.stableLocation,
-            { color: currentTheme.colors.textSecondary },
-          ]}
-        >
+        <Text style={[styles.stableLocation, { color: "#6b7280" }]}>
           {stable.city && stable.state_province
             ? `${stable.city}, ${stable.state_province}`
             : stable.location || "Location not specified"}
         </Text>
       </View>
-      <View
-        style={[
-          styles.selectButton,
-          { backgroundColor: currentTheme.colors.primary },
-        ]}
-      >
+      <View style={[styles.selectButton, { backgroundColor: "#3b82f6" }]}>
         <Text style={styles.selectButtonText}>Select</Text>
       </View>
     </TouchableOpacity>
@@ -154,38 +142,18 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
       presentationStyle="pageSheet"
     >
       <View style={styles.modalOverlay}>
-        <View
-          style={[
-            styles.container,
-            { backgroundColor: currentTheme.colors.background },
-          ]}
-        >
+        <View style={[styles.container, { backgroundColor: "#ffffff" }]}>
           {/* Header */}
-          <View
-            style={[
-              styles.header,
-              { backgroundColor: currentTheme.colors.background },
-            ]}
-          >
+          <View style={[styles.header, { backgroundColor: "#ffffff" }]}>
             <View style={styles.headerContent}>
-              <Text
-                style={[
-                  styles.headerTitle,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
+              <Text style={[styles.headerTitle, { color: "#1f2937" }]}>
                 Choose a Stable
               </Text>
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
                 <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>
             </View>
-            <Text
-              style={[
-                styles.headerSubtitle,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.headerSubtitle, { color: "#6b7280" }]}>
               Find a stable to connect with or create your own
             </Text>
           </View>
@@ -196,7 +164,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
               style={[
                 styles.tab,
                 activeTab === "popular" && {
-                  backgroundColor: currentTheme.colors.primary,
+                  backgroundColor: "#3b82f6",
                 },
               ]}
               onPress={() => setActiveTab("popular")}
@@ -205,10 +173,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
                 style={[
                   styles.tabText,
                   {
-                    color:
-                      activeTab === "popular"
-                        ? "#fff"
-                        : currentTheme.colors.textSecondary,
+                    color: activeTab === "popular" ? "#ffffff" : "#6b7280",
                   },
                 ]}
               >
@@ -219,7 +184,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
               style={[
                 styles.tab,
                 activeTab === "search" && {
-                  backgroundColor: currentTheme.colors.primary,
+                  backgroundColor: "#3b82f6",
                 },
               ]}
               onPress={() => setActiveTab("search")}
@@ -228,10 +193,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
                 style={[
                   styles.tabText,
                   {
-                    color:
-                      activeTab === "search"
-                        ? "#fff"
-                        : currentTheme.colors.textSecondary,
+                    color: activeTab === "search" ? "#ffffff" : "#6b7280",
                   },
                 ]}
               >
@@ -242,7 +204,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
               style={[
                 styles.tab,
                 activeTab === "create" && {
-                  backgroundColor: currentTheme.colors.primary,
+                  backgroundColor: "#3b82f6",
                 },
               ]}
               onPress={() => setActiveTab("create")}
@@ -251,10 +213,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
                 style={[
                   styles.tabText,
                   {
-                    color:
-                      activeTab === "create"
-                        ? "#fff"
-                        : currentTheme.colors.textSecondary,
+                    color: activeTab === "create" ? "#ffffff" : "#6b7280",
                   },
                 ]}
               >
@@ -270,26 +229,13 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
           >
             {activeTab === "popular" && (
               <View>
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
+                <Text style={[styles.sectionTitle, { color: "#1f2937" }]}>
                   Popular Stables
                 </Text>
                 {loading ? (
                   <View style={styles.loadingContainer}>
-                    <ActivityIndicator
-                      size="large"
-                      color={currentTheme.colors.primary}
-                    />
-                    <Text
-                      style={[
-                        styles.loadingText,
-                        { color: currentTheme.colors.textSecondary },
-                      ]}
-                    >
+                    <ActivityIndicator size="large" color="#3b82f6" />
+                    <Text style={[styles.loadingText, { color: "#6b7280" }]}>
                       Loading stables...
                     </Text>
                   </View>
@@ -301,12 +247,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
                     })
                   )
                 ) : (
-                  <Text
-                    style={[
-                      styles.emptyText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
+                  <Text style={[styles.emptyText, { color: "#6b7280" }]}>
                     No popular stables found
                   </Text>
                 )}
@@ -315,12 +256,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
 
             {activeTab === "search" && (
               <View>
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
+                <Text style={[styles.sectionTitle, { color: "#1f2937" }]}>
                   Search Stables
                 </Text>
                 <View style={styles.searchContainer}>
@@ -328,12 +264,12 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
                     style={[
                       styles.searchInput,
                       {
-                        backgroundColor: currentTheme.colors.surface,
-                        color: currentTheme.colors.text,
+                        backgroundColor: "#f9fafb",
+                        color: "#1f2937",
                       },
                     ]}
                     placeholder="Search by name or location..."
-                    placeholderTextColor={currentTheme.colors.textSecondary}
+                    placeholderTextColor="#9ca3af"
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                     onSubmitEditing={handleSearch}
@@ -341,7 +277,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.searchButton,
-                      { backgroundColor: currentTheme.colors.primary },
+                      { backgroundColor: "#3b82f6" },
                     ]}
                     onPress={handleSearch}
                     disabled={searching || searchQuery.length < 2}
@@ -366,12 +302,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
                 {searchQuery.length >= 2 &&
                   searchResults.length === 0 &&
                   !searching && (
-                    <Text
-                      style={[
-                        styles.emptyText,
-                        { color: currentTheme.colors.textSecondary },
-                      ]}
-                    >
+                    <Text style={[styles.emptyText, { color: "#6b7280" }]}>
                       No stables found matching "{searchQuery}"
                     </Text>
                   )}
@@ -380,106 +311,81 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
 
             {activeTab === "create" && (
               <View>
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
+                <Text style={[styles.sectionTitle, { color: "#1f2937" }]}>
                   Create New Stable
                 </Text>
                 <View style={styles.formContainer}>
                   <View style={styles.inputGroup}>
-                    <Text
-                      style={[
-                        styles.inputLabel,
-                        { color: currentTheme.colors.text },
-                      ]}
-                    >
+                    <Text style={[styles.inputLabel, { color: "#1f2937" }]}>
                       Stable Name *
                     </Text>
                     <TextInput
                       style={[
                         styles.textInput,
                         {
-                          backgroundColor: currentTheme.colors.surface,
-                          color: currentTheme.colors.text,
+                          backgroundColor: "#f9fafb",
+                          color: "#1f2937",
                         },
                       ]}
                       placeholder="Enter stable name"
-                      placeholderTextColor={currentTheme.colors.textSecondary}
+                      placeholderTextColor="#9ca3af"
                       value={newStableName}
                       onChangeText={setNewStableName}
                       maxLength={100}
                     />
                   </View>
                   <View style={styles.inputGroup}>
-                    <Text
-                      style={[
-                        styles.inputLabel,
-                        { color: currentTheme.colors.text },
-                      ]}
-                    >
-                      City
+                    <Text style={[styles.inputLabel, { color: "#1f2937" }]}>
+                      City *
                     </Text>
                     <TextInput
                       style={[
                         styles.textInput,
                         {
-                          backgroundColor: currentTheme.colors.surface,
-                          color: currentTheme.colors.text,
+                          backgroundColor: "#f9fafb",
+                          color: "#1f2937",
                         },
                       ]}
                       placeholder="Enter city"
-                      placeholderTextColor={currentTheme.colors.textSecondary}
+                      placeholderTextColor="#9ca3af"
                       value={newStableCity}
                       onChangeText={setNewStableCity}
                       maxLength={50}
                     />
                   </View>
                   <View style={styles.inputGroup}>
-                    <Text
-                      style={[
-                        styles.inputLabel,
-                        { color: currentTheme.colors.text },
-                      ]}
-                    >
-                      State/Province
+                    <Text style={[styles.inputLabel, { color: "#1f2937" }]}>
+                      State/Province *
                     </Text>
                     <TextInput
                       style={[
                         styles.textInput,
                         {
-                          backgroundColor: currentTheme.colors.surface,
-                          color: currentTheme.colors.text,
+                          backgroundColor: "#f9fafb",
+                          color: "#1f2937",
                         },
                       ]}
                       placeholder="Enter state or province"
-                      placeholderTextColor={currentTheme.colors.textSecondary}
+                      placeholderTextColor="#9ca3af"
                       value={newStableState}
                       onChangeText={setNewStableState}
                       maxLength={50}
                     />
                   </View>
                   <View style={styles.inputGroup}>
-                    <Text
-                      style={[
-                        styles.inputLabel,
-                        { color: currentTheme.colors.text },
-                      ]}
-                    >
+                    <Text style={[styles.inputLabel, { color: "#1f2937" }]}>
                       Full Address (Optional)
                     </Text>
                     <TextInput
                       style={[
                         styles.textInput,
                         {
-                          backgroundColor: currentTheme.colors.surface,
-                          color: currentTheme.colors.text,
+                          backgroundColor: "#f9fafb",
+                          color: "#1f2937",
                         },
                       ]}
                       placeholder="Enter full address"
-                      placeholderTextColor={currentTheme.colors.textSecondary}
+                      placeholderTextColor="#9ca3af"
                       value={newStableLocation}
                       onChangeText={setNewStableLocation}
                       maxLength={200}
@@ -491,8 +397,8 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
                       styles.createButton,
                       {
                         backgroundColor: newStableName.trim()
-                          ? currentTheme.colors.primary
-                          : currentTheme.colors.textSecondary,
+                          ? "#3b82f6"
+                          : "#9ca3af",
                       },
                     ]}
                     onPress={handleCreateStable}
@@ -509,21 +415,13 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
             )}
 
             <TouchableOpacity
-              style={[
-                styles.skipButton,
-                { backgroundColor: currentTheme.colors.surface },
-              ]}
+              style={[styles.skipButton, { backgroundColor: "#f9fafb" }]}
               onPress={() => {
                 onSelect(null);
                 onClose();
               }}
             >
-              <Text
-                style={[
-                  styles.skipButtonText,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
+              <Text style={[styles.skipButtonText, { color: "#6b7280" }]}>
                 Skip - Join Later
               </Text>
             </TouchableOpacity>
@@ -576,13 +474,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
   },
   closeButtonText: {
     fontSize: 18,
-    color: "#666",
+    color: "#6b7280",
     fontWeight: "600",
   },
   tabContainer: {
@@ -737,10 +635,11 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   createButton: {
-    paddingVertical: 18,
-    borderRadius: 16,
+    paddingVertical: 16,
+    borderRadius: 20,
     alignItems: "center",
     marginTop: 12,
+    marginBottom: -45,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -789,14 +688,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   verifiedBadge: {
-    backgroundColor: "#10b981",
+    backgroundColor: "#059669",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     marginLeft: 12,
   },
   verifiedBadgeText: {
-    color: "#fff",
+    color: "#ffffff",
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.2,
