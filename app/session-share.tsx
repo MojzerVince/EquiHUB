@@ -16,7 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ViewShot from "react-native-view-shot";
 import { useAuth } from "../contexts/AuthContext";
@@ -158,6 +158,8 @@ export default function SessionShareScreen() {
         averageSpeed: found.averageSpeed,
         hasPath: found.path?.length > 0,
         pathLength: found.path?.length,
+        pathFirstPoint: found.path?.[0],
+        pathLastPoint: found.path?.[found.path?.length - 1],
         durationCheck: !!found.duration,
         distanceCheck: !!found.distance,
         avgSpeedCheck: !!found.averageSpeed,
@@ -490,6 +492,19 @@ export default function SessionShareScreen() {
       }
 
       console.log("Creating Instagram story image using ViewShot...");
+
+      // Log path data for Instagram story
+      if (session.path && session.path.length > 0) {
+        console.log(
+          "📍 Instagram story will include GPS path with",
+          session.path.length,
+          "points"
+        );
+      } else {
+        console.log(
+          "⚠️ Instagram story will use fallback design - no GPS path available"
+        );
+      }
 
       // Validate ViewShot ref
       if (!instagramViewRef.current) {
@@ -1049,91 +1064,95 @@ export default function SessionShareScreen() {
             }}
           >
             {/* Map Background */}
-            {session?.path && session.path.length > 0 ? (
-              <MapView
-                style={styles.hybridMapBackground}
-                provider={PROVIDER_GOOGLE}
-                initialRegion={getMapRegion()}
-                scrollEnabled={false}
-                zoomEnabled={false}
-                rotateEnabled={false}
-                pitchEnabled={false}
-                showsUserLocation={false}
-                showsMyLocationButton={false}
-                showsCompass={false}
-                showsScale={false}
-                showsBuildings={true}
-                showsTraffic={false}
-                showsIndoors={false}
-                showsPointsOfInterest={false}
-                loadingEnabled={false}
-                onMapReady={() => {
-                  setMapReady(true);
-                }}
-              >
-                {/* Route Polyline */}
-                <Polyline
-                  coordinates={session.path.map((point: TrackingPoint) => ({
-                    latitude: point.latitude,
-                    longitude: point.longitude,
-                  }))}
-                  strokeColor="#FFD700"
-                  strokeWidth={4}
-                  lineJoin="round"
-                  lineCap="round"
-                />
+            {(() => {
+              // Debug path data
+              if (session?.path && session.path.length > 0) {
+                console.log(
+                  "🗺️ Rendering polyline with",
+                  session.path.length,
+                  "coordinates"
+                );
+                console.log("📍 Sample path points:", session.path.slice(0, 3));
+                console.log("📍 Map region:", getMapRegion());
+              } else {
+                console.log(
+                  "⚠️ No path data available - using fallback. Session path:",
+                  session?.path
+                );
+              }
 
-                {/* Start Point Marker */}
-                {session.path.length > 0 && (
-                  <Marker
-                    coordinate={{
-                      latitude: session.path[0].latitude,
-                      longitude: session.path[0].longitude,
-                    }}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                  >
-                    <View style={styles.startMarker}>
-                      <Ionicons name="play-circle" size={20} color="#00C851" />
-                    </View>
-                  </Marker>
-                )}
-
-                {/* End Point Marker */}
-                {session.path.length > 1 && (
-                  <Marker
-                    coordinate={{
-                      latitude: session.path[session.path.length - 1].latitude,
-                      longitude:
-                        session.path[session.path.length - 1].longitude,
-                    }}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                  >
-                    <View style={styles.endMarker}>
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color="#FF4444"
-                      />
-                    </View>
-                  </Marker>
-                )}
-              </MapView>
-            ) : (
-              <View
-                style={[
-                  styles.hybridMapBackground,
-                  styles.hybridFallbackBackground,
-                  { backgroundColor: theme.primary },
-                ]}
-              >
+              return session?.path && session.path.length > 0 ? (
+                <MapView
+                  style={styles.hybridMapBackground}
+                  provider={PROVIDER_GOOGLE}
+                  initialRegion={getMapRegion()}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                  rotateEnabled={false}
+                  pitchEnabled={false}
+                  showsUserLocation={false}
+                  showsMyLocationButton={false}
+                  showsCompass={false}
+                  showsScale={false}
+                  showsBuildings={true}
+                  showsTraffic={false}
+                  showsIndoors={false}
+                  showsPointsOfInterest={false}
+                  loadingEnabled={false}
+                  onMapReady={() => {
+                    setMapReady(true);
+                    console.log(
+                      "📍 Map ready for Instagram story with path:",
+                      session.path.length,
+                      "points"
+                    );
+                  }}
+                >
+                  {/* Route Polyline - Show the complete path */}
+                  <Polyline
+                    coordinates={session.path.map((point: TrackingPoint) => {
+                      console.log("📍 Processing point:", point);
+                      return {
+                        latitude: point.latitude,
+                        longitude: point.longitude,
+                      };
+                    })}
+                    strokeColor="#FF6B6B"
+                    strokeWidth={8}
+                    lineJoin="round"
+                    lineCap="round"
+                    geodesic={true}
+                  />
+                </MapView>
+              ) : (
                 <View
                   style={[
-                    styles.hybridGradientOverlay,
-                    { backgroundColor: theme.accent + "30" },
+                    styles.hybridMapBackground,
+                    styles.hybridFallbackBackground,
+                    { backgroundColor: theme.primary },
                   ]}
-                />
-              </View>
-            )}
+                >
+                  <View
+                    style={[
+                      styles.hybridGradientOverlay,
+                      { backgroundColor: theme.accent + "30" },
+                    ]}
+                  />
+                  {/* Fallback content when no GPS data */}
+                  <View style={styles.noPathFallback}>
+                    <Ionicons
+                      name="location-outline"
+                      size={48}
+                      color="#FFFFFF"
+                    />
+                    <Text style={styles.noPathText}>Training Session</Text>
+                    <Text style={styles.noPathSubtext}>
+                      No GPS tracking available
+                    </Text>
+                  </View>
+                </View>
+              );
+            })()}
 
             {/* Content Overlay - Part of Main View */}
             <View style={styles.hybridContentOverlay}>
@@ -2143,31 +2162,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
-  // Start and End Marker Styles
-  startMarker: {
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    borderRadius: 20,
-    padding: 4,
-    borderWidth: 2,
-    borderColor: "#00C851",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  endMarker: {
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    borderRadius: 20,
-    padding: 4,
-    borderWidth: 2,
-    borderColor: "#FF4444",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
   // Stats Cards Grid
   statsGrid: {
     flexDirection: "row",
@@ -2622,5 +2616,39 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 16,
+  },
+
+  // No Path Fallback Styles
+  noPathFallback: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: [{ translateX: -75 }, { translateY: -75 }],
+    alignItems: "center",
+    justifyContent: "center",
+    width: 150,
+    height: 150,
+  },
+  noPathText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginTop: 12,
+    fontFamily: "Inder",
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  noPathSubtext: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginTop: 4,
+    opacity: 0.8,
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });
