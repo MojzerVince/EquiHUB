@@ -348,7 +348,7 @@ const RegisterScreen = () => {
                 <View style={styles.profileFormContainer}>
                   {/* Name Input */}
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Full Name</Text>
+                    <Text style={styles.inputLabel}>Name *</Text>
                     <TextInput
                       style={[
                         styles.textInput,
@@ -369,7 +369,7 @@ const RegisterScreen = () => {
 
                   {/* Age Input */}
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Age</Text>
+                    <Text style={styles.inputLabel}>Age *</Text>
                     <TextInput
                       style={[
                         styles.textInput,
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
   registerButton: {
     backgroundColor: "#2c3e50",
     paddingVertical: 18,
-    borderRadius: 12,
+    borderRadius: 20,
     alignItems: "center",
     marginBottom: 20,
     shadowColor: "#000",
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
   },
   registerButtonText: {
     color: "#ffffff",
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
