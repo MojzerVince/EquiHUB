@@ -173,6 +173,30 @@ const MyHorsesScreen = () => {
     [horseId: string]: any[];
   }>({});
 
+  // New Records modal state
+  const [recordsModalVisible, setRecordsModalVisible] = useState(false);
+  const [selectedHorseForRecords, setSelectedHorseForRecords] =
+    useState<Horse | null>(null);
+  const [recordsSection, setRecordsSection] = useState<
+    "main" | "vaccination" | "document" | "rider"
+  >("main");
+
+  // Enhanced vaccination state
+  const [vaccinationId, setVaccinationId] = useState("");
+  const [vaccinationType, setVaccinationType] = useState<"future" | "past">(
+    "future"
+  );
+  const [vaccinationRepeat, setVaccinationRepeat] = useState(false);
+  const [vaccinationRepeatInterval, setVaccinationRepeatInterval] = useState<
+    "monthly" | "quarterly" | "yearly"
+  >("yearly");
+
+  // Document manager state
+  const [documentSyncEnabled, setDocumentSyncEnabled] = useState(false);
+  const [horseDocuments, setHorseDocuments] = useState<{
+    [horseId: string]: any[];
+  }>({});
+
   // Load horses when user is authenticated - from cache first, API only on refresh
   useEffect(() => {
     // Add a timeout to prevent getting stuck in loading state
@@ -914,6 +938,53 @@ const MyHorsesScreen = () => {
     }
   };
 
+  // Records modal functions
+  const openRecordsModal = (horse: Horse) => {
+    setSelectedHorseForRecords(horse);
+    setRecordsSection("main");
+    setRecordsModalVisible(true);
+  };
+
+  const closeRecordsModal = () => {
+    setRecordsModalVisible(false);
+    setSelectedHorseForRecords(null);
+    setRecordsSection("main");
+    // Reset all sub-modal states
+    setVaccinationModalVisible(false);
+    setSelectedHorseForVaccination(null);
+    setVaccinationName("");
+    setVaccinationId("");
+    setVaccinationDate(null);
+    setVaccinationNotes("");
+    setVaccinationType("future");
+    setVaccinationRepeat(false);
+    setShowVaccinationDatePicker(false);
+  };
+
+  const openVaccinationManager = () => {
+    setSelectedHorseForVaccination(selectedHorseForRecords);
+    setRecordsSection("vaccination");
+    setVaccinationName("");
+    setVaccinationId("");
+    setVaccinationDate(null);
+    setVaccinationNotes("");
+    setVaccinationType("future");
+    setVaccinationRepeat(false);
+    setShowVaccinationDatePicker(false);
+  };
+
+  const openDocumentManager = () => {
+    setRecordsSection("document");
+  };
+
+  const openRiderManager = () => {
+    setRecordsSection("rider");
+  };
+
+  const backToRecordsMain = () => {
+    setRecordsSection("main");
+  };
+
   const openVaccinationModal = (horse: Horse) => {
     setSelectedHorseForVaccination(horse);
     setVaccinationName("");
@@ -945,8 +1016,12 @@ const MyHorsesScreen = () => {
     const newVaccination = {
       id: Date.now().toString(),
       name: vaccinationName.trim(),
+      vaccinationId: vaccinationId.trim() || null,
       date: vaccinationDate.toISOString(),
       notes: vaccinationNotes.trim(),
+      type: vaccinationType,
+      repeat: vaccinationRepeat,
+      repeatInterval: vaccinationRepeat ? vaccinationRepeatInterval : null,
       createdAt: new Date().toISOString(),
     };
 
@@ -956,17 +1031,82 @@ const MyHorsesScreen = () => {
     }
     updatedVaccinations[selectedHorseForVaccination.id].push(newVaccination);
 
+    // If repeat is enabled and this is a future vaccination, schedule recurring reminders
+    if (vaccinationRepeat && vaccinationType === "future") {
+      const additionalReminders = [];
+      const currentDate = new Date(vaccinationDate);
+
+      for (let i = 1; i <= 5; i++) {
+        // Schedule next 5 occurrences
+        const nextDate = new Date(currentDate);
+        switch (vaccinationRepeatInterval) {
+          case "monthly":
+            nextDate.setMonth(nextDate.getMonth() + i);
+            break;
+          case "quarterly":
+            nextDate.setMonth(nextDate.getMonth() + i * 3);
+            break;
+          case "yearly":
+            nextDate.setFullYear(nextDate.getFullYear() + i);
+            break;
+        }
+
+        additionalReminders.push({
+          id: (Date.now() + i).toString(),
+          name: vaccinationName.trim(),
+          vaccinationId: vaccinationId.trim() || null,
+          date: nextDate.toISOString(),
+          notes: vaccinationNotes.trim(),
+          type: "future",
+          repeat: true,
+          repeatInterval: vaccinationRepeatInterval,
+          createdAt: new Date().toISOString(),
+          isRecurring: true,
+          originalId: newVaccination.id,
+        });
+      }
+
+      updatedVaccinations[selectedHorseForVaccination.id].push(
+        ...additionalReminders
+      );
+    }
+
     await saveVaccinationReminders(updatedVaccinations);
 
-    // Schedule notifications for the new vaccination
-    await scheduleVaccinationNotifications(
-      newVaccination,
-      selectedHorseForVaccination.name
-    );
+    // Schedule notifications only for future vaccinations
+    if (vaccinationType === "future") {
+      await scheduleVaccinationNotifications(
+        newVaccination,
+        selectedHorseForVaccination.name
+      );
 
-    closeVaccinationModal();
+      // Schedule notifications for recurring reminders
+      if (vaccinationRepeat) {
+        const recurringReminders = updatedVaccinations[
+          selectedHorseForVaccination.id
+        ].filter((v) => v.originalId === newVaccination.id);
+        for (const reminder of recurringReminders) {
+          await scheduleVaccinationNotifications(
+            reminder,
+            selectedHorseForVaccination.name
+          );
+        }
+      }
+    }
+
+    // Reset form
+    setVaccinationName("");
+    setVaccinationId("");
+    setVaccinationDate(null);
+    setVaccinationNotes("");
+    setVaccinationType("future");
+    setVaccinationRepeat(false);
+    setShowVaccinationDatePicker(false);
+
     setSuccessMessage(
-      `Vaccination reminder set for ${selectedHorseForVaccination.name}`
+      `Vaccination ${vaccinationType === "past" ? "record" : "reminder"} ${
+        vaccinationRepeat ? "with recurring schedule " : ""
+      }set for ${selectedHorseForVaccination.name}`
     );
     setShowSuccessModal(true);
   };
@@ -1000,6 +1140,100 @@ const MyHorsesScreen = () => {
     const vaccinations = horseVaccinations[horseId] || [];
     const now = new Date();
     return vaccinations.filter((v) => new Date(v.date) < now);
+  };
+
+  // Document Management Functions
+  const loadHorseDocuments = async () => {
+    try {
+      const savedDocuments = await AsyncStorage.getItem(
+        `horse_documents_${user?.id}`
+      );
+      if (savedDocuments) {
+        setHorseDocuments(JSON.parse(savedDocuments));
+      }
+    } catch (error) {
+      console.error("Error loading horse documents:", error);
+    }
+  };
+
+  const saveHorseDocuments = async (documents: {
+    [horseId: string]: any[];
+  }) => {
+    try {
+      await AsyncStorage.setItem(
+        `horse_documents_${user?.id}`,
+        JSON.stringify(documents)
+      );
+      setHorseDocuments(documents);
+    } catch (error) {
+      console.error("Error saving horse documents:", error);
+      showError("Failed to save document");
+    }
+  };
+
+  const addDocument = async () => {
+    if (!selectedHorseForRecords) return;
+
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      showError("Permission to access gallery is required!");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images",
+      allowsEditing: false,
+      quality: 1,
+      base64: false,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const newDocument = {
+        id: Date.now().toString(),
+        uri: result.assets[0].uri,
+        name: `Document_${Date.now()}`,
+        type: "image",
+        createdAt: new Date().toISOString(),
+        synced: false, // For future pro sync feature
+      };
+
+      const updatedDocuments = { ...horseDocuments };
+      if (!updatedDocuments[selectedHorseForRecords.id]) {
+        updatedDocuments[selectedHorseForRecords.id] = [];
+      }
+      updatedDocuments[selectedHorseForRecords.id].push(newDocument);
+
+      await saveHorseDocuments(updatedDocuments);
+      setSuccessMessage("Document added successfully!");
+      setShowSuccessModal(true);
+    }
+  };
+
+  const deleteDocument = async (horseId: string, documentId: string) => {
+    const updatedDocuments = { ...horseDocuments };
+    if (updatedDocuments[horseId]) {
+      updatedDocuments[horseId] = updatedDocuments[horseId].filter(
+        (d) => d.id !== documentId
+      );
+      if (updatedDocuments[horseId].length === 0) {
+        delete updatedDocuments[horseId];
+      }
+    }
+    await saveHorseDocuments(updatedDocuments);
+  };
+
+  const toggleDocumentSync = () => {
+    if (!isProMember) {
+      router.push("/pro-features");
+      return;
+    }
+    setDocumentSyncEnabled(!documentSyncEnabled);
+    // TODO: Implement backend sync for PRO users
+  };
+
+  const getHorseDocuments = (horseId: string) => {
+    return horseDocuments[horseId] || [];
   };
 
   // Notification functions
@@ -1044,31 +1278,32 @@ const MyHorsesScreen = () => {
       onTheDay.setHours(9, 0, 0, 0); // 9 AM on the day
 
       // Schedule notifications if they're in the future
+      const notesText = vaccination.notes ? ` Notes: ${vaccination.notes}` : "";
       const notifications = [
         {
           date: oneWeekBefore,
           title: `🩺 Vaccination Reminder - 1 Week`,
           body: `${horseName} has a vaccination (${
             vaccination.name
-          }) due in 1 week on ${dueDate.toLocaleDateString()}`,
+          }) due in 1 week on ${dueDate.toLocaleDateString()}${notesText}`,
           identifier: `${vaccination.id}_week`,
         },
         {
           date: twoDaysBefore,
           title: `💉 Vaccination Reminder - 2 Days`,
-          body: `${horseName} has a vaccination (${vaccination.name}) due in 2 days`,
+          body: `${horseName} has a vaccination (${vaccination.name}) due in 2 days${notesText}`,
           identifier: `${vaccination.id}_2days`,
         },
         {
           date: oneDayBefore,
           title: `⚠️ Vaccination Reminder - Tomorrow`,
-          body: `${horseName} has a vaccination (${vaccination.name}) due tomorrow!`,
+          body: `${horseName} has a vaccination (${vaccination.name}) due tomorrow!${notesText}`,
           identifier: `${vaccination.id}_1day`,
         },
         {
           date: onTheDay,
           title: `🚨 Vaccination Due Today!`,
-          body: `${horseName} vaccination (${vaccination.name}) is due today!`,
+          body: `${horseName} vaccination (${vaccination.name}) is due today!${notesText}`,
           identifier: `${vaccination.id}_today`,
         },
       ];
@@ -1128,6 +1363,7 @@ const MyHorsesScreen = () => {
   useEffect(() => {
     if (user?.id) {
       loadVaccinationReminders();
+      loadHorseDocuments();
     }
   }, [user?.id]);
 
@@ -2254,7 +2490,7 @@ const MyHorsesScreen = () => {
                       styles.primaryActionButton,
                       { backgroundColor: currentTheme.colors.primary },
                     ]}
-                    onPress={() => openVaccinationModal(horse)}
+                    onPress={() => openRecordsModal(horse)}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.primaryActionButtonText}>
@@ -2902,12 +3138,12 @@ const MyHorsesScreen = () => {
       {/* Image Picker Modal */}
       <ImagePickerModal />
 
-      {/* Vaccination Reminder Modal */}
+      {/* Records Modal */}
       <Modal
         animationType="slide"
         transparent={true}
-        visible={vaccinationModalVisible}
-        onRequestClose={closeVaccinationModal}
+        visible={recordsModalVisible}
+        onRequestClose={closeRecordsModal}
       >
         <View style={styles.modalOverlay}>
           <View
@@ -2916,267 +3152,847 @@ const MyHorsesScreen = () => {
               { backgroundColor: currentTheme.colors.surface },
             ]}
           >
+            {/* Header */}
             <View
               style={[
                 styles.modalHeader,
-                { backgroundColor: currentTheme.colors.accent },
+                { backgroundColor: currentTheme.colors.primary },
               ]}
             >
-              <Text style={[styles.modalTitle, { color: "#FFFFFF" }]}>
-                💉 Vaccination Reminders
-              </Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+              >
+                {recordsSection !== "main" && (
+                  <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={backToRecordsMain}
+                  >
+                    <Text style={styles.backButtonText}>←</Text>
+                  </TouchableOpacity>
+                )}
+                <Text
+                  style={[
+                    styles.modalTitle,
+                    {
+                      color: "#FFFFFF",
+                      flex: 1,
+                      textAlign: recordsSection === "main" ? "center" : "left",
+                      marginLeft: recordsSection === "main" ? 0 : 10,
+                    },
+                  ]}
+                >
+                  {recordsSection === "main" && "📋 RECORDS"}
+                  {recordsSection === "vaccination" && "💉 Vaccination Manager"}
+                  {recordsSection === "document" && "📄 Document Manager"}
+                  {recordsSection === "rider" && "👥 Rider Manager"}
+                </Text>
+              </View>
               <TouchableOpacity
                 style={styles.modalCloseButton}
-                onPress={closeVaccinationModal}
+                onPress={closeRecordsModal}
               >
                 <Text style={styles.modalCloseText}>✕</Text>
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalContent}>
-              {selectedHorseForVaccination && (
+              {selectedHorseForRecords && (
                 <>
-                  <Text
-                    style={[
-                      styles.vaccinationHorseName,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    Setting reminder for: {selectedHorseForVaccination.name}
-                  </Text>
+                  {/* Main Records Menu */}
+                  {recordsSection === "main" && (
+                    <View>
+                      <Text
+                        style={[
+                          styles.recordsHorseName,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        Managing records for: {selectedHorseForRecords.name}
+                      </Text>
 
-                  {/* Existing Vaccinations */}
-                  {horseVaccinations[selectedHorseForVaccination.id] &&
-                    horseVaccinations[selectedHorseForVaccination.id].length >
-                      0 && (
-                      <View style={styles.existingVaccinations}>
-                        <Text
+                      <View style={styles.recordsMenuContainer}>
+                        <TouchableOpacity
                           style={[
-                            styles.existingVaccinationsTitle,
-                            { color: currentTheme.colors.text },
+                            styles.recordsMenuItem,
+                            { backgroundColor: currentTheme.colors.primary },
                           ]}
+                          onPress={openVaccinationManager}
                         >
-                          Existing Reminders:
-                        </Text>
-                        {horseVaccinations[selectedHorseForVaccination.id].map(
-                          (vaccination) => {
-                            const isOverdue =
-                              new Date(vaccination.date) < new Date();
-                            return (
-                              <View
-                                key={vaccination.id}
-                                style={[
-                                  styles.vaccinationItem,
-                                  {
-                                    backgroundColor: isOverdue
-                                      ? currentTheme.colors.error + "20"
-                                      : currentTheme.colors.success + "20",
-                                    borderColor: isOverdue
-                                      ? currentTheme.colors.error
-                                      : currentTheme.colors.success,
-                                  },
-                                ]}
-                              >
-                                <View style={styles.vaccinationItemContent}>
-                                  <Text
+                          <Text style={styles.recordsMenuIcon}>💉</Text>
+                          <View style={styles.recordsMenuContent}>
+                            <Text style={styles.recordsMenuTitle}>
+                              Vaccination Manager
+                            </Text>
+                            <Text style={styles.recordsMenuSubtitle}>
+                              Set reminders and track vaccination history
+                            </Text>
+                          </View>
+                          <Text style={styles.recordsMenuArrow}>→</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.recordsMenuItem,
+                            { backgroundColor: currentTheme.colors.accent },
+                          ]}
+                          onPress={openDocumentManager}
+                        >
+                          <Text style={styles.recordsMenuIcon}>📄</Text>
+                          <View style={styles.recordsMenuContent}>
+                            <Text style={styles.recordsMenuTitle}>
+                              Document Manager
+                            </Text>
+                            <Text style={styles.recordsMenuSubtitle}>
+                              Store and organize important documents
+                            </Text>
+                          </View>
+                          <Text style={styles.recordsMenuArrow}>→</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.recordsMenuItem,
+                            {
+                              backgroundColor:
+                                currentTheme.colors.textSecondary,
+                              opacity: 0.6,
+                            },
+                          ]}
+                          onPress={openRiderManager}
+                          disabled={true}
+                        >
+                          <Text style={styles.recordsMenuIcon}>👥</Text>
+                          <View style={styles.recordsMenuContent}>
+                            <Text style={styles.recordsMenuTitle}>
+                              Rider Manager
+                            </Text>
+                            <Text style={styles.recordsMenuSubtitle}>
+                              Coming Soon - Share horses with other riders
+                            </Text>
+                          </View>
+                          <Text style={styles.recordsMenuArrow}>→</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Vaccination Manager Section */}
+                  {recordsSection === "vaccination" && (
+                    <View>
+                      <Text
+                        style={[
+                          styles.vaccinationHorseName,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        Vaccination Manager for: {selectedHorseForRecords.name}
+                      </Text>
+
+                      {/* Vaccination Type Toggle */}
+                      <View style={styles.vaccinationTypeToggle}>
+                        <TouchableOpacity
+                          style={[
+                            styles.vaccinationTypeButton,
+                            {
+                              backgroundColor:
+                                vaccinationType === "future"
+                                  ? currentTheme.colors.primary
+                                  : currentTheme.colors.surface,
+                              borderColor: currentTheme.colors.primary,
+                            },
+                          ]}
+                          onPress={() => setVaccinationType("future")}
+                        >
+                          <Text
+                            style={[
+                              styles.vaccinationTypeButtonText,
+                              {
+                                color:
+                                  vaccinationType === "future"
+                                    ? "#FFFFFF"
+                                    : currentTheme.colors.primary,
+                              },
+                            ]}
+                          >
+                            Future Vaccination
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.vaccinationTypeButton,
+                            {
+                              backgroundColor:
+                                vaccinationType === "past"
+                                  ? currentTheme.colors.primary
+                                  : currentTheme.colors.surface,
+                              borderColor: currentTheme.colors.primary,
+                            },
+                          ]}
+                          onPress={() => setVaccinationType("past")}
+                        >
+                          <Text
+                            style={[
+                              styles.vaccinationTypeButtonText,
+                              {
+                                color:
+                                  vaccinationType === "past"
+                                    ? "#FFFFFF"
+                                    : currentTheme.colors.primary,
+                              },
+                            ]}
+                          >
+                            Past Vaccination
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Existing Vaccinations */}
+                      {horseVaccinations[selectedHorseForRecords.id] &&
+                        horseVaccinations[selectedHorseForRecords.id].length >
+                          0 && (
+                          <View style={styles.existingVaccinations}>
+                            <Text
+                              style={[
+                                styles.existingVaccinationsTitle,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              Existing Records:
+                            </Text>
+                            {horseVaccinations[selectedHorseForRecords.id]
+                              .sort(
+                                (a, b) =>
+                                  new Date(b.date).getTime() -
+                                  new Date(a.date).getTime()
+                              )
+                              .map((vaccination) => {
+                                const isOverdue =
+                                  new Date(vaccination.date) < new Date() &&
+                                  vaccination.type === "future";
+                                const isPast = vaccination.type === "past";
+                                return (
+                                  <View
+                                    key={vaccination.id}
                                     style={[
-                                      styles.vaccinationItemName,
-                                      { color: currentTheme.colors.text },
-                                    ]}
-                                  >
-                                    {vaccination.name}
-                                  </Text>
-                                  <Text
-                                    style={[
-                                      styles.vaccinationItemDate,
+                                      styles.vaccinationItem,
                                       {
-                                        color: isOverdue
+                                        backgroundColor: isPast
+                                          ? currentTheme.colors.surface + "50"
+                                          : isOverdue
+                                          ? currentTheme.colors.error + "20"
+                                          : currentTheme.colors.success + "20",
+                                        borderColor: isPast
+                                          ? currentTheme.colors.textSecondary
+                                          : isOverdue
                                           ? currentTheme.colors.error
                                           : currentTheme.colors.success,
                                       },
                                     ]}
                                   >
-                                    {isOverdue ? "⚠️ Overdue: " : "📅 Due: "}
-                                    {new Date(
-                                      vaccination.date
-                                    ).toLocaleDateString()}
-                                  </Text>
-                                  {vaccination.notes && (
+                                    <View style={styles.vaccinationItemContent}>
+                                      <View
+                                        style={styles.vaccinationItemHeader}
+                                      >
+                                        <Text
+                                          style={[
+                                            styles.vaccinationItemName,
+                                            { color: currentTheme.colors.text },
+                                          ]}
+                                        >
+                                          {vaccination.name}
+                                        </Text>
+                                        {vaccination.repeat && (
+                                          <Text style={styles.repeatIndicator}>
+                                            🔄
+                                          </Text>
+                                        )}
+                                      </View>
+                                      {vaccination.vaccinationId && (
+                                        <Text
+                                          style={[
+                                            styles.vaccinationItemId,
+                                            {
+                                              color:
+                                                currentTheme.colors
+                                                  .textSecondary,
+                                            },
+                                          ]}
+                                        >
+                                          ID: {vaccination.vaccinationId}
+                                        </Text>
+                                      )}
+                                      <Text
+                                        style={[
+                                          styles.vaccinationItemDate,
+                                          {
+                                            color: isPast
+                                              ? currentTheme.colors
+                                                  .textSecondary
+                                              : isOverdue
+                                              ? currentTheme.colors.error
+                                              : currentTheme.colors.success,
+                                          },
+                                        ]}
+                                      >
+                                        {isPast
+                                          ? "📝 Completed: "
+                                          : isOverdue
+                                          ? "⚠️ Overdue: "
+                                          : "📅 Due: "}
+                                        {new Date(
+                                          vaccination.date
+                                        ).toLocaleDateString()}
+                                      </Text>
+                                      {vaccination.notes && (
+                                        <Text
+                                          style={[
+                                            styles.vaccinationItemNotes,
+                                            {
+                                              color:
+                                                currentTheme.colors
+                                                  .textSecondary,
+                                            },
+                                          ]}
+                                        >
+                                          {vaccination.notes}
+                                        </Text>
+                                      )}
+                                    </View>
+                                    <TouchableOpacity
+                                      style={styles.deleteVaccinationButton}
+                                      onPress={() =>
+                                        deleteVaccinationReminder(
+                                          selectedHorseForRecords.id,
+                                          vaccination.id
+                                        )
+                                      }
+                                    >
+                                      <Text
+                                        style={
+                                          styles.deleteVaccinationButtonText
+                                        }
+                                      >
+                                        🗑️
+                                      </Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                );
+                              })}
+                          </View>
+                        )}
+
+                      {/* Add New Vaccination Form */}
+                      <View style={styles.addVaccinationForm}>
+                        <Text
+                          style={[
+                            styles.addVaccinationTitle,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          Add New{" "}
+                          {vaccinationType === "past" ? "Record" : "Reminder"}:
+                        </Text>
+
+                        <View style={styles.inputGroup}>
+                          <Text
+                            style={[
+                              styles.inputLabel,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            Vaccination Name *
+                          </Text>
+                          <TextInput
+                            style={[
+                              styles.textInput,
+                              {
+                                backgroundColor: currentTheme.colors.surface,
+                                borderColor: currentTheme.colors.border,
+                                color: currentTheme.colors.text,
+                              },
+                            ]}
+                            value={vaccinationName}
+                            onChangeText={setVaccinationName}
+                            placeholder="e.g., Annual Shots, Flu, etc."
+                            placeholderTextColor={
+                              currentTheme.colors.textSecondary
+                            }
+                            maxLength={50}
+                          />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                          <Text
+                            style={[
+                              styles.inputLabel,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            Vaccination ID (Optional)
+                          </Text>
+                          <TextInput
+                            style={[
+                              styles.textInput,
+                              {
+                                backgroundColor: currentTheme.colors.surface,
+                                borderColor: currentTheme.colors.border,
+                                color: currentTheme.colors.text,
+                              },
+                            ]}
+                            value={vaccinationId}
+                            onChangeText={setVaccinationId}
+                            placeholder="Batch number, serial, etc."
+                            placeholderTextColor={
+                              currentTheme.colors.textSecondary
+                            }
+                            maxLength={30}
+                          />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                          <Text
+                            style={[
+                              styles.inputLabel,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            {vaccinationType === "past"
+                              ? "Completed Date"
+                              : "Due Date"}{" "}
+                            *
+                          </Text>
+                          <TouchableOpacity
+                            style={[
+                              styles.datePickerButton,
+                              {
+                                backgroundColor: currentTheme.colors.surface,
+                                borderColor: currentTheme.colors.border,
+                              },
+                            ]}
+                            onPress={() => setShowVaccinationDatePicker(true)}
+                          >
+                            <Text
+                              style={[
+                                styles.datePickerButtonText,
+                                {
+                                  color: vaccinationDate
+                                    ? currentTheme.colors.text
+                                    : currentTheme.colors.textSecondary,
+                                },
+                              ]}
+                            >
+                              {vaccinationDate
+                                ? vaccinationDate.toLocaleDateString()
+                                : `Select ${
+                                    vaccinationType === "past"
+                                      ? "completion"
+                                      : "due"
+                                  } date`}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.datePickerArrow,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              📅
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        {vaccinationType === "future" && (
+                          <View style={styles.inputGroup}>
+                            <View style={styles.repeatToggleContainer}>
+                              <Text
+                                style={[
+                                  styles.inputLabel,
+                                  { color: currentTheme.colors.text },
+                                ]}
+                              >
+                                Set Recurring Reminder
+                              </Text>
+                              <TouchableOpacity
+                                style={[
+                                  styles.repeatToggle,
+                                  {
+                                    backgroundColor: vaccinationRepeat
+                                      ? currentTheme.colors.primary
+                                      : currentTheme.colors.textSecondary,
+                                  },
+                                ]}
+                                onPress={() =>
+                                  setVaccinationRepeat(!vaccinationRepeat)
+                                }
+                              >
+                                <View
+                                  style={[
+                                    styles.repeatToggleSlider,
+                                    {
+                                      transform: [
+                                        {
+                                          translateX: vaccinationRepeat
+                                            ? 18
+                                            : 2,
+                                        },
+                                      ],
+                                    },
+                                  ]}
+                                />
+                              </TouchableOpacity>
+                            </View>
+
+                            {vaccinationRepeat && (
+                              <View style={styles.repeatIntervalContainer}>
+                                <Text
+                                  style={[
+                                    styles.inputLabel,
+                                    {
+                                      color: currentTheme.colors.text,
+                                      fontSize: 14,
+                                    },
+                                  ]}
+                                >
+                                  Repeat Every:
+                                </Text>
+                                <View style={styles.repeatIntervalButtons}>
+                                  {["monthly", "quarterly", "yearly"].map(
+                                    (interval) => (
+                                      <TouchableOpacity
+                                        key={interval}
+                                        style={[
+                                          styles.repeatIntervalButton,
+                                          {
+                                            backgroundColor:
+                                              vaccinationRepeatInterval ===
+                                              interval
+                                                ? currentTheme.colors.primary
+                                                : currentTheme.colors.surface,
+                                            borderColor:
+                                              currentTheme.colors.primary,
+                                          },
+                                        ]}
+                                        onPress={() =>
+                                          setVaccinationRepeatInterval(
+                                            interval as any
+                                          )
+                                        }
+                                      >
+                                        <Text
+                                          style={[
+                                            styles.repeatIntervalButtonText,
+                                            {
+                                              color:
+                                                vaccinationRepeatInterval ===
+                                                interval
+                                                  ? "#FFFFFF"
+                                                  : currentTheme.colors.primary,
+                                            },
+                                          ]}
+                                        >
+                                          {interval.charAt(0).toUpperCase() +
+                                            interval.slice(1)}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    )
+                                  )}
+                                </View>
+                              </View>
+                            )}
+                          </View>
+                        )}
+
+                        <View style={styles.inputGroup}>
+                          <Text
+                            style={[
+                              styles.inputLabel,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            Notes (Optional)
+                          </Text>
+                          <TextInput
+                            style={[
+                              styles.textInput,
+                              styles.textInputMultiline,
+                              {
+                                backgroundColor: currentTheme.colors.surface,
+                                borderColor: currentTheme.colors.border,
+                                color: currentTheme.colors.text,
+                              },
+                            ]}
+                            value={vaccinationNotes}
+                            onChangeText={setVaccinationNotes}
+                            placeholder="Additional notes about this vaccination..."
+                            placeholderTextColor={
+                              currentTheme.colors.textSecondary
+                            }
+                            multiline={true}
+                            numberOfLines={3}
+                            maxLength={200}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Document Manager Section */}
+                  {recordsSection === "document" && (
+                    <View>
+                      <Text
+                        style={[
+                          styles.documentHorseName,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        Document Manager for: {selectedHorseForRecords.name}
+                      </Text>
+
+                      {/* Pro Sync Toggle */}
+                      <View style={styles.documentSyncContainer}>
+                        <View style={styles.documentSyncHeader}>
+                          <View style={styles.documentSyncInfo}>
+                            <Text
+                              style={[
+                                styles.documentSyncTitle,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              Cloud Sync {!isProMember && "(PRO Only)"}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.documentSyncSubtitle,
+                                { color: currentTheme.colors.textSecondary },
+                              ]}
+                            >
+                              {isProMember
+                                ? "Sync documents to cloud for backup and sharing"
+                                : "Upgrade to PRO to sync documents to cloud"}
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            style={[
+                              styles.documentSyncToggle,
+                              {
+                                backgroundColor:
+                                  documentSyncEnabled && isProMember
+                                    ? currentTheme.colors.primary
+                                    : currentTheme.colors.textSecondary,
+                                opacity: isProMember ? 1 : 0.5,
+                              },
+                            ]}
+                            onPress={toggleDocumentSync}
+                          >
+                            <View
+                              style={[
+                                styles.documentSyncSlider,
+                                {
+                                  transform: [
+                                    {
+                                      translateX:
+                                        documentSyncEnabled && isProMember
+                                          ? 18
+                                          : 2,
+                                    },
+                                  ],
+                                },
+                              ]}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      {/* Documents List */}
+                      {getHorseDocuments(selectedHorseForRecords.id).length >
+                        0 && (
+                        <View style={styles.documentsContainer}>
+                          <Text
+                            style={[
+                              styles.documentsTitle,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            Stored Documents:
+                          </Text>
+                          {getHorseDocuments(selectedHorseForRecords.id).map(
+                            (document) => (
+                              <View
+                                key={document.id}
+                                style={[
+                                  styles.documentItem,
+                                  {
+                                    backgroundColor:
+                                      currentTheme.colors.surface,
+                                    borderColor: currentTheme.colors.border,
+                                  },
+                                ]}
+                              >
+                                <TouchableOpacity
+                                  style={styles.documentItemContent}
+                                  onPress={() => {
+                                    // Open document in gallery
+                                    // This is a placeholder - you might want to use a library like react-native-image-viewing
+                                  }}
+                                >
+                                  <Text style={styles.documentIcon}>📄</Text>
+                                  <View style={styles.documentInfo}>
                                     <Text
                                       style={[
-                                        styles.vaccinationItemNotes,
+                                        styles.documentName,
+                                        { color: currentTheme.colors.text },
+                                      ]}
+                                    >
+                                      {document.name}
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.documentDate,
                                         {
                                           color:
                                             currentTheme.colors.textSecondary,
                                         },
                                       ]}
                                     >
-                                      {vaccination.notes}
+                                      Added:{" "}
+                                      {new Date(
+                                        document.createdAt
+                                      ).toLocaleDateString()}
                                     </Text>
-                                  )}
-                                </View>
+                                  </View>
+                                </TouchableOpacity>
                                 <TouchableOpacity
-                                  style={styles.deleteVaccinationButton}
+                                  style={styles.deleteDocumentButton}
                                   onPress={() =>
-                                    deleteVaccinationReminder(
-                                      selectedHorseForVaccination.id,
-                                      vaccination.id
+                                    deleteDocument(
+                                      selectedHorseForRecords.id,
+                                      document.id
                                     )
                                   }
                                 >
-                                  <Text
-                                    style={styles.deleteVaccinationButtonText}
-                                  >
+                                  <Text style={styles.deleteDocumentButtonText}>
                                     🗑️
                                   </Text>
                                 </TouchableOpacity>
                               </View>
-                            );
-                          }
-                        )}
-                      </View>
-                    )}
+                            )
+                          )}
+                        </View>
+                      )}
 
-                  {/* Add New Vaccination Form */}
-                  <View style={styles.addVaccinationForm}>
-                    <Text
-                      style={[
-                        styles.addVaccinationTitle,
-                        { color: currentTheme.colors.text },
-                      ]}
-                    >
-                      Add New Reminder:
-                    </Text>
-
-                    <View style={styles.inputGroup}>
-                      <Text
-                        style={[
-                          styles.inputLabel,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        Vaccination Name *
-                      </Text>
-                      <TextInput
-                        style={[
-                          styles.textInput,
-                          {
-                            backgroundColor: currentTheme.colors.surface,
-                            borderColor: currentTheme.colors.border,
-                            color: currentTheme.colors.text,
-                          },
-                        ]}
-                        value={vaccinationName}
-                        onChangeText={setVaccinationName}
-                        placeholder="e.g., Annual Vaccinations, Flu Shot, etc."
-                        placeholderTextColor={currentTheme.colors.textSecondary}
-                        maxLength={50}
-                      />
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                      <Text
-                        style={[
-                          styles.inputLabel,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        Due Date *
-                      </Text>
+                      {/* Add Document Button */}
                       <TouchableOpacity
                         style={[
-                          styles.datePickerButton,
-                          {
-                            backgroundColor: currentTheme.colors.surface,
-                            borderColor: currentTheme.colors.border,
-                          },
+                          styles.addDocumentButton,
+                          { backgroundColor: currentTheme.colors.primary },
                         ]}
-                        onPress={() => setShowVaccinationDatePicker(true)}
+                        onPress={addDocument}
                       >
+                        <Text style={styles.addDocumentIcon}>📎</Text>
+                        <Text style={styles.addDocumentText}>Add Document</Text>
+                      </TouchableOpacity>
+
+                      {getHorseDocuments(selectedHorseForRecords.id).length ===
+                        0 && (
+                        <View style={styles.emptyDocumentsState}>
+                          <Text style={styles.emptyDocumentsIcon}>📄</Text>
+                          <Text
+                            style={[
+                              styles.emptyDocumentsText,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            No documents added yet.
+                          </Text>
+                          <Text
+                            style={[
+                              styles.emptyDocumentsSubtext,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            Store vaccination certificates, health records, and
+                            other important documents here.
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {/* Rider Manager Section */}
+                  {recordsSection === "rider" && (
+                    <View style={styles.riderManagerContainer}>
+                      <Text
+                        style={[
+                          styles.riderManagerTitle,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        Rider Manager for: {selectedHorseForRecords.name}
+                      </Text>
+
+                      <View style={styles.comingSoonContainer}>
+                        <Text style={styles.comingSoonIcon}>🚧</Text>
                         <Text
                           style={[
-                            styles.datePickerButtonText,
-                            {
-                              color: vaccinationDate
-                                ? currentTheme.colors.text
-                                : currentTheme.colors.textSecondary,
-                            },
-                          ]}
-                        >
-                          {vaccinationDate
-                            ? vaccinationDate.toLocaleDateString()
-                            : "Select due date"}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.datePickerArrow,
+                            styles.comingSoonTitle,
                             { color: currentTheme.colors.text },
                           ]}
                         >
-                          📅
+                          Coming Soon
                         </Text>
-                      </TouchableOpacity>
+                        <Text
+                          style={[
+                            styles.comingSoonDescription,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          Share your horses with other riders and allow them to
+                          track sessions and view data. This feature will be
+                          available for PRO members.
+                        </Text>
+                      </View>
                     </View>
-
-                    <View style={styles.inputGroup}>
-                      <Text
-                        style={[
-                          styles.inputLabel,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        Notes (Optional)
-                      </Text>
-                      <TextInput
-                        style={[
-                          styles.textInput,
-                          styles.textInputMultiline,
-                          {
-                            backgroundColor: currentTheme.colors.surface,
-                            borderColor: currentTheme.colors.border,
-                            color: currentTheme.colors.text,
-                          },
-                        ]}
-                        value={vaccinationNotes}
-                        onChangeText={setVaccinationNotes}
-                        placeholder="Additional notes about this vaccination..."
-                        placeholderTextColor={currentTheme.colors.textSecondary}
-                        multiline={true}
-                        numberOfLines={3}
-                        maxLength={200}
-                      />
-                    </View>
-                  </View>
+                  )}
                 </>
               )}
             </ScrollView>
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.cancelButton,
-                  { backgroundColor: currentTheme.colors.textSecondary },
-                ]}
-                onPress={closeVaccinationModal}
-              >
-                <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.saveButton,
-                  { backgroundColor: currentTheme.colors.accent },
-                ]}
-                onPress={saveVaccinationReminder}
-              >
-                <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
-                  Save Reminder
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {/* Footer Actions */}
+            {recordsSection === "vaccination" && (
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[
+                    styles.modalButton,
+                    styles.cancelButton,
+                    { backgroundColor: currentTheme.colors.textSecondary },
+                  ]}
+                  onPress={() => {
+                    setVaccinationName("");
+                    setVaccinationId("");
+                    setVaccinationDate(null);
+                    setVaccinationNotes("");
+                    setVaccinationType("future");
+                    setVaccinationRepeat(false);
+                    setShowVaccinationDatePicker(false);
+                  }}
+                >
+                  <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
+                    Clear Form
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.modalButton,
+                    styles.saveButton,
+                    { backgroundColor: currentTheme.colors.primary },
+                  ]}
+                  onPress={saveVaccinationReminder}
+                >
+                  <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
+                    Save {vaccinationType === "past" ? "Record" : "Reminder"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -4039,6 +4855,308 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     fontFamily: "Inder",
+  },
+
+  // Records Modal Styles
+  recordsHorseName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  recordsMenuContainer: {
+    gap: 15,
+  },
+  recordsMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 20,
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  recordsMenuIcon: {
+    fontSize: 32,
+    marginRight: 15,
+  },
+  recordsMenuContent: {
+    flex: 1,
+  },
+  recordsMenuTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  recordsMenuSubtitle: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontFamily: "Inder",
+  },
+  recordsMenuArrow: {
+    fontSize: 20,
+    color: "#FFFFFF",
+  },
+  backButton: {
+    padding: 5,
+    marginRight: 10,
+  },
+  backButtonText: {
+    fontSize: 24,
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+
+  // Vaccination Manager Styles
+  vaccinationTypeToggle: {
+    flexDirection: "row",
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: 20,
+  },
+  vaccinationTypeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  vaccinationTypeButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  vaccinationItemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  vaccinationItemId: {
+    fontSize: 12,
+    fontStyle: "italic",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  repeatIndicator: {
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  repeatToggleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  repeatToggle: {
+    width: 40,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: "center",
+  },
+  repeatToggleSlider: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#FFFFFF",
+  },
+  repeatIntervalContainer: {
+    marginTop: 10,
+  },
+  repeatIntervalButtons: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 8,
+  },
+  repeatIntervalButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  repeatIntervalButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+
+  // Document Manager Styles
+  documentHorseName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  documentSyncContainer: {
+    backgroundColor: "rgba(0, 0, 0, 0.03)",
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+  },
+  documentSyncHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  documentSyncInfo: {
+    flex: 1,
+    marginRight: 15,
+  },
+  documentSyncTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  documentSyncSubtitle: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    lineHeight: 16,
+  },
+  documentSyncToggle: {
+    width: 40,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: "center",
+  },
+  documentSyncSlider: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#FFFFFF",
+  },
+  documentsContainer: {
+    marginBottom: 20,
+  },
+  documentsTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 15,
+  },
+  documentItem: {
+    flexDirection: "row",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  documentItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  documentIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  documentInfo: {
+    flex: 1,
+  },
+  documentName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 2,
+  },
+  documentDate: {
+    fontSize: 12,
+    fontFamily: "Inder",
+  },
+  deleteDocumentButton: {
+    padding: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteDocumentButtonText: {
+    fontSize: 16,
+  },
+  addDocumentButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  addDocumentIcon: {
+    fontSize: 20,
+    marginRight: 10,
+    color: "#FFFFFF",
+  },
+  addDocumentText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
+  },
+  emptyDocumentsState: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyDocumentsIcon: {
+    fontSize: 48,
+    marginBottom: 15,
+  },
+  emptyDocumentsText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  emptyDocumentsSubtext: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+
+  // Rider Manager Styles
+  riderManagerContainer: {
+    alignItems: "center",
+  },
+  riderManagerTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 30,
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  comingSoonContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 30,
+  },
+  comingSoonIcon: {
+    fontSize: 64,
+    marginBottom: 20,
+  },
+  comingSoonTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 15,
+  },
+  comingSoonDescription: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    textAlign: "center",
+    lineHeight: 24,
   },
 });
 
