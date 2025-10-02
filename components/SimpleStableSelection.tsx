@@ -251,7 +251,7 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
                   },
                 ]}
               >
-                Create New
+                Create
               </Text>
             </TouchableOpacity>
           </View>
