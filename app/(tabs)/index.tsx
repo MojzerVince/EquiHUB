@@ -1224,10 +1224,19 @@ const MyHorsesScreen = () => {
   };
 
   const toggleDocumentSync = () => {
+    console.log("toggleDocumentSync called, isProMember:", isProMember);
     if (!isProMember) {
-      router.push("/pro-features");
+      console.log("Non-PRO user, navigating to pro-features");
+      showConfirm(
+        "PRO Feature Required",
+        "Cloud sync is a PRO feature. Would you like to upgrade to PRO to sync your documents to the cloud?",
+        () => {
+          router.push("/pro-features");
+        }
+      );
       return;
     }
+    console.log("PRO user, toggling sync state");
     setDocumentSyncEnabled(!documentSyncEnabled);
     // TODO: Implement backend sync for PRO users
   };
@@ -3769,6 +3778,21 @@ const MyHorsesScreen = () => {
                                 ? "Sync documents to cloud for backup and sharing"
                                 : "Upgrade to PRO to sync documents to cloud"}
                             </Text>
+                            {!isProMember && (
+                              <Text
+                                style={[
+                                  styles.documentSyncSubtitle,
+                                  {
+                                    color: currentTheme.colors.primary,
+                                    fontSize: 12,
+                                    fontWeight: "600",
+                                    marginTop: 4,
+                                  },
+                                ]}
+                              >
+                                Tap to upgrade →
+                              </Text>
+                            )}
                           </View>
                           <TouchableOpacity
                             style={[
@@ -3778,10 +3802,16 @@ const MyHorsesScreen = () => {
                                   documentSyncEnabled && isProMember
                                     ? currentTheme.colors.primary
                                     : currentTheme.colors.textSecondary,
-                                opacity: isProMember ? 1 : 0.5,
+                                opacity: isProMember ? 1 : 0.3,
+                                borderWidth: !isProMember ? 2 : 0,
+                                borderColor: !isProMember
+                                  ? currentTheme.colors.error
+                                  : "transparent",
                               },
                             ]}
                             onPress={toggleDocumentSync}
+                            disabled={false} // Always allow press to show pro-features page for non-pro users
+                            activeOpacity={isProMember ? 0.7 : 1}
                           >
                             <View
                               style={[
