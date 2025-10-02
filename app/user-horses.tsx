@@ -149,10 +149,12 @@ const UserHorsesScreen = () => {
               onPress={() => router.back()}
               style={styles.backButton}
             >
-              <Text style={styles.backIcon}>←</Text>
+              <Image
+                source={require("../assets/in_app_icons/back.png")}
+                style={styles.backIcon}
+              />
             </TouchableOpacity>
             <Text style={[styles.header, { color: "#FFFFFF" }]}>Horses</Text>
-            <View style={styles.headerSpacer} />
           </View>
         </SafeAreaView>
         <View
@@ -198,12 +200,14 @@ const UserHorsesScreen = () => {
             onPress={() => router.back()}
             style={styles.backButton}
           >
-            <Text style={styles.backIcon}>←</Text>
+            <Image
+              source={require("../assets/in_app_icons/back.png")}
+              style={styles.backIcon}
+            />
           </TouchableOpacity>
           <Text style={[styles.header, { color: "#FFFFFF" }]}>
             {`${userProfile?.name || "User"}'s Horses`}
           </Text>
-          <View style={styles.headerSpacer} />
         </View>
       </SafeAreaView>
 
@@ -275,32 +279,39 @@ const styles = StyleSheet.create({
     marginTop: -5,
   },
   header: {
-    fontSize: 30,
+    fontSize: 24,
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",
     flex: 1,
     fontWeight: "600",
+    marginTop: 8,
   },
   backButton: {
     position: "absolute",
     left: 20,
-    padding: 5,
+    padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
   },
   backIcon: {
-    fontSize: 24,
-    color: "#fff",
-  },
-  headerSpacer: {
-    width: 50,
+    width: 26,
+    height: 26,
+    tintColor: "#fff",
   },
   viewPort: {
     backgroundColor: "#FFFFFF",
     flex: 1,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
-    marginTop: 5,
-    paddingTop: 20,
+    marginTop: -4,
+    paddingTop: 15,
+    paddingBottom: 110,
   },
   centered: {
     flex: 1,
