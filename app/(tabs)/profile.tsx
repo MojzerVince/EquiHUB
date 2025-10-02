@@ -477,7 +477,6 @@ const ProfileScreen = () => {
           description: "Welcome to EquiHub!",
           experience: 0,
           is_pro_member: false,
-          stable_ranch: "",
         });
 
         // Use the newly created profile
@@ -487,7 +486,6 @@ const ProfileScreen = () => {
       // Update state with loaded/created profile data
       const loadedExperience = profile.experience || 0;
       const loadedProStatus = profile.is_pro_member || false;
-      const loadedStableRanch = profile.stable_ranch || "";
 
       // Determine final membership status based on database value
       const finalProStatus = determineMembershipStatus(loadedProStatus);
@@ -497,7 +495,6 @@ const ProfileScreen = () => {
       setUserDescription(profile.description);
       setUserExperience(loadedExperience.toString());
       setIsProMember(finalProStatus);
-      setUserStableRanch(loadedStableRanch);
 
       // Load user's stable information from stable_members table
       try {
@@ -542,6 +539,8 @@ const ProfileScreen = () => {
           };
           setSelectedStable(userStable);
           setSavedSelectedStable(userStable);
+          setUserStableRanch(userStable.name);
+          setSavedUserStableRanch(userStable.name);
           console.log("Successfully loaded user stable:", userStable.name);
           if (stableMemberships.length > 1) {
             console.log(
@@ -552,11 +551,15 @@ const ProfileScreen = () => {
           console.log("No stable membership found for user");
           setSelectedStable(null);
           setSavedSelectedStable(null);
+          setUserStableRanch("");
+          setSavedUserStableRanch("");
         }
       } catch (stableError) {
         console.error("Exception loading user stable:", stableError);
         setSelectedStable(null);
         setSavedSelectedStable(null);
+        setUserStableRanch("");
+        setSavedUserStableRanch("");
       }
 
       setNewStableData(null);
@@ -565,7 +568,6 @@ const ProfileScreen = () => {
       setSavedUserDescription(profile.description);
       setSavedUserExperience(loadedExperience.toString());
       setSavedIsProMember(finalProStatus);
-      setSavedUserStableRanch(loadedStableRanch);
       setSavedNewStableData(null);
 
       if (profile.profile_image_url) {
@@ -614,7 +616,6 @@ const ProfileScreen = () => {
         // Update state with refreshed profile data
         const loadedExperience = profile.experience || 0;
         const loadedProStatus = profile.is_pro_member || false;
-        const loadedStableRanch = profile.stable_ranch || "";
 
         // Determine final membership status based on database value
         const finalProStatus = determineMembershipStatus(loadedProStatus);
@@ -624,7 +625,6 @@ const ProfileScreen = () => {
         setUserDescription(profile.description);
         setUserExperience(loadedExperience.toString());
         setIsProMember(finalProStatus);
-        setUserStableRanch(loadedStableRanch);
 
         // Load user's stable information from stable_members table
         try {
@@ -664,16 +664,22 @@ const ProfileScreen = () => {
             };
             setSelectedStable(userStable);
             setSavedSelectedStable(userStable);
+            setUserStableRanch(userStable.name);
+            setSavedUserStableRanch(userStable.name);
             console.log("Refreshed user stable:", userStable.name);
           } else {
             setSelectedStable(null);
             setSavedSelectedStable(null);
+            setUserStableRanch("");
+            setSavedUserStableRanch("");
             console.log("User is not a member of any stable (refresh)");
           }
         } catch (stableError) {
           console.error("Error refreshing user stable:", stableError);
           setSelectedStable(null);
           setSavedSelectedStable(null);
+          setUserStableRanch("");
+          setSavedUserStableRanch("");
         }
 
         setNewStableData(null);
@@ -682,7 +688,6 @@ const ProfileScreen = () => {
         setSavedUserDescription(profile.description);
         setSavedUserExperience(loadedExperience.toString());
         setSavedIsProMember(finalProStatus);
-        setSavedUserStableRanch(loadedStableRanch);
         setSavedNewStableData(null);
 
         if (profile.profile_image_url) {
@@ -904,7 +909,6 @@ const ProfileScreen = () => {
         description: userDescription,
         experience: experienceValue,
         is_pro_member: finalProStatus,
-        stable_ranch: userStableRanch,
       };
 
       // Handle image upload if there's a new image
@@ -1424,13 +1428,7 @@ const ProfileScreen = () => {
 
             <View style={styles.profileImageContainer}>
               {!isEditing ? (
-                <Image
-                  source={profileImage}
-                  style={[
-                    styles.profileImage,
-                    { borderColor: currentTheme.colors.primary },
-                  ]}
-                />
+                <Image source={profileImage} style={[styles.profileImage]} />
               ) : (
                 <TouchableOpacity
                   onPress={pickImage}
@@ -2218,13 +2216,12 @@ const styles = StyleSheet.create({
   },
   profileImageContainer: {
     marginTop: 20,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
+    width: 125,
+    height: 125,
+    borderRadius: 75,
   },
   editImageContainer: {
     position: "relative",
@@ -2256,7 +2253,7 @@ const styles = StyleSheet.create({
   userAge: {
     fontSize: 20,
     fontFamily: "Inder",
-    marginBottom: 5,
+    marginBottom: 15,
     textAlign: "center",
   },
   userDescription: {
@@ -2283,6 +2280,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontFamily: "Inder",
     marginTop: 2,
+    marginBottom: 5,
   },
   stableRanchContainer: {
     alignItems: "center",
