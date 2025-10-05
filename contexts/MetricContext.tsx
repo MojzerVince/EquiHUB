@@ -22,10 +22,16 @@ export interface MetricContextType {
   formatWeight: (kilograms: number) => string;
   formatWeightValue: (kilograms: number) => number;
   formatWeightUnit: () => string;
+  // Weight input conversion functions
+  convertWeightToMetric: (value: number) => number;
+  convertWeightFromMetric: (kilograms: number) => number;
   // Height conversion functions
   formatHeight: (centimeters: number) => string;
   formatHeightValue: (centimeters: number) => number;
   formatHeightUnit: () => string;
+  // Height input conversion functions
+  convertHeightToMetric: (value: number) => number;
+  convertHeightFromMetric: (centimeters: number) => number;
 }
 
 const MetricContext = createContext<MetricContextType | undefined>(undefined);
@@ -190,6 +196,40 @@ export const MetricProvider: React.FC<{ children: React.ReactNode }> = ({
     return metricSystem === "metric" ? "cm" : "in";
   };
 
+  // Weight input conversion functions
+  const convertWeightToMetric = (value: number): number => {
+    if (metricSystem === "metric") {
+      return value; // Already in kg
+    } else {
+      return value / 2.205; // Convert pounds to kg
+    }
+  };
+
+  const convertWeightFromMetric = (kilograms: number): number => {
+    if (metricSystem === "metric") {
+      return kilograms; // Stay in kg
+    } else {
+      return kilograms * 2.205; // Convert kg to pounds
+    }
+  };
+
+  // Height input conversion functions
+  const convertHeightToMetric = (value: number): number => {
+    if (metricSystem === "metric") {
+      return value; // Already in cm
+    } else {
+      return value * 2.54; // Convert inches to cm
+    }
+  };
+
+  const convertHeightFromMetric = (centimeters: number): number => {
+    if (metricSystem === "metric") {
+      return centimeters; // Stay in cm
+    } else {
+      return centimeters / 2.54; // Convert cm to inches
+    }
+  };
+
   // Don't render children until metric system is loaded
   if (isLoading) {
     return null;
@@ -210,9 +250,13 @@ export const MetricProvider: React.FC<{ children: React.ReactNode }> = ({
     formatWeight,
     formatWeightValue,
     formatWeightUnit,
+    convertWeightToMetric,
+    convertWeightFromMetric,
     formatHeight,
     formatHeightValue,
     formatHeightUnit,
+    convertHeightToMetric,
+    convertHeightFromMetric,
   };
 
   return (

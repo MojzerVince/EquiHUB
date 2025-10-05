@@ -103,6 +103,10 @@ const MyHorsesScreen = () => {
     formatWeight,
     formatHeightUnit,
     formatWeightUnit,
+    convertHeightToMetric,
+    convertHeightFromMetric,
+    convertWeightToMetric,
+    convertWeightFromMetric,
     metricSystem,
   } = useMetric();
   const [refreshing, setRefreshing] = useState(false);
@@ -466,8 +470,13 @@ const MyHorsesScreen = () => {
     setEditingHorse(horse);
     setEditName(horse.name);
     setEditGender(horse.gender);
-    setEditHeight(horse.height.toString());
-    setEditWeight(horse.weight ? horse.weight.toString() : "");
+    // Convert height and weight from metric (stored) to current system for editing
+    setEditHeight(Math.round(convertHeightFromMetric(horse.height)).toString());
+    setEditWeight(
+      horse.weight
+        ? Math.round(convertWeightFromMetric(horse.weight)).toString()
+        : ""
+    );
     setEditBreed(horse.breed);
     // Check if image_url contains base64 data or is a regular URL
     setEditImage(horse.image_url ? { uri: horse.image_url } : null);
@@ -594,10 +603,11 @@ const MyHorsesScreen = () => {
     }
 
     const heightNum = parseInt(normalizedHeight);
-    if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
+    const heightInMetric = Math.round(convertHeightToMetric(heightNum));
+    if (isNaN(heightNum) || heightInMetric < 50 || heightInMetric > 250) {
       const heightUnit = metricSystem === "metric" ? "cm" : "inches";
       const minHeight = metricSystem === "metric" ? "50" : "20";
-      const maxHeight = metricSystem === "metric" ? "250" : "98";
+      const maxHeight = metricSystem === "metric" ? "300" : "118";
       showError(
         `Please enter a valid height (${minHeight}-${maxHeight} ${heightUnit})`
       );
@@ -605,9 +615,11 @@ const MyHorsesScreen = () => {
     }
 
     let weightNum = null; // Use null instead of undefined for proper deletion
+    let weightInMetric = null;
     if (normalizedWeight) {
       weightNum = parseInt(normalizedWeight);
-      if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
+      weightInMetric = Math.round(convertWeightToMetric(weightNum));
+      if (isNaN(weightNum) || weightInMetric < 50 || weightInMetric > 2000) {
         const weightUnit = metricSystem === "metric" ? "kg" : "lbs";
         const minWeight = metricSystem === "metric" ? "50" : "110";
         const maxWeight = metricSystem === "metric" ? "2000" : "4400";
@@ -625,8 +637,8 @@ const MyHorsesScreen = () => {
         name: normalizedName,
         gender: normalizedGender,
         birth_date: editBirthDate.toISOString(),
-        height: heightNum,
-        weight: weightNum, // This will be null if weight field is cleared
+        height: heightInMetric, // Store in metric (cm)
+        weight: weightInMetric, // Store in metric (kg) - This will be null if weight field is cleared
         breed: normalizedBreed,
         image:
           editImage && editImage.uri !== editingHorse.image_url
@@ -718,7 +730,8 @@ const MyHorsesScreen = () => {
     }
 
     const heightNum = parseInt(normalizedHeight);
-    if (isNaN(heightNum) || heightNum < 50 || heightNum > 250) {
+    const heightInMetric = Math.round(convertHeightToMetric(heightNum));
+    if (isNaN(heightNum) || heightInMetric < 50 || heightInMetric > 250) {
       const heightUnit = metricSystem === "metric" ? "cm" : "inches";
       const minHeight = metricSystem === "metric" ? "50" : "20";
       const maxHeight = metricSystem === "metric" ? "250" : "98";
@@ -729,9 +742,11 @@ const MyHorsesScreen = () => {
     }
 
     let weightNum = null; // Use null instead of undefined for consistency
+    let weightInMetric = null;
     if (normalizedWeight) {
       weightNum = parseInt(normalizedWeight);
-      if (isNaN(weightNum) || weightNum < 50 || weightNum > 2000) {
+      weightInMetric = Math.round(convertWeightToMetric(weightNum));
+      if (isNaN(weightNum) || weightInMetric < 50 || weightInMetric > 2000) {
         const weightUnit = metricSystem === "metric" ? "kg" : "lbs";
         const minWeight = metricSystem === "metric" ? "50" : "110";
         const maxWeight = metricSystem === "metric" ? "2000" : "4400";
@@ -749,8 +764,8 @@ const MyHorsesScreen = () => {
         name: normalizedName,
         gender: normalizedGender,
         birth_date: addBirthDate.toISOString(),
-        height: heightNum,
-        weight: weightNum,
+        height: heightInMetric, // Store in metric (cm)
+        weight: weightInMetric, // Store in metric (kg)
         breed: normalizedBreed,
         image: addImage,
       };
@@ -2795,9 +2810,7 @@ const MyHorsesScreen = () => {
                   value={editHeight}
                   onChangeText={setEditHeight}
                   placeholder={
-                    metricSystem === "metric"
-                      ? "Enter height (100-220 cm)"
-                      : "Enter height (39-87 in)"
+                    metricSystem === "metric" ? "Enter height" : "Enter height"
                   }
                   placeholderTextColor={currentTheme.colors.textSecondary}
                   keyboardType="numeric"
