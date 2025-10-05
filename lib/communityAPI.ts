@@ -11,6 +11,14 @@ export interface CreatePostData {
     avg_speed: string;
     session_id?: string;
     horse_image_url?: string;
+    path?: Array<{
+      latitude: number;
+      longitude: number;
+      timestamp: number;
+      accuracy?: number;
+      speed?: number;
+    }>;
+    path_enabled?: boolean;
   };
 }
 

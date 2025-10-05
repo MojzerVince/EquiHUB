@@ -22,6 +22,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import MapView, { Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useMetric } from "../../contexts/MetricContext";
@@ -33,8 +34,8 @@ import { GlobalChallengeAPI } from "../../lib/globalChallengeAPI";
 import { HiddenPostsManager } from "../../lib/hiddenPostsManager";
 import { getImageDataUrl } from "../../lib/imageUtils";
 import {
-  NotificationService,
   handleNotificationResponse,
+  NotificationService,
 } from "../../lib/notificationService";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { SimpleStableAPI, UserWithStable } from "../../lib/simpleStableAPI";
@@ -69,6 +70,14 @@ interface User {
   isFriend: boolean;
 }
 
+interface TrackingPoint {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+  accuracy?: number;
+  speed?: number;
+}
+
 interface Post {
   id: string;
   user: User;
@@ -83,6 +92,8 @@ interface Post {
     distance: string;
     avgSpeed: string;
     horseImageUrl?: string;
+    path?: TrackingPoint[];
+    pathEnabled?: boolean;
   };
 }
 
@@ -881,6 +892,8 @@ export default function CommunityScreen() {
                     distance: dbPost.session_data.distance,
                     avgSpeed: dbPost.session_data.avg_speed,
                     horseImageUrl: horseProfileImage, // Use the properly determined horse profile image
+                    path: dbPost.session_data.path,
+                    pathEnabled: dbPost.session_data.path_enabled,
                   }
                 : undefined,
             };
@@ -1826,6 +1839,48 @@ export default function CommunityScreen() {
           </View>
         </View>
       )}
+
+      {/* Render map if path is enabled and available */}
+      {item.sessionData?.pathEnabled &&
+        item.sessionData?.path &&
+        item.sessionData.path.length > 0 && (
+          <View style={styles.mapContainer}>
+            <MapView
+              style={styles.postMap}
+              provider={PROVIDER_GOOGLE}
+              initialRegion={{
+                latitude:
+                  item.sessionData.path.reduce(
+                    (sum, point) => sum + point.latitude,
+                    0
+                  ) / item.sessionData.path.length,
+                longitude:
+                  item.sessionData.path.reduce(
+                    (sum, point) => sum + point.longitude,
+                    0
+                  ) / item.sessionData.path.length,
+                latitudeDelta: 0.02,
+                longitudeDelta: 0.02,
+              }}
+              scrollEnabled={true}
+              zoomEnabled={true}
+              rotateEnabled={false}
+              pitchEnabled={false}
+            >
+              <Polyline
+                coordinates={item.sessionData.path.map((point) => ({
+                  latitude: point.latitude,
+                  longitude: point.longitude,
+                }))}
+                strokeColor={theme.primary}
+                strokeWidth={4}
+                lineJoin="round"
+                lineCap="round"
+                geodesic={true}
+              />
+            </MapView>
+          </View>
+        )}
 
       <View style={styles.postActions}>
         <TouchableOpacity
@@ -3795,6 +3850,22 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
+  },
+  mapContainer: {
+    width: "100%",
+    height: 250,
+    borderRadius: 8,
+    overflow: "hidden",
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  postMap: {
+    width: "100%",
+    height: "100%",
   },
   sessionTitle: {
     fontSize: 14,
