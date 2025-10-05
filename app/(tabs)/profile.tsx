@@ -888,6 +888,12 @@ const ProfileScreen = () => {
     }
   };
 
+  const deleteProfileImage = () => {
+    setShowImagePickerModal(false);
+    // Reset to default profile image
+    setProfileImage(require("../../assets/in_app_icons/rider_icon.png"));
+  };
+
   const handleSave = async () => {
     if (userName.trim() === "") {
       showError("Name cannot be empty");
@@ -926,10 +932,17 @@ const ProfileScreen = () => {
         typeof savedProfileImage === "object" &&
         savedProfileImage.uri;
 
-      // Determine if we have a new image to upload
+      // Check if current image is the default (require() returns a number)
+      const isCurrentImageDefault = typeof profileImage === "number";
+      const isSavedImageDefault = typeof savedProfileImage === "number";
+
+      // Determine if we have a new image to upload or if we're resetting to default
       const hasNewImage =
         isCurrentImageUri &&
         (!isSavedImageUri || profileImage.uri !== savedProfileImage.uri);
+
+      // Check if user switched from custom image to default
+      const resetToDefault = isCurrentImageDefault && isSavedImageUri;
 
       // Prepare profile data - preserve existing image URL if no new image uploaded
       const experienceValue = parseInt(userExperience);
@@ -944,8 +957,12 @@ const ProfileScreen = () => {
         is_pro_member: finalProStatus,
       };
 
-      // Handle image upload if there's a new image
-      if (hasNewImage) {
+      // Handle image changes
+      if (resetToDefault) {
+        // User reset to default image - clear the profile_image_url
+        updateData.profile_image_url = null;
+        console.log("📷 Resetting profile image to default");
+      } else if (hasNewImage) {
         try {
           // Check file size before processing (limit to 5MB for safety)
           const sizeCheckResponse = await fetch(profileImage.uri);
@@ -1005,9 +1022,12 @@ const ProfileScreen = () => {
             }
           );
         }
-      } else if (isSavedImageUri) {
-        // Keep existing image URL if user hasn't changed the image
+      } else if (isSavedImageUri && !resetToDefault) {
+        // Keep existing image URL if user hasn't changed the image and didn't reset to default
         updateData.profile_image_url = savedProfileImage.uri;
+      } else if (isSavedImageDefault && !isCurrentImageUri) {
+        // Both current and saved are default - no image URL needed
+        updateData.profile_image_url = null;
       }
 
       // Handle stable creation before updating profile
@@ -1221,7 +1241,7 @@ const ProfileScreen = () => {
           <Text
             style={[styles.modalTitle, { color: currentTheme.colors.text }]}
           >
-            Select Image
+            Profile Picture
           </Text>
           <Text
             style={[
@@ -1229,7 +1249,7 @@ const ProfileScreen = () => {
               { color: currentTheme.colors.textSecondary },
             ]}
           >
-            Choose how you want to select your profile picture
+            Choose an option for your profile picture
           </Text>
           <View style={styles.imagePickerButtons}>
             <TouchableOpacity
@@ -1245,6 +1265,12 @@ const ProfileScreen = () => {
               <Text style={styles.modalButtonText}>🖼️ Gallery</Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.deleteImageButton]}
+            onPress={deleteProfileImage}
+          >
+            <Text style={styles.deleteImageButtonText}>🗑️ Delete Current</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modalButton, styles.cancelModalButton]}
             onPress={() => setShowImagePickerModal(false)}
@@ -2286,7 +2312,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: "rgba(0, 0, 0, 0.6)",
-    borderRadius: 50,
+    borderRadius: 75,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -2688,6 +2714,18 @@ const styles = StyleSheet.create({
   imagePickerButton: {
     backgroundColor: "#335C67",
     flex: 1,
+  },
+  deleteImageButton: {
+    backgroundColor: "#FF9800",
+    minWidth: 150,
+    marginBottom: 10,
+  },
+  deleteImageButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    fontFamily: "Inder",
   },
   cancelModalButton: {
     backgroundColor: "#FF6B6B",
