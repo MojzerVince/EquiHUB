@@ -100,6 +100,7 @@ export default function SessionShareScreen() {
   const [postText, setPostText] = useState("");
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [sharePathEnabled, setSharePathEnabled] = useState(false);
 
   // Load session data on component mount
   useEffect(() => {
@@ -350,6 +351,13 @@ export default function SessionShareScreen() {
         session_id: sessionId,
         training_type: session.trainingType || "Training Session",
         session_date: new Date(session.startTime).toLocaleDateString(),
+        // Include path data if user enabled path sharing
+        ...(sharePathEnabled && session.path && session.path.length > 0
+          ? {
+              path: session.path,
+              path_enabled: true,
+            }
+          : { path_enabled: false }),
       };
 
       // Get selected media item (single selection)
@@ -395,6 +403,8 @@ export default function SessionShareScreen() {
         hasHorseImage: !!horse?.image_url,
         mediaInfo,
         contentLength: postText.trim().length,
+        sharePathEnabled,
+        pathPointsCount: sharePathEnabled ? session.path?.length : 0,
       });
 
       // Create post in database with core session data
@@ -865,6 +875,34 @@ export default function SessionShareScreen() {
               characters
             </Text>
           </View>
+
+          {/* Share Path Checkbox */}
+          {session?.path && session.path.length > 0 && (
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => setSharePathEnabled(!sharePathEnabled)}
+              disabled={isSharing}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  {
+                    backgroundColor: sharePathEnabled
+                      ? theme.primary
+                      : "transparent",
+                    borderColor: theme.primary,
+                  },
+                ]}
+              >
+                {sharePathEnabled && (
+                  <Ionicons name="checkmark" size={18} color="#fff" />
+                )}
+              </View>
+              <Text style={[styles.checkboxLabel, { color: theme.text }]}>
+                Share path ({session.path.length} points)
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Session Media Card */}
@@ -2248,6 +2286,28 @@ const styles = StyleSheet.create({
   },
   postCharacterCount: {
     fontSize: 12,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.1)",
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    fontFamily: "Inder",
+    fontWeight: "500",
   },
   // Media Content Card Styles
   mediaContentCard: {
