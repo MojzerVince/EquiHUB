@@ -345,6 +345,8 @@ const MapScreen = () => {
     useState<boolean>(false);
   const [publishedTrails, setPublishedTrails] = useState<PublishedTrail[]>([]);
   const [trailsLoading, setTrailsLoading] = useState<boolean>(false);
+  const [showPathUnavailableModal, setShowPathUnavailableModal] =
+    useState<boolean>(false);
 
   // Real-time gait detection state
   const [currentGait, setCurrentGait] = useState<
@@ -3005,11 +3007,8 @@ const MapScreen = () => {
 
   // Toggle published trails visibility
   const togglePublishedTrails = async () => {
-    if (!showPublishedTrails && publishedTrails.length === 0) {
-      // Load trails if we don't have them yet
-      await loadPublishedTrails();
-    }
-    setShowPublishedTrails(!showPublishedTrails);
+    // Show "not available yet" modal instead of loading trails
+    setShowPathUnavailableModal(true);
   };
 
   // Get difficulty color for trails
@@ -4717,6 +4716,53 @@ const MapScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Path Feature Unavailable Modal */}
+      <Modal
+        visible={showPathUnavailableModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPathUnavailableModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.featureUnavailableModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <View style={styles.featureUnavailableContent}>
+              <Text style={styles.featureUnavailableIcon}>🗺️</Text>
+              <Text
+                style={[
+                  styles.featureUnavailableTitle,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Feature Coming Soon
+              </Text>
+              <Text
+                style={[
+                  styles.featureUnavailableMessage,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                This feature is not available yet. We're working hard to bring
+                you published trails and community paths soon!
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.featureUnavailableButton,
+                  { backgroundColor: currentTheme.colors.primary },
+                ]}
+                onPress={() => setShowPathUnavailableModal(false)}
+              >
+                <Text style={styles.featureUnavailableButtonText}>Got it!</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -5537,6 +5583,62 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Inder",
     fontWeight: "500",
+  },
+
+  // Feature Unavailable Modal Styles
+  featureUnavailableModal: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 32,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  featureUnavailableContent: {
+    alignItems: "center",
+  },
+  featureUnavailableIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  featureUnavailableTitle: {
+    fontSize: 22,
+    fontFamily: "Inder",
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  featureUnavailableMessage: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    lineHeight: 24,
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  featureUnavailableButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  featureUnavailableButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
   },
 });
 
