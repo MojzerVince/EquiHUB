@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 import { apiCache, CacheKeys } from './apiCache';
 import API_CONFIG from './apiConfig';
+import { ImageCompression } from './imageCompression';
 import { getSupabase, Horse } from './supabase';
 
 export class HorseAPI {
@@ -119,9 +120,21 @@ export class HorseAPI {
 
       // Convert image to base64 if provided
       if (horseData.image && horseData.image.uri) {
-        imageBase64 = await FileSystem.readAsStringAsync(horseData.image.uri, {
+        console.log('🐴 HorseAPI: Compressing horse image before upload...');
+        
+        // Compress the image to reduce data usage
+        const compressedImage = await ImageCompression.compressImage(horseData.image.uri, {
+          maxWidth: 400,
+          maxHeight: 400,
+          quality: 0.5,
+          format: 'jpeg'
+        });
+        
+        imageBase64 = await FileSystem.readAsStringAsync(compressedImage.uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
+        
+        console.log('🐴 HorseAPI: Horse image compressed and converted to base64');
       }
 
       // Use direct REST API (Supabase client has compatibility issues)
@@ -187,9 +200,21 @@ export class HorseAPI {
 
       // Convert new image to base64 if provided
       if (updates.image && updates.image.uri) {
-        imageBase64 = await FileSystem.readAsStringAsync(updates.image.uri, {
+        console.log('🐴 HorseAPI: Compressing updated horse image before upload...');
+        
+        // Compress the image to reduce data usage
+        const compressedImage = await ImageCompression.compressImage(updates.image.uri, {
+          maxWidth: 400,
+          maxHeight: 400,
+          quality: 0.5,
+          format: 'jpeg'
+        });
+        
+        imageBase64 = await FileSystem.readAsStringAsync(compressedImage.uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
+        
+        console.log('🐴 HorseAPI: Updated horse image compressed and converted to base64');
       }
 
       const updateData: any = { ...updates };

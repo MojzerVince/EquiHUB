@@ -70,10 +70,10 @@ const ProfileScreen = () => {
 
   // State for profile image
   const [profileImage, setProfileImage] = useState(
-    require("../../assets/images/horses/falko.png")
+    require("../../assets/in_app_icons/rider_icon.png")
   );
   const [savedProfileImage, setSavedProfileImage] = useState(
-    require("../../assets/images/horses/falko.png")
+    require("../../assets/in_app_icons/rider_icon.png")
   );
 
   // Loading state
@@ -575,8 +575,10 @@ const ProfileScreen = () => {
         setSavedProfileImage({ uri: profile.profile_image_url });
       } else {
         // Reset to default image if no profile image URL
-        setProfileImage(require("../../assets/images/horses/falko.png"));
-        setSavedProfileImage(require("../../assets/images/horses/falko.png"));
+        setProfileImage(require("../../assets/in_app_icons/rider_icon.png"));
+        setSavedProfileImage(
+          require("../../assets/in_app_icons/rider_icon.png")
+        );
       }
     } catch (err) {
       console.error("Error loading profile:", err);
@@ -695,8 +697,10 @@ const ProfileScreen = () => {
           setSavedProfileImage({ uri: profile.profile_image_url });
         } else {
           // Reset to default image if no profile image URL
-          setProfileImage(require("../../assets/images/horses/falko.png"));
-          setSavedProfileImage(require("../../assets/images/horses/falko.png"));
+          setProfileImage(require("../../assets/in_app_icons/rider_icon.png"));
+          setSavedProfileImage(
+            require("../../assets/in_app_icons/rider_icon.png")
+          );
         }
 
         // Reload badges after refreshing profile using direct API
@@ -780,13 +784,42 @@ const ProfileScreen = () => {
 
   const compressImageForUpload = async (imageUri: string) => {
     try {
+      console.log("📷 Starting image compression for profile upload...");
+
+      // Get original file size for comparison
+      const originalResponse = await fetch(imageUri);
+      const originalBlob = await originalResponse.blob();
+      const originalSize = originalBlob.size;
+      console.log(
+        `📷 Original image size: ${(originalSize / 1024).toFixed(2)} KB`
+      );
+
       const compressedImage = await ImageCompression.compressImage(imageUri, {
-        maxWidth: 400,
-        maxHeight: 400,
-        quality: 0.6,
+        maxWidth: 300, // Reduced from 400 to save more data
+        maxHeight: 300, // Reduced from 400 to save more data
+        quality: 0.4, // Reduced from 0.6 to save more data
         format: "jpeg",
       });
-      console.log("📷 Image compressed for profile upload");
+
+      // Get compressed file size for comparison
+      const compressedResponse = await fetch(compressedImage.uri);
+      const compressedBlob = await compressedResponse.blob();
+      const compressedSize = compressedBlob.size;
+      const compressionRatio = (
+        ((originalSize - compressedSize) / originalSize) *
+        100
+      ).toFixed(1);
+
+      console.log(
+        `📷 Compressed image size: ${(compressedSize / 1024).toFixed(2)} KB`
+      );
+      console.log(
+        `📷 Data saved: ${compressionRatio}% (${(
+          (originalSize - compressedSize) /
+          1024
+        ).toFixed(2)} KB)`
+      );
+
       return compressedImage;
     } catch (error) {
       console.error("📷 Error compressing image:", error);
@@ -823,7 +856,7 @@ const ProfileScreen = () => {
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.5, // Reduced from 0.8 to save data
+      quality: 0.3, // Further reduced to save even more data
       base64: false,
     });
 
@@ -842,7 +875,7 @@ const ProfileScreen = () => {
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.5, // Reduced from 0.8 to save data
+      quality: 0.3, // Further reduced to save even more data
       base64: false,
     });
 
@@ -914,6 +947,22 @@ const ProfileScreen = () => {
       // Handle image upload if there's a new image
       if (hasNewImage) {
         try {
+          // Check file size before processing (limit to 5MB for safety)
+          const sizeCheckResponse = await fetch(profileImage.uri);
+          const sizeCheckBlob = await sizeCheckResponse.blob();
+          const fileSizeMB = sizeCheckBlob.size / (1024 * 1024);
+
+          if (fileSizeMB > 5) {
+            showError(
+              "Image file is too large. Please choose an image smaller than 5MB."
+            );
+            return;
+          }
+
+          console.log(
+            `📷 Processing image upload (${fileSizeMB.toFixed(2)} MB)...`
+          );
+
           // Convert image to base64 directly here instead of using separate upload function
           const response = await fetch(profileImage.uri);
           if (!response.ok) {
@@ -921,6 +970,10 @@ const ProfileScreen = () => {
           }
 
           const blob = await response.blob();
+
+          // Log final upload size
+          const finalSizeKB = blob.size / 1024;
+          console.log(`📷 Final upload size: ${finalSizeKB.toFixed(2)} KB`);
 
           // Convert blob to Base64
           const base64 = await new Promise<string>((resolve, reject) => {

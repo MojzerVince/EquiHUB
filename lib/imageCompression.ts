@@ -15,14 +15,25 @@ export class ImageCompression {
   ): Promise<{ uri: string; size?: number }> {
     try {
       const {
-        maxWidth = 512,    // Reduced from typical 1024 to save more data
-        maxHeight = 512,   // Square profile images
-        quality = 0.6,     // Reduced from 0.8 to save more data
+        maxWidth = 400,    // Optimized for profile images (reduced from 512)
+        maxHeight = 400,   // Square profile images
+        quality = 0.5,     // Further reduced from 0.6 to save more data
         format = 'jpeg'    // JPEG generally smaller than PNG
       } = options;
 
       console.log('🗜️ ImageCompression: Starting compression...');
-      console.log('🗜️ ImageCompression: Original URI:', imageUri);
+      console.log(`🗜️ ImageCompression: Target dimensions: ${maxWidth}x${maxHeight}, quality: ${quality}`);
+
+      // Get original file info for comparison
+      let originalSize: number | null = null;
+      try {
+        const response = await fetch(imageUri);
+        const blob = await response.blob();
+        originalSize = blob.size;
+        console.log(`🗜️ ImageCompression: Original file size: ${(originalSize / 1024).toFixed(2)} KB`);
+      } catch (error) {
+        console.log('🗜️ ImageCompression: Could not determine original file size');
+      }
 
       // Manipulate the image to reduce size
       const manipulatedImage = await ImageManipulator.manipulateAsync(
@@ -42,7 +53,20 @@ export class ImageCompression {
         }
       );
 
-      console.log('🗜️ ImageCompression: Compressed URI:', manipulatedImage.uri);
+      // Get compressed file info for comparison
+      if (originalSize) {
+        try {
+          const compressedResponse = await fetch(manipulatedImage.uri);
+          const compressedBlob = await compressedResponse.blob();
+          const compressedSize = compressedBlob.size;
+          const savings = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
+          console.log(`🗜️ ImageCompression: Compressed file size: ${(compressedSize / 1024).toFixed(2)} KB`);
+          console.log(`🗜️ ImageCompression: Data savings: ${savings}% (${((originalSize - compressedSize) / 1024).toFixed(2)} KB saved)`);
+        } catch (error) {
+          console.log('🗜️ ImageCompression: Could not determine compressed file size');
+        }
+      }
+
       console.log('🗜️ ImageCompression: Compression completed successfully');
 
       return {
@@ -61,7 +85,7 @@ export class ImageCompression {
     estimatedReduction: string;
     newDimensions: { width: number; height: number };
   } {
-    const { maxWidth = 512, maxHeight = 512, quality = 0.6 } = options;
+    const { maxWidth = 400, maxHeight = 400, quality = 0.5 } = options;
     
     // Calculate new dimensions (maintain aspect ratio)
     let newWidth = originalWidth;
