@@ -195,6 +195,13 @@ const MyHorsesScreen = () => {
     "monthly" | "quarterly" | "yearly"
   >("yearly");
 
+  // Edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingVaccination, setEditingVaccination] = useState<any | null>(
+    null
+  );
+  const [applyToFuture, setApplyToFuture] = useState(false);
+
   // Document manager state
   const [documentSyncEnabled, setDocumentSyncEnabled] = useState(false);
   const [horseDocuments, setHorseDocuments] = useState<{
@@ -1016,6 +1023,13 @@ const MyHorsesScreen = () => {
     setVaccinationDate(null);
     setVaccinationNotes("");
     setShowVaccinationDatePicker(false);
+    setIsEditMode(false);
+    setEditingVaccination(null);
+    setApplyToFuture(false);
+    setVaccinationId("");
+    setVaccinationType("future");
+    setVaccinationRepeat(false);
+    setVaccinationRepeatInterval("yearly");
   };
 
   const saveVaccinationReminder = async () => {
@@ -1028,86 +1042,138 @@ const MyHorsesScreen = () => {
       return;
     }
 
-    const newVaccination = {
-      id: Date.now().toString(),
-      name: vaccinationName.trim(),
-      vaccinationId: vaccinationId.trim() || null,
-      date: vaccinationDate.toISOString(),
-      notes: vaccinationNotes.trim(),
-      type: vaccinationType,
-      repeat: vaccinationRepeat,
-      repeatInterval: vaccinationRepeat ? vaccinationRepeatInterval : null,
-      createdAt: new Date().toISOString(),
-    };
-
     const updatedVaccinations = { ...horseVaccinations };
     if (!updatedVaccinations[selectedHorseForVaccination.id]) {
       updatedVaccinations[selectedHorseForVaccination.id] = [];
     }
-    updatedVaccinations[selectedHorseForVaccination.id].push(newVaccination);
 
-    // If repeat is enabled and this is a future vaccination, schedule recurring reminders
+    // Calculate next due date for recurring reminders
+    let nextDueDate = null;
     if (vaccinationRepeat && vaccinationType === "future") {
-      const additionalReminders = [];
       const currentDate = new Date(vaccinationDate);
-
-      for (let i = 1; i <= 5; i++) {
-        // Schedule next 5 occurrences
-        const nextDate = new Date(currentDate);
-        switch (vaccinationRepeatInterval) {
-          case "monthly":
-            nextDate.setMonth(nextDate.getMonth() + i);
-            break;
-          case "quarterly":
-            nextDate.setMonth(nextDate.getMonth() + i * 3);
-            break;
-          case "yearly":
-            nextDate.setFullYear(nextDate.getFullYear() + i);
-            break;
-        }
-
-        additionalReminders.push({
-          id: (Date.now() + i).toString(),
-          name: vaccinationName.trim(),
-          vaccinationId: vaccinationId.trim() || null,
-          date: nextDate.toISOString(),
-          notes: vaccinationNotes.trim(),
-          type: "future",
-          repeat: true,
-          repeatInterval: vaccinationRepeatInterval,
-          createdAt: new Date().toISOString(),
-          isRecurring: true,
-          originalId: newVaccination.id,
-        });
+      const next = new Date(currentDate);
+      switch (vaccinationRepeatInterval) {
+        case "monthly":
+          next.setMonth(next.getMonth() + 1);
+          break;
+        case "quarterly":
+          next.setMonth(next.getMonth() + 3);
+          break;
+        case "yearly":
+          next.setFullYear(next.getFullYear() + 1);
+          break;
       }
-
-      updatedVaccinations[selectedHorseForVaccination.id].push(
-        ...additionalReminders
-      );
+      nextDueDate = next.toISOString();
     }
 
-    await saveVaccinationReminders(updatedVaccinations);
+    if (isEditMode && editingVaccination) {
+      // Edit existing vaccination
+      const index = updatedVaccinations[
+        selectedHorseForVaccination.id
+      ].findIndex((v) => v.id === editingVaccination.id);
 
-    // Schedule notifications only for future vaccinations
-    if (vaccinationType === "future") {
-      await scheduleVaccinationNotifications(
-        newVaccination,
-        selectedHorseForVaccination.name
-      );
+      if (index !== -1) {
+        // Update the main record
+        updatedVaccinations[selectedHorseForVaccination.id][index] = {
+          ...editingVaccination,
+          name: vaccinationName.trim(),
+          vaccinationId: vaccinationId.trim() || null,
+          date: vaccinationDate.toISOString(),
+          notes: vaccinationNotes.trim(),
+          type: vaccinationType,
+          repeat: vaccinationRepeat,
+          repeatInterval: vaccinationRepeat ? vaccinationRepeatInterval : null,
+          nextDueDate: nextDueDate,
+        };
 
-      // Schedule notifications for recurring reminders
-      if (vaccinationRepeat) {
-        const recurringReminders = updatedVaccinations[
-          selectedHorseForVaccination.id
-        ].filter((v) => v.originalId === newVaccination.id);
-        for (const reminder of recurringReminders) {
+        // If applying to all future recurring records created by the old system
+        if (applyToFuture && editingVaccination.repeat) {
+          // Find all records with the same originalId or that are recurring from this record
+          updatedVaccinations[selectedHorseForVaccination.id] =
+            updatedVaccinations[selectedHorseForVaccination.id].map((v) => {
+              if (
+                v.id === editingVaccination.id ||
+                v.originalId === editingVaccination.id ||
+                v.originalId === editingVaccination.originalId
+              ) {
+                // Calculate new date based on the interval offset
+                if (v.id !== editingVaccination.id && v.type === "future") {
+                  const originalDate = new Date(editingVaccination.date);
+                  const updatedDate = new Date(vaccinationDate);
+                  const timeDiff =
+                    updatedDate.getTime() - originalDate.getTime();
+                  const currentVacDate = new Date(v.date);
+                  const newVacDate = new Date(
+                    currentVacDate.getTime() + timeDiff
+                  );
+
+                  return {
+                    ...v,
+                    name: vaccinationName.trim(),
+                    vaccinationId: vaccinationId.trim() || null,
+                    date: newVacDate.toISOString(),
+                    notes: vaccinationNotes.trim(),
+                    repeatInterval: vaccinationRepeat
+                      ? vaccinationRepeatInterval
+                      : null,
+                  };
+                }
+                return v;
+              }
+              return v;
+            });
+        }
+
+        // Cancel old notifications and schedule new ones
+        await cancelVaccinationNotifications(editingVaccination.id);
+        if (vaccinationType === "future") {
           await scheduleVaccinationNotifications(
-            reminder,
+            updatedVaccinations[selectedHorseForVaccination.id][index],
             selectedHorseForVaccination.name
           );
         }
       }
+
+      setSuccessMessage(
+        `Vaccination ${
+          vaccinationType === "past" ? "record" : "reminder"
+        } updated for ${selectedHorseForVaccination.name}`
+      );
+    } else {
+      // Create new vaccination
+      const newVaccination = {
+        id: Date.now().toString(),
+        name: vaccinationName.trim(),
+        vaccinationId: vaccinationId.trim() || null,
+        date: vaccinationDate.toISOString(),
+        notes: vaccinationNotes.trim(),
+        type: vaccinationType,
+        repeat: vaccinationRepeat,
+        repeatInterval: vaccinationRepeat ? vaccinationRepeatInterval : null,
+        createdAt: new Date().toISOString(),
+        nextDueDate: nextDueDate,
+        lastCompletedDate: null,
+        occurrenceCount: 0,
+      };
+
+      updatedVaccinations[selectedHorseForVaccination.id].push(newVaccination);
+
+      // Schedule notifications only for future vaccinations
+      if (vaccinationType === "future") {
+        await scheduleVaccinationNotifications(
+          newVaccination,
+          selectedHorseForVaccination.name
+        );
+      }
+
+      setSuccessMessage(
+        `Vaccination ${vaccinationType === "past" ? "record" : "reminder"} ${
+          vaccinationRepeat ? "with recurring schedule " : ""
+        }set for ${selectedHorseForVaccination.name}`
+      );
     }
+
+    await saveVaccinationReminders(updatedVaccinations);
 
     // Reset form
     setVaccinationName("");
@@ -1117,12 +1183,10 @@ const MyHorsesScreen = () => {
     setVaccinationType("future");
     setVaccinationRepeat(false);
     setShowVaccinationDatePicker(false);
+    setIsEditMode(false);
+    setEditingVaccination(null);
+    setApplyToFuture(false);
 
-    setSuccessMessage(
-      `Vaccination ${vaccinationType === "past" ? "record" : "reminder"} ${
-        vaccinationRepeat ? "with recurring schedule " : ""
-      }set for ${selectedHorseForVaccination.name}`
-    );
     setShowSuccessModal(true);
   };
 
@@ -1143,6 +1207,93 @@ const MyHorsesScreen = () => {
       }
     }
     await saveVaccinationReminders(updatedVaccinations);
+  };
+
+  const markVaccinationAsCompleted = async (
+    horseId: string,
+    vaccinationId: string
+  ) => {
+    const updatedVaccinations = { ...horseVaccinations };
+    if (!updatedVaccinations[horseId]) return;
+
+    const index = updatedVaccinations[horseId].findIndex(
+      (v) => v.id === vaccinationId
+    );
+
+    if (index === -1) return;
+
+    const vaccination = updatedVaccinations[horseId][index];
+
+    // If it's a recurring reminder, update to next occurrence
+    if (
+      vaccination.repeat &&
+      vaccination.type === "future" &&
+      vaccination.repeatInterval
+    ) {
+      const currentDate = new Date(vaccination.date);
+      const nextDate = new Date(currentDate);
+
+      switch (vaccination.repeatInterval) {
+        case "monthly":
+          nextDate.setMonth(nextDate.getMonth() + 1);
+          break;
+        case "quarterly":
+          nextDate.setMonth(nextDate.getMonth() + 3);
+          break;
+        case "yearly":
+          nextDate.setFullYear(nextDate.getFullYear() + 1);
+          break;
+      }
+
+      // Calculate new next due date
+      const newNextDueDate = new Date(nextDate);
+      switch (vaccination.repeatInterval) {
+        case "monthly":
+          newNextDueDate.setMonth(newNextDueDate.getMonth() + 1);
+          break;
+        case "quarterly":
+          newNextDueDate.setMonth(newNextDueDate.getMonth() + 3);
+          break;
+        case "yearly":
+          newNextDueDate.setFullYear(newNextDueDate.getFullYear() + 1);
+          break;
+      }
+
+      // Update the vaccination record
+      updatedVaccinations[horseId][index] = {
+        ...vaccination,
+        date: nextDate.toISOString(),
+        lastCompletedDate: currentDate.toISOString(),
+        nextDueDate: newNextDueDate.toISOString(),
+        occurrenceCount: (vaccination.occurrenceCount || 0) + 1,
+      };
+
+      // Cancel old notification and schedule new one
+      await cancelVaccinationNotifications(vaccinationId);
+      await scheduleVaccinationNotifications(
+        updatedVaccinations[horseId][index],
+        horseVaccinations[horseId]?.find(() => true)?.name || "Horse"
+      );
+
+      setSuccessMessage(
+        "Vaccination marked as completed. Next reminder scheduled."
+      );
+    } else {
+      // If it's not recurring, just change it to past type
+      updatedVaccinations[horseId][index] = {
+        ...vaccination,
+        type: "past",
+        date: new Date().toISOString(),
+      };
+
+      // Cancel notification
+      await cancelVaccinationNotifications(vaccinationId);
+
+      setSuccessMessage("Vaccination marked as completed.");
+    }
+
+    await saveVaccinationReminders(updatedVaccinations);
+    setShowSuccessModal(true);
   };
 
   const getUpcomingVaccinations = (horseId: string) => {
@@ -3806,23 +3957,80 @@ const MyHorsesScreen = () => {
                                         </Text>
                                       )}
                                     </View>
-                                    <TouchableOpacity
-                                      style={styles.deleteVaccinationButton}
-                                      onPress={() =>
-                                        deleteVaccinationReminder(
-                                          selectedHorseForRecords.id,
-                                          vaccination.id
-                                        )
-                                      }
-                                    >
-                                      <Text
-                                        style={
-                                          styles.deleteVaccinationButtonText
+                                    <View style={styles.vaccinationActions}>
+                                      {vaccination.type === "future" && (
+                                        <TouchableOpacity
+                                          style={
+                                            styles.completeVaccinationButton
+                                          }
+                                          onPress={() =>
+                                            markVaccinationAsCompleted(
+                                              selectedHorseForRecords.id,
+                                              vaccination.id
+                                            )
+                                          }
+                                        >
+                                          <Text
+                                            style={
+                                              styles.completeVaccinationButtonText
+                                            }
+                                          >
+                                            ✅
+                                          </Text>
+                                        </TouchableOpacity>
+                                      )}
+                                      <TouchableOpacity
+                                        style={styles.editVaccinationButton}
+                                        onPress={() => {
+                                          setIsEditMode(true);
+                                          setEditingVaccination(vaccination);
+                                          setVaccinationName(vaccination.name);
+                                          setVaccinationId(
+                                            vaccination.vaccinationId || ""
+                                          );
+                                          setVaccinationDate(
+                                            new Date(vaccination.date)
+                                          );
+                                          setVaccinationType(vaccination.type);
+                                          setVaccinationRepeat(
+                                            vaccination.repeat
+                                          );
+                                          setVaccinationRepeatInterval(
+                                            vaccination.repeatInterval ||
+                                              "yearly"
+                                          );
+                                          setVaccinationNotes(
+                                            vaccination.notes || ""
+                                          );
+                                          setApplyToFuture(false);
+                                        }}
+                                      >
+                                        <Text
+                                          style={
+                                            styles.editVaccinationButtonText
+                                          }
+                                        >
+                                          ✏️
+                                        </Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity
+                                        style={styles.deleteVaccinationButton}
+                                        onPress={() =>
+                                          deleteVaccinationReminder(
+                                            selectedHorseForRecords.id,
+                                            vaccination.id
+                                          )
                                         }
                                       >
-                                        🗑️
-                                      </Text>
-                                    </TouchableOpacity>
+                                        <Text
+                                          style={
+                                            styles.deleteVaccinationButtonText
+                                          }
+                                        >
+                                          🗑️
+                                        </Text>
+                                      </TouchableOpacity>
+                                    </View>
                                   </View>
                                 );
                               })}
@@ -3837,7 +4045,7 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text },
                           ]}
                         >
-                          Add New{" "}
+                          {isEditMode ? "Edit" : "Add New"}{" "}
                           {vaccinationType === "past" ? "Record" : "Reminder"}:
                         </Text>
 
@@ -4079,6 +4287,42 @@ const MyHorsesScreen = () => {
                             maxLength={200}
                           />
                         </View>
+
+                        {/* Apply to Future Occurrences Checkbox */}
+                        {isEditMode &&
+                          editingVaccination &&
+                          editingVaccination.repeat && (
+                            <View style={styles.inputGroup}>
+                              <TouchableOpacity
+                                style={styles.applyToFutureContainer}
+                                onPress={() => setApplyToFuture(!applyToFuture)}
+                              >
+                                <View
+                                  style={[
+                                    styles.checkbox,
+                                    {
+                                      borderColor: currentTheme.colors.primary,
+                                      backgroundColor: applyToFuture
+                                        ? currentTheme.colors.primary
+                                        : "transparent",
+                                    },
+                                  ]}
+                                >
+                                  {applyToFuture && (
+                                    <Text style={styles.checkboxCheck}>✓</Text>
+                                  )}
+                                </View>
+                                <Text
+                                  style={[
+                                    styles.applyToFutureText,
+                                    { color: currentTheme.colors.text },
+                                  ]}
+                                >
+                                  Apply changes to all future occurrences
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          )}
                       </View>
                     </View>
                   )}
@@ -5098,6 +5342,27 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     fontFamily: "Inder",
   },
+  vaccinationActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  editVaccinationButton: {
+    padding: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  editVaccinationButtonText: {
+    fontSize: 16,
+  },
+  completeVaccinationButton: {
+    padding: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  completeVaccinationButtonText: {
+    fontSize: 16,
+  },
   deleteVaccinationButton: {
     padding: 8,
     justifyContent: "center",
@@ -5310,6 +5575,30 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
     fontFamily: "Inder",
+  },
+  applyToFutureContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    gap: 12,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderRadius: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxCheck: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+  applyToFutureText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    flex: 1,
   },
 
   // Document Manager Styles
