@@ -3189,7 +3189,10 @@ const MyHorsesScreen = () => {
                     style={styles.backButton}
                     onPress={backToRecordsMain}
                   >
-                    <Text style={styles.backButtonText}>←</Text>
+                    <Image
+                      style={styles.backIcon}
+                      source={require("../../assets/in_app_icons/back.png")}
+                    />
                   </TouchableOpacity>
                 )}
                 <Text
@@ -3204,9 +3207,9 @@ const MyHorsesScreen = () => {
                   ]}
                 >
                   {recordsSection === "main" && "📋 RECORDS"}
-                  {recordsSection === "vaccination" && "💉 Vaccination Manager"}
-                  {recordsSection === "document" && "📄 Document Manager"}
-                  {recordsSection === "rider" && "👥 Rider Manager"}
+                  {recordsSection === "vaccination" && "Vaccination Manager"}
+                  {recordsSection === "document" && "Document Manager"}
+                  {recordsSection === "rider" && "Rider Manager"}
                 </Text>
               </View>
               <TouchableOpacity
@@ -3314,7 +3317,7 @@ const MyHorsesScreen = () => {
                       <View style={styles.vaccinationTypeToggle}>
                         <TouchableOpacity
                           style={[
-                            styles.vaccinationTypeButton,
+                            styles.vaccinationTypeButtonLeft,
                             {
                               backgroundColor:
                                 vaccinationType === "future"
@@ -3341,7 +3344,7 @@ const MyHorsesScreen = () => {
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[
-                            styles.vaccinationTypeButton,
+                            styles.vaccinationTypeButtonRight,
                             {
                               backgroundColor:
                                 vaccinationType === "past"
@@ -4436,7 +4439,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
   },
   modalTitle: {
-    fontSize: 26,
+    fontSize: 24,
     fontFamily: "Inder",
     fontWeight: "bold",
     color: "#335C67",
@@ -4466,6 +4469,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     fontWeight: "600",
     color: "#335C67",
+    marginTop: -5,
     marginBottom: 10,
   },
   textInput: {
@@ -4481,13 +4485,14 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
     includeFontPadding: false,
     textAlign: "left",
+    marginBottom: 5,
   },
   modalActions: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 25,
+    padding: 15,
     borderTopWidth: 1,
-    borderTopColor: "#eee",
+    borderTopColor: "#ddddddff",
     gap: 20,
   },
   modalButton: {
@@ -4955,28 +4960,37 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 5,
-    marginRight: 10,
+    marginRight: 5,
   },
-  backButtonText: {
-    fontSize: 24,
-    color: "#FFFFFF",
-    fontWeight: "bold",
+  backIcon: {
+    width: 24,
+    height: 24,
+    tintColor: "#fff",
   },
 
   // Vaccination Manager Styles
   vaccinationTypeToggle: {
     flexDirection: "row",
     backgroundColor: "rgba(0, 0, 0, 0.05)",
-    borderRadius: 8,
+    borderRadius: 16,
     padding: 4,
     marginBottom: 20,
   },
-  vaccinationTypeButton: {
+  vaccinationTypeButtonLeft: {
     flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 15,
-    borderRadius: 6,
-    borderWidth: 1,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    width: "50%",
+  },
+  vaccinationTypeButtonRight: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+    width: "50%",
   },
   vaccinationTypeButtonText: {
     fontSize: 14,
@@ -5004,7 +5018,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
   },
   repeatToggle: {
     width: 40,
@@ -5030,7 +5043,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 6,
+    borderRadius: 12,
     borderWidth: 1,
   },
   repeatIntervalButtonText: {
