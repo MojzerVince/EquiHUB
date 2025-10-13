@@ -1871,6 +1871,329 @@ const MyHorsesScreen = () => {
     );
   };
 
+  // Vaccination Date Picker Component (for Due Date / Completed Date)
+  const VaccinationDatePicker = ({
+    value,
+    vaccinationType,
+    onSelect,
+    isVisible,
+    setVisible,
+  }: {
+    value: Date | null;
+    vaccinationType: "past" | "future";
+    onSelect: (date: Date) => void;
+    isVisible: boolean;
+    setVisible: (visible: boolean) => void;
+  }) => {
+    const currentDate = new Date();
+    const [selectedDay, setSelectedDay] = useState(
+      value?.getDate() || currentDate.getDate()
+    );
+    const [selectedMonth, setSelectedMonth] = useState(
+      value?.getMonth() || currentDate.getMonth()
+    );
+    const [selectedYear, setSelectedYear] = useState(
+      value?.getFullYear() || currentDate.getFullYear()
+    );
+
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+
+    const generateYears = () => {
+      const years = [];
+      const currentYear = currentDate.getFullYear();
+      if (vaccinationType === "past") {
+        // For past vaccinations: show from 10 years ago to current year
+        for (let i = currentYear; i >= currentYear - 10; i--) {
+          years.push(i);
+        }
+      } else {
+        // For future vaccinations: show from current year to 5 years ahead
+        for (let i = currentYear; i <= currentYear + 5; i++) {
+          years.push(i);
+        }
+      }
+      return years;
+    };
+
+    const getDaysInMonth = (month: number, year: number) => {
+      return new Date(year, month + 1, 0).getDate();
+    };
+
+    const generateDays = () => {
+      const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
+      const days = [];
+      for (let i = 1; i <= daysInMonth; i++) {
+        days.push(i);
+      }
+      return days;
+    };
+
+    const handleConfirm = () => {
+      const newDate = new Date(selectedYear, selectedMonth, selectedDay);
+      onSelect(newDate);
+      setVisible(false);
+    };
+
+    return (
+      <Modal
+        transparent={true}
+        visible={isVisible}
+        animationType="fade"
+        onRequestClose={() => setVisible(false)}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          activeOpacity={1}
+          onPress={() => setVisible(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View
+              style={{
+                backgroundColor: currentTheme.colors.surface,
+                borderRadius: 12,
+                padding: 20,
+                width: 350,
+                maxWidth: 400,
+                borderWidth: 1,
+                borderColor: currentTheme.colors.border,
+              }}
+            >
+              <Text
+                style={{
+                  color: currentTheme.colors.text,
+                  fontSize: 20,
+                  fontWeight: "bold",
+                  textAlign: "center",
+                  marginBottom: 20,
+                  fontFamily: "Inder",
+                }}
+              >
+                {vaccinationType === "past"
+                  ? "Select Completed Date"
+                  : "Select Due Date"}
+              </Text>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 20,
+                }}
+              >
+                {/* Month Picker */}
+                <View style={{ flex: 1, marginRight: 10 }}>
+                  <Text
+                    style={{
+                      color: currentTheme.colors.text,
+                      marginBottom: 10,
+                      textAlign: "center",
+                      fontFamily: "Inder",
+                    }}
+                  >
+                    Month
+                  </Text>
+                  <ScrollView
+                    style={{
+                      maxHeight: 150,
+                      backgroundColor: currentTheme.colors.primaryDark,
+                      borderRadius: 8,
+                    }}
+                  >
+                    {months.map((month, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={{
+                          paddingVertical: 12,
+                          paddingHorizontal: 10,
+                          backgroundColor:
+                            selectedMonth === index
+                              ? currentTheme.colors.secondary
+                              : "transparent",
+                        }}
+                        onPress={() => setSelectedMonth(index)}
+                      >
+                        <Text
+                          style={{
+                            color: "#FFFFFF",
+                            textAlign: "center",
+                            fontFamily: "Inder",
+                            fontWeight:
+                              selectedMonth === index ? "bold" : "normal",
+                          }}
+                        >
+                          {month}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Day Picker */}
+                <View style={{ flex: 0.6, marginRight: 10 }}>
+                  <Text
+                    style={{
+                      color: currentTheme.colors.text,
+                      marginBottom: 10,
+                      textAlign: "center",
+                      fontFamily: "Inder",
+                    }}
+                  >
+                    Day
+                  </Text>
+                  <ScrollView
+                    style={{
+                      maxHeight: 150,
+                      backgroundColor: currentTheme.colors.primaryDark,
+                      borderRadius: 8,
+                    }}
+                  >
+                    {generateDays().map((day) => (
+                      <TouchableOpacity
+                        key={day}
+                        style={{
+                          paddingVertical: 12,
+                          paddingHorizontal: 10,
+                          backgroundColor:
+                            selectedDay === day
+                              ? currentTheme.colors.secondary
+                              : "transparent",
+                        }}
+                        onPress={() => setSelectedDay(day)}
+                      >
+                        <Text
+                          style={{
+                            color: "#FFFFFF",
+                            textAlign: "center",
+                            fontFamily: "Inder",
+                            fontWeight: selectedDay === day ? "bold" : "normal",
+                          }}
+                        >
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Year Picker */}
+                <View style={{ flex: 0.8 }}>
+                  <Text
+                    style={{
+                      color: currentTheme.colors.text,
+                      marginBottom: 10,
+                      textAlign: "center",
+                      fontFamily: "Inder",
+                    }}
+                  >
+                    Year
+                  </Text>
+                  <ScrollView
+                    style={{
+                      maxHeight: 150,
+                      backgroundColor: currentTheme.colors.primaryDark,
+                      borderRadius: 8,
+                    }}
+                  >
+                    {generateYears().map((year) => (
+                      <TouchableOpacity
+                        key={year}
+                        style={{
+                          paddingVertical: 12,
+                          paddingHorizontal: 10,
+                          backgroundColor:
+                            selectedYear === year
+                              ? currentTheme.colors.secondary
+                              : "transparent",
+                        }}
+                        onPress={() => setSelectedYear(year)}
+                      >
+                        <Text
+                          style={{
+                            color: "#FFFFFF",
+                            textAlign: "center",
+                            fontFamily: "Inder",
+                            fontWeight:
+                              selectedYear === year ? "bold" : "normal",
+                          }}
+                        >
+                          {year}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: currentTheme.colors.textSecondary,
+                    borderRadius: 8,
+                    paddingVertical: 12,
+                  }}
+                  onPress={() => setVisible(false)}
+                >
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      textAlign: "center",
+                      fontSize: 16,
+                      fontFamily: "Inder",
+                    }}
+                  >
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: currentTheme.colors.primary,
+                    borderRadius: 8,
+                    paddingVertical: 12,
+                  }}
+                  onPress={handleConfirm}
+                >
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      textAlign: "center",
+                      fontSize: 16,
+                      fontFamily: "Inder",
+                    }}
+                  >
+                    Confirm
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
   // Custom Number Picker Component
   const NumberPicker = ({
     value,
@@ -4045,79 +4368,15 @@ const MyHorsesScreen = () => {
 
       {/* Vaccination Date Picker Modal */}
       {showVaccinationDatePicker && (
-        <Modal
-          transparent={true}
-          visible={showVaccinationDatePicker}
-          animationType="fade"
-          onRequestClose={() => setShowVaccinationDatePicker(false)}
-        >
-          <TouchableOpacity
-            style={styles.datePickerOverlay}
-            onPress={() => setShowVaccinationDatePicker(false)}
-          >
-            <View
-              style={[
-                styles.datePickerContainer,
-                { backgroundColor: currentTheme.colors.surface },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.datePickerTitle,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                Select Due Date
-              </Text>
-
-              <ScrollView style={styles.datePickerScroll}>
-                {Array.from({ length: 365 }, (_, index) => {
-                  const date = new Date();
-                  date.setDate(date.getDate() + index);
-                  return (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.datePickerOption,
-                        {
-                          backgroundColor:
-                            vaccinationDate?.toDateString() ===
-                            date.toDateString()
-                              ? currentTheme.colors.accent
-                              : "transparent",
-                        },
-                      ]}
-                      onPress={() => {
-                        setVaccinationDate(date);
-                        setShowVaccinationDatePicker(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.datePickerOptionText,
-                          {
-                            color:
-                              vaccinationDate?.toDateString() ===
-                              date.toDateString()
-                                ? "#FFFFFF"
-                                : currentTheme.colors.text,
-                          },
-                        ]}
-                      >
-                        {date.toLocaleDateString("en-US", {
-                          weekday: "short",
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          </TouchableOpacity>
-        </Modal>
+        <VaccinationDatePicker
+          value={vaccinationDate}
+          vaccinationType={vaccinationType}
+          onSelect={(date) => {
+            setVaccinationDate(date);
+          }}
+          isVisible={showVaccinationDatePicker}
+          setVisible={setShowVaccinationDatePicker}
+        />
       )}
     </View>
   );
