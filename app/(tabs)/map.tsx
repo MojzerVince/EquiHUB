@@ -37,9 +37,9 @@ import {
   FallDetectionConfig,
   FallEvent,
 } from "../../lib/fallDetectionAPI";
+import { GlobalChallengeAPI } from "../../lib/globalChallengeAPI";
 import { HorseAPI } from "../../lib/horseAPI";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
-import { StableChallengeAPI } from "../../lib/stableChallengeAPI";
 import { Horse, Profile } from "../../lib/supabase";
 import { ChallengeSession } from "../../types/challengeTypes";
 
@@ -1910,18 +1910,27 @@ const MapScreen = () => {
       sessions.push(session);
       await AsyncStorage.setItem("training_sessions", JSON.stringify(sessions));
 
-      // Automatically contribute to stable challenge if user is in a stable
+      // Automatically contribute to global challenge if user is in a stable
       if (user?.id && session.distance && session.distance > 0) {
         try {
-          // Convert meters to kilometers for stable challenge
+          // Convert meters to kilometers for global challenge
           const distanceInKm = session.distance / 1000;
-          await StableChallengeAPI.addDistanceToStableChallenge(
+          const success = await GlobalChallengeAPI.addDistanceToGlobalChallenge(
             user.id,
-            distanceInKm
+            distanceInKm,
+            1 // session count
           );
-          console.log(`Added ${distanceInKm.toFixed(2)}km to stable challenge`);
+          if (success) {
+            console.log(
+              `✅ Added ${distanceInKm.toFixed(2)}km to global challenge`
+            );
+          } else {
+            console.log(
+              `⚠️ Could not add distance to global challenge (user may not be in a stable or no active challenge)`
+            );
+          }
         } catch (error) {
-          console.error("Error adding distance to stable challenge:", error);
+          console.error("❌ Error adding distance to global challenge:", error);
           // Don't throw error as session saving should still succeed
         }
       }

@@ -9,6 +9,8 @@ export class GlobalChallengeAPI {
     try {
       const supabase = getSupabase();
       const now = new Date().toISOString();
+      
+      console.log('🔍 Querying active global challenges with date:', now);
 
       const { data, error } = await supabase
         .from('global_challenges')
@@ -21,8 +23,24 @@ export class GlobalChallengeAPI {
         .gte('end_date', now)
         .order('start_date', { ascending: false });
 
+      console.log('📊 Raw query result:', { 
+        dataCount: data?.length || 0, 
+        error: error?.message || 'none' 
+      });
+      
+      if (data && data.length > 0) {
+        console.log('📋 Challenges found:', data.map((c: any) => ({
+          id: c.id,
+          title: c.title,
+          type: c.challenge_type,
+          start: c.start_date,
+          end: c.end_date,
+          active: c.is_active
+        })));
+      }
+
       if (error) {
-        console.error('Error fetching global challenges:', error);
+        console.error('❌ Error fetching global challenges:', error);
         return [];
       }
 
@@ -71,8 +89,22 @@ export class GlobalChallengeAPI {
    * Get current monthly global challenge
    */
   static async getCurrentMonthlyChallenge(): Promise<GlobalChallenge | null> {
+    console.log('🗓️ Getting current monthly challenge...');
     const challenges = await this.getActiveGlobalChallenges();
-    return challenges.find(c => c.challengeType === 'monthly') || null;
+    const monthlyChallenge = challenges.find(c => c.challengeType === 'monthly') || null;
+    
+    if (monthlyChallenge) {
+      console.log('✅ Monthly challenge found:', {
+        id: monthlyChallenge.id,
+        title: monthlyChallenge.title,
+        targetDistance: monthlyChallenge.targetDistance
+      });
+    } else {
+      console.log('❌ No monthly challenge found. Available challenge types:', 
+        challenges.map(c => c.challengeType));
+    }
+    
+    return monthlyChallenge;
   }
 
   /**

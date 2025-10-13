@@ -627,20 +627,65 @@ export default function CommunityScreen() {
 
   // Global Challenge functions
   const loadGlobalChallenge = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log("⚠️ loadGlobalChallenge: No user ID");
+      return;
+    }
 
+    console.log("🌍 Loading global challenge for user:", user.id);
     setLoadingGlobalChallenge(true);
     try {
       // Get current monthly global challenge
+      console.log("📥 Fetching current monthly challenge...");
       const challenge = await GlobalChallengeAPI.getCurrentMonthlyChallenge();
+      console.log(
+        "📊 Challenge received:",
+        challenge
+          ? {
+              id: challenge.id,
+              title: challenge.title,
+              targetDistance: challenge.targetDistance,
+              startDate: challenge.startDate,
+              endDate: challenge.endDate,
+              isActive: challenge.isActive,
+              leaderboardCount: challenge.globalLeaderboard?.length || 0,
+            }
+          : "null"
+      );
       setGlobalChallenge(challenge);
 
       // Get user's active global challenge
+      console.log("👤 Fetching user's active global challenge...");
       const activeGlobal =
         await GlobalChallengeAPI.getUserActiveGlobalChallenge(user.id);
+      console.log(
+        "✅ Active global challenge:",
+        activeGlobal
+          ? {
+              challengeId: activeGlobal.challengeId,
+              stableId: activeGlobal.stableId,
+              stableName: activeGlobal.stableName,
+              stableProgress: activeGlobal.stableProgress,
+              userContribution: activeGlobal.userContribution,
+              stableRank: activeGlobal.stableRank,
+            }
+          : "null - User may not be in a stable"
+      );
       setActiveGlobalChallenge(activeGlobal);
+
+      if (!challenge) {
+        console.log(
+          "❌ No active monthly challenge found. Current date may be outside challenge dates."
+        );
+      } else if (!activeGlobal) {
+        console.log(
+          "⚠️ Challenge found but user has no active challenge (not in a stable?)"
+        );
+      } else {
+        console.log("✅ Global challenge loaded successfully!");
+      }
     } catch (error) {
-      console.error("Error loading global challenge:", error);
+      console.error("❌ Error loading global challenge:", error);
     } finally {
       setLoadingGlobalChallenge(false);
     }
@@ -2595,9 +2640,13 @@ export default function CommunityScreen() {
                           style={[styles.progressText, { color: theme.text }]}
                         >
                           Stable:{" "}
-                          {formatDistance(activeGlobalChallenge.stableProgress)}{" "}
-                          / {formatDistance(globalChallenge.targetDistance)}{" "}
-                          {formatDistanceUnit()}
+                          {formatDistance(
+                            activeGlobalChallenge.stableProgress * 1000
+                          )}{" "}
+                          /{" "}
+                          {formatDistance(
+                            globalChallenge.targetDistance * 1000
+                          )}
                         </Text>
                         <Text
                           style={[
@@ -2607,9 +2656,8 @@ export default function CommunityScreen() {
                         >
                           Your contribution:{" "}
                           {formatDistance(
-                            activeGlobalChallenge.userContribution
-                          )}{" "}
-                          {formatDistanceUnit()}
+                            activeGlobalChallenge.userContribution * 1000
+                          )}
                         </Text>
                       </View>
                     )}
@@ -2690,11 +2738,11 @@ export default function CommunityScreen() {
                                     { color: theme.textSecondary },
                                   ]}
                                 >
-                                  {formatDistance(stable.progressValue)}{" "}
-                                  {formatDistanceUnit()} • {stable.memberCount}{" "}
-                                  members • Avg:{" "}
-                                  {formatDistance(stable.averageContribution)}{" "}
-                                  {formatDistanceUnit()}
+                                  {formatDistance(stable.progressValue * 1000)}{" "}
+                                  • {stable.memberCount} members • Avg:{" "}
+                                  {formatDistance(
+                                    stable.averageContribution * 1000
+                                  )}
                                 </Text>
                               </View>
                             </View>
