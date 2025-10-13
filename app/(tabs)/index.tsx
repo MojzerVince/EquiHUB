@@ -2,10 +2,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
+import * as Sharing from "expo-sharing";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Modal,
   RefreshControl,
   ScrollView,
@@ -207,6 +209,8 @@ const MyHorsesScreen = () => {
   const [horseDocuments, setHorseDocuments] = useState<{
     [horseId: string]: any[];
   }>({});
+  const [documentViewerVisible, setDocumentViewerVisible] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
 
   // Load horses when user is authenticated - from cache first, API only on refresh
   useEffect(() => {
@@ -1387,6 +1391,33 @@ const MyHorsesScreen = () => {
       }
     }
     await saveHorseDocuments(updatedDocuments);
+  };
+
+  const openDocument = (document: any) => {
+    setSelectedDocument(document);
+    setDocumentViewerVisible(true);
+  };
+
+  const shareDocument = async () => {
+    if (!selectedDocument) return;
+
+    try {
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(selectedDocument.uri);
+      } else {
+        // Fallback: try to open with Linking
+        const supported = await Linking.canOpenURL(selectedDocument.uri);
+        if (supported) {
+          await Linking.openURL(selectedDocument.uri);
+        } else {
+          showError("Cannot open this document");
+        }
+      }
+    } catch (error) {
+      console.error("Error sharing document:", error);
+      showError("Failed to open document");
+    }
   };
 
   const toggleDocumentSync = () => {
@@ -3634,6 +3665,71 @@ const MyHorsesScreen = () => {
       {/* Image Picker Modal */}
       <ImagePickerModal />
 
+      {/* Document Viewer Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={documentViewerVisible}
+        onRequestClose={() => setDocumentViewerVisible(false)}
+      >
+        <View style={styles.documentViewerOverlay}>
+          <View style={styles.documentViewerContainer}>
+            {/* Header */}
+            <View style={styles.documentViewerHeader}>
+              <Text style={styles.documentViewerTitle}>
+                {selectedDocument?.name || "Document"}
+              </Text>
+              <TouchableOpacity
+                style={styles.documentViewerCloseButton}
+                onPress={() => setDocumentViewerVisible(false)}
+              >
+                <Text style={styles.documentViewerCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Image Display */}
+            <ScrollView
+              style={styles.documentViewerContent}
+              contentContainerStyle={styles.documentViewerContentContainer}
+              maximumZoomScale={3}
+              minimumZoomScale={1}
+            >
+              {selectedDocument && (
+                <Image
+                  source={{ uri: selectedDocument.uri }}
+                  style={styles.documentViewerImage}
+                  resizeMode="contain"
+                />
+              )}
+            </ScrollView>
+
+            {/* Actions */}
+            <View style={styles.documentViewerActions}>
+              <TouchableOpacity
+                style={[
+                  styles.documentViewerButton,
+                  { backgroundColor: currentTheme.colors.primary },
+                ]}
+                onPress={shareDocument}
+              >
+                <Text style={styles.documentViewerButtonText}>
+                  📤 Open in Gallery
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.documentViewerButton,
+                  { backgroundColor: currentTheme.colors.textSecondary },
+                ]}
+                onPress={() => setDocumentViewerVisible(false)}
+              >
+                <Text style={styles.documentViewerButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Records Modal */}
       <Modal
         animationType="slide"
@@ -4442,10 +4538,7 @@ const MyHorsesScreen = () => {
                               >
                                 <TouchableOpacity
                                   style={styles.documentItemContent}
-                                  onPress={() => {
-                                    // Open document in gallery
-                                    // This is a placeholder - you might want to use a library like react-native-image-viewing
-                                  }}
+                                  onPress={() => openDocument(document)}
                                 >
                                   <Text style={styles.documentIcon}>📄</Text>
                                   <View style={styles.documentInfo}>
@@ -5733,6 +5826,77 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     lineHeight: 20,
+  },
+
+  // Document Viewer Modal Styles
+  documentViewerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  documentViewerContainer: {
+    width: "95%",
+    height: "90%",
+    backgroundColor: "#1a1a1a",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  documentViewerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 15,
+    backgroundColor: "#2a2a2a",
+    borderBottomWidth: 1,
+    borderBottomColor: "#444",
+  },
+  documentViewerTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
+    flex: 1,
+  },
+  documentViewerCloseButton: {
+    padding: 5,
+  },
+  documentViewerCloseText: {
+    fontSize: 24,
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+  documentViewerContent: {
+    flex: 1,
+  },
+  documentViewerContentContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  documentViewerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  documentViewerActions: {
+    flexDirection: "row",
+    padding: 15,
+    gap: 10,
+    backgroundColor: "#2a2a2a",
+    borderTopWidth: 1,
+    borderTopColor: "#444",
+  },
+  documentViewerButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  documentViewerButtonText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
   },
 
   // Rider Manager Styles
