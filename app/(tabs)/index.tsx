@@ -3712,9 +3712,7 @@ const MyHorsesScreen = () => {
                 ]}
                 onPress={shareDocument}
               >
-                <Text style={styles.documentViewerButtonText}>
-                  📤 Open in Gallery
-                </Text>
+                <Text style={styles.documentViewerButtonText}>📤 Share</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -4511,6 +4509,18 @@ const MyHorsesScreen = () => {
                         </View>
                       </View>
 
+                      {/* Add Document Button */}
+                      <TouchableOpacity
+                        style={[
+                          styles.addDocumentButton,
+                          { backgroundColor: currentTheme.colors.primary },
+                        ]}
+                        onPress={addDocument}
+                      >
+                        <Text style={styles.addDocumentIcon}>📎</Text>
+                        <Text style={styles.addDocumentText}>Add Document</Text>
+                      </TouchableOpacity>
+
                       {/* Documents List */}
                       {getHorseDocuments(selectedHorseForRecords.id).length >
                         0 && (
@@ -4584,18 +4594,6 @@ const MyHorsesScreen = () => {
                           )}
                         </View>
                       )}
-
-                      {/* Add Document Button */}
-                      <TouchableOpacity
-                        style={[
-                          styles.addDocumentButton,
-                          { backgroundColor: currentTheme.colors.primary },
-                        ]}
-                        onPress={addDocument}
-                      >
-                        <Text style={styles.addDocumentIcon}>📎</Text>
-                        <Text style={styles.addDocumentText}>Add Document</Text>
-                      </TouchableOpacity>
 
                       {getHorseDocuments(selectedHorseForRecords.id).length ===
                         0 && (
