@@ -3958,7 +3958,7 @@ const MyHorsesScreen = () => {
                                       )}
                                     </View>
                                     <View style={styles.vaccinationActions}>
-                                      {vaccination.type === "future" && (
+                                      {isOverdue && (
                                         <TouchableOpacity
                                           style={
                                             styles.completeVaccinationButton
