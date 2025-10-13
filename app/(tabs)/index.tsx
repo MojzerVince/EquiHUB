@@ -211,6 +211,9 @@ const MyHorsesScreen = () => {
   }>({});
   const [documentViewerVisible, setDocumentViewerVisible] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [renamingDocument, setRenamingDocument] = useState<any | null>(null);
+  const [newDocumentName, setNewDocumentName] = useState("");
 
   // Load horses when user is authenticated - from cache first, API only on refresh
   useEffect(() => {
@@ -1391,6 +1394,46 @@ const MyHorsesScreen = () => {
       }
     }
     await saveHorseDocuments(updatedDocuments);
+  };
+
+  const openRenameModal = (horseId: string, document: any) => {
+    setRenamingDocument({ horseId, document });
+    setNewDocumentName(document.name);
+    setRenameModalVisible(true);
+  };
+
+  const closeRenameModal = () => {
+    setRenameModalVisible(false);
+    setRenamingDocument(null);
+    setNewDocumentName("");
+  };
+
+  const saveDocumentRename = async () => {
+    if (!renamingDocument || !newDocumentName.trim()) {
+      showError("Please enter a valid name");
+      return;
+    }
+
+    const { horseId, document } = renamingDocument;
+    const updatedDocuments = { ...horseDocuments };
+
+    if (updatedDocuments[horseId]) {
+      const index = updatedDocuments[horseId].findIndex(
+        (d) => d.id === document.id
+      );
+
+      if (index !== -1) {
+        updatedDocuments[horseId][index] = {
+          ...updatedDocuments[horseId][index],
+          name: newDocumentName.trim(),
+        };
+
+        await saveHorseDocuments(updatedDocuments);
+        setSuccessMessage("Document renamed successfully!");
+        setShowSuccessModal(true);
+        closeRenameModal();
+      }
+    }
   };
 
   const openDocument = (document: any) => {
@@ -3728,6 +3771,89 @@ const MyHorsesScreen = () => {
         </View>
       </Modal>
 
+      {/* Rename Document Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={renameModalVisible}
+        onRequestClose={closeRenameModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.renameModalContainer,
+              { backgroundColor: currentTheme.colors.surface },
+            ]}
+          >
+            {/* Header */}
+            <View
+              style={[
+                styles.renameModalHeader,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
+            >
+              <Text style={styles.renameModalTitle}>Rename Document</Text>
+              <TouchableOpacity
+                style={styles.renameModalCloseButton}
+                onPress={closeRenameModal}
+              >
+                <Text style={styles.renameModalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Input */}
+            <View style={styles.renameModalContent}>
+              <Text
+                style={[
+                  styles.renameModalLabel,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Document Name:
+              </Text>
+              <TextInput
+                style={[
+                  styles.renameModalInput,
+                  {
+                    backgroundColor: currentTheme.colors.surface,
+                    borderColor: currentTheme.colors.border,
+                    color: currentTheme.colors.text,
+                  },
+                ]}
+                value={newDocumentName}
+                onChangeText={setNewDocumentName}
+                placeholder="Enter document name"
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                maxLength={50}
+                autoFocus={true}
+              />
+            </View>
+
+            {/* Actions */}
+            <View style={styles.renameModalActions}>
+              <TouchableOpacity
+                style={[
+                  styles.renameModalButton,
+                  { backgroundColor: currentTheme.colors.textSecondary },
+                ]}
+                onPress={closeRenameModal}
+              >
+                <Text style={styles.renameModalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.renameModalButton,
+                  { backgroundColor: currentTheme.colors.primary },
+                ]}
+                onPress={saveDocumentRename}
+              >
+                <Text style={styles.renameModalButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Records Modal */}
       <Modal
         animationType="slide"
@@ -4575,6 +4701,19 @@ const MyHorsesScreen = () => {
                                       ).toLocaleDateString()}
                                     </Text>
                                   </View>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={styles.renameDocumentButton}
+                                  onPress={() =>
+                                    openRenameModal(
+                                      selectedHorseForRecords.id,
+                                      document
+                                    )
+                                  }
+                                >
+                                  <Text style={styles.renameDocumentButtonText}>
+                                    ✏️
+                                  </Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                   style={styles.deleteDocumentButton}
@@ -5776,6 +5915,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inder",
   },
+  renameDocumentButton: {
+    padding: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  renameDocumentButtonText: {
+    fontSize: 16,
+  },
   deleteDocumentButton: {
     padding: 8,
     justifyContent: "center",
@@ -5891,6 +6038,70 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   documentViewerButtonText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
+  },
+
+  // Rename Document Modal Styles
+  renameModalContainer: {
+    width: "85%",
+    maxWidth: 400,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  renameModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 15,
+  },
+  renameModalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
+    flex: 1,
+  },
+  renameModalCloseButton: {
+    padding: 5,
+  },
+  renameModalCloseText: {
+    fontSize: 24,
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+  renameModalContent: {
+    padding: 20,
+  },
+  renameModalLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+    fontFamily: "Inder",
+  },
+  renameModalInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    fontFamily: "Inder",
+  },
+  renameModalActions: {
+    flexDirection: "row",
+    padding: 15,
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+  },
+  renameModalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  renameModalButtonText: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#FFFFFF",
