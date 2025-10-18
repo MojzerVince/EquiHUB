@@ -3534,12 +3534,9 @@ const MyHorsesScreen = () => {
                   ]}
                 >
                   <Image
-                    style={[
-                      styles.selectedImage,
-                      { borderColor: currentTheme.colors.primary },
-                    ]}
+                    style={styles.selectedImage}
                     source={
-                      addImage || require("../../assets/images/horses/pony.jpg")
+                      addImage || require("../../assets/in_app_icons/horse_withBG.png")
                     }
                     resizeMode="cover"
                   />
@@ -5400,8 +5397,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    borderWidth: 3,
-    // borderColor applied dynamically with theme
   },
   changePhotoButton: {
     flexDirection: "row",
