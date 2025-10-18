@@ -2173,38 +2173,78 @@ const MyHorsesScreen = () => {
       setVisible(false);
     };
 
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    };
+
     return (
-      <Modal
-        transparent={true}
-        visible={isVisible}
-        animationType="fade"
-        onRequestClose={() => setVisible(false)}
-      >
+      <View style={{ marginBottom: 20 }}>
         <TouchableOpacity
           style={{
-            flex: 1,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            justifyContent: "center",
+            backgroundColor: currentTheme.colors.surface,
+            borderRadius: 8,
+            paddingVertical: 15,
+            paddingHorizontal: 16,
+            borderWidth: 1,
+            borderColor: currentTheme.colors.border,
+            flexDirection: "row",
+            justifyContent: "space-between",
             alignItems: "center",
           }}
-          activeOpacity={1}
-          onPress={() => setVisible(false)}
+          onPress={() => setVisible(!isVisible)}
         >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
+          <Text
+            style={{
+              color: value
+                ? currentTheme.colors.text
+                : currentTheme.colors.textSecondary,
+              fontSize: 16,
+              fontFamily: "Inder",
+              includeFontPadding: false,
+            }}
           >
-            <View
+            {value
+              ? formatDate(value)
+              : `Select ${
+                  vaccinationType === "past" ? "completion" : "due"
+                } date`}
+          </Text>
+          <Text style={{ color: currentTheme.colors.text, fontSize: 16 }}>
+            {isVisible ? "▲" : "▼"}
+          </Text>
+        </TouchableOpacity>
+
+        {isVisible ? (
+          <Modal
+            transparent={true}
+            visible={isVisible}
+            animationType="fade"
+            onRequestClose={() => setVisible(false)}
+          >
+            <TouchableOpacity
               style={{
-                backgroundColor: currentTheme.colors.surface,
-                borderRadius: 12,
-                padding: 20,
-                width: 350,
-                maxWidth: 400,
-                borderWidth: 1,
-                borderColor: currentTheme.colors.border,
+                flex: 1,
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                justifyContent: "center",
+                alignItems: "center",
               }}
+              onPress={() => setVisible(false)}
             >
+              <View
+                style={{
+                  backgroundColor: currentTheme.colors.surface,
+                  borderRadius: 12,
+                  padding: 20,
+                  width: "90%",
+                  maxWidth: 400,
+                  borderWidth: 1,
+                  borderColor: currentTheme.colors.border,
+                }}
+              >
               <Text
                 style={{
                   color: currentTheme.colors.text,
@@ -2415,8 +2455,9 @@ const MyHorsesScreen = () => {
               </View>
             </View>
           </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+        </Modal>
+        ) : null}
+      </View>
     );
   };
 
@@ -4333,43 +4374,13 @@ const MyHorsesScreen = () => {
                               : "Due Date"}{" "}
                             *
                           </Text>
-                          <TouchableOpacity
-                            style={[
-                              styles.datePickerButton,
-                              {
-                                backgroundColor: currentTheme.colors.surface,
-                                borderColor: currentTheme.colors.border,
-                              },
-                            ]}
-                            onPress={() => setShowVaccinationDatePicker(true)}
-                          >
-                            <Text
-                              style={[
-                                styles.datePickerButtonText,
-                                {
-                                  color: vaccinationDate
-                                    ? currentTheme.colors.text
-                                    : currentTheme.colors.textSecondary,
-                                },
-                              ]}
-                            >
-                              {vaccinationDate
-                                ? vaccinationDate.toLocaleDateString()
-                                : `Select ${
-                                    vaccinationType === "past"
-                                      ? "completion"
-                                      : "due"
-                                  } date`}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.datePickerArrow,
-                                { color: currentTheme.colors.text },
-                              ]}
-                            >
-                              📅
-                            </Text>
-                          </TouchableOpacity>
+                          <VaccinationDatePicker
+                            value={vaccinationDate}
+                            vaccinationType={vaccinationType}
+                            onSelect={setVaccinationDate}
+                            isVisible={showVaccinationDatePicker}
+                            setVisible={setShowVaccinationDatePicker}
+                          />
                         </View>
 
                         {vaccinationType === "future" && (
@@ -4834,19 +4845,6 @@ const MyHorsesScreen = () => {
             )}
           </View>
         </Modal>
-
-      {/* Vaccination Date Picker Modal */}
-      {showVaccinationDatePicker && (
-        <VaccinationDatePicker
-          value={vaccinationDate}
-          vaccinationType={vaccinationType}
-          onSelect={(date) => {
-            setVaccinationDate(date);
-          }}
-          isVisible={showVaccinationDatePicker}
-          setVisible={setShowVaccinationDatePicker}
-        />
-      )}
     </View>
   );
 };
