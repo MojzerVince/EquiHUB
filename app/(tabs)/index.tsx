@@ -3190,17 +3190,16 @@ const MyHorsesScreen = () => {
       {/* Edit Horse Modal */}
       <Modal
         animationType="slide"
-        transparent={true}
         visible={editModalVisible}
         onRequestClose={closeEditModal}
+        presentationStyle="pageSheet"
       >
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContainer,
-              { backgroundColor: currentTheme.colors.surface },
-            ]}
-          >
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: currentTheme.colors.surface },
+          ]}
+        >
             <View
               style={[
                 styles.modalHeader,
@@ -3443,23 +3442,21 @@ const MyHorsesScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
       </Modal>
 
       {/* Add Horse Modal */}
       <Modal
         animationType="slide"
-        transparent={true}
         visible={addModalVisible}
         onRequestClose={closeAddModal}
+        presentationStyle="pageSheet"
       >
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContainer,
-              { backgroundColor: currentTheme.colors.surface },
-            ]}
-          >
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: currentTheme.colors.surface },
+          ]}
+        >
             <View
               style={[
                 styles.modalHeader,
@@ -3700,7 +3697,6 @@ const MyHorsesScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
       </Modal>
 
       {/* Success Modal */}
@@ -3858,17 +3854,16 @@ const MyHorsesScreen = () => {
       {/* Records Modal */}
       <Modal
         animationType="slide"
-        transparent={true}
         visible={recordsModalVisible}
         onRequestClose={closeRecordsModal}
+        presentationStyle="pageSheet"
       >
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContainer,
-              { backgroundColor: currentTheme.colors.surface },
-            ]}
-          >
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: currentTheme.colors.surface },
+          ]}
+        >
             {/* Header */}
             <View
               style={[
@@ -4838,8 +4833,7 @@ const MyHorsesScreen = () => {
               </View>
             )}
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
       {/* Vaccination Date Picker Modal */}
       {showVaccinationDatePicker && (
@@ -5152,13 +5146,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    width: "105%",
-    maxWidth: "105%",
-    minWidth: "90%",
-    maxHeight: "98%",
-    minHeight: "80%",
+    flex: 1,
   },
   modalHeader: {
     flexDirection: "row",
@@ -5169,8 +5157,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
   },
   modalTitle: {
     fontSize: 24,

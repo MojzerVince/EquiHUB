@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   safeArea: {
     position: "absolute",
     width: "100%",
-    bottom: 0,
+    bottom: 5,
   },
   container: {
     paddingHorizontal: 20,
