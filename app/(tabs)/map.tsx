@@ -13,6 +13,7 @@ import {
   AppState,
   Image,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -3289,7 +3290,7 @@ const MapScreen = () => {
               onPress={() => router.push("/statistics")}
             >
               <Image
-                style={{ width: 28, height: 28 }}
+                style={{ width: 36, height: 36 }}
                 source={require("../../assets/in_app_icons/trends.png")}
               />
             </TouchableOpacity>
@@ -3299,7 +3300,7 @@ const MapScreen = () => {
               onPress={() => router.push("/sessions")}
             >
               <Image
-                style={{ width: 36, height: 36 }}
+                style={{ width: 38, height: 38 }}
                 source={require("../../assets/in_app_icons/history.png")}
               />
             </TouchableOpacity>
@@ -3346,7 +3347,7 @@ const MapScreen = () => {
             onPress={() => router.push("/statistics")}
           >
             <Image
-              style={{ width: 40, height: 40 }}
+              style={{ width: 34, height: 34 }}
               source={require("../../assets/in_app_icons/trends.png")}
             />
           </TouchableOpacity>
@@ -3356,7 +3357,7 @@ const MapScreen = () => {
             onPress={() => router.push("/sessions")}
           >
             <Image
-              style={{ width: 40, height: 40 }}
+              style={{ width: 42, height: 42 }}
               source={require("../../assets/in_app_icons/history.png")}
             />
           </TouchableOpacity>
@@ -4792,8 +4793,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -45,
-    marginTop: -5,
+    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   header: {
     fontSize: 30,
