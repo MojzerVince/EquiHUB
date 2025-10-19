@@ -1256,36 +1256,45 @@ const MyHorsesScreen = () => {
     }
 
     const coverDateStr = pregnancyCoverDate.toISOString().split('T')[0];
-    createPregnancy(
-      selectedHorseForRecords.id,
-      coverDateStr,
-      undefined,
-      pregnancyMethod
-    );
+    
+    // Store temp variables
+    const tempCoverDate = pregnancyCoverDate;
+    const tempMethod = pregnancyMethod;
+    const tempVetName = pregnancyVetName;
+    const tempVetPhone = pregnancyVetPhone;
+    const tempHorseId = selectedHorseForRecords.id;
+    const tempHorseName = selectedHorseForRecords.name;
 
-    // Update the pregnancy with vet info if provided
-    if (pregnancyVetName || pregnancyVetPhone) {
-      const horseId = selectedHorseForRecords.id;
-      setPregnancies(prev => ({
-        ...prev,
-        [horseId]: {
-          ...prev[horseId],
-          vet: {
-            name: pregnancyVetName || undefined,
-            phone: pregnancyVetPhone || undefined
-          }
-        }
-      }));
-    }
-
-    // Reset form and close modal
+    // Create the pregnancy object immediately to prevent flickering
+    const pregnancyId = `pregnancy-${tempHorseId}-${Date.now()}`;
+    const plan = buildPregnancyPlan(coverDateStr);
+    const newPregnancy: Pregnancy = {
+      id: pregnancyId,
+      horseId: tempHorseId,
+      status: "active",
+      ...plan,
+      method: tempMethod,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      vet: (tempVetName || tempVetPhone) ? {
+        name: tempVetName || undefined,
+        phone: tempVetPhone || undefined
+      } : undefined
+    };
+    
+    // Update all state together to prevent race conditions
     setPregnancyCoverDate(null);
     setPregnancyMethod("natural");
     setPregnancyVetName("");
     setPregnancyVetPhone("");
     setPregnancyModalVisible(false);
+    setPregnancies(prev => ({ ...prev, [tempHorseId]: newPregnancy }));
+    setSelectedPregnancy(newPregnancy);
 
-    showSuccess(`Pregnancy started for ${selectedHorseForRecords.name}! Your 340-day timeline has been created with automatic milestones.`);
+    // Show success message after a brief delay to ensure UI has updated
+    setTimeout(() => {
+      showSuccess(`Pregnancy started for ${tempHorseName}! Your 340-day timeline has been created with automatic milestones.`);
+    }, 100);
   };
 
   const handleAddEvent = () => {
