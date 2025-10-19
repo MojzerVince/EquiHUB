@@ -3361,6 +3361,74 @@ const MyHorsesScreen = () => {
                       )}
                     </View>
                   )}
+
+                  {/* Pregnancy Timeline Section */}
+                  {horse.gender === "Mare" && pregnancies[horse.id] && pregnancies[horse.id].status === "active" && (
+                    <View
+                      style={[
+                        styles.pregnancySection,
+                        {
+                          backgroundColor: currentTheme.colors.surface,
+                          borderColor: currentTheme.colors.border,
+                        },
+                      ]}
+                    >
+                      <View style={styles.pregnancySectionHeader}>
+                        <Text
+                          style={[
+                            styles.pregnancySectionTitle,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          🤰 Pregnancy Timeline
+                        </Text>
+                        <Text
+                          style={[
+                            styles.pregnancyDayCount,
+                            { color: '#ff69b4' },
+                          ]}
+                        >
+                          Day {getDaysPregnant(pregnancies[horse.id])}
+                        </Text>
+                      </View>
+
+                      {/* Segmented Progress Bar */}
+                      <View style={styles.pregnancyProgressContainer}>
+                        <View style={styles.pregnancyProgressBar}>
+                          {/* Progress Fill */}
+                          <View 
+                            style={[
+                              styles.pregnancyProgressFill,
+                              { 
+                                width: `${Math.min((getDaysPregnant(pregnancies[horse.id]) / 340) * 100, 100)}%`,
+                                backgroundColor: '#ff69b4'
+                              }
+                            ]}
+                          />
+                          {/* Stage Dividers */}
+                          <View style={[styles.pregnancyStageDivider, { left: '33.33%' }]} />
+                          <View style={[styles.pregnancyStageDivider, { left: '66.66%' }]} />
+                        </View>
+                        
+                        {/* Stage Labels */}
+                        <View style={styles.pregnancyStageLabels}>
+                          <Text style={styles.pregnancyStageLabel}>Early</Text>
+                          <Text style={styles.pregnancyStageLabel}>Mid</Text>
+                          <Text style={styles.pregnancyStageLabel}>Late</Text>
+                        </View>
+                      </View>
+
+                      {/* Due Date */}
+                      <Text
+                        style={[
+                          styles.pregnancyDueDate,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Due: {new Date(pregnancies[horse.id].dueDateEstimate).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.actionButtons}>
@@ -5092,13 +5160,31 @@ const MyHorsesScreen = () => {
 
                             {/* Progress Bar */}
                             {selectedPregnancy.status === "active" && (
-                              <View style={styles.progressBarContainer}>
-                                <View 
-                                  style={[
-                                    styles.progressBarFill,
-                                    { width: `${Math.min((getDaysPregnant(selectedPregnancy) / 340) * 100, 100)}%` }
-                                  ]}
-                                />
+                              <View style={styles.modalProgressContainer}>
+                                <View style={styles.progressBarContainer}>
+                                  <View 
+                                    style={[
+                                      styles.progressBarFill,
+                                      { width: `${Math.min((getDaysPregnant(selectedPregnancy) / 340) * 100, 100)}%` }
+                                    ]}
+                                  />
+                                  {/* Stage Dividers */}
+                                  <View style={[styles.modalStageDivider, { left: '33.33%' }]} />
+                                  <View style={[styles.modalStageDivider, { left: '66.66%' }]} />
+                                </View>
+                                
+                                {/* Stage Labels */}
+                                <View style={styles.modalStageLabels}>
+                                  <Text style={[styles.modalStageLabel, { color: currentTheme.colors.textSecondary }]}>
+                                    Early (0-113d)
+                                  </Text>
+                                  <Text style={[styles.modalStageLabel, { color: currentTheme.colors.textSecondary }]}>
+                                    Mid (114-226d)
+                                  </Text>
+                                  <Text style={[styles.modalStageLabel, { color: currentTheme.colors.textSecondary }]}>
+                                    Late (227-340d)
+                                  </Text>
+                                </View>
                               </View>
                             )}
 
@@ -6237,6 +6323,71 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     fontWeight: "600",
   },
+
+  // Pregnancy Section on Horse Card Styles
+  pregnancySection: {
+    marginTop: 15,
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  pregnancySectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  pregnancySectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  pregnancyDayCount: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  pregnancyProgressContainer: {
+    marginBottom: 10,
+  },
+  pregnancyProgressBar: {
+    height: 8,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 4,
+    position: "relative",
+    overflow: "visible",
+    marginBottom: 8,
+  },
+  pregnancyProgressFill: {
+    height: "100%",
+    borderRadius: 4,
+    position: "absolute",
+    left: 0,
+    top: 0,
+  },
+  pregnancyStageDivider: {
+    position: "absolute",
+    width: 2,
+    height: 12,
+    backgroundColor: "#666",
+    top: -2,
+  },
+  pregnancyStageLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  pregnancyStageLabel: {
+    fontSize: 10,
+    fontFamily: "Inder",
+    color: "#666",
+    flex: 1,
+    textAlign: "center",
+  },
+  pregnancyDueDate: {
+    fontSize: 12,
+    fontFamily: "Inder",
+    marginTop: 5,
+  },
   vaccinationHorseName: {
     fontSize: 18,
     fontWeight: "bold",
@@ -6827,17 +6978,42 @@ const styles = StyleSheet.create({
     color: "#999",
     fontFamily: "Inder",
   },
+  modalProgressContainer: {
+    marginBottom: 20,
+  },
   progressBarContainer: {
     height: 8,
     backgroundColor: "#e0e0e0",
     borderRadius: 4,
-    marginBottom: 20,
-    overflow: "hidden",
+    position: "relative",
+    overflow: "visible",
+    marginBottom: 8,
   },
   progressBarFill: {
     height: "100%",
     backgroundColor: "#ff69b4",
     borderRadius: 4,
+    position: "absolute",
+    left: 0,
+    top: 0,
+  },
+  modalStageDivider: {
+    position: "absolute",
+    width: 2,
+    height: 16,
+    backgroundColor: "#666",
+    top: -4,
+  },
+  modalStageLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 5,
+  },
+  modalStageLabel: {
+    fontSize: 11,
+    fontFamily: "Inder",
+    flex: 1,
+    textAlign: "center",
   },
   nextActionCard: {
     padding: 15,
