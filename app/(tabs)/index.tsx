@@ -4860,28 +4860,215 @@ const MyHorsesScreen = () => {
                         </View>
 
                         {!selectedPregnancy ? (
-                          // No active pregnancy - Show "Start Pregnancy" button
-                          <View style={styles.noPregnancyContainer}>
-                            <Text style={styles.noPregnancyIcon}>🐴</Text>
-                            <Text style={[styles.noPregnancyTitle, { color: currentTheme.colors.text }]}>
-                              No Active Pregnancy
-                            </Text>
-                            <Text style={[styles.noPregnancySubtitle, { color: currentTheme.colors.textSecondary }]}>
-                              Start tracking a pregnancy for {selectedHorseForRecords.name}
-                            </Text>
-                            <TouchableOpacity
-                              style={[
-                                styles.startPregnancyButton,
-                                { backgroundColor: currentTheme.colors.primary },
-                              ]}
-                              onPress={() => {
-                                // Show start pregnancy modal
-                                setPregnancyModalVisible(true);
-                              }}
-                            >
-                              <Text style={styles.startPregnancyButtonText}>Start Pregnancy</Text>
-                            </TouchableOpacity>
-                          </View>
+                          // No active pregnancy - Show inline form or start button
+                          !pregnancyModalVisible ? (
+                            <View style={styles.noPregnancyContainer}>
+                              <Text style={styles.noPregnancyIcon}>🐴</Text>
+                              <Text style={[styles.noPregnancyTitle, { color: currentTheme.colors.text }]}>
+                                No Active Pregnancy
+                              </Text>
+                              <Text style={[styles.noPregnancySubtitle, { color: currentTheme.colors.textSecondary }]}>
+                                Start tracking a pregnancy for {selectedHorseForRecords.name}
+                              </Text>
+                              <TouchableOpacity
+                                style={[
+                                  styles.startPregnancyButton,
+                                  { backgroundColor: currentTheme.colors.primary },
+                                ]}
+                                onPress={() => {
+                                  // Show inline pregnancy form
+                                  setPregnancyModalVisible(true);
+                                }}
+                              >
+                                <Text style={styles.startPregnancyButtonText}>Start Pregnancy</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ) : (
+                            // Inline Start Pregnancy Form
+                            <View style={styles.pregnancyFormContainer}>
+                              <Text style={[styles.pregnancyFormTitle, { color: currentTheme.colors.text }]}>
+                                Start New Pregnancy
+                              </Text>
+                              <Text style={[styles.startPregnancySubtitle, { color: currentTheme.colors.textSecondary }]}>
+                                Enter the cover date and optional details to start tracking
+                              </Text>
+
+                              {/* Cover Date - Required */}
+                              <View style={styles.inputGroup}>
+                                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                  Cover Date *
+                                </Text>
+                                <DatePicker
+                                  value={pregnancyCoverDate}
+                                  placeholder="Select cover date"
+                                  onSelect={setPregnancyCoverDate}
+                                  isVisible={showPregnancyCoverDatePicker}
+                                  setVisible={setShowPregnancyCoverDatePicker}
+                                />
+                              </View>
+
+                              {/* Stallion Name - Optional */}
+                              <View style={styles.inputGroup}>
+                                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                  Stallion Name (Optional)
+                                </Text>
+                                <TextInput
+                                  style={[
+                                    styles.input,
+                                    {
+                                      backgroundColor: currentTheme.colors.accent,
+                                      color: currentTheme.colors.text,
+                                      borderColor: currentTheme.colors.primary,
+                                    },
+                                  ]}
+                                  value={pregnancyStallion}
+                                  onChangeText={setPregnancyStallion}
+                                  placeholder="Enter stallion name"
+                                  placeholderTextColor={currentTheme.colors.textSecondary}
+                                />
+                              </View>
+
+                              {/* Breeding Method - Optional */}
+                              <View style={styles.inputGroup}>
+                                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                  Breeding Method
+                                </Text>
+                                <View style={styles.methodToggle}>
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.methodButton,
+                                      pregnancyMethod === "natural" && styles.methodButtonActive,
+                                      { borderColor: currentTheme.colors.primary }
+                                    ]}
+                                    onPress={() => setPregnancyMethod("natural")}
+                                  >
+                                    <Text style={[
+                                      styles.methodButtonText,
+                                      pregnancyMethod === "natural" && styles.methodButtonTextActive
+                                    ]}>
+                                      Natural
+                                    </Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.methodButton,
+                                      pregnancyMethod === "AI" && styles.methodButtonActive,
+                                      { borderColor: currentTheme.colors.primary }
+                                    ]}
+                                    onPress={() => setPregnancyMethod("AI")}
+                                  >
+                                    <Text style={[
+                                      styles.methodButtonText,
+                                      pregnancyMethod === "AI" && styles.methodButtonTextActive
+                                    ]}>
+                                      AI
+                                    </Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.methodButton,
+                                      pregnancyMethod === "ICSI" && styles.methodButtonActive,
+                                      { borderColor: currentTheme.colors.primary }
+                                    ]}
+                                    onPress={() => setPregnancyMethod("ICSI")}
+                                  >
+                                    <Text style={[
+                                      styles.methodButtonText,
+                                      pregnancyMethod === "ICSI" && styles.methodButtonTextActive
+                                    ]}>
+                                      ICSI
+                                    </Text>
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+
+                              {/* Veterinarian Info - Optional */}
+                              <View style={styles.inputGroup}>
+                                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                  Veterinarian Name (Optional)
+                                </Text>
+                                <TextInput
+                                  style={[
+                                    styles.input,
+                                    {
+                                      backgroundColor: currentTheme.colors.accent,
+                                      color: currentTheme.colors.text,
+                                      borderColor: currentTheme.colors.primary,
+                                    },
+                                  ]}
+                                  value={pregnancyVetName}
+                                  onChangeText={setPregnancyVetName}
+                                  placeholder="Enter vet name"
+                                  placeholderTextColor={currentTheme.colors.textSecondary}
+                                />
+                              </View>
+
+                              <View style={styles.inputGroup}>
+                                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                  Veterinarian Phone (Optional)
+                                </Text>
+                                <TextInput
+                                  style={[
+                                    styles.input,
+                                    {
+                                      backgroundColor: currentTheme.colors.accent,
+                                      color: currentTheme.colors.text,
+                                      borderColor: currentTheme.colors.primary,
+                                    },
+                                  ]}
+                                  value={pregnancyVetPhone}
+                                  onChangeText={setPregnancyVetPhone}
+                                  placeholder="Enter vet phone"
+                                  placeholderTextColor={currentTheme.colors.textSecondary}
+                                  keyboardType="phone-pad"
+                                />
+                              </View>
+
+                              {/* Info Banner */}
+                              <View style={styles.pregnancyInfoBanner}>
+                                <Text style={styles.pregnancyInfoIcon}>ℹ️</Text>
+                                <Text style={styles.pregnancyInfoText}>
+                                  A 340-day timeline will be automatically created with ultrasound checks, vaccine reminders, and deworming schedule.
+                                </Text>
+                              </View>
+
+                              {/* Form Actions */}
+                              <View style={styles.pregnancyFormActions}>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.pregnancyFormButton,
+                                    styles.pregnancyCancelButton,
+                                    { backgroundColor: currentTheme.colors.textSecondary },
+                                  ]}
+                                  onPress={() => {
+                                    setPregnancyModalVisible(false);
+                                    // Reset form
+                                    setPregnancyCoverDate(null);
+                                    setPregnancyStallion("");
+                                    setPregnancyMethod("natural");
+                                    setPregnancyVetName("");
+                                    setPregnancyVetPhone("");
+                                  }}
+                                >
+                                  <Text style={styles.pregnancyFormButtonText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.pregnancyFormButton,
+                                    styles.pregnancySaveButton,
+                                    { 
+                                      backgroundColor: currentTheme.colors.primary,
+                                      opacity: pregnancyCoverDate ? 1 : 0.5
+                                    },
+                                  ]}
+                                  onPress={handleStartPregnancy}
+                                  disabled={!pregnancyCoverDate}
+                                >
+                                  <Text style={styles.pregnancyFormButtonText}>Start Pregnancy</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          )
                         ) : (
                           // Active pregnancy exists
                           <View>
@@ -5373,215 +5560,6 @@ const MyHorsesScreen = () => {
                 </TouchableOpacity>
               </View>
             )}
-          </View>
-        </Modal>
-
-        {/* Start Pregnancy Modal */}
-        <Modal
-          visible={pregnancyModalVisible}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setPregnancyModalVisible(false)}
-        >
-          <View style={{ flex: 1, backgroundColor: currentTheme.colors.background }}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[
-                    styles.modalTitle,
-                    {
-                      color: currentTheme.colors.text,
-                      textAlign: "center",
-                    },
-                  ]}
-                >
-                  Start Pregnancy
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setPregnancyModalVisible(false)}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalContent}>
-              <Text style={[styles.startPregnancySubtitle, { color: currentTheme.colors.textSecondary }]}>
-                Enter the cover date and optional details to start tracking pregnancy for {selectedHorseForRecords?.name}
-              </Text>
-
-              {/* Cover Date - Required */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                  Cover Date *
-                </Text>
-                <DatePicker
-                  value={pregnancyCoverDate}
-                  placeholder="Select cover date"
-                  onSelect={setPregnancyCoverDate}
-                  isVisible={showPregnancyCoverDatePicker}
-                  setVisible={setShowPregnancyCoverDatePicker}
-                />
-              </View>
-
-              {/* Stallion Name - Optional */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                  Stallion Name (Optional)
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: currentTheme.colors.accent,
-                      color: currentTheme.colors.text,
-                      borderColor: currentTheme.colors.primary,
-                    },
-                  ]}
-                  value={pregnancyStallion}
-                  onChangeText={setPregnancyStallion}
-                  placeholder="Enter stallion name"
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                />
-              </View>
-
-              {/* Breeding Method - Optional */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                  Breeding Method
-                </Text>
-                <View style={styles.methodToggle}>
-                  <TouchableOpacity
-                    style={[
-                      styles.methodButton,
-                      pregnancyMethod === "natural" && styles.methodButtonActive,
-                      { borderColor: currentTheme.colors.primary }
-                    ]}
-                    onPress={() => setPregnancyMethod("natural")}
-                  >
-                    <Text style={[
-                      styles.methodButtonText,
-                      pregnancyMethod === "natural" && styles.methodButtonTextActive
-                    ]}>
-                      Natural
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.methodButton,
-                      pregnancyMethod === "AI" && styles.methodButtonActive,
-                      { borderColor: currentTheme.colors.primary }
-                    ]}
-                    onPress={() => setPregnancyMethod("AI")}
-                  >
-                    <Text style={[
-                      styles.methodButtonText,
-                      pregnancyMethod === "AI" && styles.methodButtonTextActive
-                    ]}>
-                      AI
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.methodButton,
-                      pregnancyMethod === "ICSI" && styles.methodButtonActive,
-                      { borderColor: currentTheme.colors.primary }
-                    ]}
-                    onPress={() => setPregnancyMethod("ICSI")}
-                  >
-                    <Text style={[
-                      styles.methodButtonText,
-                      pregnancyMethod === "ICSI" && styles.methodButtonTextActive
-                    ]}>
-                      ICSI
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Veterinarian Info - Optional */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                  Veterinarian Name (Optional)
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: currentTheme.colors.accent,
-                      color: currentTheme.colors.text,
-                      borderColor: currentTheme.colors.primary,
-                    },
-                  ]}
-                  value={pregnancyVetName}
-                  onChangeText={setPregnancyVetName}
-                  placeholder="Enter vet name"
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                  Veterinarian Phone (Optional)
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: currentTheme.colors.accent,
-                      color: currentTheme.colors.text,
-                      borderColor: currentTheme.colors.primary,
-                    },
-                  ]}
-                  value={pregnancyVetPhone}
-                  onChangeText={setPregnancyVetPhone}
-                  placeholder="Enter vet phone"
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              {/* Info Banner */}
-              <View style={styles.pregnancyInfoBanner}>
-                <Text style={styles.pregnancyInfoIcon}>ℹ️</Text>
-                <Text style={styles.pregnancyInfoText}>
-                  A 340-day timeline will be automatically created with ultrasound checks, vaccine reminders, and deworming schedule.
-                </Text>
-              </View>
-            </ScrollView>
-
-            {/* Footer Actions */}
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.cancelButton,
-                  { backgroundColor: currentTheme.colors.textSecondary },
-                ]}
-                onPress={() => setPregnancyModalVisible(false)}
-              >
-                <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.saveButton,
-                  { 
-                    backgroundColor: currentTheme.colors.primary,
-                    opacity: pregnancyCoverDate ? 1 : 0.5
-                  },
-                ]}
-                onPress={handleStartPregnancy}
-                disabled={!pregnancyCoverDate}
-              >
-                <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
-                  Start Pregnancy
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </Modal>
     </View>
@@ -7016,6 +6994,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inder",
     color: "#666",
+  },
+  pregnancyFormContainer: {
+    paddingVertical: 20,
+  },
+  pregnancyFormTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  pregnancyFormActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  pregnancyFormButton: {
+    flex: 1,
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pregnancyCancelButton: {
+    // backgroundColor set dynamically
+  },
+  pregnancySaveButton: {
+    // backgroundColor set dynamically
+  },
+  pregnancyFormButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
   },
 
   // Document Viewer Modal Styles
