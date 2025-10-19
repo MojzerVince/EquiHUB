@@ -296,7 +296,6 @@ const MyHorsesScreen = () => {
   
   // Pregnancy form state
   const [pregnancyCoverDate, setPregnancyCoverDate] = useState<Date | null>(null);
-  const [pregnancyStallion, setPregnancyStallion] = useState("");
   const [pregnancyMethod, setPregnancyMethod] = useState<BreedingMethod>("natural");
   const [pregnancyVetName, setPregnancyVetName] = useState("");
   const [pregnancyVetPhone, setPregnancyVetPhone] = useState("");
@@ -1260,7 +1259,7 @@ const MyHorsesScreen = () => {
     createPregnancy(
       selectedHorseForRecords.id,
       coverDateStr,
-      pregnancyStallion || undefined,
+      undefined,
       pregnancyMethod
     );
 
@@ -1281,7 +1280,6 @@ const MyHorsesScreen = () => {
 
     // Reset form and close modal
     setPregnancyCoverDate(null);
-    setPregnancyStallion("");
     setPregnancyMethod("natural");
     setPregnancyVetName("");
     setPregnancyVetPhone("");
@@ -5119,27 +5117,6 @@ const MyHorsesScreen = () => {
                                 />
                               </View>
 
-                              {/* Stallion Name - Optional */}
-                              <View style={styles.inputGroup}>
-                                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                                  Stallion Name (Optional)
-                                </Text>
-                                <TextInput
-                                  style={[
-                                    styles.input,
-                                    {
-                                      backgroundColor: currentTheme.colors.accent,
-                                      color: currentTheme.colors.text,
-                                      borderColor: currentTheme.colors.primary,
-                                    },
-                                  ]}
-                                  value={pregnancyStallion}
-                                  onChangeText={setPregnancyStallion}
-                                  placeholder="Enter stallion name"
-                                  placeholderTextColor={currentTheme.colors.textSecondary}
-                                />
-                              </View>
-
                               {/* Breeding Method - Optional */}
                               <View style={styles.inputGroup}>
                                 <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
@@ -5256,7 +5233,6 @@ const MyHorsesScreen = () => {
                                     setPregnancyModalVisible(false);
                                     // Reset form
                                     setPregnancyCoverDate(null);
-                                    setPregnancyStallion("");
                                     setPregnancyMethod("natural");
                                     setPregnancyVetName("");
                                     setPregnancyVetPhone("");
