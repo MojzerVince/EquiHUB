@@ -14,6 +14,7 @@ import {
   Dimensions,
   Image,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -3607,8 +3608,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -45,
-    marginTop: -5,
+    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   header: {
     fontSize: 30,
@@ -3674,7 +3675,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 10,
     paddingHorizontal: 16,
   },
   sectionTitle: {
@@ -3727,6 +3728,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 10,
   },
   searchButton: {
     width: 40,
@@ -4046,8 +4048,8 @@ const styles = StyleSheet.create({
   // Notification and Friend Request Styles
   notificationBadge: {
     position: "absolute",
-    top: -5,
-    right: -5,
+    top: 0,
+    right: 0,
     backgroundColor: "#FF4444",
     borderRadius: 10,
     minWidth: 20,
@@ -4603,6 +4605,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
     paddingHorizontal: 4,
+    borderRadius: 12,
   },
   leaderboardRank: {
     width: 30,
