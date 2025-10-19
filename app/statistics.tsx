@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -547,7 +548,6 @@ const StatisticsScreen = () => {
               />
             </TouchableOpacity>
             <Text style={styles.header}>Statistics</Text>
-            <View style={styles.placeholder} />
           </View>
           <View
             style={[
@@ -579,7 +579,7 @@ const StatisticsScreen = () => {
     >
       <SafeAreaView
         style={[
-          styles.container,
+          styles.safeArea,
           { backgroundColor: currentTheme.colors.primary },
         ]}
       >
@@ -594,12 +594,12 @@ const StatisticsScreen = () => {
             />
           </TouchableOpacity>
           <Text style={styles.header}>Statistics</Text>
-          <View style={styles.placeholder} />
         </View>
+      </SafeAreaView>
 
         <ScrollView
           style={[
-            styles.content,
+            styles.viewPort,
             { backgroundColor: currentTheme.colors.background },
           ]}
         >
@@ -842,7 +842,6 @@ const StatisticsScreen = () => {
             </View>
           )}
         </ScrollView>
-      </SafeAreaView>
     </View>
   );
 };
@@ -859,11 +858,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: -10,
-    marginTop: -12,
+    position: "relative",
+    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   backButton: {
+    position: "absolute",
+    left: 20,
     padding: 10,
     borderRadius: 20,
     minWidth: 40,
@@ -876,26 +877,23 @@ const styles = StyleSheet.create({
   backIcon: {
     width: 26,
     height: 26,
+    tintColor: "#fff",
   },
   header: {
     fontSize: 30,
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",
-    fontWeight: 600,
     flex: 1,
+    fontWeight: "600",
   },
-  placeholder: {
-    width: 40,
-    height: 40,
-  },
-  content: {
-    flex: 1,
+  viewPort: {
     backgroundColor: "#FFFFFF",
+    flex: 1,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
-    marginTop: 5,
-    paddingHorizontal: 30,
+    marginTop: -8,
+    paddingHorizontal: 20,
   },
   loadingContainer: {
     flex: 1,
