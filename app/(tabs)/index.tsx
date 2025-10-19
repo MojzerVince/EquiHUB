@@ -1290,11 +1290,6 @@ const MyHorsesScreen = () => {
     setPregnancyModalVisible(false);
     setPregnancies(prev => ({ ...prev, [tempHorseId]: newPregnancy }));
     setSelectedPregnancy(newPregnancy);
-
-    // Show success message after a brief delay to ensure UI has updated
-    setTimeout(() => {
-      showSuccess(`Pregnancy started for ${tempHorseName}! Your 340-day timeline has been created with automatic milestones.`);
-    }, 100);
   };
 
   const handleAddEvent = () => {
