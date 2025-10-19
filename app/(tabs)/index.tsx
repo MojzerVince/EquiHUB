@@ -979,6 +979,16 @@ const MyHorsesScreen = () => {
             );
           }
 
+          // Clean up pregnancy data for deleted horse
+          if (pregnancies[horse.id]) {
+            const updatedPregnancies = { ...pregnancies };
+            delete updatedPregnancies[horse.id];
+            await savePregnancies(updatedPregnancies);
+            console.log(
+              `🗑️ Removed pregnancy data for deleted horse: ${horse.name}`
+            );
+          }
+
           // Add a small delay to ensure the delete has been processed on the server
           await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -1088,6 +1098,33 @@ const MyHorsesScreen = () => {
     } catch (error) {
       console.error("Error saving vaccination reminders:", error);
       showError("Failed to save vaccination reminder");
+    }
+  };
+
+  // Pregnancy data persistence functions
+  const loadPregnancies = async () => {
+    try {
+      const savedPregnancies = await AsyncStorage.getItem(
+        `pregnancies_${user?.id}`
+      );
+      if (savedPregnancies) {
+        setPregnancies(JSON.parse(savedPregnancies));
+      }
+    } catch (error) {
+      console.error("Error loading pregnancies:", error);
+    }
+  };
+
+  const savePregnancies = async (pregnancyData: Record<string, Pregnancy>) => {
+    try {
+      await AsyncStorage.setItem(
+        `pregnancies_${user?.id}`,
+        JSON.stringify(pregnancyData)
+      );
+      setPregnancies(pregnancyData);
+    } catch (error) {
+      console.error("Error saving pregnancies:", error);
+      showError("Failed to save pregnancy data");
     }
   };
 
@@ -1288,8 +1325,13 @@ const MyHorsesScreen = () => {
     setPregnancyVetName("");
     setPregnancyVetPhone("");
     setPregnancyModalVisible(false);
-    setPregnancies(prev => ({ ...prev, [tempHorseId]: newPregnancy }));
+    
+    const updatedPregnancies = { ...pregnancies, [tempHorseId]: newPregnancy };
+    setPregnancies(updatedPregnancies);
     setSelectedPregnancy(newPregnancy);
+    
+    // Save to AsyncStorage
+    savePregnancies(updatedPregnancies);
   };
 
   const handleAddEvent = () => {
@@ -1327,11 +1369,15 @@ const MyHorsesScreen = () => {
     updatedPregnancy.updatedAt = new Date().toISOString();
 
     // Update pregnancy
-    setPregnancies(prev => ({
-      ...prev,
+    const updatedPregnancies = {
+      ...pregnancies,
       [updatedPregnancy.horseId]: updatedPregnancy
-    }));
+    };
+    setPregnancies(updatedPregnancies);
     setSelectedPregnancy(updatedPregnancy);
+    
+    // Save to AsyncStorage
+    savePregnancies(updatedPregnancies);
 
     // Reset form
     setEventDate(null);
@@ -1374,11 +1420,15 @@ const MyHorsesScreen = () => {
         updatedAt: new Date().toISOString()
       };
 
-      setPregnancies(prev => ({
-        ...prev,
+      const updatedPregnancies = {
+        ...pregnancies,
         [updatedPregnancy.horseId]: updatedPregnancy
-      }));
+      };
+      setPregnancies(updatedPregnancies);
       setSelectedPregnancy(updatedPregnancy);
+      
+      // Save to AsyncStorage
+      savePregnancies(updatedPregnancies);
 
       showSuccess("Photo captured successfully!");
     }
@@ -1416,11 +1466,15 @@ const MyHorsesScreen = () => {
         updatedAt: new Date().toISOString()
       };
 
-      setPregnancies(prev => ({
-        ...prev,
+      const updatedPregnancies = {
+        ...pregnancies,
         [updatedPregnancy.horseId]: updatedPregnancy
-      }));
+      };
+      setPregnancies(updatedPregnancies);
       setSelectedPregnancy(updatedPregnancy);
+      
+      // Save to AsyncStorage
+      savePregnancies(updatedPregnancies);
 
       showSuccess("Photo added successfully!");
     }
@@ -2020,11 +2074,12 @@ const MyHorsesScreen = () => {
     }
   };
 
-  // Load vaccination reminders when component mounts
+  // Load vaccination reminders and pregnancies when component mounts
   useEffect(() => {
     if (user?.id) {
       loadVaccinationReminders();
       loadHorseDocuments();
+      loadPregnancies();
     }
   }, [user?.id]);
 
