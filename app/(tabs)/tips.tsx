@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import {
   Image,
   Modal,
-  RefreshControl,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -69,7 +69,6 @@ const CoachScreen = () => {
   const { currentTheme } = useTheme();
   const { isProMember } = useSubscription();
   const theme = currentTheme.colors;
-  const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTutorial, setSelectedTutorial] = useState<{
     id: string;
@@ -506,16 +505,6 @@ const CoachScreen = () => {
         keyword.toLowerCase().includes(emergencySearchQuery.toLowerCase())
       )
   );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    // In a real app, you would fetch updated progress from an API
-    // For now, just refresh the data without making changes
-
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  };
 
   const updateLessonProgress = (
     tutorialId: string,
@@ -1072,9 +1061,6 @@ const CoachScreen = () => {
           { backgroundColor: currentTheme.colors.background },
         ]}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
       >
         {selectedCategory ? (
           // Show tutorials for selected category
@@ -1193,8 +1179,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -45,
-    marginTop: -5,
+    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   header: {
     fontSize: 30,
