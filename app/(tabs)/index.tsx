@@ -1126,7 +1126,7 @@ const MyHorsesScreen = () => {
   };
 
   const openPregnancyManager = () => {
-    if (selectedHorseForRecords) {
+    if (selectedHorseForRecords && selectedHorseForRecords.gender === "Mare") {
       const pregnancy = pregnancies[selectedHorseForRecords.id];
       setSelectedPregnancy(pregnancy || null);
       setRecordsSection("pregnancy");
@@ -4839,7 +4839,7 @@ const MyHorsesScreen = () => {
                   )}
 
                   {/* Pregnancy Manager Section */}
-                  {recordsSection === "pregnancy" && (
+                  {recordsSection === "pregnancy" && selectedHorseForRecords?.gender === "Mare" && (
                     <View>
                       <View style={styles.pregnancyHeader}>
                         <Text
