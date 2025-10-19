@@ -128,7 +128,7 @@ interface Pregnancy {
 }
 
 // Dropdown options
-const genderOptions = ["Stallion", "Mare", "Gelding", "Filly", "Colt"];
+const genderOptions = ["Stallion", "Mare", "Gelding"];
 
 const breedOptions = [
   "Arabian",
