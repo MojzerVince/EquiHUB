@@ -302,6 +302,16 @@ const MyHorsesScreen = () => {
   const [pregnancyVetPhone, setPregnancyVetPhone] = useState("");
   const [showPregnancyCoverDatePicker, setShowPregnancyCoverDatePicker] = useState(false);
 
+  // Add Event Modal state
+  const [addEventModalVisible, setAddEventModalVisible] = useState(false);
+  const [eventType, setEventType] = useState<"ultrasound" | "vaccine" | "deworming" | "note">("ultrasound");
+  const [eventDate, setEventDate] = useState<Date | null>(null);
+  const [eventNotes, setEventNotes] = useState("");
+  const [showEventDatePicker, setShowEventDatePicker] = useState(false);
+
+  // Photo capture state
+  const [photoCaptureModalVisible, setPhotoCaptureModalVisible] = useState(false);
+
   // Enhanced vaccination state
   const [vaccinationId, setVaccinationId] = useState("");
   const [vaccinationType, setVaccinationType] = useState<"future" | "past">(
@@ -1278,6 +1288,140 @@ const MyHorsesScreen = () => {
     setPregnancyModalVisible(false);
 
     showSuccess(`Pregnancy started for ${selectedHorseForRecords.name}! Your 340-day timeline has been created with automatic milestones.`);
+  };
+
+  const handleAddEvent = () => {
+    if (!eventDate || !selectedPregnancy) {
+      showError("Please select an event date.");
+      return;
+    }
+
+    const eventDateStr = eventDate.toISOString().split('T')[0];
+    const updatedPregnancy = { ...selectedPregnancy };
+
+    if (eventType === "ultrasound") {
+      updatedPregnancy.checks.push({
+        type: "US-40-60" as CheckType,
+        date: eventDateStr,
+        done: true,
+        notes: eventNotes || undefined
+      });
+    } else if (eventType === "vaccine") {
+      updatedPregnancy.vaccines.push({
+        type: "EHV-1" as VaccineType,
+        due: eventDateStr,
+        done: true,
+        notes: eventNotes || undefined
+      });
+    } else if (eventType === "deworming") {
+      updatedPregnancy.deworming.push({
+        type: "pre-foaling",
+        due: eventDateStr,
+        done: true,
+        notes: eventNotes || undefined
+      });
+    }
+
+    updatedPregnancy.updatedAt = new Date().toISOString();
+
+    // Update pregnancy
+    setPregnancies(prev => ({
+      ...prev,
+      [updatedPregnancy.horseId]: updatedPregnancy
+    }));
+    setSelectedPregnancy(updatedPregnancy);
+
+    // Reset form
+    setEventDate(null);
+    setEventNotes("");
+    setEventType("ultrasound");
+    setAddEventModalVisible(false);
+
+    showSuccess("Event added successfully!");
+  };
+
+  const handleCapturePhoto = async () => {
+    if (!selectedPregnancy) return;
+
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    
+    if (!permissionResult.granted) {
+      showError("Camera permission is required to capture photos.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const photo: PregnancyPhoto = {
+        date: new Date().toISOString().split('T')[0],
+        dayPregnant: getDaysPregnant(selectedPregnancy),
+        view: "left-lateral",
+        url: result.assets[0].uri,
+        month: getPregnancyMonth(getDaysPregnant(selectedPregnancy))
+      };
+
+      const updatedPregnancy = {
+        ...selectedPregnancy,
+        photos: [...(selectedPregnancy.photos || []), photo],
+        updatedAt: new Date().toISOString()
+      };
+
+      setPregnancies(prev => ({
+        ...prev,
+        [updatedPregnancy.horseId]: updatedPregnancy
+      }));
+      setSelectedPregnancy(updatedPregnancy);
+
+      showSuccess("Photo captured successfully!");
+    }
+  };
+
+  const handlePickPhotoFromLibrary = async () => {
+    if (!selectedPregnancy) return;
+
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (!permissionResult.granted) {
+      showError("Photo library permission is required.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const photo: PregnancyPhoto = {
+        date: new Date().toISOString().split('T')[0],
+        dayPregnant: getDaysPregnant(selectedPregnancy),
+        view: "left-lateral",
+        url: result.assets[0].uri,
+        month: getPregnancyMonth(getDaysPregnant(selectedPregnancy))
+      };
+
+      const updatedPregnancy = {
+        ...selectedPregnancy,
+        photos: [...(selectedPregnancy.photos || []), photo],
+        updatedAt: new Date().toISOString()
+      };
+
+      setPregnancies(prev => ({
+        ...prev,
+        [updatedPregnancy.horseId]: updatedPregnancy
+      }));
+      setSelectedPregnancy(updatedPregnancy);
+
+      showSuccess("Photo added successfully!");
+    }
   };
 
   const openVaccinationModal = (horse: Horse) => {
@@ -5268,9 +5412,7 @@ const MyHorsesScreen = () => {
                                     styles.addEventButton,
                                     { backgroundColor: currentTheme.colors.primary }
                                   ]}
-                                  onPress={() => {
-                                    // Show add event modal
-                                  }}
+                                  onPress={() => setAddEventModalVisible(true)}
                                 >
                                   <Text style={styles.addEventButtonText}>+ Add Event</Text>
                                 </TouchableOpacity>
@@ -5329,9 +5471,7 @@ const MyHorsesScreen = () => {
                                     styles.capturePhotoButton,
                                     { backgroundColor: currentTheme.colors.primary }
                                   ]}
-                                  onPress={() => {
-                                    // Show photo capture modal with left-lateral overlay
-                                  }}
+                                  onPress={() => setPhotoCaptureModalVisible(true)}
                                 >
                                   <Text style={styles.capturePhotoButtonText}>📷 Capture Photo</Text>
                                 </TouchableOpacity>
@@ -5340,7 +5480,14 @@ const MyHorsesScreen = () => {
                                   <View style={styles.photoGrid}>
                                     {selectedPregnancy.photos.map((photo, index) => (
                                       <View key={index} style={styles.photoItem}>
-                                        <Text style={styles.photoDay}>Day {photo.dayPregnant}</Text>
+                                        <Image 
+                                          source={{ uri: photo.url }}
+                                          style={styles.photoImage}
+                                          resizeMode="cover"
+                                        />
+                                        <View style={styles.photoOverlay}>
+                                          <Text style={styles.photoDay}>Day {photo.dayPregnant}</Text>
+                                        </View>
                                       </View>
                                     ))}
                                   </View>
@@ -5646,6 +5793,278 @@ const MyHorsesScreen = () => {
                 </TouchableOpacity>
               </View>
             )}
+          </View>
+        </Modal>
+
+        {/* Add Event Modal */}
+        <Modal
+          visible={addEventModalVisible}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setAddEventModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: currentTheme.colors.background }}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.modalTitle,
+                    {
+                      color: currentTheme.colors.text,
+                      textAlign: "center",
+                    },
+                  ]}
+                >
+                  Add Event
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setAddEventModalVisible(false)}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              {/* Event Type Selection */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                  Event Type
+                </Text>
+                <View style={styles.eventTypeGrid}>
+                  <TouchableOpacity
+                    style={[
+                      styles.eventTypeButton,
+                      eventType === "ultrasound" && styles.eventTypeButtonActive,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
+                    onPress={() => setEventType("ultrasound")}
+                  >
+                    <Text style={styles.eventTypeIcon}>🔍</Text>
+                    <Text style={[
+                      styles.eventTypeText,
+                      eventType === "ultrasound" && styles.eventTypeTextActive
+                    ]}>
+                      Ultrasound
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.eventTypeButton,
+                      eventType === "vaccine" && styles.eventTypeButtonActive,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
+                    onPress={() => setEventType("vaccine")}
+                  >
+                    <Text style={styles.eventTypeIcon}>💉</Text>
+                    <Text style={[
+                      styles.eventTypeText,
+                      eventType === "vaccine" && styles.eventTypeTextActive
+                    ]}>
+                      Vaccine
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.eventTypeButton,
+                      eventType === "deworming" && styles.eventTypeButtonActive,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
+                    onPress={() => setEventType("deworming")}
+                  >
+                    <Text style={styles.eventTypeIcon}>💊</Text>
+                    <Text style={[
+                      styles.eventTypeText,
+                      eventType === "deworming" && styles.eventTypeTextActive
+                    ]}>
+                      Deworming
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.eventTypeButton,
+                      eventType === "note" && styles.eventTypeButtonActive,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
+                    onPress={() => setEventType("note")}
+                  >
+                    <Text style={styles.eventTypeIcon}>📝</Text>
+                    <Text style={[
+                      styles.eventTypeText,
+                      eventType === "note" && styles.eventTypeTextActive
+                    ]}>
+                      Note
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Event Date */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                  Event Date *
+                </Text>
+                <DatePicker
+                  value={eventDate}
+                  placeholder="Select event date"
+                  onSelect={setEventDate}
+                  isVisible={showEventDatePicker}
+                  setVisible={setShowEventDatePicker}
+                />
+              </View>
+
+              {/* Notes */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                  Notes (Optional)
+                </Text>
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    {
+                      backgroundColor: currentTheme.colors.accent,
+                      color: currentTheme.colors.text,
+                      borderColor: currentTheme.colors.primary,
+                      minHeight: 100,
+                      textAlignVertical: "top",
+                    },
+                  ]}
+                  value={eventNotes}
+                  onChangeText={setEventNotes}
+                  placeholder="Enter any notes or observations..."
+                  placeholderTextColor={currentTheme.colors.textSecondary}
+                  multiline
+                />
+              </View>
+            </ScrollView>
+
+            {/* Footer Actions */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.cancelButton,
+                  { backgroundColor: currentTheme.colors.textSecondary },
+                ]}
+                onPress={() => {
+                  setAddEventModalVisible(false);
+                  setEventDate(null);
+                  setEventNotes("");
+                  setEventType("ultrasound");
+                }}
+              >
+                <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.saveButton,
+                  { 
+                    backgroundColor: currentTheme.colors.primary,
+                    opacity: eventDate ? 1 : 0.5
+                  },
+                ]}
+                onPress={handleAddEvent}
+                disabled={!eventDate}
+              >
+                <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
+                  Add Event
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Photo Capture Modal */}
+        <Modal
+          visible={photoCaptureModalVisible}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setPhotoCaptureModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: currentTheme.colors.background }}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.modalTitle,
+                    {
+                      color: currentTheme.colors.text,
+                      textAlign: "center",
+                    },
+                  ]}
+                >
+                  Capture Progress Photo
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setPhotoCaptureModalVisible(false)}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.photoCaptureContent}>
+              <Text style={[styles.photoCaptureTitle, { color: currentTheme.colors.text }]}>
+                Choose Photo Source
+              </Text>
+              <Text style={[styles.photoCaptureSubtitle, { color: currentTheme.colors.textSecondary }]}>
+                Capture a new photo or select from your library
+              </Text>
+
+              <View style={styles.photoSourceButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.photoSourceButton,
+                    { backgroundColor: currentTheme.colors.primary }
+                  ]}
+                  onPress={() => {
+                    setPhotoCaptureModalVisible(false);
+                    handleCapturePhoto();
+                  }}
+                >
+                  <Text style={styles.photoSourceIcon}>📷</Text>
+                  <Text style={styles.photoSourceText}>Take Photo</Text>
+                  <Text style={styles.photoSourceSubtext}>Use camera</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.photoSourceButton,
+                    { backgroundColor: currentTheme.colors.accent, borderWidth: 2, borderColor: currentTheme.colors.primary }
+                  ]}
+                  onPress={() => {
+                    setPhotoCaptureModalVisible(false);
+                    handlePickPhotoFromLibrary();
+                  }}
+                >
+                  <Text style={styles.photoSourceIcon}>🖼️</Text>
+                  <Text style={[styles.photoSourceText, { color: currentTheme.colors.text }]}>
+                    Choose from Library
+                  </Text>
+                  <Text style={[styles.photoSourceSubtext, { color: currentTheme.colors.textSecondary }]}>
+                    Select existing photo
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.photoTipBanner}>
+                <Text style={styles.photoTipIcon}>💡</Text>
+                <View style={styles.photoTipContent}>
+                  <Text style={styles.photoTipTitle}>Photography Tip</Text>
+                  <Text style={styles.photoTipText}>
+                    For best results, photograph your mare from the left side (left-lateral view) in good lighting. This allows consistent comparison throughout the pregnancy.
+                  </Text>
+                </View>
+              </View>
+            </View>
           </View>
         </Modal>
     </View>
@@ -7163,13 +7582,134 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     backgroundColor: "#f0f0f0",
     borderRadius: 8,
-    justifyContent: "center",
+    overflow: "hidden",
+    position: "relative",
+  },
+  photoImage: {
+    width: "100%",
+    height: "100%",
+  },
+  photoOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    padding: 8,
     alignItems: "center",
   },
   photoDay: {
     fontSize: 14,
     fontFamily: "Inder",
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+  
+  // Add Event Modal Styles
+  eventTypeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 10,
+  },
+  eventTypeButton: {
+    width: "48%",
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 2,
+    backgroundColor: "#f5f5f5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  eventTypeButtonActive: {
+    backgroundColor: "#ff69b4",
+    borderColor: "#ff69b4",
+  },
+  eventTypeIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  eventTypeText: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Inder",
     color: "#666",
+  },
+  eventTypeTextActive: {
+    color: "#FFFFFF",
+  },
+
+  // Photo Capture Modal Styles
+  photoCaptureContent: {
+    flex: 1,
+    padding: 20,
+    justifyContent: "center",
+  },
+  photoCaptureTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  photoCaptureSubtitle: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginBottom: 40,
+  },
+  photoSourceButtons: {
+    gap: 15,
+    marginBottom: 40,
+  },
+  photoSourceButton: {
+    padding: 25,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoSourceIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  photoSourceText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    color: "#FFFFFF",
+    marginBottom: 5,
+  },
+  photoSourceSubtext: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    color: "rgba(255, 255, 255, 0.8)",
+  },
+  photoTipBanner: {
+    flexDirection: "row",
+    backgroundColor: "#fff3cd",
+    borderRadius: 12,
+    padding: 15,
+    alignItems: "flex-start",
+  },
+  photoTipIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  photoTipContent: {
+    flex: 1,
+  },
+  photoTipTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    color: "#856404",
+    marginBottom: 5,
+  },
+  photoTipText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    color: "#856404",
+    lineHeight: 20,
   },
   pregnancyFormContainer: {
     paddingVertical: 20,
