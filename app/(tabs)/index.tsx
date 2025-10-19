@@ -27,6 +27,106 @@ import { HorseAPI } from "../../lib/horseAPI";
 import PaymentService from "../../lib/paymentService";
 import { Horse } from "../../lib/supabase";
 
+// Pregnancy Timeline Types
+type PregnancyStatus = "active" | "foaled" | "lost";
+type BreedingMethod = "natural" | "AI" | "ICSI";
+type CheckType = "US-14-16" | "Heartbeat-25-30" | "US-40-60" | "Sexing-55-70" | "Sexing-110-150" | "Fall-check";
+type VaccineType = "EHV-1" | "Core-prefoal";
+type AlertType = "red-bag" | "placenta>3h" | "discharge" | "fever" | "udder-premature";
+
+interface PregnancyCheck {
+  type: CheckType;
+  date?: string;
+  due?: string;
+  result?: string;
+  fetusSex?: string;
+  notes?: string;
+  done?: boolean;
+}
+
+interface PregnancyVaccine {
+  type: VaccineType;
+  due: string;
+  done?: boolean;
+  notes?: string;
+}
+
+interface PregnancyHusbandry {
+  bcsTarget?: string;
+  fescueRemovedOn?: string | null;
+  dietNotes?: string;
+}
+
+interface PregnancyDeworming {
+  type: "pre-foaling";
+  due: string;
+  drug?: "ivermectin" | "benzimidazole";
+  done?: boolean;
+  notes?: string;
+}
+
+interface MilkCalciumReading {
+  date: string;
+  ppm: number;
+  notes?: string;
+}
+
+interface PregnancyPhoto {
+  date: string;
+  dayPregnant: number;
+  view: "left-lateral";
+  url: string;
+  month?: number;
+}
+
+interface PregnancyAlert {
+  type: AlertType;
+  active: boolean;
+  date: string;
+  notes?: string;
+}
+
+interface FoalingDetails {
+  date: string;
+  time?: string;
+  foalSex?: string;
+  foalWeight?: number;
+  placentaPassedTime?: string;
+  foalStoodTime?: string;
+  foalNursedTime?: string;
+  placentaPhoto?: string;
+  complications?: string;
+  notes?: string;
+}
+
+interface Pregnancy {
+  id: string;
+  horseId: string;
+  status: PregnancyStatus;
+  coverDate: string;
+  ovulationDate?: string;
+  dueDateEstimate: string;
+  dueWindowStart: string;
+  dueWindowEnd: string;
+  stallion?: string;
+  method?: BreedingMethod;
+  vet?: {
+    name?: string;
+    phone?: string;
+  };
+  checks: PregnancyCheck[];
+  vaccines: PregnancyVaccine[];
+  husbandry?: PregnancyHusbandry;
+  deworming: PregnancyDeworming[];
+  milkCalcium: MilkCalciumReading[];
+  photos: PregnancyPhoto[];
+  alerts: PregnancyAlert[];
+  notes?: string;
+  foalingDetails?: FoalingDetails;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Dropdown options
 const genderOptions = ["Stallion", "Mare", "Gelding", "Filly", "Colt"];
 
@@ -100,7 +200,7 @@ const breedOptions = [
 const MyHorsesScreen = () => {
   const { user, loading: authLoading } = useAuth();
   const { currentTheme } = useTheme();
-  const { showError, showDelete, showConfirm } = useDialog();
+  const { showError, showDelete, showConfirm, showSuccess } = useDialog();
   const {
     formatHeight,
     formatWeight,
@@ -185,8 +285,22 @@ const MyHorsesScreen = () => {
   const [selectedHorseForRecords, setSelectedHorseForRecords] =
     useState<Horse | null>(null);
   const [recordsSection, setRecordsSection] = useState<
-    "main" | "vaccination" | "document" | "rider"
+    "main" | "vaccination" | "document" | "rider" | "pregnancy"
   >("main");
+
+  // Pregnancy state
+  const [pregnancies, setPregnancies] = useState<Record<string, Pregnancy>>({});
+  const [selectedPregnancy, setSelectedPregnancy] = useState<Pregnancy | null>(null);
+  const [pregnancyView, setPregnancyView] = useState<"timeline" | "fruit" | "photos">("timeline");
+  const [pregnancyModalVisible, setPregnancyModalVisible] = useState(false);
+  
+  // Pregnancy form state
+  const [pregnancyCoverDate, setPregnancyCoverDate] = useState<Date | null>(null);
+  const [pregnancyStallion, setPregnancyStallion] = useState("");
+  const [pregnancyMethod, setPregnancyMethod] = useState<BreedingMethod>("natural");
+  const [pregnancyVetName, setPregnancyVetName] = useState("");
+  const [pregnancyVetPhone, setPregnancyVetPhone] = useState("");
+  const [showPregnancyCoverDatePicker, setShowPregnancyCoverDatePicker] = useState(false);
 
   // Enhanced vaccination state
   const [vaccinationId, setVaccinationId] = useState("");
@@ -1011,8 +1125,159 @@ const MyHorsesScreen = () => {
     setRecordsSection("rider");
   };
 
+  const openPregnancyManager = () => {
+    if (selectedHorseForRecords) {
+      const pregnancy = pregnancies[selectedHorseForRecords.id];
+      setSelectedPregnancy(pregnancy || null);
+      setRecordsSection("pregnancy");
+    }
+  };
+
   const backToRecordsMain = () => {
     setRecordsSection("main");
+  };
+
+  // Pregnancy helper functions
+  const addDays = (date: Date, days: number): string => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result.toISOString().split('T')[0];
+  };
+
+  const addMonths = (date: Date, months: number): string => {
+    const result = new Date(date);
+    result.setMonth(result.getMonth() + months);
+    return result.toISOString().split('T')[0];
+  };
+
+  const buildPregnancyPlan = (coverDate: string): Omit<Pregnancy, 'id' | 'horseId' | 'createdAt' | 'updatedAt' | 'status'> => {
+    const cover = new Date(coverDate);
+    return {
+      coverDate,
+      dueDateEstimate: addDays(cover, 340),
+      dueWindowStart: addDays(cover, 320),
+      dueWindowEnd: addDays(cover, 362),
+      checks: [
+        { type: "US-14-16", due: addDays(cover, 14), done: false },
+        { type: "Heartbeat-25-30", due: addDays(cover, 26), done: false },
+        { type: "US-40-60", due: addDays(cover, 50), done: false },
+        { type: "Sexing-55-70", due: addDays(cover, 62), done: false },
+        { type: "Fall-check", due: addDays(cover, 200), done: false }
+      ],
+      vaccines: [
+        { type: "EHV-1", due: addMonths(cover, 5), done: false },
+        { type: "EHV-1", due: addMonths(cover, 7), done: false },
+        { type: "EHV-1", due: addMonths(cover, 9), done: false },
+        { type: "Core-prefoal", due: addDays(cover, 305), done: false }
+      ],
+      deworming: [
+        { type: "pre-foaling", due: addDays(cover, 338), done: false }
+      ],
+      milkCalcium: [],
+      photos: [],
+      alerts: []
+    };
+  };
+
+  const createPregnancy = (horseId: string, coverDate: string, stallion?: string, method?: BreedingMethod) => {
+    const pregnancyId = `pregnancy-${horseId}-${Date.now()}`;
+    const plan = buildPregnancyPlan(coverDate);
+    const newPregnancy: Pregnancy = {
+      id: pregnancyId,
+      horseId,
+      status: "active",
+      ...plan,
+      stallion,
+      method,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setPregnancies(prev => ({ ...prev, [horseId]: newPregnancy }));
+    setSelectedPregnancy(newPregnancy);
+  };
+
+  const getDaysPregnant = (pregnancy: Pregnancy): number => {
+    const cover = new Date(pregnancy.coverDate);
+    const today = new Date();
+    const diff = today.getTime() - cover.getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const getPregnancyMonth = (daysPregnant: number): number => {
+    return Math.min(Math.floor(daysPregnant / 30) + 1, 11);
+  };
+
+  const getNextAction = (pregnancy: Pregnancy): { text: string; daysUntil: number } | null => {
+    const today = new Date();
+    const upcoming = [
+      ...pregnancy.checks.filter(c => !c.done && c.due).map(c => ({ text: `Ultrasound: ${c.type}`, date: c.due! })),
+      ...pregnancy.vaccines.filter(v => !v.done).map(v => ({ text: `Vaccine: ${v.type}`, date: v.due })),
+      ...pregnancy.deworming.filter(d => !d.done).map(d => ({ text: `Deworm (pre-foaling)`, date: d.due }))
+    ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    if (upcoming.length > 0) {
+      const next = upcoming[0];
+      const daysUntil = Math.ceil((new Date(next.date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return { text: next.text, daysUntil };
+    }
+    return null;
+  };
+
+  const getMonthInfo = (month: number): { fruit: string; size: string; description: string } => {
+    const monthData = [
+      { fruit: "🫐", size: "Grape/Blueberry (~1 cm)", description: "Embryo visible; first ultrasound at D14-16; heartbeat by D24-26" },
+      { fruit: "🍑", size: "Plum/Kiwi (~3-4 cm)", description: "Rapid growth; confirm heartbeat; recheck for twins" },
+      { fruit: "🍋", size: "Lemon to Small Pear (~12-15 cm)", description: "Organs forming; major development phase" },
+      { fruit: "🍆", size: "Small Eggplant (~20 cm)", description: "Facial hair buds appear" },
+      { fruit: "🥒", size: "Butternut Squash (~30 cm)", description: "Eyelids and coat developing; EHV-1 vaccine due" },
+      { fruit: "🍉", size: "Small Watermelon (~40 cm)", description: "Clear weight gain begins in mare" },
+      { fruit: "🍉", size: "Medium Watermelon (~50 cm)", description: "Tail hair appears; EHV-1 vaccine due" },
+      { fruit: "🎃", size: "Large Pumpkin (~60 cm)", description: "Mane and back hair developing" },
+      { fruit: "🎃", size: "Giant Pumpkin (~70 cm)", description: "Fine coat over body; EHV-1 vaccine due; remove fescue" },
+      { fruit: "🍉", size: "Very Large Watermelon (~80 cm)", description: "Major growth spurt; increase feed; prep foaling area" },
+      { fruit: "🎃", size: "Massive Pumpkin (~90+ cm)", description: "Final preparations; watch for foaling signs; pre-foaling deworm" }
+    ];
+    return monthData[Math.min(month - 1, 10)];
+  };
+
+  const handleStartPregnancy = () => {
+    if (!pregnancyCoverDate || !selectedHorseForRecords) {
+      showError("Please select a cover date to continue.");
+      return;
+    }
+
+    const coverDateStr = pregnancyCoverDate.toISOString().split('T')[0];
+    createPregnancy(
+      selectedHorseForRecords.id,
+      coverDateStr,
+      pregnancyStallion || undefined,
+      pregnancyMethod
+    );
+
+    // Update the pregnancy with vet info if provided
+    if (pregnancyVetName || pregnancyVetPhone) {
+      const horseId = selectedHorseForRecords.id;
+      setPregnancies(prev => ({
+        ...prev,
+        [horseId]: {
+          ...prev[horseId],
+          vet: {
+            name: pregnancyVetName || undefined,
+            phone: pregnancyVetPhone || undefined
+          }
+        }
+      }));
+    }
+
+    // Reset form and close modal
+    setPregnancyCoverDate(null);
+    setPregnancyStallion("");
+    setPregnancyMethod("natural");
+    setPregnancyVetName("");
+    setPregnancyVetPhone("");
+    setPregnancyModalVisible(false);
+
+    showSuccess(`Pregnancy started for ${selectedHorseForRecords.name}! Your 340-day timeline has been created with automatic milestones.`);
   };
 
   const openVaccinationModal = (horse: Horse) => {
@@ -3936,6 +4201,7 @@ const MyHorsesScreen = () => {
                 >
                   {recordsSection === "main" && "📋 RECORDS"}
                   {recordsSection === "vaccination" && "Vaccination Manager"}
+                  {recordsSection === "pregnancy" && "Pregnancy Timeline"}
                   {recordsSection === "document" && "Document Manager"}
                   {recordsSection === "rider" && "Rider Manager"}
                 </Text>
@@ -3982,6 +4248,27 @@ const MyHorsesScreen = () => {
                           </View>
                           <Text style={styles.recordsMenuArrow}>→</Text>
                         </TouchableOpacity>
+
+                        {selectedHorseForRecords?.gender === "Mare" && (
+                          <TouchableOpacity
+                            style={[
+                              styles.recordsMenuItem,
+                              { backgroundColor: '#ff69b4' },
+                            ]}
+                            onPress={openPregnancyManager}
+                          >
+                            <Text style={styles.recordsMenuIcon}>🤰</Text>
+                            <View style={styles.recordsMenuContent}>
+                              <Text style={styles.recordsMenuTitle}>
+                                Pregnancy Timeline
+                              </Text>
+                              <Text style={styles.recordsMenuSubtitle}>
+                                Track breeding to foaling with milestones & reminders
+                              </Text>
+                            </View>
+                            <Text style={styles.recordsMenuArrow}>→</Text>
+                          </TouchableOpacity>
+                        )}
 
                         <TouchableOpacity
                           style={[
@@ -4551,6 +4838,252 @@ const MyHorsesScreen = () => {
                     </View>
                   )}
 
+                  {/* Pregnancy Manager Section */}
+                  {recordsSection === "pregnancy" && (
+                    <View>
+                      <View style={styles.pregnancyHeader}>
+                        <Text
+                          style={[
+                            styles.pregnancyHorseName,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          Pregnancy Timeline for: {selectedHorseForRecords.name}
+                        </Text>
+                        
+                        {/* Safety Disclaimer */}
+                        <View style={styles.disclaimerBanner}>
+                          <Text style={styles.disclaimerIcon}>⚠️</Text>
+                          <Text style={styles.disclaimerText}>
+                            Educational only — contact your veterinarian for diagnosis or emergencies
+                          </Text>
+                        </View>
+
+                        {!selectedPregnancy ? (
+                          // No active pregnancy - Show "Start Pregnancy" button
+                          <View style={styles.noPregnancyContainer}>
+                            <Text style={styles.noPregnancyIcon}>🐴</Text>
+                            <Text style={[styles.noPregnancyTitle, { color: currentTheme.colors.text }]}>
+                              No Active Pregnancy
+                            </Text>
+                            <Text style={[styles.noPregnancySubtitle, { color: currentTheme.colors.textSecondary }]}>
+                              Start tracking a pregnancy for {selectedHorseForRecords.name}
+                            </Text>
+                            <TouchableOpacity
+                              style={[
+                                styles.startPregnancyButton,
+                                { backgroundColor: currentTheme.colors.primary },
+                              ]}
+                              onPress={() => {
+                                // Show start pregnancy modal
+                                setPregnancyModalVisible(true);
+                              }}
+                            >
+                              <Text style={styles.startPregnancyButtonText}>Start Pregnancy</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          // Active pregnancy exists
+                          <View>
+                            {/* Status Badge and Day Counter */}
+                            <View style={styles.pregnancyStatusContainer}>
+                              <View style={styles.statusBadge}>
+                                <Text style={styles.statusBadgeText}>
+                                  {selectedPregnancy.status === "active" ? "🤰 Active" : 
+                                   selectedPregnancy.status === "foaled" ? "🐴 Foaled" : "❌ Lost"}
+                                </Text>
+                              </View>
+                              {selectedPregnancy.status === "active" && (
+                                <View style={styles.dayCounter}>
+                                  <Text style={styles.dayCounterNumber}>
+                                    Day {getDaysPregnant(selectedPregnancy)}
+                                  </Text>
+                                  <Text style={styles.dayCounterLabel}>of ~340</Text>
+                                </View>
+                              )}
+                            </View>
+
+                            {/* Progress Bar */}
+                            {selectedPregnancy.status === "active" && (
+                              <View style={styles.progressBarContainer}>
+                                <View 
+                                  style={[
+                                    styles.progressBarFill,
+                                    { width: `${Math.min((getDaysPregnant(selectedPregnancy) / 340) * 100, 100)}%` }
+                                  ]}
+                                />
+                              </View>
+                            )}
+
+                            {/* Next Action Card */}
+                            {selectedPregnancy.status === "active" && getNextAction(selectedPregnancy) && (
+                              <View style={[styles.nextActionCard, { backgroundColor: currentTheme.colors.accent }]}>
+                                <Text style={styles.nextActionTitle}>Next Action</Text>
+                                <Text style={styles.nextActionText}>
+                                  {getNextAction(selectedPregnancy)!.text}
+                                </Text>
+                                <Text style={styles.nextActionDays}>
+                                  {getNextAction(selectedPregnancy)!.daysUntil > 0 
+                                    ? `in ${getNextAction(selectedPregnancy)!.daysUntil} days`
+                                    : getNextAction(selectedPregnancy)!.daysUntil === 0
+                                    ? "Today!"
+                                    : `${Math.abs(getNextAction(selectedPregnancy)!.daysUntil)} days overdue`
+                                  }
+                                </Text>
+                              </View>
+                            )}
+
+                            {/* View Toggle */}
+                            <View style={styles.viewToggle}>
+                              <TouchableOpacity
+                                style={[
+                                  styles.viewToggleButton,
+                                  pregnancyView === "timeline" && styles.viewToggleButtonActive,
+                                  { borderColor: currentTheme.colors.primary }
+                                ]}
+                                onPress={() => setPregnancyView("timeline")}
+                              >
+                                <Text style={[
+                                  styles.viewToggleText,
+                                  pregnancyView === "timeline" && styles.viewToggleTextActive
+                                ]}>
+                                  Timeline
+                                </Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[
+                                  styles.viewToggleButton,
+                                  pregnancyView === "fruit" && styles.viewToggleButtonActive,
+                                  { borderColor: currentTheme.colors.primary }
+                                ]}
+                                onPress={() => setPregnancyView("fruit")}
+                              >
+                                <Text style={[
+                                  styles.viewToggleText,
+                                  pregnancyView === "fruit" && styles.viewToggleTextActive
+                                ]}>
+                                  Month View
+                                </Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[
+                                  styles.viewToggleButton,
+                                  pregnancyView === "photos" && styles.viewToggleButtonActive,
+                                  { borderColor: currentTheme.colors.primary }
+                                ]}
+                                onPress={() => setPregnancyView("photos")}
+                              >
+                                <Text style={[
+                                  styles.viewToggleText,
+                                  pregnancyView === "photos" && styles.viewToggleTextActive
+                                ]}>
+                                  Photos
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+
+                            {/* Timeline View */}
+                            {pregnancyView === "timeline" && (
+                              <View style={styles.timelineContainer}>
+                                <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
+                                  Event Timeline
+                                </Text>
+                                
+                                {/* Add Event Button */}
+                                <TouchableOpacity
+                                  style={[
+                                    styles.addEventButton,
+                                    { backgroundColor: currentTheme.colors.primary }
+                                  ]}
+                                  onPress={() => {
+                                    // Show add event modal
+                                  }}
+                                >
+                                  <Text style={styles.addEventButtonText}>+ Add Event</Text>
+                                </TouchableOpacity>
+
+                                {/* Events List (reverse chronological) */}
+                                <View style={styles.eventsList}>
+                                  <Text style={[styles.placeholderText, { color: currentTheme.colors.textSecondary }]}>
+                                    Events will appear here as they are added
+                                  </Text>
+                                </View>
+                              </View>
+                            )}
+
+                            {/* Month/Fruit View */}
+                            {pregnancyView === "fruit" && (
+                              <View style={styles.fruitViewContainer}>
+                                {selectedPregnancy.status === "active" && (
+                                  <>
+                                    {(() => {
+                                      const days = getDaysPregnant(selectedPregnancy);
+                                      const month = getPregnancyMonth(days);
+                                      const info = getMonthInfo(month);
+                                      return (
+                                        <>
+                                          <View style={styles.fruitDisplay}>
+                                            <Text style={styles.fruitEmoji}>{info.fruit}</Text>
+                                            <Text style={[styles.fruitSize, { color: currentTheme.colors.text }]}>
+                                              {info.size}
+                                            </Text>
+                                            <Text style={[styles.fruitMonth, { color: currentTheme.colors.textSecondary }]}>
+                                              Month {month} of 11
+                                            </Text>
+                                          </View>
+                                          
+                                          <View style={[styles.infoCard, { backgroundColor: currentTheme.colors.accent }]}>
+                                            <Text style={styles.infoCardTitle}>What's happening:</Text>
+                                            <Text style={styles.infoCardText}>{info.description}</Text>
+                                          </View>
+                                        </>
+                                      );
+                                    })()}
+                                  </>
+                                )}
+                              </View>
+                            )}
+
+                            {/* Photos View */}
+                            {pregnancyView === "photos" && (
+                              <View style={styles.photosContainer}>
+                                <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
+                                  Progress Photos
+                                </Text>
+                                
+                                <TouchableOpacity
+                                  style={[
+                                    styles.capturePhotoButton,
+                                    { backgroundColor: currentTheme.colors.primary }
+                                  ]}
+                                  onPress={() => {
+                                    // Show photo capture modal with left-lateral overlay
+                                  }}
+                                >
+                                  <Text style={styles.capturePhotoButtonText}>📷 Capture Photo</Text>
+                                </TouchableOpacity>
+
+                                {selectedPregnancy.photos && selectedPregnancy.photos.length > 0 ? (
+                                  <View style={styles.photoGrid}>
+                                    {selectedPregnancy.photos.map((photo, index) => (
+                                      <View key={index} style={styles.photoItem}>
+                                        <Text style={styles.photoDay}>Day {photo.dayPregnant}</Text>
+                                      </View>
+                                    ))}
+                                  </View>
+                                ) : (
+                                  <Text style={[styles.placeholderText, { color: currentTheme.colors.textSecondary }]}>
+                                    No photos yet. Capture progress photos to track your mare's development.
+                                  </Text>
+                                )}
+                              </View>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  )}
+
                   {/* Document Manager Section */}
                   {recordsSection === "document" && (
                     <View>
@@ -4840,6 +5373,215 @@ const MyHorsesScreen = () => {
                 </TouchableOpacity>
               </View>
             )}
+          </View>
+        </Modal>
+
+        {/* Start Pregnancy Modal */}
+        <Modal
+          visible={pregnancyModalVisible}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setPregnancyModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: currentTheme.colors.background }}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.modalTitle,
+                    {
+                      color: currentTheme.colors.text,
+                      textAlign: "center",
+                    },
+                  ]}
+                >
+                  Start Pregnancy
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setPregnancyModalVisible(false)}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              <Text style={[styles.startPregnancySubtitle, { color: currentTheme.colors.textSecondary }]}>
+                Enter the cover date and optional details to start tracking pregnancy for {selectedHorseForRecords?.name}
+              </Text>
+
+              {/* Cover Date - Required */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                  Cover Date *
+                </Text>
+                <DatePicker
+                  value={pregnancyCoverDate}
+                  placeholder="Select cover date"
+                  onSelect={setPregnancyCoverDate}
+                  isVisible={showPregnancyCoverDatePicker}
+                  setVisible={setShowPregnancyCoverDatePicker}
+                />
+              </View>
+
+              {/* Stallion Name - Optional */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                  Stallion Name (Optional)
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: currentTheme.colors.accent,
+                      color: currentTheme.colors.text,
+                      borderColor: currentTheme.colors.primary,
+                    },
+                  ]}
+                  value={pregnancyStallion}
+                  onChangeText={setPregnancyStallion}
+                  placeholder="Enter stallion name"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
+                />
+              </View>
+
+              {/* Breeding Method - Optional */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                  Breeding Method
+                </Text>
+                <View style={styles.methodToggle}>
+                  <TouchableOpacity
+                    style={[
+                      styles.methodButton,
+                      pregnancyMethod === "natural" && styles.methodButtonActive,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
+                    onPress={() => setPregnancyMethod("natural")}
+                  >
+                    <Text style={[
+                      styles.methodButtonText,
+                      pregnancyMethod === "natural" && styles.methodButtonTextActive
+                    ]}>
+                      Natural
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.methodButton,
+                      pregnancyMethod === "AI" && styles.methodButtonActive,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
+                    onPress={() => setPregnancyMethod("AI")}
+                  >
+                    <Text style={[
+                      styles.methodButtonText,
+                      pregnancyMethod === "AI" && styles.methodButtonTextActive
+                    ]}>
+                      AI
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.methodButton,
+                      pregnancyMethod === "ICSI" && styles.methodButtonActive,
+                      { borderColor: currentTheme.colors.primary }
+                    ]}
+                    onPress={() => setPregnancyMethod("ICSI")}
+                  >
+                    <Text style={[
+                      styles.methodButtonText,
+                      pregnancyMethod === "ICSI" && styles.methodButtonTextActive
+                    ]}>
+                      ICSI
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Veterinarian Info - Optional */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                  Veterinarian Name (Optional)
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: currentTheme.colors.accent,
+                      color: currentTheme.colors.text,
+                      borderColor: currentTheme.colors.primary,
+                    },
+                  ]}
+                  value={pregnancyVetName}
+                  onChangeText={setPregnancyVetName}
+                  placeholder="Enter vet name"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                  Veterinarian Phone (Optional)
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: currentTheme.colors.accent,
+                      color: currentTheme.colors.text,
+                      borderColor: currentTheme.colors.primary,
+                    },
+                  ]}
+                  value={pregnancyVetPhone}
+                  onChangeText={setPregnancyVetPhone}
+                  placeholder="Enter vet phone"
+                  placeholderTextColor={currentTheme.colors.textSecondary}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              {/* Info Banner */}
+              <View style={styles.pregnancyInfoBanner}>
+                <Text style={styles.pregnancyInfoIcon}>ℹ️</Text>
+                <Text style={styles.pregnancyInfoText}>
+                  A 340-day timeline will be automatically created with ultrasound checks, vaccine reminders, and deworming schedule.
+                </Text>
+              </View>
+            </ScrollView>
+
+            {/* Footer Actions */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.cancelButton,
+                  { backgroundColor: currentTheme.colors.textSecondary },
+                ]}
+                onPress={() => setPregnancyModalVisible(false)}
+              >
+                <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.saveButton,
+                  { 
+                    backgroundColor: currentTheme.colors.primary,
+                    opacity: pregnancyCoverDate ? 1 : 0.5
+                  },
+                ]}
+                onPress={handleStartPregnancy}
+                disabled={!pregnancyCoverDate}
+              >
+                <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
+                  Start Pregnancy
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </Modal>
     </View>
@@ -5201,6 +5943,14 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlign: "left",
     marginBottom: 5,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    fontFamily: "Inder",
+    marginTop: 8,
   },
   modalActions: {
     flexDirection: "row",
@@ -5951,6 +6701,321 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     lineHeight: 20,
+  },
+
+  // Pregnancy Manager Styles
+  pregnancyHeader: {
+    marginBottom: 20,
+  },
+  pregnancyHorseName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  disclaimerBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff3cd",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+  },
+  disclaimerIcon: {
+    fontSize: 20,
+    marginRight: 10,
+  },
+  disclaimerText: {
+    flex: 1,
+    fontSize: 12,
+    color: "#856404",
+    fontFamily: "Inder",
+    lineHeight: 16,
+  },
+  noPregnancyContainer: {
+    alignItems: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 30,
+  },
+  noPregnancyIcon: {
+    fontSize: 80,
+    marginBottom: 20,
+  },
+  noPregnancyTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 10,
+  },
+  noPregnancySubtitle: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginBottom: 30,
+  },
+  startPregnancyButton: {
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 12,
+  },
+  startPregnancyButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
+  },
+  startPregnancySubtitle: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    textAlign: "center",
+    marginBottom: 25,
+    lineHeight: 20,
+  },
+  methodToggle: {
+    flexDirection: "row",
+    marginTop: 8,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  methodButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  methodButtonActive: {
+    backgroundColor: "#ff69b4",
+  },
+  methodButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+    fontFamily: "Inder",
+  },
+  methodButtonTextActive: {
+    color: "#FFFFFF",
+  },
+  pregnancyInfoBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#e3f2fd",
+    borderRadius: 8,
+    padding: 15,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  pregnancyInfoIcon: {
+    fontSize: 20,
+    marginRight: 10,
+  },
+  pregnancyInfoText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#1565c0",
+    fontFamily: "Inder",
+    lineHeight: 18,
+  },
+  pregnancyStatusContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  statusBadge: {
+    backgroundColor: "#ff69b4",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  statusBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  dayCounter: {
+    alignItems: "flex-end",
+  },
+  dayCounterNumber: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#ff69b4",
+    fontFamily: "Inder",
+  },
+  dayCounterLabel: {
+    fontSize: 12,
+    color: "#999",
+    fontFamily: "Inder",
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 4,
+    marginBottom: 20,
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#ff69b4",
+    borderRadius: 4,
+  },
+  nextActionCard: {
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  nextActionTitle: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#666",
+    fontFamily: "Inder",
+    marginBottom: 5,
+    textTransform: "uppercase",
+  },
+  nextActionText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    fontFamily: "Inder",
+    marginBottom: 3,
+  },
+  nextActionDays: {
+    fontSize: 14,
+    color: "#666",
+    fontFamily: "Inder",
+  },
+  viewToggle: {
+    flexDirection: "row",
+    marginBottom: 20,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  viewToggleButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  viewToggleButtonActive: {
+    backgroundColor: "#ff69b4",
+  },
+  viewToggleText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+    fontFamily: "Inder",
+  },
+  viewToggleTextActive: {
+    color: "#FFFFFF",
+  },
+  timelineContainer: {
+    marginTop: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 15,
+  },
+  addEventButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  addEventButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
+  },
+  eventsList: {
+    marginTop: 10,
+  },
+  placeholderText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    textAlign: "center",
+    fontStyle: "italic",
+    paddingVertical: 30,
+  },
+  fruitViewContainer: {
+    marginTop: 10,
+    alignItems: "center",
+  },
+  fruitDisplay: {
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  fruitEmoji: {
+    fontSize: 120,
+    marginBottom: 20,
+  },
+  fruitSize: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 8,
+  },
+  fruitMonth: {
+    fontSize: 14,
+    fontFamily: "Inder",
+  },
+  infoCard: {
+    width: "100%",
+    padding: 20,
+    borderRadius: 12,
+  },
+  infoCardTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 10,
+    color: "#333",
+  },
+  infoCardText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 20,
+    color: "#555",
+  },
+  photosContainer: {
+    marginTop: 10,
+  },
+  capturePhotoButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  capturePhotoButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
+  },
+  photoGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  photoItem: {
+    width: "48%",
+    aspectRatio: 1,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  photoDay: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    color: "#666",
   },
 
   // Document Viewer Modal Styles
