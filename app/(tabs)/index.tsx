@@ -266,6 +266,7 @@ const MyHorsesScreen = () => {
   // Image picker state
   const [editImage, setEditImage] = useState<any>(null);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
+  const [showInlineImagePicker, setShowInlineImagePicker] = useState(false);
 
   // Vaccination reminder state
   const [vaccinationModalVisible, setVaccinationModalVisible] = useState(false);
@@ -651,6 +652,7 @@ const MyHorsesScreen = () => {
     setDatePickerVisible(false);
     setHeightPickerVisible(false);
     setShowImagePickerModal(false);
+    setShowInlineImagePicker(false);
   };
 
   const openAddModal = () => {
@@ -696,6 +698,7 @@ const MyHorsesScreen = () => {
     setAddDatePickerVisible(false);
     setAddHeightPickerVisible(false);
     setShowImagePickerModal(false);
+    setShowInlineImagePicker(false);
   };
 
   const saveHorseEdit = async () => {
@@ -3824,22 +3827,57 @@ const MyHorsesScreen = () => {
                     }
                     resizeMode="cover"
                   />
-                  <TouchableOpacity
-                    style={[
-                      styles.changePhotoButton,
-                      { backgroundColor: currentTheme.colors.primary },
-                    ]}
-                    onPress={() => setShowImagePickerModal(true)}
-                  >
-                    <View style={styles.cameraIconContainer}>
-                      <Text style={styles.cameraIconText}>📷</Text>
-                    </View>
-                    <Text
-                      style={[styles.changePhotoText, { color: "#FFFFFF" }]}
+                  {!showInlineImagePicker ? (
+                    <TouchableOpacity
+                      style={[
+                        styles.changePhotoButton,
+                        { backgroundColor: currentTheme.colors.primary },
+                      ]}
+                      onPress={() => setShowInlineImagePicker(true)}
                     >
-                      Change Photo
-                    </Text>
-                  </TouchableOpacity>
+                      <View style={styles.cameraIconContainer}>
+                        <Text style={styles.cameraIconText}>📷</Text>
+                      </View>
+                      <Text
+                        style={[styles.changePhotoText, { color: "#FFFFFF" }]}
+                      >
+                        Change Photo
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.inlineImagePickerButtons}>
+                      <TouchableOpacity
+                        style={[
+                          styles.inlineImagePickerButton,
+                          { backgroundColor: currentTheme.colors.primary },
+                        ]}
+                        onPress={() => {
+                          setShowInlineImagePicker(false);
+                          takePhoto();
+                        }}
+                      >
+                        <Text style={styles.inlineImagePickerEmoji}>📷</Text>
+                        <Text style={styles.inlineImagePickerButtonText}>
+                          Take Photo
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.inlineImagePickerButton,
+                          { backgroundColor: currentTheme.colors.secondary },
+                        ]}
+                        onPress={() => {
+                          setShowInlineImagePicker(false);
+                          pickImageFromLibrary();
+                        }}
+                      >
+                        <Text style={styles.inlineImagePickerEmoji}>🖼️</Text>
+                        <Text style={styles.inlineImagePickerButtonText}>
+                          Choose from Library
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               </View>
 
@@ -4074,22 +4112,57 @@ const MyHorsesScreen = () => {
                     }
                     resizeMode="cover"
                   />
-                  <TouchableOpacity
-                    style={[
-                      styles.changePhotoButton,
-                      { backgroundColor: currentTheme.colors.primary },
-                    ]}
-                    onPress={() => setShowImagePickerModal(true)}
-                  >
-                    <View style={styles.cameraIconContainer}>
-                      <Text style={styles.cameraIconText}>📷</Text>
-                    </View>
-                    <Text
-                      style={[styles.changePhotoText, { color: "#FFFFFF" }]}
+                  {!showInlineImagePicker ? (
+                    <TouchableOpacity
+                      style={[
+                        styles.changePhotoButton,
+                        { backgroundColor: currentTheme.colors.primary },
+                      ]}
+                      onPress={() => setShowInlineImagePicker(true)}
                     >
-                      Add Photo
-                    </Text>
-                  </TouchableOpacity>
+                      <View style={styles.cameraIconContainer}>
+                        <Text style={styles.cameraIconText}>📷</Text>
+                      </View>
+                      <Text
+                        style={[styles.changePhotoText, { color: "#FFFFFF" }]}
+                      >
+                        Add Photo
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.inlineImagePickerButtons}>
+                      <TouchableOpacity
+                        style={[
+                          styles.inlineImagePickerButton,
+                          { backgroundColor: currentTheme.colors.primary },
+                        ]}
+                        onPress={() => {
+                          setShowInlineImagePicker(false);
+                          takePhoto();
+                        }}
+                      >
+                        <Text style={styles.inlineImagePickerEmoji}>📷</Text>
+                        <Text style={styles.inlineImagePickerButtonText}>
+                          Take Photo
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.inlineImagePickerButton,
+                          { backgroundColor: currentTheme.colors.secondary },
+                        ]}
+                        onPress={() => {
+                          setShowInlineImagePicker(false);
+                          pickImageFromLibrary();
+                        }}
+                      >
+                        <Text style={styles.inlineImagePickerEmoji}>🖼️</Text>
+                        <Text style={styles.inlineImagePickerButtonText}>
+                          Choose from Library
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               </View>
 
@@ -6697,6 +6770,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     fontFamily: "Inder",
+  },
+  inlineImagePickerButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+  },
+  inlineImagePickerButton: {
+    flex: 1,
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 15,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  inlineImagePickerEmoji: {
+    fontSize: 28,
+  },
+  inlineImagePickerButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    color: "#FFFFFF",
+    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,
