@@ -7406,7 +7406,7 @@ const styles = StyleSheet.create({
   disclaimerBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff3cd",
+    backgroundColor: "#e8d28aff",
     borderRadius: 8,
     padding: 12,
     marginBottom: 20,
