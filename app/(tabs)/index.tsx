@@ -311,6 +311,7 @@ const MyHorsesScreen = () => {
 
   // Photo capture state
   const [photoCaptureModalVisible, setPhotoCaptureModalVisible] = useState(false);
+  const [showInlinePregnancyPhotoPicker, setShowInlinePregnancyPhotoPicker] = useState(false);
 
   // Enhanced vaccination state
   const [vaccinationId, setVaccinationId] = useState("");
@@ -1184,6 +1185,7 @@ const MyHorsesScreen = () => {
 
   const backToRecordsMain = () => {
     setRecordsSection("main");
+    setShowInlinePregnancyPhotoPicker(false);
   };
 
   // Pregnancy helper functions
@@ -1402,7 +1404,7 @@ const MyHorsesScreen = () => {
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
@@ -1448,7 +1450,7 @@ const MyHorsesScreen = () => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
@@ -5466,7 +5468,10 @@ const MyHorsesScreen = () => {
                                   pregnancyView === "timeline" && styles.viewToggleButtonActive,
                                   { borderColor: currentTheme.colors.primary }
                                 ]}
-                                onPress={() => setPregnancyView("timeline")}
+                                onPress={() => {
+                                  setPregnancyView("timeline");
+                                  setShowInlinePregnancyPhotoPicker(false);
+                                }}
                               >
                                 <Text style={[
                                   styles.viewToggleText,
@@ -5481,7 +5486,10 @@ const MyHorsesScreen = () => {
                                   pregnancyView === "fruit" && styles.viewToggleButtonActive,
                                   { borderColor: currentTheme.colors.primary }
                                 ]}
-                                onPress={() => setPregnancyView("fruit")}
+                                onPress={() => {
+                                  setPregnancyView("fruit");
+                                  setShowInlinePregnancyPhotoPicker(false);
+                                }}
                               >
                                 <Text style={[
                                   styles.viewToggleText,
@@ -5496,7 +5504,10 @@ const MyHorsesScreen = () => {
                                   pregnancyView === "photos" && styles.viewToggleButtonActive,
                                   { borderColor: currentTheme.colors.primary }
                                 ]}
-                                onPress={() => setPregnancyView("photos")}
+                                onPress={() => {
+                                  setPregnancyView("photos");
+                                  setShowInlinePregnancyPhotoPicker(false);
+                                }}
                               >
                                 <Text style={[
                                   styles.viewToggleText,
@@ -5574,15 +5585,50 @@ const MyHorsesScreen = () => {
                                   Progress Photos
                                 </Text>
                                 
-                                <TouchableOpacity
-                                  style={[
-                                    styles.capturePhotoButton,
-                                    { backgroundColor: currentTheme.colors.primary }
-                                  ]}
-                                  onPress={() => setPhotoCaptureModalVisible(true)}
-                                >
-                                  <Text style={styles.capturePhotoButtonText}>📷 Capture Photo</Text>
-                                </TouchableOpacity>
+                                {!showInlinePregnancyPhotoPicker ? (
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.capturePhotoButton,
+                                      { backgroundColor: currentTheme.colors.primary }
+                                    ]}
+                                    onPress={() => setShowInlinePregnancyPhotoPicker(true)}
+                                  >
+                                    <Text style={styles.capturePhotoButtonText}>📷 Capture Photo</Text>
+                                  </TouchableOpacity>
+                                ) : (
+                                  <View style={styles.inlineImagePickerButtons}>
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.inlineImagePickerButton,
+                                        { backgroundColor: currentTheme.colors.primary },
+                                      ]}
+                                      onPress={() => {
+                                        setShowInlinePregnancyPhotoPicker(false);
+                                        handleCapturePhoto();
+                                      }}
+                                    >
+                                      <Text style={styles.inlineImagePickerEmoji}>📷</Text>
+                                      <Text style={styles.inlineImagePickerButtonText}>
+                                        Take Photo
+                                      </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.inlineImagePickerButton,
+                                        { backgroundColor: currentTheme.colors.secondary },
+                                      ]}
+                                      onPress={() => {
+                                        setShowInlinePregnancyPhotoPicker(false);
+                                        handlePickPhotoFromLibrary();
+                                      }}
+                                    >
+                                      <Text style={styles.inlineImagePickerEmoji}>🖼️</Text>
+                                      <Text style={styles.inlineImagePickerButtonText}>
+                                        Choose from Library
+                                      </Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                )}
 
                                 {selectedPregnancy.photos && selectedPregnancy.photos.length > 0 ? (
                                   <View style={styles.photoGrid}>
@@ -6774,7 +6820,7 @@ const styles = StyleSheet.create({
   inlineImagePickerButtons: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 10,
+    marginBottom: 20,
   },
   inlineImagePickerButton: {
     flex: 1,
@@ -6782,7 +6828,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 15,
-    paddingVertical: 16,
     paddingHorizontal: 12,
     gap: 8,
     shadowColor: "#000",
@@ -6795,14 +6840,15 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   inlineImagePickerEmoji: {
-    fontSize: 28,
+    fontSize: 24,
   },
   inlineImagePickerButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
     fontFamily: "Inder",
     color: "#FFFFFF",
     textAlign: "center",
+    marginBottom: 2,
   },
   loadingContainer: {
     flex: 1,
@@ -7701,9 +7747,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   capturePhotoButton: {
-    paddingVertical: 12,
+    paddingVertical: 15,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 15,
     alignItems: "center",
     marginBottom: 20,
   },
