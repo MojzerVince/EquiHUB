@@ -5939,6 +5939,46 @@ const MyHorsesScreen = () => {
                               </View>
                             )}
                             
+                            {selectedPregnancy.status === 'foaled' && (
+                              <View style={styles.statusActionsContainer}>
+                                <TouchableOpacity
+                                  style={[styles.saveFoalButton, { backgroundColor: currentTheme.colors.primary }]}
+                                  onPress={() => {
+                                    if (selectedPregnancy) {
+                                      // Pre-populate foal data
+                                      setAddName('');
+                                      setAddGender(''); // Let user choose
+                                      setAddBirthDate(new Date()); // Today's date
+                                      setAddBreed('');
+                                      setAddHeight('');
+                                      setAddWeight('');
+                                      setAddImage(null);
+                                      
+                                      // Delete pregnancy record
+                                      const newPregnancies = { ...pregnancies };
+                                      delete newPregnancies[selectedPregnancy.horseId];
+                                      setPregnancies(newPregnancies);
+                                      savePregnancies(newPregnancies);
+                                      
+                                      // Close pregnancy modal and reset
+                                      setSelectedPregnancy(null);
+                                      setPregnancySettingsMode(false);
+                                      setRecordsModalVisible(false);
+                                      
+                                      // Open Add Horse modal
+                                      setAddModalVisible(true);
+                                    }
+                                  }}
+                                >
+                                  <Text style={styles.saveFoalButtonText}>🐴 Save Foal & Add to Horses</Text>
+                                </TouchableOpacity>
+                                
+                                <Text style={[styles.foalHelpText, { color: currentTheme.colors.textSecondary }]}>
+                                  This will open the Add Horse form where you can enter your foal's details.
+                                </Text>
+                              </View>
+                            )}
+                            
                             {/* Save Button */}
                             <TouchableOpacity
                               style={[styles.saveSettingsButton, { backgroundColor: currentTheme.colors.secondary }]}
@@ -7926,6 +7966,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     fontFamily: 'Inder',
+  },
+  saveFoalButton: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  saveFoalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'Inder',
+  },
+  foalHelpText: {
+    fontSize: 13,
+    textAlign: 'center',
+    fontFamily: 'Inder',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
   saveSettingsButton: {
     padding: 16,
