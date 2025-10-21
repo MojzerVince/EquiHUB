@@ -1264,18 +1264,18 @@ const MyHorsesScreen = () => {
     return Math.min(Math.floor(daysPregnant / 30) + 1, 11);
   };
 
-  const getNextAction = (pregnancy: Pregnancy): { text: string; daysUntil: number } | null => {
+  const getNextAction = (pregnancy: Pregnancy): { text: string; daysUntil: number; type: 'check' | 'vaccine' | 'deworming'; date: string } | null => {
     const today = new Date();
     const upcoming = [
-      ...pregnancy.checks.filter(c => !c.done && c.due).map(c => ({ text: `Ultrasound: ${c.type}`, date: c.due! })),
-      ...pregnancy.vaccines.filter(v => !v.done).map(v => ({ text: `Vaccine: ${v.type}`, date: v.due })),
-      ...pregnancy.deworming.filter(d => !d.done).map(d => ({ text: `Deworm (pre-foaling)`, date: d.due }))
+      ...pregnancy.checks.filter(c => !c.done && c.due).map(c => ({ text: `Ultrasound: ${c.type}`, date: c.due!, type: 'check' as const })),
+      ...pregnancy.vaccines.filter(v => !v.done).map(v => ({ text: `Vaccine: ${v.type}`, date: v.due, type: 'vaccine' as const })),
+      ...pregnancy.deworming.filter(d => !d.done).map(d => ({ text: `Deworm (pre-foaling)`, date: d.due, type: 'deworming' as const }))
     ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     if (upcoming.length > 0) {
       const next = upcoming[0];
       const daysUntil = Math.ceil((new Date(next.date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      return { text: next.text, daysUntil };
+      return { text: next.text, daysUntil, type: next.type, date: next.date };
     }
     return null;
   };
@@ -1353,6 +1353,54 @@ const MyHorsesScreen = () => {
     
     // Save to AsyncStorage
     savePregnancies(updatedPregnancies);
+  };
+
+  const handleCompleteNextAction = () => {
+    if (!selectedPregnancy) return;
+
+    const nextAction = getNextAction(selectedPregnancy);
+    if (!nextAction) return;
+
+    const updatedPregnancy = { ...selectedPregnancy };
+
+    // Mark the action as complete based on type
+    if (nextAction.type === 'check') {
+      const checkIndex = updatedPregnancy.checks.findIndex(
+        c => !c.done && c.due === nextAction.date
+      );
+      if (checkIndex !== -1) {
+        updatedPregnancy.checks[checkIndex].done = true;
+      }
+    } else if (nextAction.type === 'vaccine') {
+      const vaccineIndex = updatedPregnancy.vaccines.findIndex(
+        v => !v.done && v.due === nextAction.date
+      );
+      if (vaccineIndex !== -1) {
+        updatedPregnancy.vaccines[vaccineIndex].done = true;
+      }
+    } else if (nextAction.type === 'deworming') {
+      const dewormIndex = updatedPregnancy.deworming.findIndex(
+        d => !d.done && d.due === nextAction.date
+      );
+      if (dewormIndex !== -1) {
+        updatedPregnancy.deworming[dewormIndex].done = true;
+      }
+    }
+
+    updatedPregnancy.updatedAt = new Date().toISOString();
+
+    // Update pregnancy
+    const updatedPregnancies = {
+      ...pregnancies,
+      [updatedPregnancy.horseId]: updatedPregnancy
+    };
+    setPregnancies(updatedPregnancies);
+    setSelectedPregnancy(updatedPregnancy);
+    
+    // Save to AsyncStorage
+    savePregnancies(updatedPregnancies);
+
+    showSuccess("Action marked as completed!");
   };
 
   const handleAddEvent = () => {
@@ -5461,18 +5509,31 @@ const MyHorsesScreen = () => {
                             {/* Next Action Card */}
                             {selectedPregnancy.status === "active" && getNextAction(selectedPregnancy) && (
                               <View style={[styles.nextActionCard, { backgroundColor: currentTheme.colors.accent }]}>
-                                <Text style={styles.nextActionTitle}>Next Action</Text>
-                                <Text style={styles.nextActionText}>
-                                  {getNextAction(selectedPregnancy)!.text}
-                                </Text>
-                                <Text style={styles.nextActionDays}>
-                                  {getNextAction(selectedPregnancy)!.daysUntil > 0 
-                                    ? `in ${getNextAction(selectedPregnancy)!.daysUntil} days`
-                                    : getNextAction(selectedPregnancy)!.daysUntil === 0
-                                    ? "Today!"
-                                    : `${Math.abs(getNextAction(selectedPregnancy)!.daysUntil)} days overdue`
-                                  }
-                                </Text>
+                                <View style={styles.nextActionContent}>
+                                  <View style={styles.nextActionTextContainer}>
+                                    <Text style={styles.nextActionTitle}>Next Action</Text>
+                                    <Text style={styles.nextActionText}>
+                                      {getNextAction(selectedPregnancy)!.text}
+                                    </Text>
+                                    <Text style={styles.nextActionDays}>
+                                      {getNextAction(selectedPregnancy)!.daysUntil > 0 
+                                        ? `in ${getNextAction(selectedPregnancy)!.daysUntil} days`
+                                        : getNextAction(selectedPregnancy)!.daysUntil === 0
+                                        ? "Today!"
+                                        : `${Math.abs(getNextAction(selectedPregnancy)!.daysUntil)} days overdue`
+                                      }
+                                    </Text>
+                                  </View>
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.nextActionCheckButton,
+                                      { backgroundColor: currentTheme.colors.primary }
+                                    ]}
+                                    onPress={handleCompleteNextAction}
+                                  >
+                                    <Text style={styles.nextActionCheckIcon}>✓</Text>
+                                  </TouchableOpacity>
+                                </View>
                               </View>
                             )}
 
@@ -7643,6 +7704,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 20,
   },
+  nextActionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  nextActionTextContainer: {
+    flex: 1,
+    marginRight: 12,
+  },
   nextActionTitle: {
     fontSize: 12,
     fontWeight: "bold",
@@ -7662,6 +7732,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     fontFamily: "Inder",
+  },
+  nextActionCheckButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  nextActionCheckIcon: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#FFFFFF",
   },
   viewToggle: {
     flexDirection: "row",
