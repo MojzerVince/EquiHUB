@@ -3592,7 +3592,7 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text },
                           ]}
                         >
-                          🤰 Pregnancy Timeline
+                          Pregnancy Timeline
                         </Text>
                         <Text
                           style={[
@@ -6955,6 +6955,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
   },
   pregnancyDayCount: {
+    marginLeft: 15,
     fontSize: 18,
     fontWeight: "bold",
     fontFamily: "Inder",
