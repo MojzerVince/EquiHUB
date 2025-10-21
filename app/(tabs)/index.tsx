@@ -5552,7 +5552,9 @@ const MyHorsesScreen = () => {
                                   </View>
                                 </View>
                               );
-                            })()}                            {/* View Toggle */}
+                            })()}
+
+                            {/* View Toggle */}
                             <View style={styles.viewToggle}>
                               <TouchableOpacity
                                 style={[
