@@ -5474,34 +5474,36 @@ const MyHorsesScreen = () => {
                               </View>
                             )}
                             
-                            {/* Status Badge and Day Counter */}
-                            <View style={styles.pregnancyStatusContainer}>
-                              <View style={[styles.statusBadge, { backgroundColor: currentTheme.colors.accent }]}>
-                                <Text style={[styles.statusBadgeText, { color: currentTheme.colors.text }]}>
-                                  {selectedPregnancy.status === "active" ? "🤰 Active" : 
-                                   selectedPregnancy.status === "foaled" ? "🐴 Foaled" : "❌ Lost"}
-                                </Text>
-                              </View>
-                              
-                              {/* Settings Button */}
-                              <TouchableOpacity 
-                                style={[styles.settingsButton, { backgroundColor: currentTheme.colors.surface }]}
-                                onPress={() => setPregnancySettingsMode(!pregnancySettingsMode)}
-                              >
-                                <Text style={[styles.settingsButtonIcon, { color: currentTheme.colors.text }]}>
-                                  ⚙️
-                                </Text>
-                              </TouchableOpacity>
-                              
-                              {selectedPregnancy.status === "active" && (
-                                <View style={styles.dayCounter}>
-                                  <Text style={[styles.dayCounterNumber, { color: currentTheme.colors.text }]}>
-                                    Day {getDaysPregnant(selectedPregnancy)}
-                                  </Text>
-                                  <Text style={styles.dayCounterLabel}>of ~340</Text>
+                            {!pregnancySettingsMode && (
+                              <>
+                                {/* Status Badge and Day Counter */}
+                                <View style={styles.pregnancyStatusContainer}>
+                                  <View style={[styles.statusBadge, { backgroundColor: currentTheme.colors.accent }]}>
+                                    <Text style={[styles.statusBadgeText, { color: currentTheme.colors.text }]}>
+                                      {selectedPregnancy.status === "active" ? "🤰 Active" : 
+                                       selectedPregnancy.status === "foaled" ? "🐴 Foaled" : "❌ Lost"}
+                                    </Text>
+                                  </View>
+                                  
+                                  {/* Settings Button */}
+                                  <TouchableOpacity 
+                                    style={[styles.settingsButton, { backgroundColor: currentTheme.colors.surface }]}
+                                    onPress={() => setPregnancySettingsMode(!pregnancySettingsMode)}
+                                  >
+                                    <Text style={[styles.settingsButtonIcon, { color: currentTheme.colors.text }]}>
+                                      ⚙️
+                                    </Text>
+                                  </TouchableOpacity>
+                                  
+                                  {selectedPregnancy.status === "active" && (
+                                    <View style={styles.dayCounter}>
+                                      <Text style={[styles.dayCounterNumber, { color: currentTheme.colors.text }]}>
+                                        Day {getDaysPregnant(selectedPregnancy)}
+                                      </Text>
+                                      <Text style={styles.dayCounterLabel}>of ~340</Text>
+                                    </View>
+                                  )}
                                 </View>
-                              )}
-                            </View>
 
                             {/* Progress Bar */}
                             {selectedPregnancy.status === "active" && (
@@ -5778,6 +5780,8 @@ const MyHorsesScreen = () => {
                                   </Text>
                                 )}
                               </View>
+                            )}
+                              </>
                             )}
                           </View>
                         )}
