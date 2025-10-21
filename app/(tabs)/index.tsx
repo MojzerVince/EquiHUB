@@ -3661,7 +3661,7 @@ const MyHorsesScreen = () => {
                         <Text
                           style={[
                             styles.pregnancyDayCount,
-                            { color: '#ff69b4' },
+                            { color: currentTheme.colors.textSecondary },
                           ]}
                         >
                           Day {getDaysPregnant(pregnancies[horse.id])}
@@ -3670,27 +3670,27 @@ const MyHorsesScreen = () => {
 
                       {/* Segmented Progress Bar */}
                       <View style={styles.pregnancyProgressContainer}>
-                        <View style={styles.pregnancyProgressBar}>
+                        <View style={[styles.pregnancyProgressBar, { backgroundColor: currentTheme.colors.secondary }]}>
                           {/* Progress Fill */}
                           <View 
                             style={[
                               styles.pregnancyProgressFill,
                               { 
                                 width: `${Math.min((getDaysPregnant(pregnancies[horse.id]) / 340) * 100, 100)}%`,
-                                backgroundColor: '#ff69b4'
+                                backgroundColor: currentTheme.colors.primary
                               }
                             ]}
                           />
                           {/* Stage Dividers */}
-                          <View style={[styles.pregnancyStageDivider, { left: '33.33%' }]} />
-                          <View style={[styles.pregnancyStageDivider, { left: '66.66%' }]} />
+                          <View style={[styles.pregnancyStageDivider, { left: '33.33%', backgroundColor: currentTheme.colors.surface }]} />
+                          <View style={[styles.pregnancyStageDivider, { left: '66.66%', backgroundColor: currentTheme.colors.surface }]} />
                         </View>
                         
                         {/* Stage Labels */}
                         <View style={styles.pregnancyStageLabels}>
-                          <Text style={styles.pregnancyStageLabel}>Early</Text>
-                          <Text style={styles.pregnancyStageLabel}>Mid</Text>
-                          <Text style={styles.pregnancyStageLabel}>Late</Text>
+                          <Text style={[styles.pregnancyStageLabel, { color: currentTheme.colors.textSecondary }]}>Early</Text>
+                          <Text style={[styles.pregnancyStageLabel, { color: currentTheme.colors.textSecondary }]}>Mid</Text>
+                          <Text style={[styles.pregnancyStageLabel, { color: currentTheme.colors.textSecondary }]}>Late</Text>
                         </View>
                       </View>
 
@@ -5418,9 +5418,9 @@ const MyHorsesScreen = () => {
                               </View>
 
                               {/* Info Banner */}
-                              <View style={styles.pregnancyInfoBanner}>
+                              <View style={[styles.pregnancyInfoBanner, { backgroundColor: currentTheme.colors.accent }]}>
                                 <Text style={styles.pregnancyInfoIcon}>ℹ️</Text>
-                                <Text style={styles.pregnancyInfoText}>
+                                <Text style={[styles.pregnancyInfoText, { color: currentTheme.colors.text }]}>
                                   A 340-day timeline will be automatically created with ultrasound checks, vaccine reminders, and deworming schedule.
                                 </Text>
                               </View>
@@ -5466,15 +5466,15 @@ const MyHorsesScreen = () => {
                           <View>
                             {/* Status Badge and Day Counter */}
                             <View style={styles.pregnancyStatusContainer}>
-                              <View style={styles.statusBadge}>
-                                <Text style={styles.statusBadgeText}>
+                              <View style={[styles.statusBadge, { backgroundColor: currentTheme.colors.accent }]}>
+                                <Text style={[styles.statusBadgeText, { color: currentTheme.colors.text }]}>
                                   {selectedPregnancy.status === "active" ? "🤰 Active" : 
                                    selectedPregnancy.status === "foaled" ? "🐴 Foaled" : "❌ Lost"}
                                 </Text>
                               </View>
                               {selectedPregnancy.status === "active" && (
                                 <View style={styles.dayCounter}>
-                                  <Text style={styles.dayCounterNumber}>
+                                  <Text style={[styles.dayCounterNumber, { color: currentTheme.colors.text }]}>
                                     Day {getDaysPregnant(selectedPregnancy)}
                                   </Text>
                                   <Text style={styles.dayCounterLabel}>of ~340</Text>
@@ -5485,16 +5485,19 @@ const MyHorsesScreen = () => {
                             {/* Progress Bar */}
                             {selectedPregnancy.status === "active" && (
                               <View style={styles.modalProgressContainer}>
-                                <View style={styles.progressBarContainer}>
+                                <View style={[styles.progressBarContainer, { backgroundColor: currentTheme.colors.secondary }]}>
                                   <View 
                                     style={[
                                       styles.progressBarFill,
-                                      { width: `${Math.min((getDaysPregnant(selectedPregnancy) / 340) * 100, 100)}%` }
+                                      { 
+                                        width: `${Math.min((getDaysPregnant(selectedPregnancy) / 340) * 100, 100)}%`,
+                                        backgroundColor: currentTheme.colors.primary
+                                      }
                                     ]}
                                   />
                                   {/* Stage Dividers */}
-                                  <View style={[styles.modalStageDivider, { left: '33.33%' }]} />
-                                  <View style={[styles.modalStageDivider, { left: '66.66%' }]} />
+                                  <View style={[styles.modalStageDivider, { left: '33.33%', backgroundColor: currentTheme.colors.surface }]} />
+                                  <View style={[styles.modalStageDivider, { left: '66.66%', backgroundColor: currentTheme.colors.surface }]} />
                                 </View>
                                 
                                 {/* Stage Labels */}
@@ -5520,11 +5523,11 @@ const MyHorsesScreen = () => {
                                 <View style={[styles.nextActionCard, { backgroundColor: currentTheme.colors.accent }]}>
                                   <View style={styles.nextActionContent}>
                                     <View style={styles.nextActionTextContainer}>
-                                      <Text style={styles.nextActionTitle}>Next Action</Text>
-                                      <Text style={styles.nextActionText}>
+                                      <Text style={[styles.nextActionTitle, { color: currentTheme.colors.textSecondary }]}>Next Action</Text>
+                                      <Text style={[styles.nextActionText, { color: currentTheme.colors.text }]}>
                                         {nextAction.text}
                                       </Text>
-                                      <Text style={styles.nextActionDays}>
+                                      <Text style={[styles.nextActionDays, { color: currentTheme.colors.textSecondary }]}>
                                         {nextAction.daysUntil > 0 
                                           ? `in ${nextAction.daysUntil} days`
                                           : nextAction.daysUntil === 0
@@ -5537,7 +5540,7 @@ const MyHorsesScreen = () => {
                                       style={[
                                         styles.nextActionCheckButton,
                                         { 
-                                          backgroundColor: isFutureAction ? '#cccccc' : currentTheme.colors.primary,
+                                          backgroundColor: isFutureAction ? currentTheme.colors.border : currentTheme.colors.primary,
                                           opacity: isFutureAction ? 0.5 : 1
                                         }
                                       ]}
@@ -5549,15 +5552,16 @@ const MyHorsesScreen = () => {
                                   </View>
                                 </View>
                               );
-                            })()}
-
-                            {/* View Toggle */}
+                            })()}                            {/* View Toggle */}
                             <View style={styles.viewToggle}>
                               <TouchableOpacity
                                 style={[
                                   styles.viewToggleButtonLeft,
                                   pregnancyView === "timeline" && styles.viewToggleButtonActive,
-                                  { borderColor: currentTheme.colors.primary }
+                                  { 
+                                    borderColor: currentTheme.colors.primary,
+                                    backgroundColor: pregnancyView === "timeline" ? currentTheme.colors.primary : currentTheme.colors.surface
+                                  }
                                 ]}
                                 onPress={() => {
                                   setPregnancyView("timeline");
@@ -5566,7 +5570,8 @@ const MyHorsesScreen = () => {
                               >
                                 <Text style={[
                                   styles.viewToggleText,
-                                  pregnancyView === "timeline" && styles.viewToggleTextActive
+                                  pregnancyView === "timeline" && styles.viewToggleTextActive,
+                                  { color: pregnancyView === "timeline" ? '#FFFFFF' : currentTheme.colors.text }
                                 ]}>
                                   Timeline
                                 </Text>
@@ -5575,7 +5580,10 @@ const MyHorsesScreen = () => {
                                 style={[
                                   styles.viewToggleButton,
                                   pregnancyView === "fruit" && styles.viewToggleButtonActive,
-                                  { borderColor: currentTheme.colors.primary }
+                                  { 
+                                    borderColor: currentTheme.colors.primary,
+                                    backgroundColor: pregnancyView === "fruit" ? currentTheme.colors.primary : currentTheme.colors.surface
+                                  }
                                 ]}
                                 onPress={() => {
                                   setPregnancyView("fruit");
@@ -5584,7 +5592,8 @@ const MyHorsesScreen = () => {
                               >
                                 <Text style={[
                                   styles.viewToggleText,
-                                  pregnancyView === "fruit" && styles.viewToggleTextActive
+                                  pregnancyView === "fruit" && styles.viewToggleTextActive,
+                                  { color: pregnancyView === "fruit" ? '#FFFFFF' : currentTheme.colors.text }
                                 ]}>
                                   Month View
                                 </Text>
@@ -5593,7 +5602,10 @@ const MyHorsesScreen = () => {
                                 style={[
                                   styles.viewToggleButtonRight,
                                   pregnancyView === "photos" && styles.viewToggleButtonActive,
-                                  { borderColor: currentTheme.colors.primary }
+                                  { 
+                                    borderColor: currentTheme.colors.primary,
+                                    backgroundColor: pregnancyView === "photos" ? currentTheme.colors.primary : currentTheme.colors.surface
+                                  }
                                 ]}
                                 onPress={() => {
                                   setPregnancyView("photos");
@@ -5602,7 +5614,8 @@ const MyHorsesScreen = () => {
                               >
                                 <Text style={[
                                   styles.viewToggleText,
-                                  pregnancyView === "photos" && styles.viewToggleTextActive
+                                  pregnancyView === "photos" && styles.viewToggleTextActive,
+                                  { color: pregnancyView === "photos" ? '#FFFFFF' : currentTheme.colors.text }
                                 ]}>
                                   Photos
                                 </Text>
