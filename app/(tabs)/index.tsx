@@ -6,6 +6,7 @@ import * as Sharing from "expo-sharing";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Linking,
   Modal,
@@ -312,6 +313,9 @@ const MyHorsesScreen = () => {
   // Photo capture state
   const [photoCaptureModalVisible, setPhotoCaptureModalVisible] = useState(false);
   const [showInlinePregnancyPhotoPicker, setShowInlinePregnancyPhotoPicker] = useState(false);
+  
+  // Pregnancy settings state
+  const [pregnancySettingsMode, setPregnancySettingsMode] = useState(false);
 
   // Enhanced vaccination state
   const [vaccinationId, setVaccinationId] = useState("");
@@ -1192,6 +1196,7 @@ const MyHorsesScreen = () => {
   const backToRecordsMain = () => {
     setRecordsSection("main");
     setShowInlinePregnancyPhotoPicker(false);
+    setPregnancySettingsMode(false);
   };
 
   // Pregnancy helper functions
@@ -5262,11 +5267,13 @@ const MyHorsesScreen = () => {
                             { color: currentTheme.colors.text },
                           ]}
                         >
-                          Pregnancy Timeline for: {selectedHorseForRecords.name}
+                          {pregnancySettingsMode ? 'Pregnancy Settings for:' : 'Pregnancy Timeline for:'} {selectedHorseForRecords.name}
                         </Text>
                         
-                        {/* Safety Disclaimer */}
-                        <View style={styles.disclaimerBanner}>
+                        {!pregnancySettingsMode && (
+                          <>
+                            {/* Safety Disclaimer */}
+                            <View style={styles.disclaimerBanner}>
                           <Text style={styles.disclaimerIcon}>⚠️</Text>
                           <Text style={styles.disclaimerText}>
                             Educational only — contact your veterinarian for diagnosis or emergencies
@@ -5472,6 +5479,17 @@ const MyHorsesScreen = () => {
                                    selectedPregnancy.status === "foaled" ? "🐴 Foaled" : "❌ Lost"}
                                 </Text>
                               </View>
+                              
+                              {/* Settings Button */}
+                              <TouchableOpacity 
+                                style={[styles.settingsButton, { backgroundColor: currentTheme.colors.surface }]}
+                                onPress={() => setPregnancySettingsMode(!pregnancySettingsMode)}
+                              >
+                                <Text style={[styles.settingsButtonIcon, { color: currentTheme.colors.text }]}>
+                                  ⚙️
+                                </Text>
+                              </TouchableOpacity>
+                              
                               {selectedPregnancy.status === "active" && (
                                 <View style={styles.dayCounter}>
                                   <Text style={[styles.dayCounterNumber, { color: currentTheme.colors.text }]}>
@@ -5758,6 +5776,178 @@ const MyHorsesScreen = () => {
                                 )}
                               </View>
                             )}
+                          </View>
+                        )}
+                          </>
+                        )}
+                        
+                        {/* Settings Mode Content */}
+                        {pregnancySettingsMode && selectedPregnancy && (
+                          <View style={styles.settingsContainer}>
+                            <Text style={[styles.settingsTitle, { color: currentTheme.colors.text }]}>
+                              Pregnancy Status
+                            </Text>
+                            
+                            {/* Status Options */}
+                            <View style={styles.statusOptionsContainer}>
+                              <TouchableOpacity
+                                style={[
+                                  styles.statusOption,
+                                  {
+                                    backgroundColor: selectedPregnancy.status === 'active' 
+                                      ? currentTheme.colors.primary 
+                                      : currentTheme.colors.surface,
+                                    borderColor: currentTheme.colors.border,
+                                  }
+                                ]}
+                                onPress={() => {
+                                  if (selectedPregnancy) {
+                                    const updated = {
+                                      ...selectedPregnancy,
+                                      status: 'active' as PregnancyStatus
+                                    };
+                                    setSelectedPregnancy(updated);
+                                    const newPregnancies = { ...pregnancies, [selectedPregnancy.horseId]: updated };
+                                    setPregnancies(newPregnancies);
+                                    savePregnancies(newPregnancies);
+                                  }
+                                }}
+                              >
+                                <Text style={[
+                                  styles.statusOptionText,
+                                  { 
+                                    color: selectedPregnancy.status === 'active' 
+                                      ? '#FFFFFF' 
+                                      : currentTheme.colors.text 
+                                  }
+                                ]}>
+                                  🤰 Active
+                                </Text>
+                              </TouchableOpacity>
+                              
+                              <TouchableOpacity
+                                style={[
+                                  styles.statusOption,
+                                  {
+                                    backgroundColor: selectedPregnancy.status === 'foaled' 
+                                      ? currentTheme.colors.primary 
+                                      : currentTheme.colors.surface,
+                                    borderColor: currentTheme.colors.border,
+                                  }
+                                ]}
+                                onPress={() => {
+                                  if (selectedPregnancy) {
+                                    const updated = {
+                                      ...selectedPregnancy,
+                                      status: 'foaled' as PregnancyStatus
+                                    };
+                                    setSelectedPregnancy(updated);
+                                    const newPregnancies = { ...pregnancies, [selectedPregnancy.horseId]: updated };
+                                    setPregnancies(newPregnancies);
+                                    savePregnancies(newPregnancies);
+                                  }
+                                }}
+                              >
+                                <Text style={[
+                                  styles.statusOptionText,
+                                  { 
+                                    color: selectedPregnancy.status === 'foaled' 
+                                      ? '#FFFFFF' 
+                                      : currentTheme.colors.text 
+                                  }
+                                ]}>
+                                  🐴 Foaled
+                                </Text>
+                              </TouchableOpacity>
+                              
+                              <TouchableOpacity
+                                style={[
+                                  styles.statusOption,
+                                  {
+                                    backgroundColor: selectedPregnancy.status === 'lost' 
+                                      ? currentTheme.colors.primary 
+                                      : currentTheme.colors.surface,
+                                    borderColor: currentTheme.colors.border,
+                                  }
+                                ]}
+                                onPress={() => {
+                                  if (selectedPregnancy) {
+                                    const updated = {
+                                      ...selectedPregnancy,
+                                      status: 'lost' as PregnancyStatus
+                                    };
+                                    setSelectedPregnancy(updated);
+                                    const newPregnancies = { ...pregnancies, [selectedPregnancy.horseId]: updated };
+                                    setPregnancies(newPregnancies);
+                                    savePregnancies(newPregnancies);
+                                  }
+                                }}
+                              >
+                                <Text style={[
+                                  styles.statusOptionText,
+                                  { 
+                                    color: selectedPregnancy.status === 'lost' 
+                                      ? '#FFFFFF' 
+                                      : currentTheme.colors.text 
+                                  }
+                                ]}>
+                                  ❌ Lost
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                            
+                            {/* Status-Specific Actions */}
+                            {selectedPregnancy.status === 'lost' && (
+                              <View style={styles.statusActionsContainer}>
+                                <TouchableOpacity
+                                  style={[styles.exportButton, { backgroundColor: currentTheme.colors.primary }]}
+                                  onPress={() => {
+                                    Alert.alert('Export', 'Export functionality coming soon');
+                                  }}
+                                >
+                                  <Text style={styles.exportButtonText}>📄 Export Timeline</Text>
+                                </TouchableOpacity>
+                                
+                                <TouchableOpacity
+                                  style={[styles.pregnancyDeleteButton, { backgroundColor: '#DC2626' }]}
+                                  onPress={() => {
+                                    Alert.alert(
+                                      'Delete Pregnancy',
+                                      'Are you sure you want to delete this pregnancy record? This action cannot be undone.',
+                                      [
+                                        { text: 'Cancel', style: 'cancel' },
+                                        {
+                                          text: 'Delete',
+                                          style: 'destructive',
+                                          onPress: () => {
+                                            if (selectedPregnancy) {
+                                              const newPregnancies = { ...pregnancies };
+                                              delete newPregnancies[selectedPregnancy.horseId];
+                                              setPregnancies(newPregnancies);
+                                              savePregnancies(newPregnancies);
+                                              setSelectedPregnancy(null);
+                                              setPregnancySettingsMode(false);
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    );
+                                  }}
+                                >
+                                  <Text style={styles.pregnancyDeleteButtonText}>🗑️ Delete Pregnancy</Text>
+                                </TouchableOpacity>
+                              </View>
+                            )}
+                            
+                            {/* Save Button */}
+                            <TouchableOpacity
+                              style={[styles.saveSettingsButton, { backgroundColor: currentTheme.colors.secondary }]}
+                              onPress={() => {
+                                setPregnancySettingsMode(false);
+                              }}
+                            >
+                              <Text style={styles.saveSettingsButtonText}>✓ Save & Return to Timeline</Text>
+                            </TouchableOpacity>
                           </View>
                         )}
                       </View>
@@ -7676,6 +7866,78 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
     fontFamily: "Inder",
+  },
+  settingsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  settingsButtonIcon: {
+    fontSize: 20,
+  },
+  settingsContainer: {
+    marginTop: 20,
+  },
+  settingsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    fontFamily: 'Inder',
+  },
+  statusOptionsContainer: {
+    gap: 12,
+  },
+  statusOption: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+  },
+  statusOptionText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'Inder',
+  },
+  statusActionsContainer: {
+    marginTop: 20,
+    gap: 12,
+  },
+  exportButton: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  exportButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'Inder',
+  },
+  pregnancyDeleteButton: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  pregnancyDeleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'Inder',
+  },
+  saveSettingsButton: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 30,
+  },
+  saveSettingsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'Inder',
   },
   dayCounter: {
     alignItems: "flex-end",
