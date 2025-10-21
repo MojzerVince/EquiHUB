@@ -305,6 +305,7 @@ const MyHorsesScreen = () => {
 
   // Add Event Modal state
   const [addEventModalVisible, setAddEventModalVisible] = useState(false);
+  const [showInlineAddEvent, setShowInlineAddEvent] = useState(false);
   const [eventType, setEventType] = useState<"ultrasound" | "vaccine" | "deworming" | "note">("ultrasound");
   const [eventDate, setEventDate] = useState<Date | null>(null);
   const [eventNotes, setEventNotes] = useState("");
@@ -1464,6 +1465,7 @@ const MyHorsesScreen = () => {
     setEventNotes("");
     setEventType("ultrasound");
     setAddEventModalVisible(false);
+    setShowInlineAddEvent(false);
 
     showSuccess("Event added successfully!");
   };
@@ -5655,15 +5657,168 @@ const MyHorsesScreen = () => {
                                 </Text>
                                 
                                 {/* Add Event Button */}
-                                <TouchableOpacity
-                                  style={[
-                                    styles.addEventButton,
-                                    { backgroundColor: currentTheme.colors.primary }
-                                  ]}
-                                  onPress={() => setAddEventModalVisible(true)}
-                                >
-                                  <Text style={styles.addEventButtonText}>+ Add Event</Text>
-                                </TouchableOpacity>
+                                {!showInlineAddEvent ? (
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.addEventButton,
+                                      { backgroundColor: currentTheme.colors.primary }
+                                    ]}
+                                    onPress={() => setShowInlineAddEvent(true)}
+                                  >
+                                    <Text style={styles.addEventButtonText}>+ Add Event</Text>
+                                  </TouchableOpacity>
+                                ) : (
+                                  <View style={[styles.inlineEventForm, { backgroundColor: currentTheme.colors.surface }]}>
+                                    {/* Event Type Selection */}
+                                    <View style={styles.inputGroup}>
+                                      <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                        Event Type
+                                      </Text>
+                                      <View style={styles.eventTypeGrid}>
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.eventTypeButton,
+                                            eventType === "ultrasound" && styles.eventTypeButtonActive,
+                                            { borderColor: currentTheme.colors.primary }
+                                          ]}
+                                          onPress={() => setEventType("ultrasound")}
+                                        >
+                                          <Text style={styles.eventTypeIcon}>🔍</Text>
+                                          <Text style={[
+                                            styles.eventTypeText,
+                                            eventType === "ultrasound" && styles.eventTypeTextActive
+                                          ]}>
+                                            Ultrasound
+                                          </Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.eventTypeButton,
+                                            eventType === "vaccine" && styles.eventTypeButtonActive,
+                                            { borderColor: currentTheme.colors.primary }
+                                          ]}
+                                          onPress={() => setEventType("vaccine")}
+                                        >
+                                          <Text style={styles.eventTypeIcon}>💉</Text>
+                                          <Text style={[
+                                            styles.eventTypeText,
+                                            eventType === "vaccine" && styles.eventTypeTextActive
+                                          ]}>
+                                            Vaccine
+                                          </Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.eventTypeButton,
+                                            eventType === "deworming" && styles.eventTypeButtonActive,
+                                            { borderColor: currentTheme.colors.primary }
+                                          ]}
+                                          onPress={() => setEventType("deworming")}
+                                        >
+                                          <Text style={styles.eventTypeIcon}>💊</Text>
+                                          <Text style={[
+                                            styles.eventTypeText,
+                                            eventType === "deworming" && styles.eventTypeTextActive
+                                          ]}>
+                                            Deworming
+                                          </Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.eventTypeButton,
+                                            eventType === "note" && styles.eventTypeButtonActive,
+                                            { borderColor: currentTheme.colors.primary }
+                                          ]}
+                                          onPress={() => setEventType("note")}
+                                        >
+                                          <Text style={styles.eventTypeIcon}>📝</Text>
+                                          <Text style={[
+                                            styles.eventTypeText,
+                                            eventType === "note" && styles.eventTypeTextActive
+                                          ]}>
+                                            Note
+                                          </Text>
+                                        </TouchableOpacity>
+                                      </View>
+                                    </View>
+
+                                    {/* Event Date */}
+                                    <View style={styles.inputGroup}>
+                                      <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                        Event Date *
+                                      </Text>
+                                      <DatePicker
+                                        value={eventDate}
+                                        placeholder="Select event date"
+                                        onSelect={setEventDate}
+                                        isVisible={showEventDatePicker}
+                                        setVisible={setShowEventDatePicker}
+                                      />
+                                    </View>
+
+                                    {/* Notes */}
+                                    <View style={styles.inputGroup}>
+                                      <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                        Notes (Optional)
+                                      </Text>
+                                      <TextInput
+                                        style={[
+                                          styles.textInput,
+                                          {
+                                            backgroundColor: currentTheme.colors.accent,
+                                            color: currentTheme.colors.text,
+                                            borderColor: currentTheme.colors.primary,
+                                            minHeight: 100,
+                                            textAlignVertical: "top",
+                                          },
+                                        ]}
+                                        value={eventNotes}
+                                        onChangeText={setEventNotes}
+                                        placeholder="Enter any notes or observations..."
+                                        placeholderTextColor={currentTheme.colors.textSecondary}
+                                        multiline
+                                      />
+                                    </View>
+
+                                    {/* Action Buttons */}
+                                    <View style={styles.inlineEventActions}>
+                                      <TouchableOpacity
+                                        style={[
+                                          styles.inlineEventCancelButton,
+                                          { backgroundColor: currentTheme.colors.textSecondary },
+                                        ]}
+                                        onPress={() => {
+                                          setShowInlineAddEvent(false);
+                                          setEventDate(null);
+                                          setEventNotes("");
+                                          setEventType("ultrasound");
+                                        }}
+                                      >
+                                        <Text style={styles.inlineEventCancelButtonText}>
+                                          Cancel
+                                        </Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity
+                                        style={[
+                                          styles.inlineEventSaveButton,
+                                          { 
+                                            backgroundColor: currentTheme.colors.primary,
+                                            opacity: eventDate ? 1 : 0.5
+                                          },
+                                        ]}
+                                        onPress={handleAddEvent}
+                                        disabled={!eventDate}
+                                      >
+                                        <Text style={styles.inlineEventSaveButtonText}>
+                                          Add Event
+                                        </Text>
+                                      </TouchableOpacity>
+                                    </View>
+                                  </View>
+                                )}
 
                                 {/* Events List (reverse chronological) */}
                                 <View style={styles.eventsList}>
@@ -8191,6 +8346,40 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FFFFFF",
     fontFamily: "Inder",
+  },
+  inlineEventForm: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  inlineEventActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+  },
+  inlineEventCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  inlineEventCancelButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Inder',
+  },
+  inlineEventSaveButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  inlineEventSaveButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Inder',
   },
   eventsList: {
     marginTop: 10,
