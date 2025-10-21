@@ -1361,6 +1361,12 @@ const MyHorsesScreen = () => {
     const nextAction = getNextAction(selectedPregnancy);
     if (!nextAction) return;
 
+    // Prevent completing future actions (only allow today or overdue)
+    if (nextAction.daysUntil > 0) {
+      showError("Cannot complete future actions. This action is not due yet.");
+      return;
+    }
+
     const updatedPregnancy = { ...selectedPregnancy };
 
     // Mark the action as complete based on type
@@ -5507,35 +5513,43 @@ const MyHorsesScreen = () => {
                             )}
 
                             {/* Next Action Card */}
-                            {selectedPregnancy.status === "active" && getNextAction(selectedPregnancy) && (
-                              <View style={[styles.nextActionCard, { backgroundColor: currentTheme.colors.accent }]}>
-                                <View style={styles.nextActionContent}>
-                                  <View style={styles.nextActionTextContainer}>
-                                    <Text style={styles.nextActionTitle}>Next Action</Text>
-                                    <Text style={styles.nextActionText}>
-                                      {getNextAction(selectedPregnancy)!.text}
-                                    </Text>
-                                    <Text style={styles.nextActionDays}>
-                                      {getNextAction(selectedPregnancy)!.daysUntil > 0 
-                                        ? `in ${getNextAction(selectedPregnancy)!.daysUntil} days`
-                                        : getNextAction(selectedPregnancy)!.daysUntil === 0
-                                        ? "Today!"
-                                        : `${Math.abs(getNextAction(selectedPregnancy)!.daysUntil)} days overdue`
-                                      }
-                                    </Text>
+                            {selectedPregnancy.status === "active" && getNextAction(selectedPregnancy) && (() => {
+                              const nextAction = getNextAction(selectedPregnancy)!;
+                              const isFutureAction = nextAction.daysUntil > 0;
+                              return (
+                                <View style={[styles.nextActionCard, { backgroundColor: currentTheme.colors.accent }]}>
+                                  <View style={styles.nextActionContent}>
+                                    <View style={styles.nextActionTextContainer}>
+                                      <Text style={styles.nextActionTitle}>Next Action</Text>
+                                      <Text style={styles.nextActionText}>
+                                        {nextAction.text}
+                                      </Text>
+                                      <Text style={styles.nextActionDays}>
+                                        {nextAction.daysUntil > 0 
+                                          ? `in ${nextAction.daysUntil} days`
+                                          : nextAction.daysUntil === 0
+                                          ? "Today!"
+                                          : `${Math.abs(nextAction.daysUntil)} days overdue`
+                                        }
+                                      </Text>
+                                    </View>
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.nextActionCheckButton,
+                                        { 
+                                          backgroundColor: isFutureAction ? '#cccccc' : currentTheme.colors.primary,
+                                          opacity: isFutureAction ? 0.5 : 1
+                                        }
+                                      ]}
+                                      onPress={handleCompleteNextAction}
+                                      disabled={isFutureAction}
+                                    >
+                                      <Text style={styles.nextActionCheckIcon}>✓</Text>
+                                    </TouchableOpacity>
                                   </View>
-                                  <TouchableOpacity
-                                    style={[
-                                      styles.nextActionCheckButton,
-                                      { backgroundColor: currentTheme.colors.primary }
-                                    ]}
-                                    onPress={handleCompleteNextAction}
-                                  >
-                                    <Text style={styles.nextActionCheckIcon}>✓</Text>
-                                  </TouchableOpacity>
                                 </View>
-                              </View>
-                            )}
+                              );
+                            })()}
 
                             {/* View Toggle */}
                             <View style={styles.viewToggle}>
