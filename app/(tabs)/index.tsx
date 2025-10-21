@@ -5261,25 +5261,6 @@ const MyHorsesScreen = () => {
                   {recordsSection === "pregnancy" && selectedHorseForRecords?.gender === "Mare" && (
                     <View>
                       <View style={styles.pregnancyHeader}>
-                        <Text
-                          style={[
-                            styles.pregnancyHorseName,
-                            { color: currentTheme.colors.text },
-                          ]}
-                        >
-                          {pregnancySettingsMode ? 'Pregnancy Settings for:' : 'Pregnancy Timeline for:'} {selectedHorseForRecords.name}
-                        </Text>
-                        
-                        {!pregnancySettingsMode && (
-                          <>
-                            {/* Safety Disclaimer */}
-                            <View style={styles.disclaimerBanner}>
-                          <Text style={styles.disclaimerIcon}>⚠️</Text>
-                          <Text style={styles.disclaimerText}>
-                            Educational only — contact your veterinarian for diagnosis or emergencies
-                          </Text>
-                        </View>
-
                         {!selectedPregnancy ? (
                           // No active pregnancy - Show inline form or start button
                           !pregnancyModalVisible ? (
@@ -5474,6 +5455,25 @@ const MyHorsesScreen = () => {
                         ) : (
                           // Active pregnancy exists
                           <View>
+                            {/* Title and Disclaimer for Active Pregnancy */}
+                            <Text
+                              style={[
+                                styles.pregnancyHorseName,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              {pregnancySettingsMode ? 'Pregnancy Settings for:' : 'Pregnancy Timeline for:'} {selectedHorseForRecords.name}
+                            </Text>
+                            
+                            {!pregnancySettingsMode && (
+                              <View style={styles.disclaimerBanner}>
+                                <Text style={styles.disclaimerIcon}>⚠️</Text>
+                                <Text style={styles.disclaimerText}>
+                                  Educational only — contact your veterinarian for diagnosis or emergencies
+                                </Text>
+                              </View>
+                            )}
+                            
                             {/* Status Badge and Day Counter */}
                             <View style={styles.pregnancyStatusContainer}>
                               <View style={[styles.statusBadge, { backgroundColor: currentTheme.colors.accent }]}>
@@ -5780,8 +5780,6 @@ const MyHorsesScreen = () => {
                               </View>
                             )}
                           </View>
-                        )}
-                          </>
                         )}
                         
                         {/* Settings Mode Content */}
@@ -8397,7 +8395,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   pregnancyFormContainer: {
-    paddingVertical: 20,
+    paddingBottom: 20,
   },
   pregnancyFormTitle: {
     fontSize: 20,
