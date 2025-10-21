@@ -5336,9 +5336,10 @@ const MyHorsesScreen = () => {
                                 <View style={styles.methodToggle}>
                                   <TouchableOpacity
                                     style={[
-                                      styles.methodButton,
+                                      styles.methodButtonLeft,
                                       pregnancyMethod === "natural" && styles.methodButtonActive,
-                                      { borderColor: currentTheme.colors.primary }
+                                      pregnancyMethod === "natural" ? {backgroundColor: currentTheme.colors.secondary} : { backgroundColor: currentTheme.colors.surface },
+                                      { borderColor: currentTheme.colors.primary}
                                     ]}
                                     onPress={() => setPregnancyMethod("natural")}
                                   >
@@ -5353,7 +5354,8 @@ const MyHorsesScreen = () => {
                                     style={[
                                       styles.methodButton,
                                       pregnancyMethod === "AI" && styles.methodButtonActive,
-                                      { borderColor: currentTheme.colors.primary }
+                                      pregnancyMethod === "AI" ? {backgroundColor: currentTheme.colors.secondary} : { backgroundColor: currentTheme.colors.surface },
+                                      { borderColor: currentTheme.colors.primary}
                                     ]}
                                     onPress={() => setPregnancyMethod("AI")}
                                   >
@@ -5366,8 +5368,9 @@ const MyHorsesScreen = () => {
                                   </TouchableOpacity>
                                   <TouchableOpacity
                                     style={[
-                                      styles.methodButton,
+                                      styles.methodButtonRight,
                                       pregnancyMethod === "ICSI" && styles.methodButtonActive,
+                                      pregnancyMethod === "ICSI" ? {backgroundColor: currentTheme.colors.secondary} : { backgroundColor: currentTheme.colors.surface },
                                       { borderColor: currentTheme.colors.primary }
                                     ]}
                                     onPress={() => setPregnancyMethod("ICSI")}
@@ -5391,9 +5394,9 @@ const MyHorsesScreen = () => {
                                   style={[
                                     styles.input,
                                     {
-                                      backgroundColor: currentTheme.colors.accent,
-                                      color: currentTheme.colors.text,
-                                      borderColor: currentTheme.colors.primary,
+                                      backgroundColor: currentTheme.colors.surface,
+                                      color: currentTheme.colors.primaryDark,
+                                      borderColor: currentTheme.colors.primaryDark,
                                     },
                                   ]}
                                   value={pregnancyVetName}
@@ -5411,9 +5414,9 @@ const MyHorsesScreen = () => {
                                   style={[
                                     styles.input,
                                     {
-                                      backgroundColor: currentTheme.colors.accent,
-                                      color: currentTheme.colors.text,
-                                      borderColor: currentTheme.colors.primary,
+                                      backgroundColor: currentTheme.colors.surface,
+                                      color: currentTheme.colors.primaryDark,
+                                      borderColor: currentTheme.colors.primaryDark,
                                     },
                                   ]}
                                   value={pregnancyVetPhone}
@@ -7829,7 +7832,7 @@ const styles = StyleSheet.create({
   startPregnancyButton: {
     paddingVertical: 15,
     paddingHorizontal: 40,
-    borderRadius: 12,
+    borderRadius: 15,
   },
   startPregnancyButtonText: {
     fontSize: 16,
@@ -7847,14 +7850,33 @@ const styles = StyleSheet.create({
   methodToggle: {
     flexDirection: "row",
     marginTop: 8,
-    borderRadius: 8,
     overflow: "hidden",
+  },
+  methodButtonLeft: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderTopLeftRadius: 15,
+    borderBottomLeftRadius: 15,
+    borderWidth: 1,
+    borderRightWidth: 0,
+    backgroundColor: "#f5f5f5",
   },
   methodButton: {
     flex: 1,
     paddingVertical: 12,
     alignItems: "center",
     borderWidth: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  methodButtonRight: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderTopRightRadius: 15,
+    borderBottomRightRadius: 15,
+    borderWidth: 1,
+    borderLeftWidth: 0,
     backgroundColor: "#f5f5f5",
   },
   methodButtonActive: {
@@ -7873,9 +7895,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     backgroundColor: "#e3f2fd",
-    borderRadius: 8,
+    borderRadius: 15,
     padding: 15,
-    marginTop: 20,
     marginBottom: 10,
   },
   pregnancyInfoIcon: {
