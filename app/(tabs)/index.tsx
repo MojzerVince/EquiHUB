@@ -5555,7 +5555,7 @@ const MyHorsesScreen = () => {
                             <View style={styles.viewToggle}>
                               <TouchableOpacity
                                 style={[
-                                  styles.viewToggleButton,
+                                  styles.viewToggleButtonLeft,
                                   pregnancyView === "timeline" && styles.viewToggleButtonActive,
                                   { borderColor: currentTheme.colors.primary }
                                 ]}
@@ -5591,7 +5591,7 @@ const MyHorsesScreen = () => {
                               </TouchableOpacity>
                               <TouchableOpacity
                                 style={[
-                                  styles.viewToggleButton,
+                                  styles.viewToggleButtonRight,
                                   pregnancyView === "photos" && styles.viewToggleButtonActive,
                                   { borderColor: currentTheme.colors.primary }
                                 ]}
@@ -7715,7 +7715,7 @@ const styles = StyleSheet.create({
   },
   nextActionCard: {
     padding: 15,
-    borderRadius: 12,
+    borderRadius: 15,
     marginBottom: 20,
   },
   nextActionContent: {
@@ -7770,14 +7770,34 @@ const styles = StyleSheet.create({
   viewToggle: {
     flexDirection: "row",
     marginBottom: 20,
-    borderRadius: 8,
+    borderRadius: 15,
     overflow: "hidden",
+  },
+  viewToggleButtonLeft: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderTopLeftRadius: 15,
+    borderBottomLeftRadius: 15,
+    borderWidth: 1,
+    borderRightWidth: 0,
+    backgroundColor: "#f5f5f5",
   },
   viewToggleButton: {
     flex: 1,
     paddingVertical: 12,
     alignItems: "center",
     borderWidth: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  viewToggleButtonRight: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderTopRightRadius: 15,
+    borderBottomRightRadius: 15,
+    borderWidth: 1,
+    borderLeftWidth: 0,
     backgroundColor: "#f5f5f5",
   },
   viewToggleButtonActive: {
@@ -7849,7 +7869,8 @@ const styles = StyleSheet.create({
   infoCard: {
     width: "100%",
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 15,
+    marginBottom: 20,
   },
   infoCardTitle: {
     fontSize: 16,
