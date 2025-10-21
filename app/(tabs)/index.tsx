@@ -1176,6 +1176,12 @@ const MyHorsesScreen = () => {
   };
 
   const openPregnancyManager = () => {
+    // Check if user is PRO member
+    if (!isProMember) {
+      router.push("/pro-features");
+      return;
+    }
+    
     if (selectedHorseForRecords && selectedHorseForRecords.gender === "Mare") {
       const pregnancy = pregnancies[selectedHorseForRecords.id];
       setSelectedPregnancy(pregnancy || null);
@@ -4604,7 +4610,7 @@ const MyHorsesScreen = () => {
                             <Text style={styles.recordsMenuIcon}>🤰</Text>
                             <View style={styles.recordsMenuContent}>
                               <Text style={styles.recordsMenuTitle}>
-                                Pregnancy Timeline
+                                Pregnancy Timeline {!isProMember && "(PRO)"}
                               </Text>
                               <Text style={styles.recordsMenuSubtitle}>
                                 Track breeding to foaling with milestones & reminders
