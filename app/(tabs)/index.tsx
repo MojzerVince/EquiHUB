@@ -1280,6 +1280,16 @@ const MyHorsesScreen = () => {
     return null;
   };
 
+  const formatDueDateRange = (dueDateStr: string): string => {
+    const dueDate = new Date(dueDateStr);
+    const earlyDate = new Date(dueDate);
+    earlyDate.setDate(dueDate.getDate() - 20);
+    const lateDate = new Date(dueDate);
+    lateDate.setDate(dueDate.getDate() + 20);
+    
+    return `${earlyDate.toLocaleDateString()} - ${lateDate.toLocaleDateString()}`;
+  };
+
   const getMonthInfo = (month: number): { fruit: string; size: string; description: string } => {
     const monthData = [
       { fruit: "🫐", size: "Grape/Blueberry (~1 cm)", description: "Embryo visible; first ultrasound at D14-16; heartbeat by D24-26" },
@@ -3637,7 +3647,7 @@ const MyHorsesScreen = () => {
                           { color: currentTheme.colors.textSecondary },
                         ]}
                       >
-                        Due: {new Date(pregnancies[horse.id].dueDateEstimate).toLocaleDateString()}
+                        Due: {formatDueDateRange(pregnancies[horse.id].dueDateEstimate)}
                       </Text>
                     </View>
                   )}
