@@ -32,6 +32,14 @@
         "serviceAccountKeyPath": "./play-store-service-account.json",
         "track": "internal"
       }
+    },
+    "iosPreview": {
+      "ios": {
+        "ascAppId": "6754323414",
+        "appleTeamId": "NLMGF499CX",
+        "ascApiKeyId": "68MSCD37Y3",
+        "ascApiKeyIssuerId": "82888c8e-51ca-4bca-9a7a-bc6824cf292c"
+      }
     }
   }
 }
