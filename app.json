@@ -23,7 +23,9 @@
         ],
         "CFBundleURLTypes": [
           {
-            "CFBundleURLSchemes": ["com.googleusercontent.apps.645905000706-79hvbfust1ggops4ftqijeul16eb0dvm"]
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.645905000706-79hvbfust1ggops4ftqijeul16eb0dvm"
+            ]
           }
         ]
       },
@@ -31,7 +33,7 @@
         "googleMapsApiKey": "AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg"
       },
       "bundleIdentifier": "com.mojzi1969.EquiHUB",
-      "buildNumber": "43"
+      "buildNumber": "44"
     },
     "android": {
       "adaptiveIcon": {
