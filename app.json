@@ -12,7 +12,20 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs location access to track your riding routes and show your position on the map.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access to track your riding routes even when the app is in the background."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access to track your riding routes even when the app is in the background.",
+        "NSLocationAlwaysUsageDescription": "This app needs location access to track your riding routes, even when the app is in the background.",
+        "NSCameraUsageDescription": "This app needs camera access to take photos of your rides and horses.",
+        "NSPhotoLibraryUsageDescription": "This app needs photo library access to select photos of your rides and horses.",
+        "NSPhotoLibraryAddUsageDescription": "This app needs photo library access to save photos of your rides and horses.",
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ],
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["com.googleusercontent.apps.645905000706-79hvbfust1ggops4ftqijeul16eb0dvm"]
+          }
+        ]
       },
       "config": {
         "googleMapsApiKey": "AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg"
