@@ -14,6 +14,10 @@
         "buildType": "apk"
       }
     },
+    "iosPreview": {
+      "distribution": "store",
+      "autoIncrement": true
+    },
     "production": {
       "autoIncrement": true,
       "android": {
