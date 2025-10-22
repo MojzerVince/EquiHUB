@@ -2,14 +2,14 @@
   "expo": {
     "name": "EquiHUB",
     "slug": "EquiHUB",
-    "version": "0.8.0",
+    "version": "0.9.0",
     "orientation": "portrait",
     "icon": "./assets/icons/512x512.png",
     "scheme": "EquiHUB",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs location access to track your riding routes and show your position on the map.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access to track your riding routes even when the app is in the background.",
@@ -30,7 +30,8 @@
       "config": {
         "googleMapsApiKey": "AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg"
       },
-      "bundleIdentifier": "com.mojzi1969.EquiHUB"
+      "bundleIdentifier": "com.mojzi1969.EquiHUB",
+      "buildNumber": "43"
     },
     "android": {
       "adaptiveIcon": {
@@ -107,7 +108,7 @@
       },
       "expoPublicApiServerUrl": "https://grdsqxwghajehneksxik.supabase.co",
       "expoPublicBundleId": "com.mojzi1969.EquiHUB",
-      "expoPublicAppVersion": "0.8.0"
+      "expoPublicAppVersion": "0.9.0"
     }
   }
 }
