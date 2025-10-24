@@ -48,6 +48,7 @@ interface PregnancyCheck {
 interface PregnancyVaccine {
   type: VaccineType;
   due: string;
+  date?: string; // Actual date when vaccine was given
   done?: boolean;
   notes?: string;
 }
@@ -61,6 +62,7 @@ interface PregnancyHusbandry {
 interface PregnancyDeworming {
   type: "pre-foaling";
   due: string;
+  date?: string; // Actual date when deworming was done
   drug?: "ivermectin" | "benzimidazole";
   done?: boolean;
   notes?: string;
@@ -1376,7 +1378,7 @@ const MyHorsesScreen = () => {
     const updatedPregnancy = { ...selectedPregnancy };
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // Mark the action as complete based on type and set completion date
+    // Mark the action as complete based on type and set completion date to TODAY
     if (nextAction.type === 'check') {
       const checkIndex = updatedPregnancy.checks.findIndex(
         c => !c.done && c.due === nextAction.date
@@ -1392,8 +1394,8 @@ const MyHorsesScreen = () => {
       );
       if (vaccineIndex !== -1) {
         updatedPregnancy.vaccines[vaccineIndex].done = true;
-        // The due date stays as is, we just mark it done
-        // This way it shows up as completed in the Event Timeline
+        // Set the actual date when it was completed (today) - appears at top
+        updatedPregnancy.vaccines[vaccineIndex].date = todayStr;
       }
     } else if (nextAction.type === 'deworming') {
       const dewormIndex = updatedPregnancy.deworming.findIndex(
@@ -1401,8 +1403,8 @@ const MyHorsesScreen = () => {
       );
       if (dewormIndex !== -1) {
         updatedPregnancy.deworming[dewormIndex].done = true;
-        // The due date stays as is, we just mark it done
-        // This way it shows up as completed in the Event Timeline
+        // Set the actual date when it was completed (today) - appears at top
+        updatedPregnancy.deworming[dewormIndex].date = todayStr;
       }
     }
 
@@ -5858,7 +5860,7 @@ const MyHorsesScreen = () => {
                                       .forEach(v => {
                                         completedEvents.push({
                                           type: 'vaccine',
-                                          date: v.due,
+                                          date: v.date || v.due, // Use actual completion date if available, fallback to due date
                                           text: `Vaccine: ${v.type}`,
                                           notes: v.notes,
                                           icon: '💉'
@@ -5871,7 +5873,7 @@ const MyHorsesScreen = () => {
                                       .forEach(d => {
                                         completedEvents.push({
                                           type: 'deworming',
-                                          date: d.due,
+                                          date: d.date || d.due, // Use actual completion date if available, fallback to due date
                                           text: 'Deworm (pre-foaling)',
                                           notes: d.notes,
                                           icon: '💊'
