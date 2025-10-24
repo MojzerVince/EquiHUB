@@ -20,6 +20,23 @@ const LAST_PHOTO_REMINDER_KEY = 'pregnancy_last_photo_reminder';
 export class PregnancyNotificationService {
   
   /**
+   * Check if pregnancy notifications are enabled in settings
+   */
+  private static async areNotificationsEnabled(): Promise<boolean> {
+    try {
+      const settings = await AsyncStorage.getItem('notificationSettings');
+      if (settings) {
+        const parsed = JSON.parse(settings);
+        return parsed.pregnancyReminders !== false; // Default to true if not set
+      }
+      return true; // Default to enabled
+    } catch (error) {
+      console.error('Error checking notification settings:', error);
+      return true; // Default to enabled on error
+    }
+  }
+
+  /**
    * Calculate days pregnant from cover date
    */
   private static getDaysPregnant(coverDate: string): number {
@@ -336,6 +353,13 @@ export class PregnancyNotificationService {
   static async scheduleAllNotifications(pregnancy: Pregnancy): Promise<void> {
     console.log('📅 Scheduling all pregnancy notifications for:', pregnancy.id);
     
+    // Check if notifications are enabled
+    const enabled = await this.areNotificationsEnabled();
+    if (!enabled) {
+      console.log('🔕 Pregnancy notifications are disabled in settings');
+      return;
+    }
+    
     // Cancel existing notifications first
     await this.cancelPregnancyNotifications(pregnancy.id);
 
@@ -390,6 +414,13 @@ export class PregnancyNotificationService {
    * Daily check for all active pregnancies (call this when app opens)
    */
   static async dailyPregnancyCheck(pregnancies: Pregnancy[]): Promise<void> {
+    // Check if notifications are enabled
+    const enabled = await this.areNotificationsEnabled();
+    if (!enabled) {
+      console.log('🔕 Pregnancy notifications are disabled in settings');
+      return;
+    }
+    
     const activePregnancies = pregnancies.filter(p => p.status === 'active');
     
     for (const pregnancy of activePregnancies) {

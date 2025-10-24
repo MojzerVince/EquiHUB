@@ -4,8 +4,8 @@ import { MetricSystem, useMetric } from "@/contexts/MetricContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { AuthAPI } from "@/lib/authAPI";
 import {
-  EmergencyFriend,
-  EmergencyFriendsAPI,
+    EmergencyFriend,
+    EmergencyFriendsAPI,
 } from "@/lib/emergencyFriendsAPI";
 import { FeedbackAPI } from "@/lib/feedbackAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
@@ -18,20 +18,20 @@ import * as Notifications from "expo-notifications";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  Linking,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    Linking,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import appConfig from "../../app.json";
@@ -54,6 +54,7 @@ const OptionsScreen = () => {
     trackingStatus: true,
     weeklySummary: true,
     monthlySummary: true,
+    pregnancyReminders: true,
   });
 
   // Load hidden posts when component mounts
@@ -423,6 +424,19 @@ const OptionsScreen = () => {
     // Update scheduled notifications for weekly/monthly summaries
     if (key === "weeklySummary" || key === "monthlySummary") {
       await schedulePeriodicNotifications();
+    }
+
+    // Handle pregnancy reminders toggle
+    if (key === "pregnancyReminders") {
+      if (!newSettings.pregnancyReminders) {
+        // Cancel all pregnancy notifications when disabled
+        console.log('🔕 Pregnancy notifications disabled - cancelling all notifications');
+        // Note: Individual pregnancy notifications will be cancelled automatically
+        // by the PregnancyNotificationService when it checks the setting
+      } else {
+        // Notifications will be rescheduled automatically when enabled
+        console.log('🔔 Pregnancy notifications enabled - notifications will be scheduled');
+      }
     }
   };
 
@@ -1746,6 +1760,46 @@ ${
                   }}
                   thumbColor={
                     notificationSettings.monthlySummary ? "#fff" : "#f4f3f4"
+                  }
+                />
+              </View>
+
+              {/* Pregnancy Reminders */}
+              <View
+                style={[
+                  styles.notificationSettingItem,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <View style={styles.notificationSettingInfo}>
+                  <Text
+                    style={[
+                      styles.notificationSettingTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    🐴 Pregnancy Reminders
+                  </Text>
+                  <Text
+                    style={[
+                      styles.notificationSettingSubtitle,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Get notifications for pregnancy milestones, next actions, photo reminders, and late-pregnancy care
+                  </Text>
+                </View>
+                <Switch
+                  value={notificationSettings.pregnancyReminders}
+                  onValueChange={() =>
+                    handleNotificationToggle("pregnancyReminders")
+                  }
+                  trackColor={{
+                    false: currentTheme.colors.accent,
+                    true: currentTheme.colors.primary,
+                  }}
+                  thumbColor={
+                    notificationSettings.pregnancyReminders ? "#fff" : "#f4f3f4"
                   }
                 />
               </View>
