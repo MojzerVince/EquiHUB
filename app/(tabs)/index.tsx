@@ -26,6 +26,7 @@ import { useMetric } from "../../contexts/MetricContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { HorseAPI } from "../../lib/horseAPI";
 import PaymentService from "../../lib/paymentService";
+import { PregnancyNotificationService } from "../../lib/pregnancyNotificationService";
 import { Horse } from "../../lib/supabase";
 
 // Pregnancy Timeline Types
@@ -411,6 +412,23 @@ const MyHorsesScreen = () => {
       checkProMembership();
     }
   }, [user?.id]); // Only depend on user?.id changing
+
+  // Daily pregnancy notification check
+  useEffect(() => {
+    if (user?.id && Object.keys(pregnancies).length > 0) {
+      const pregnancyList = Object.values(pregnancies).map(p => {
+        const horse = horses.find(h => h.id === p.horseId);
+        return {
+          ...p,
+          horseName: horse?.name
+        };
+      });
+      
+      PregnancyNotificationService.dailyPregnancyCheck(pregnancyList).catch(error => {
+        console.error('Failed to check pregnancy notifications:', error);
+      });
+    }
+  }, [user?.id, pregnancies, horses]);
 
   // Load horses from local cache (for startup)
   const loadHorsesFromCache = async (userId: string) => {
@@ -1361,6 +1379,16 @@ const MyHorsesScreen = () => {
     
     // Save to AsyncStorage
     savePregnancies(updatedPregnancies);
+
+    // Schedule pregnancy notifications
+    PregnancyNotificationService.scheduleAllNotifications({
+      ...newPregnancy,
+      horseName: tempHorseName
+    }).catch(error => {
+      console.error('Failed to schedule pregnancy notifications:', error);
+    });
+
+    showSuccess(`Pregnancy tracking started for ${tempHorseName}!`);
   };
 
   const handleCompleteNextAction = () => {
@@ -1420,6 +1448,15 @@ const MyHorsesScreen = () => {
     
     // Save to AsyncStorage
     savePregnancies(updatedPregnancies);
+
+    // Update notifications (reschedule based on remaining actions)
+    const horseName = horses.find(h => h.id === updatedPregnancy.horseId)?.name;
+    PregnancyNotificationService.updatePregnancyNotifications({
+      ...updatedPregnancy,
+      horseName
+    }).catch(error => {
+      console.error('Failed to update pregnancy notifications:', error);
+    });
 
     showSuccess("Action completed and added to Event Timeline!");
   };
@@ -6069,6 +6106,15 @@ const MyHorsesScreen = () => {
                                     const newPregnancies = { ...pregnancies, [selectedPregnancy.horseId]: updated };
                                     setPregnancies(newPregnancies);
                                     savePregnancies(newPregnancies);
+                                    
+                                    // Update notifications (reactivate all notifications)
+                                    const horseName = horses.find(h => h.id === updated.horseId)?.name;
+                                    PregnancyNotificationService.updatePregnancyNotifications({
+                                      ...updated,
+                                      horseName
+                                    }).catch(error => {
+                                      console.error('Failed to update pregnancy notifications:', error);
+                                    });
                                   }
                                 }}
                               >
@@ -6104,6 +6150,11 @@ const MyHorsesScreen = () => {
                                     const newPregnancies = { ...pregnancies, [selectedPregnancy.horseId]: updated };
                                     setPregnancies(newPregnancies);
                                     savePregnancies(newPregnancies);
+                                    
+                                    // Cancel notifications (pregnancy completed)
+                                    PregnancyNotificationService.cancelPregnancyNotifications(updated.id).catch(error => {
+                                      console.error('Failed to cancel pregnancy notifications:', error);
+                                    });
                                   }
                                 }}
                               >
@@ -6139,6 +6190,11 @@ const MyHorsesScreen = () => {
                                     const newPregnancies = { ...pregnancies, [selectedPregnancy.horseId]: updated };
                                     setPregnancies(newPregnancies);
                                     savePregnancies(newPregnancies);
+                                    
+                                    // Cancel notifications (pregnancy ended)
+                                    PregnancyNotificationService.cancelPregnancyNotifications(updated.id).catch(error => {
+                                      console.error('Failed to cancel pregnancy notifications:', error);
+                                    });
                                   }
                                 }}
                               >
