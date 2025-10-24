@@ -1374,14 +1374,17 @@ const MyHorsesScreen = () => {
     }
 
     const updatedPregnancy = { ...selectedPregnancy };
+    const todayStr = new Date().toISOString().split('T')[0];
 
-    // Mark the action as complete based on type
+    // Mark the action as complete based on type and set completion date
     if (nextAction.type === 'check') {
       const checkIndex = updatedPregnancy.checks.findIndex(
         c => !c.done && c.due === nextAction.date
       );
       if (checkIndex !== -1) {
         updatedPregnancy.checks[checkIndex].done = true;
+        // Set the actual date when it was completed (today)
+        updatedPregnancy.checks[checkIndex].date = todayStr;
       }
     } else if (nextAction.type === 'vaccine') {
       const vaccineIndex = updatedPregnancy.vaccines.findIndex(
@@ -1389,6 +1392,8 @@ const MyHorsesScreen = () => {
       );
       if (vaccineIndex !== -1) {
         updatedPregnancy.vaccines[vaccineIndex].done = true;
+        // The due date stays as is, we just mark it done
+        // This way it shows up as completed in the Event Timeline
       }
     } else if (nextAction.type === 'deworming') {
       const dewormIndex = updatedPregnancy.deworming.findIndex(
@@ -1396,6 +1401,8 @@ const MyHorsesScreen = () => {
       );
       if (dewormIndex !== -1) {
         updatedPregnancy.deworming[dewormIndex].done = true;
+        // The due date stays as is, we just mark it done
+        // This way it shows up as completed in the Event Timeline
       }
     }
 
@@ -1412,7 +1419,7 @@ const MyHorsesScreen = () => {
     // Save to AsyncStorage
     savePregnancies(updatedPregnancies);
 
-    showSuccess("Action marked as completed!");
+    showSuccess("Action completed and added to Event Timeline!");
   };
 
   const handleAddEvent = () => {
@@ -5822,9 +5829,99 @@ const MyHorsesScreen = () => {
 
                                 {/* Events List (reverse chronological) */}
                                 <View style={styles.eventsList}>
-                                  <Text style={[styles.placeholderText, { color: currentTheme.colors.textSecondary }]}>
-                                    Events will appear here as they are added
-                                  </Text>
+                                  {(() => {
+                                    // Gather all completed events
+                                    const completedEvents: Array<{
+                                      type: 'ultrasound' | 'vaccine' | 'deworming';
+                                      date: string;
+                                      text: string;
+                                      notes?: string;
+                                      icon: string;
+                                    }> = [];
+
+                                    // Add completed ultrasounds
+                                    selectedPregnancy.checks
+                                      .filter(c => c.done && c.date)
+                                      .forEach(c => {
+                                        completedEvents.push({
+                                          type: 'ultrasound',
+                                          date: c.date!,
+                                          text: `Ultrasound: ${c.type}`,
+                                          notes: c.notes,
+                                          icon: '🔍'
+                                        });
+                                      });
+
+                                    // Add completed vaccines
+                                    selectedPregnancy.vaccines
+                                      .filter(v => v.done)
+                                      .forEach(v => {
+                                        completedEvents.push({
+                                          type: 'vaccine',
+                                          date: v.due,
+                                          text: `Vaccine: ${v.type}`,
+                                          notes: v.notes,
+                                          icon: '💉'
+                                        });
+                                      });
+
+                                    // Add completed deworming
+                                    selectedPregnancy.deworming
+                                      .filter(d => d.done)
+                                      .forEach(d => {
+                                        completedEvents.push({
+                                          type: 'deworming',
+                                          date: d.due,
+                                          text: 'Deworm (pre-foaling)',
+                                          notes: d.notes,
+                                          icon: '💊'
+                                        });
+                                      });
+
+                                    // Sort by date (most recent first)
+                                    completedEvents.sort((a, b) => 
+                                      new Date(b.date).getTime() - new Date(a.date).getTime()
+                                    );
+
+                                    if (completedEvents.length === 0) {
+                                      return (
+                                        <Text style={[styles.placeholderText, { color: currentTheme.colors.textSecondary }]}>
+                                          Events will appear here as they are added
+                                        </Text>
+                                      );
+                                    }
+
+                                    return completedEvents.map((event, index) => (
+                                      <View
+                                        key={`event-${event.type}-${event.date}-${index}`}
+                                        style={[
+                                          styles.eventCard,
+                                          { backgroundColor: currentTheme.colors.surface }
+                                        ]}
+                                      >
+                                        <View style={styles.eventCardHeader}>
+                                          <Text style={styles.eventIcon}>{event.icon}</Text>
+                                          <View style={styles.eventCardInfo}>
+                                            <Text style={[styles.eventCardTitle, { color: currentTheme.colors.text }]}>
+                                              {event.text}
+                                            </Text>
+                                            <Text style={[styles.eventCardDate, { color: currentTheme.colors.textSecondary }]}>
+                                              {new Date(event.date).toLocaleDateString('en-US', {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                year: 'numeric'
+                                              })}
+                                            </Text>
+                                          </View>
+                                        </View>
+                                        {event.notes && (
+                                          <Text style={[styles.eventCardNotes, { color: currentTheme.colors.textSecondary }]}>
+                                            {event.notes}
+                                          </Text>
+                                        )}
+                                      </View>
+                                    ));
+                                  })()}
                                 </View>
                               </View>
                             )}
@@ -8383,6 +8480,46 @@ const styles = StyleSheet.create({
   },
   eventsList: {
     marginTop: 10,
+  },
+  eventCard: {
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  eventCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  eventIcon: {
+    fontSize: 24,
+  },
+  eventCardInfo: {
+    flex: 1,
+  },
+  eventCardTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  eventCardDate: {
+    fontSize: 13,
+    fontFamily: "Inder",
+  },
+  eventCardNotes: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(128, 128, 128, 0.2)",
+    lineHeight: 20,
   },
   placeholderText: {
     fontSize: 14,
