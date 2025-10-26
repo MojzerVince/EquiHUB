@@ -33,7 +33,8 @@
         "googleMapsApiKey": "AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg"
       },
       "bundleIdentifier": "com.mojzi1969.EquiHUB",
-      "buildNumber": "45"
+      "buildNumber": "46",
+      "ITSAppUsesNonExemptEncryption": false
     },
     "android": {
       "adaptiveIcon": {
@@ -42,7 +43,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
-      "versionCode": 43,
+      "versionCode": 44,
       "permissions": [
         "INTERNET",
         "FOREGROUND_SERVICE",
