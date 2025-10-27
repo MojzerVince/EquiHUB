@@ -3636,7 +3636,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F9FA",
     marginBottom: 15,
     borderRadius: 25,
-    width: "92%",
+    width: "94%",
     alignSelf: "center",
     padding: 5,
   },
@@ -3649,7 +3649,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     fontFamily: "Inder",
   },

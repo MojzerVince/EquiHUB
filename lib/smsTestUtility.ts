@@ -1,4 +1,3 @@
-import { EmergencyContactsAPI } from "./emergencyContactsAPI";
 import { ServerSMSAPI } from "./serverSMSAPI";
 
 export class SMSTestUtility {
@@ -159,19 +158,6 @@ export class SMSTestUtility {
       issues,
       recommendations,
     };
-  }
-
-  // Sync emergency contacts to database
-  static async syncContactsToDatabase(userId: string): Promise<void> {
-    console.log("🔄 Syncing emergency contacts to database...");
-    
-    try {
-      await EmergencyContactsAPI.syncAllContactsToDatabase(userId);
-      console.log("✅ Emergency contacts successfully synced to database!");
-    } catch (error) {
-      console.error("❌ Failed to sync emergency contacts to database:", error);
-      throw error;
-    }
   }
 
   // Quick test - just test basic SMS functionality

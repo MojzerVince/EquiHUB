@@ -54,6 +54,7 @@ const OptionsScreen = () => {
     trackingStatus: true,
     weeklySummary: true,
     monthlySummary: true,
+    pregnancyReminders: true,
   });
 
   // Load hidden posts when component mounts
@@ -424,6 +425,19 @@ const OptionsScreen = () => {
     if (key === "weeklySummary" || key === "monthlySummary") {
       await schedulePeriodicNotifications();
     }
+
+    // Handle pregnancy reminders toggle
+    if (key === "pregnancyReminders") {
+      if (!newSettings.pregnancyReminders) {
+        // Cancel all pregnancy notifications when disabled
+        console.log('🔕 Pregnancy notifications disabled - cancelling all notifications');
+        // Note: Individual pregnancy notifications will be cancelled automatically
+        // by the PregnancyNotificationService when it checks the setting
+      } else {
+        // Notifications will be rescheduled automatically when enabled
+        console.log('🔔 Pregnancy notifications enabled - notifications will be scheduled');
+      }
+    }
   };
 
   // Handle weekly summary notification tap
@@ -651,6 +665,7 @@ const OptionsScreen = () => {
           permissionResults.push("❌ Camera access denied");
         }
       } catch (error) {
+        console.error("Camera permission error:", error);
         permissionResults.push("❌ Camera permission failed");
       }
 
@@ -665,6 +680,7 @@ const OptionsScreen = () => {
           permissionResults.push("❌ Photo library access denied");
         }
       } catch (error) {
+        console.error("Media library permission error:", error);
         permissionResults.push("❌ Photo library permission failed");
       }
 
@@ -679,6 +695,7 @@ const OptionsScreen = () => {
           permissionResults.push("❌ Location access denied");
         }
       } catch (error) {
+        console.error("Location permission error:", error);
         permissionResults.push("❌ Location permission failed");
       }
 
@@ -696,14 +713,13 @@ const OptionsScreen = () => {
         if (notificationResult.granted) {
           permissionsGranted++;
           permissionResults.push("✅ Notification access granted");
-          // Schedule notifications if settings allow (don't await to avoid blocking)
-          schedulePeriodicNotifications().catch((error) => {
-            console.log("Notification scheduling failed silently:", error);
-          });
+          // Note: Notification scheduling will happen automatically on next app launch
+          // We don't schedule here to avoid potential iOS crashes when requesting multiple permissions
         } else {
           permissionResults.push("❌ Notification access denied");
         }
       } catch (error) {
+        console.error("Notification permission error:", error);
         permissionResults.push("❌ Notification permission failed");
       }
 
@@ -1746,6 +1762,46 @@ ${
                   }}
                   thumbColor={
                     notificationSettings.monthlySummary ? "#fff" : "#f4f3f4"
+                  }
+                />
+              </View>
+
+              {/* Pregnancy Reminders */}
+              <View
+                style={[
+                  styles.notificationSettingItem,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <View style={styles.notificationSettingInfo}>
+                  <Text
+                    style={[
+                      styles.notificationSettingTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    🐴 Pregnancy Reminders
+                  </Text>
+                  <Text
+                    style={[
+                      styles.notificationSettingSubtitle,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Get notifications for pregnancy milestones, next actions, photo reminders, and late-pregnancy care
+                  </Text>
+                </View>
+                <Switch
+                  value={notificationSettings.pregnancyReminders}
+                  onValueChange={() =>
+                    handleNotificationToggle("pregnancyReminders")
+                  }
+                  trackColor={{
+                    false: currentTheme.colors.accent,
+                    true: currentTheme.colors.primary,
+                  }}
+                  thumbColor={
+                    notificationSettings.pregnancyReminders ? "#fff" : "#f4f3f4"
                   }
                 />
               </View>

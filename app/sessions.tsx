@@ -10,6 +10,7 @@ import {
   Image,
   Modal,
   PanResponder,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -539,7 +540,7 @@ const SessionsScreen = () => {
         </SafeAreaView>
         <View
           style={[
-            styles.content,
+            styles.viewPort,
             { backgroundColor: currentTheme.colors.background },
           ]}
         >
@@ -596,7 +597,7 @@ const SessionsScreen = () => {
 
       <View
         style={[
-          styles.content,
+          styles.viewPort,
           { backgroundColor: currentTheme.colors.background },
         ]}
         {...panResponder.panHandlers}
@@ -854,13 +855,15 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: -55,
-    marginTop: -15,
+    position: "relative",
+    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   backButton: {
+    position: "absolute",
+    left: 20,
     padding: 10,
     borderRadius: 20,
     minWidth: 40,
@@ -879,14 +882,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",
-    fontWeight: "600",
     flex: 1,
-  },
-  placeholder: {
-    width: 40,
-    height: 40,
+    fontWeight: "600",
   },
   calendarButton: {
+    position: "absolute",
+    right: 20,
     padding: 10,
     borderRadius: 20,
     minWidth: 40,
@@ -894,14 +895,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     zIndex: 10,
   },
   calendarIcon: {
     fontSize: 20,
     color: "#fff",
   },
-  content: {
+  viewPort: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 50,

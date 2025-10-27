@@ -50,7 +50,7 @@ const initializeGoogleSignInModule = () => {
 const GOOGLE_CONFIG = {
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-  //iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
   offlineAccess: true,
   forceCodeForRefreshToken: true,
   scopes: ['openid', 'profile', 'email'],
@@ -69,13 +69,25 @@ export const configureGoogleSignIn = async () => {
     const isAvailable = initializeGoogleSignInModule();
     
     if (isAvailable && GoogleSignin) {
-      const config = {
+      // Platform-specific configuration
+      const config: any = {
         webClientId: GOOGLE_CONFIG.webClientId,
-        //iosClientId: GOOGLE_CONFIG.iosClientId,
-        androidClientId: GOOGLE_CONFIG.androidClientId,
         offlineAccess: GOOGLE_CONFIG.offlineAccess,
         forceCodeForRefreshToken: GOOGLE_CONFIG.forceCodeForRefreshToken,
       };
+
+      // Add platform-specific client IDs
+      if (Platform.OS === 'ios') {
+        // iOS only accepts webClientId and iosClientId (if available)
+        if (GOOGLE_CONFIG.iosClientId) {
+          config.iosClientId = GOOGLE_CONFIG.iosClientId;
+        }
+      } else if (Platform.OS === 'android') {
+        // Android can use androidClientId
+        if (GOOGLE_CONFIG.androidClientId) {
+          config.androidClientId = GOOGLE_CONFIG.androidClientId;
+        }
+      }
 
       // Check if required client ID is available
       if (!config.webClientId) {
@@ -83,7 +95,7 @@ export const configureGoogleSignIn = async () => {
       }
 
       GoogleSignin.configure(config);
-      console.log('Google Sign In configured for native platform');
+      console.log('Google Sign In configured for native platform:', Platform.OS);
       return true;
     } else {
       console.log('Google Sign In native module not available, will use web OAuth');

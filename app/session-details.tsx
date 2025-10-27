@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -264,7 +265,7 @@ const SessionDetailsScreen = () => {
         </SafeAreaView>
         <View
           style={[
-            styles.content,
+            styles.viewPort,
             { backgroundColor: currentTheme.colors.background },
           ]}
         >
@@ -304,7 +305,7 @@ const SessionDetailsScreen = () => {
         </SafeAreaView>
         <View
           style={[
-            styles.content,
+            styles.viewPort,
             { backgroundColor: currentTheme.colors.background },
           ]}
         >
@@ -350,23 +351,16 @@ const SessionDetailsScreen = () => {
             activeOpacity={0.7}
           >
             <Image
-              source={require("../assets/UI_resources/UI_white/arrow_white.png")}
+              source={require("../assets/in_app_icons/back.png")}
               style={styles.backIcon}
             />
           </TouchableOpacity>
           <Text style={styles.header}>Session Details</Text>
-          <View style={styles.placeholder} />
         </View>
       </SafeAreaView>
 
-      <View
-        style={[
-          styles.content,
-          { backgroundColor: currentTheme.colors.background },
-        ]}
-      >
         <ScrollView
-          style={styles.scrollContainer}
+          style={styles.viewPort}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
@@ -377,22 +371,15 @@ const SessionDetailsScreen = () => {
               { backgroundColor: currentTheme.colors.surface },
             ]}
           >
-            <View
-              style={[
-                styles.sessionIconContainer,
-                { backgroundColor: currentTheme.colors.primary },
-              ]}
-            >
-              {horse && horse.image_url ? (
-                <Image
-                  source={{ uri: horse.image_url }}
-                  style={styles.horseImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <Text style={styles.sessionIcon}>🐎</Text>
-              )}
-            </View>
+            {horse && horse.image_url ? (
+              <Image
+                source={{ uri: horse.image_url }}
+                style={styles.horseImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={styles.sessionIcon}>🐎</Text>
+            )}
             <Text
               style={[styles.sessionTitle, { color: currentTheme.colors.text }]}
             >
@@ -981,7 +968,6 @@ const SessionDetailsScreen = () => {
           </View>
         </ScrollView>
       </View>
-    </View>
   );
 };
 
@@ -995,12 +981,15 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: -45,
+    position: "relative",
+    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   backButton: {
+    position: "absolute",
+    left: 20,
     padding: 10,
     borderRadius: 20,
     minWidth: 40,
@@ -1008,38 +997,33 @@ const styles = StyleSheet.create({
     marginTop: 10,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     zIndex: 10,
   },
   backIcon: {
-    width: 24,
-    height: 24,
-    tintColor: "#fff",
+    width: 26,
+    height: 26,
   },
   header: {
     fontSize: 30,
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",
-    fontWeight: "600",
     flex: 1,
+    fontWeight: "600",
   },
   placeholder: {
     width: 40,
     height: 40,
   },
-  content: {
+  viewPort: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
-    marginTop: 5,
-  },
-  scrollContainer: {
-    flex: 1,
+    marginTop: -8,
   },
   scrollContent: {
-    paddingTop: 30,
+    paddingTop: 20,
     paddingHorizontal: 20,
     paddingBottom: 75,
   },
@@ -1086,21 +1070,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
-  sessionIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-  },
   sessionIcon: {
     fontSize: 40,
   },
   horseImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 10,
   },
   sessionTitle: {
     fontSize: 24,

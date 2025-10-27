@@ -9,6 +9,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -626,12 +627,11 @@ export default function SessionShareScreen() {
               style={styles.backButton}
             >
               <Image
-                style={{ width: 24, height: 24 }}
+                style={{ width: 26, height: 26 }}
                 source={require("../assets/in_app_icons/back.png")}
               />
             </TouchableOpacity>
             <Text style={styles.header}>Share Session</Text>
-            <View style={styles.backButton} /> {/* Spacer for centering */}
           </View>
         </SafeAreaView>
         <View
@@ -678,14 +678,13 @@ export default function SessionShareScreen() {
             disabled={isSharing}
           >
             <Image
-              style={{ width: 24, height: 24 }}
+              style={{ width: 26, height: 26 }}
               source={require("../assets/in_app_icons/back.png")}
             />
           </TouchableOpacity>
           <Text style={[styles.header, { color: "#FFFFFF" }]}>
             Share Session
           </Text>
-          <View style={styles.backButton} /> {/* Spacer for centering */}
         </View>
       </SafeAreaView>
 
@@ -1196,11 +1195,10 @@ export default function SessionShareScreen() {
             <View style={styles.hybridContentOverlay}>
               {/* Header Section */}
               <View style={styles.hybridHeader}>
-                <View style={styles.hybridBrandContainer}>
-                  <Ionicons name="logo-buffer" size={18} color="#FFFFFF" />
-                  <Text style={styles.hybridBrandText}>EquiHub</Text>
-                </View>
-                <Text style={styles.hybridTitle}>Training Session</Text>
+                <Image
+                  source={require("../assets/icons/1024x 1024-02.png")}
+                  style={styles.hybridBrandLogo}
+                />
               </View>
 
               {/* Horse Section */}
@@ -1213,9 +1211,11 @@ export default function SessionShareScreen() {
                   }
                   style={styles.hybridHorseImage}
                 />
-                <Text style={styles.hybridHorseName}>
-                  {session.horseName || "Unknown Horse"}
-                </Text>
+                <View style={styles.hybridHorseNameContainer}>
+                  <Text style={styles.hybridHorseName}>
+                    {session.horseName || "Unknown Horse"}
+                  </Text>
+                </View>
               </View>
 
               {/* Spacer to push stats to bottom */}
@@ -1398,29 +1398,41 @@ export default function SessionShareScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#335C67",
   },
   safeArea: {
-    // backgroundColor applied dynamically
+    backgroundColor: "#335C67",
   },
   headerContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 16,
     position: "relative",
-    marginBottom: -45,
-    marginTop: -5,
+    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   header: {
-    fontSize: 24,
+    fontSize: 30,
     fontFamily: "Inder",
     fontWeight: "600",
     flex: 1,
     textAlign: "center",
   },
   backButton: {
-    padding: 8,
-    zIndex: 1,
+    position: "absolute",
+    left: 20,
+    padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  backIcon: {
+    width: 26,
+    height: 26,
   },
   viewPort: {
     backgroundColor: "#FFFFFF",
@@ -1428,7 +1440,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: -8,
-    paddingTop: 0,
     marginBottom: 100,
   },
   scrollContent: {
@@ -1443,8 +1454,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    marginBottom: 12,
     fontFamily: "Inder",
+    paddingLeft: 16,
+    marginTop: 10,
   },
   mediaSection: {
     marginBottom: 20,
@@ -1858,7 +1870,7 @@ const styles = StyleSheet.create({
 
   // Instagram Map View Styles
   mapContainer: {
-    marginBottom: 20,
+    marginBottom: 10,
   },
   mapTitleContainer: {
     flexDirection: "row",
@@ -1886,9 +1898,12 @@ const styles = StyleSheet.create({
     height: width, // Square aspect ratio
   },
   instagramMapView: {
-    width: width,
-    height: width, // Square aspect ratio (1:1)
+    width: "94%",
+    height: 400,
     position: "relative",
+    borderRadius: 20,
+    overflow: "hidden",
+    alignSelf: "center",
   },
   mapBackground: {
     flex: 1,
@@ -1963,243 +1978,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
 
-  // New Redesigned Map Overlay Styles
-  mapBrandingContainerNew: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  mapBrandIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-  },
-  mapBrandTextNew: {
-    fontSize: 16,
-    fontWeight: "700",
-    fontFamily: "Inder",
-    color: "#FFFFFF",
-    textShadowColor: "rgba(0, 0, 0, 0.8)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  mapHorseContainerNew: {
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-    minWidth: 80,
-  },
-  mapHorseImageNew: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginBottom: 4,
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-  },
-  mapHorseNameNew: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    textAlign: "center",
-    textShadowColor: "rgba(0, 0, 0, 0.8)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  mapSessionStatsContainer: {
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-    borderRadius: 20,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
-  mapSessionHeader: {
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  mapSessionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    fontFamily: "Inder",
-    textShadowColor: "rgba(0, 0, 0, 0.8)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  mapSessionStats: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-  mapSessionStatItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  mapStatIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  mapSessionStatLabel: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginBottom: 2,
-    textShadowColor: "rgba(0, 0, 0, 0.8)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    opacity: 0.9,
-  },
-  mapSessionStatValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    textAlign: "center",
-    fontFamily: "Inder",
-    textShadowColor: "rgba(0, 0, 0, 0.8)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  mapHorseContainer: {
-    backgroundColor: "rgba(128, 128, 128, 0.5)",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    alignItems: "center",
-    minWidth: 80,
-    marginRight: 16,
-  },
-  mapHorseImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginBottom: 4,
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-  },
-  mapHorseName: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    textAlign: "center",
-    textShadowColor: "rgba(0, 0, 0, 0.75)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  mapCenter: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  mapBottom: {
-    position: "relative",
-    marginLeft: "auto",
-    marginRight: "auto",
-    alignItems: "center",
-    width: "75%",
-  },
-  mapStatsContainer: {
-    backgroundColor: "rgba(128, 128, 128, 0.5)",
-    borderRadius: 12,
-    padding: 2,
-  },
-  mapHeader: {
-    alignItems: "center",
-  },
-  mapTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    textAlign: "center",
-    fontFamily: "Inder",
-    color: "#FFFFFF",
-    textShadowColor: "rgba(0, 0, 0, 0.75)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  mapSubtitle: {
-    fontSize: 24,
-    textAlign: "center",
-    marginTop: 4,
-    color: "#FFFFFF",
-    fontWeight: "bold",
-    fontFamily: "Inder",
-    textShadowColor: "rgba(0, 0, 0, 0.75)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  mapStats: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-  mapStatItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  mapStatLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    marginTop: 6,
-    textAlign: "center",
-    color: "#FFFFFF",
-    textShadowColor: "rgba(0, 0, 0, 0.75)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  mapStatValue: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 2,
-    textAlign: "center",
-    fontFamily: "Inder",
-    color: "#FFFFFF",
-    textShadowColor: "rgba(0, 0, 0, 0.75)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  mapBranding: {
-    alignItems: "center",
-  },
-  mapBrandText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    fontFamily: "Inder",
-    color: "#FFFFFF",
-    textShadowColor: "rgba(0, 0, 0, 0.75)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
   // Stats Cards Grid
   statsGrid: {
     flexDirection: "row",
@@ -2341,126 +2119,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
   },
 
-  // Simple Instagram View Styles - Flat Design
-  simpleBackgroundGradient: {
-    flex: 1,
-    position: "relative",
-  },
-  simpleBackgroundOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  simpleHeader: {
-    paddingTop: 40,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  simpleBrandContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  simpleBrandText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginLeft: 8,
-    fontFamily: "Inder",
-  },
-  simpleTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    textAlign: "center",
-    fontFamily: "Inder",
-  },
-  simpleHorseSection: {
-    alignItems: "center",
-    marginBottom: 30,
-    paddingHorizontal: 24,
-  },
-  simpleHorseImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: "#FFFFFF",
-    marginBottom: 12,
-  },
-  simpleHorseName: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    textAlign: "center",
-    fontFamily: "Inder",
-  },
-  simpleStatsSection: {
-    paddingHorizontal: 24,
-    marginBottom: 30,
-  },
-  simpleStatCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  simpleStatValue: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginTop: 8,
-    fontFamily: "Inder",
-  },
-  simpleStatLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginTop: 4,
-    opacity: 0.9,
-  },
-  simpleRouteSection: {
-    alignItems: "center",
-    paddingHorizontal: 24,
-    marginBottom: 20,
-  },
-  simpleRouteIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  simpleRouteText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#FFFFFF",
-    textAlign: "center",
-    opacity: 0.9,
-  },
-  simpleDateSection: {
-    paddingHorizontal: 24,
-    paddingBottom: 30,
-    alignItems: "center",
-  },
-  simpleDateText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#FFFFFF",
-    textAlign: "center",
-    opacity: 0.8,
-  },
-
   // Hybrid Instagram View Styles - Map + Data Combined
   hybridMapBackground: {
     position: "absolute",
@@ -2485,52 +2143,35 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
     justifyContent: "space-between",
     paddingVertical: 20,
     paddingHorizontal: 20,
   },
   hybridHeader: {
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 10,
   },
-  hybridBrandContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  hybridBrandText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginLeft: 6,
-    fontFamily: "Inder",
-  },
-  hybridTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    textAlign: "center",
-    fontFamily: "Inder",
-    textShadowColor: "rgba(0, 0, 0, 0.8)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+  hybridBrandLogo: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
   },
   hybridHorseSection: {
-    alignItems: "center",
-    marginTop: 10,
+    alignItems: "flex-end",
+    marginTop: -70,
   },
   hybridHorseImage: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  hybridHorseNameContainer: {
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    borderRadius: 12,
+    width: 62,
+    paddingVertical: 4,
   },
   hybridHorseName: {
     fontSize: 16,

@@ -417,8 +417,8 @@ const MapScreen = () => {
     requestLocationPermission();
     // Start watching for location immediately when component mounts
     startLocationWatcher();
-    // Request camera and media library permissions
-    requestCameraPermissions();
+    // Note: Camera and media library permissions are now requested when user tries to take a photo
+    // This prevents crashes on iOS TestFlight
     // Initialize fall detection
     initializeFallDetection();
     // Load user profile
@@ -607,9 +607,9 @@ const MapScreen = () => {
         await ImagePicker.requestCameraPermissionsAsync();
       setCameraPermission(cameraStatus === "granted");
 
-      // Request media library permission
+      // Request media library permission using ImagePicker (more reliable on iOS)
       const { status: mediaStatus } =
-        await MediaLibrary.requestPermissionsAsync();
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       setMediaLibraryPermission(mediaStatus === "granted");
 
       // Request notification permissions for fall detection alerts
@@ -2192,12 +2192,24 @@ const MapScreen = () => {
 
   // Camera and media functions
   const takePhoto = async () => {
-    if (!cameraPermission) {
-      showError("Camera permission is required to take photos");
-      return;
-    }
-
     try {
+      // Request camera permission if not already granted
+      if (!cameraPermission) {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        setCameraPermission(status === "granted");
+        if (status !== "granted") {
+          showError("Camera permission is required to take photos");
+          return;
+        }
+      }
+
+      // Request media library permission if not already granted
+      if (!mediaLibraryPermission) {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        setMediaLibraryPermission(status === "granted");
+        // Continue even if media library permission is denied - we can still take the photo
+      }
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: "images",
         allowsEditing: false,
@@ -2207,9 +2219,14 @@ const MapScreen = () => {
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
 
-        // Save to device gallery
+        // Save to device gallery (only if we have permission)
         if (mediaLibraryPermission) {
-          await MediaLibrary.saveToLibraryAsync(asset.uri);
+          try {
+            await MediaLibrary.saveToLibraryAsync(asset.uri);
+          } catch (saveError) {
+            console.error("Error saving to library:", saveError);
+            // Don't show error to user - photo is still captured for session
+          }
         }
 
         // Create media item
@@ -2238,12 +2255,24 @@ const MapScreen = () => {
   };
 
   const takeVideo = async () => {
-    if (!cameraPermission) {
-      showError("Camera permission is required to record videos");
-      return;
-    }
-
     try {
+      // Request camera permission if not already granted
+      if (!cameraPermission) {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        setCameraPermission(status === "granted");
+        if (status !== "granted") {
+          showError("Camera permission is required to record videos");
+          return;
+        }
+      }
+
+      // Request media library permission if not already granted
+      if (!mediaLibraryPermission) {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        setMediaLibraryPermission(status === "granted");
+        // Continue even if media library permission is denied
+      }
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: "videos",
         allowsEditing: false,
@@ -2254,9 +2283,14 @@ const MapScreen = () => {
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
 
-        // Save to device gallery
+        // Save to device gallery (only if we have permission)
         if (mediaLibraryPermission) {
-          await MediaLibrary.saveToLibraryAsync(asset.uri);
+          try {
+            await MediaLibrary.saveToLibraryAsync(asset.uri);
+          } catch (saveError) {
+            console.error("Error saving to library:", saveError);
+            // Don't show error to user - video is still captured for session
+          }
         }
 
         // Create media item
