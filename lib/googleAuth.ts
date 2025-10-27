@@ -5,6 +5,46 @@ let GoogleSignin: any = null;
 let statusCodes: any = null;
 let googleSignInAvailable = false;
 
+// Generate secure random state parameter for OAuth 2.0 CSRF protection
+const generateSecureState = (): string => {
+  const array = new Uint8Array(32);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(array);
+  } else {
+    // Fallback for environments without crypto.getRandomValues
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  // Convert to hex string
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+};
+
+// Verify state parameter to prevent CSRF attacks
+const verifyState = (receivedState: string): boolean => {
+  let storedState: string | null = null;
+  
+  if (Platform.OS === 'web') {
+    storedState = sessionStorage.getItem('google_oauth_state');
+    sessionStorage.removeItem('google_oauth_state'); // Clean up
+  } else {
+    storedState = (global as any).__googleOAuthState;
+    delete (global as any).__googleOAuthState; // Clean up
+  }
+  
+  if (!storedState || !receivedState) {
+    console.error('OAuth state verification failed: missing state parameter');
+    return false;
+  }
+  
+  if (storedState !== receivedState) {
+    console.error('OAuth state verification failed: state mismatch');
+    return false;
+  }
+  
+  return true;
+};
+
 // Function to safely initialize Google Sign In module
 const initializeGoogleSignInModule = () => {
   if (googleSignInAvailable || GoogleSignin) {
@@ -171,6 +211,17 @@ const initiateWebGoogleAuth = async () => {
     
     const redirectUri = Platform.OS === 'web' ? `${window.location.origin}/auth/callback` : 'com.mojzi1969.EquiHUB://oauth/callback';
     
+    // Generate secure random state parameter for CSRF protection
+    const state = generateSecureState();
+    
+    // Store state for verification (in-memory for mobile, sessionStorage for web)
+    if (Platform.OS === 'web') {
+      sessionStorage.setItem('google_oauth_state', state);
+    } else {
+      // For mobile, we'll store in a global variable (will be cleared on app restart)
+      (global as any).__googleOAuthState = state;
+    }
+    
     // Create OAuth 2.0 authorization URL
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', clientId);
@@ -179,6 +230,7 @@ const initiateWebGoogleAuth = async () => {
     authUrl.searchParams.set('scope', 'openid profile email');
     authUrl.searchParams.set('access_type', 'offline');
     authUrl.searchParams.set('prompt', 'consent');
+    authUrl.searchParams.set('state', state); // Required by Google for security
     
     if (Platform.OS === 'web') {
       // For web, open popup window
@@ -197,6 +249,15 @@ const initiateWebGoogleAuth = async () => {
         if (result.type === 'success' && result.url) {
           const url = new URL(result.url);
           const code = url.searchParams.get('code');
+          const returnedState = url.searchParams.get('state');
+          
+          // Verify state parameter to prevent CSRF attacks
+          if (!returnedState || !verifyState(returnedState)) {
+            return { 
+              type: 'error', 
+              error: 'Security validation failed. Please try again.' 
+            };
+          }
           
           if (code) {
             // Exchange code for user info via server
@@ -260,9 +321,19 @@ const openGoogleAuthPopup = async (authUrl: string, redirectUri: string) => {
         if (popup.location.href.startsWith(redirectUri)) {
           const url = new URL(popup.location.href);
           const code = url.searchParams.get('code');
+          const returnedState = url.searchParams.get('state');
           
           popup.close();
           clearInterval(checkClosed);
+          
+          // Verify state parameter to prevent CSRF attacks
+          if (!returnedState || !verifyState(returnedState)) {
+            resolve({ 
+              type: 'error', 
+              error: 'Security validation failed. Please try again.' 
+            });
+            return;
+          }
           
           if (code) {
             // Exchange code for user info via server
