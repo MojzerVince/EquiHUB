@@ -2244,7 +2244,9 @@ const MapScreen = () => {
         // Show success message
         Alert.alert(
           "Photo Captured",
-          "Photo saved to gallery and will be included in session summary"
+          mediaItem.location
+            ? "Photo saved to gallery and location marked on map!"
+            : "Photo saved to gallery and will be included in session summary"
         );
       }
     } catch (error) {
@@ -2308,7 +2310,9 @@ const MapScreen = () => {
         // Show success message
         Alert.alert(
           "Video Recorded",
-          "Video saved to gallery and will be included in session summary"
+          mediaItem.location
+            ? "Video saved to gallery and location marked on map!"
+            : "Video saved to gallery and will be included in session summary"
         );
       }
     } catch (error) {
@@ -3590,6 +3594,44 @@ const MapScreen = () => {
                     )}
                   </React.Fragment>
                 ))}
+
+              {/* Media markers - show photos/videos taken during tracking */}
+              {isTracking &&
+                sessionMedia
+                  .filter((media) => media.location)
+                  .map((media) => (
+                    <Marker
+                      key={media.id}
+                      coordinate={{
+                        latitude: media.location!.latitude,
+                        longitude: media.location!.longitude,
+                      }}
+                      title={media.type === "photo" ? "📸 Photo" : "🎥 Video"}
+                      description={`Captured at ${new Date(
+                        media.timestamp
+                      ).toLocaleTimeString()}`}
+                    >
+                      <View
+                        style={{
+                          backgroundColor:
+                            media.type === "photo" ? "#4CAF50" : "#2196F3",
+                          borderRadius: 20,
+                          padding: 8,
+                          borderWidth: 2,
+                          borderColor: "#FFFFFF",
+                          shadowColor: "#000",
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 3,
+                          elevation: 5,
+                        }}
+                      >
+                        <Text style={{ fontSize: 20 }}>
+                          {media.type === "photo" ? "📸" : "🎥"}
+                        </Text>
+                      </View>
+                    </Marker>
+                  ))}
             </MapView>
           </View>
 
@@ -4556,7 +4598,6 @@ const MapScreen = () => {
                       ]}
                       onPress={takePhoto}
                       activeOpacity={0.8}
-                      disabled={!cameraPermission}
                     >
                       <Text style={styles.cameraButtonIcon}>📸</Text>
                       <Text style={styles.cameraButtonText}>Photo</Text>
@@ -4569,7 +4610,6 @@ const MapScreen = () => {
                       ]}
                       onPress={takeVideo}
                       activeOpacity={0.8}
-                      disabled={!cameraPermission}
                     >
                       <Text style={styles.cameraButtonIcon}>🎥</Text>
                       <Text style={styles.cameraButtonText}>Video</Text>

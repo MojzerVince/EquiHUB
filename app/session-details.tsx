@@ -881,23 +881,65 @@ const SessionDetailsScreen = () => {
                     description="Training end point"
                     pinColor="red"
                   />
+
+                  {/* Media markers - show photos/videos taken during session */}
+                  {session.media &&
+                    session.media
+                      .filter((media) => media.location)
+                      .map((media) => (
+                        <Marker
+                          key={media.id}
+                          coordinate={{
+                            latitude: media.location!.latitude,
+                            longitude: media.location!.longitude,
+                          }}
+                          title={media.type === "photo" ? "📸 Photo" : "🎥 Video"}
+                          description={`Captured at ${new Date(
+                            media.timestamp
+                          ).toLocaleTimeString()}`}
+                        >
+                          <View
+                            style={{
+                              backgroundColor:
+                                media.type === "photo" ? "#4CAF50" : "#2196F3",
+                              borderRadius: 20,
+                              padding: 4,
+                              borderWidth: 2,
+                              borderColor: "#FFFFFF",
+                              shadowColor: "#000",
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.3,
+                              shadowRadius: 3,
+                              elevation: 5,
+                            }}
+                          >
+                            <Text style={{ fontSize: 18 , marginTop: -4}}>
+                              {media.type === "photo" ? "📸" : "🎥"}
+                            </Text>
+                          </View>
+                        </Marker>
+                      ))}
                 </MapView>
               </View>
 
-              {/* Gait Legend */}
-              {session.gaitAnalysis &&
-                session.gaitAnalysis.segments.length > 0 && (
-                  <View style={styles.legendContainer}>
-                    <Text
-                      style={[
-                        styles.legendTitle,
-                        { color: currentTheme.colors.text },
-                      ]}
-                    >
-                      Path Legend
-                    </Text>
-                    <View style={styles.legendItems}>
-                      {["walk", "trot", "canter", "gallop", "halt"].map(
+              {/* Map Legend */}
+              {((session.gaitAnalysis?.segments &&
+                session.gaitAnalysis.segments.length > 0) ||
+                (session.media && session.media.some((m) => m.location))) && (
+                <View style={styles.legendContainer}>
+                  <Text
+                    style={[
+                      styles.legendTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    Map Legend
+                  </Text>
+                  <View style={styles.legendItems}>
+                    {/* Gait colors */}
+                    {session.gaitAnalysis?.segments &&
+                      session.gaitAnalysis.segments.length > 0 &&
+                      ["walk", "trot", "canter", "gallop", "halt"].map(
                         (gait) => (
                           <View key={gait} style={styles.legendItem}>
                             <View
@@ -917,9 +959,59 @@ const SessionDetailsScreen = () => {
                           </View>
                         )
                       )}
-                    </View>
+
+                    {/* Media markers legend */}
+                    {session.media && session.media.some((m) => m.location) && (
+                      <>
+                        {session.media.some(
+                          (m) => m.type === "photo" && m.location
+                        ) && (
+                          <View style={styles.legendItem}>
+                            <View
+                              style={[
+                                styles.legendMarker,
+                                { backgroundColor: "#4CAF50" },
+                              ]}
+                            >
+                              <Text style={{ fontSize: 10 }}>📸</Text>
+                            </View>
+                            <Text
+                              style={[
+                                styles.legendText,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              Photo
+                            </Text>
+                          </View>
+                        )}
+                        {session.media.some(
+                          (m) => m.type === "video" && m.location
+                        ) && (
+                          <View style={styles.legendItem}>
+                            <View
+                              style={[
+                                styles.legendMarker,
+                                { backgroundColor: "#2196F3" },
+                              ]}
+                            >
+                              <Text style={{ fontSize: 10 }}>🎥</Text>
+                            </View>
+                            <Text
+                              style={[
+                                styles.legendText,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              Video
+                            </Text>
+                          </View>
+                        )}
+                      </>
+                    )}
                   </View>
-                )}
+                </View>
+              )}
             </View>
           )}
 
@@ -1487,6 +1579,16 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     marginRight: 6,
+  },
+  legendMarker: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 6,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FFFFFF",
   },
   legendText: {
     fontSize: 14,
