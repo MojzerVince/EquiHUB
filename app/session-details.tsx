@@ -112,14 +112,62 @@ const SessionDetailsScreen = () => {
         setSession(found || null);
 
         // Load horse data if session is found
-        if (found && found.horseId) {
+        if (found && found.horseId && found.userId) {
           try {
-            const horses = await HorseAPI.getHorses(found.userId);
-            const sessionHorse = horses?.find((h) => h.id === found.horseId);
-            setHorse(sessionHorse || null);
+            // First try to load horses from AsyncStorage
+            const cachedHorses = await AsyncStorage.getItem(
+              `user_horses_${found.userId}`
+            );
+
+            if (cachedHorses) {
+              const horses: Horse[] = JSON.parse(cachedHorses);
+              let sessionHorse = horses.find((h) => h.id === found.horseId);
+
+              // If horse found in cache, try to load its image from cache
+              if (sessionHorse) {
+                try {
+                  const cachedImage = await AsyncStorage.getItem(
+                    `horse_image_${sessionHorse.id}`
+                  );
+                  if (cachedImage) {
+                    const imageData = JSON.parse(cachedImage);
+                    sessionHorse = {
+                      ...sessionHorse,
+                      image_url: imageData.image_url,
+                      image_base64: imageData.image_base64,
+                    };
+                  }
+                } catch (imageError) {
+                  console.warn(
+                    `⚠️ Failed to load cached image for horse ${sessionHorse.name}:`,
+                    imageError
+                  );
+                  // Continue without image if image loading fails
+                }
+
+                setHorse(sessionHorse);
+                console.log(
+                  "✅ Loaded horse from AsyncStorage:",
+                  sessionHorse.name
+                );
+              } else {
+                // Horse not found in cache, fallback to API
+                console.log(
+                  "⚠️ Horse not found in cache, falling back to API call"
+                );
+                await loadHorseFromAPI(found.userId, found.horseId);
+              }
+            } else {
+              // No cached horses, fallback to API
+              console.log(
+                "⚠️ No cached horses found, falling back to API call"
+              );
+              await loadHorseFromAPI(found.userId, found.horseId);
+            }
           } catch (error) {
             console.error("Error loading horse data:", error);
-            setHorse(null);
+            // Fallback to API on error
+            await loadHorseFromAPI(found.userId, found.horseId);
           }
         }
       }
@@ -127,6 +175,22 @@ const SessionDetailsScreen = () => {
       console.error("Error loading session:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper function to load horse from API (fallback)
+  const loadHorseFromAPI = async (userId: string, horseId: string) => {
+    try {
+      const horses = await HorseAPI.getHorses(userId);
+      const sessionHorse = horses?.find((h) => h.id === horseId);
+      setHorse(sessionHorse || null);
+      
+      if (sessionHorse) {
+        console.log("✅ Loaded horse from API:", sessionHorse.name);
+      }
+    } catch (error) {
+      console.error("Error loading horse from API:", error);
+      setHorse(null);
     }
   };
 
