@@ -3566,7 +3566,7 @@ const MapScreen = () => {
               zoomEnabled={true}
               scrollEnabled={true}
               pitchEnabled={true}
-              rotateEnabled={true}
+              rotateEnabled={false}
               mapType={mapType}
             >
               {/* Show tracking path with gait-based colors - only during active tracking */}
