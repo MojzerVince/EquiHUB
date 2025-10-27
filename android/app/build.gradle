@@ -94,9 +94,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 44
         versionName "0.9.0"
-        missingDimensionStrategy 'store', 'play'
     }
-    
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -117,13 +115,6 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             crunchPngs (findProperty('android.enablePngCrunchInReleaseBuilds')?.toBoolean() ?: true)
-        }
-    }
-    
-    // Explicitly resolve react-native-iap variant conflicts
-    configurations.all {
-        resolutionStrategy {
-            force 'com.android.support:support-annotations:28.0.0'
         }
     }
     packagingOptions {
@@ -159,13 +150,6 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-
-    implementation(project(':react-native-maps')){
-      exclude group: 'com.google.android.gms'
-    }
-    implementation 'com.google.android.gms:play-services-base:18.2.0'
-    implementation 'com.google.android.gms:play-services-location:21.0.1'
-    implementation 'com.google.android.gms:play-services-maps:18.2.0'
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";

@@ -27,8 +27,7 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>EquiHUB</string>
-          <string>com.mojzi1969.EquiHUB</string>
+          <string>com.googleusercontent.apps.645905000706-79hvbfust1ggops4ftqijeul16eb0dvm</string>
         </array>
       </dict>
       <dict>
@@ -42,8 +41,6 @@
     <string>46</string>
     <key>GMSApiKey</key>
     <string>AIzaSyB_ZII2Yw2nnuJAYXOeaGr4ifWSgVJmXHg</string>
-    <key>ITSAppUsesNonExemptEncryption</key>
-    <false/>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>
@@ -55,18 +52,29 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSCameraUsageDescription</key>
+    <string>This app needs camera access to take photos of your rides and horses.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>This app needs location access to track your riding routes and show your position on the map.</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>This app needs location access to track your riding routes even when the app is in the background.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>This app needs location access to track your riding routes and show your position on the map.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your microphone</string>
+    <key>NSMotionUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your device motion</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>This app needs photo library access to save photos of your rides and horses.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>This app needs photo library access to select photos of your rides and horses.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
     </array>
     <key>UIBackgroundModes</key>
     <array>
+      <string>location</string>
       <string>fetch</string>
     </array>
     <key>UILaunchStoryboardName</key>
@@ -83,13 +91,6 @@
     <array>
       <string>UIInterfaceOrientationPortrait</string>
       <string>UIInterfaceOrientationPortraitUpsideDown</string>
-    </array>
-    <key>UISupportedInterfaceOrientations~ipad</key>
-    <array>
-      <string>UIInterfaceOrientationPortrait</string>
-      <string>UIInterfaceOrientationPortraitUpsideDown</string>
-      <string>UIInterfaceOrientationLandscapeLeft</string>
-      <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>UIUserInterfaceStyle</key>
     <string>Automatic</string>
