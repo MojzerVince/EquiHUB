@@ -4,8 +4,8 @@ import { MetricSystem, useMetric } from "@/contexts/MetricContext";
 import { ThemeName, useTheme } from "@/contexts/ThemeContext";
 import { AuthAPI } from "@/lib/authAPI";
 import {
-    EmergencyFriend,
-    EmergencyFriendsAPI,
+  EmergencyFriend,
+  EmergencyFriendsAPI,
 } from "@/lib/emergencyFriendsAPI";
 import { FeedbackAPI } from "@/lib/feedbackAPI";
 import { HiddenPost, HiddenPostsManager } from "@/lib/hiddenPostsManager";
@@ -18,20 +18,20 @@ import * as Notifications from "expo-notifications";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    Linking,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Linking,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import appConfig from "../../app.json";
@@ -665,6 +665,7 @@ const OptionsScreen = () => {
           permissionResults.push("❌ Camera access denied");
         }
       } catch (error) {
+        console.error("Camera permission error:", error);
         permissionResults.push("❌ Camera permission failed");
       }
 
@@ -679,6 +680,7 @@ const OptionsScreen = () => {
           permissionResults.push("❌ Photo library access denied");
         }
       } catch (error) {
+        console.error("Media library permission error:", error);
         permissionResults.push("❌ Photo library permission failed");
       }
 
@@ -693,6 +695,7 @@ const OptionsScreen = () => {
           permissionResults.push("❌ Location access denied");
         }
       } catch (error) {
+        console.error("Location permission error:", error);
         permissionResults.push("❌ Location permission failed");
       }
 
@@ -710,14 +713,13 @@ const OptionsScreen = () => {
         if (notificationResult.granted) {
           permissionsGranted++;
           permissionResults.push("✅ Notification access granted");
-          // Schedule notifications if settings allow (don't await to avoid blocking)
-          schedulePeriodicNotifications().catch((error) => {
-            console.log("Notification scheduling failed silently:", error);
-          });
+          // Note: Notification scheduling will happen automatically on next app launch
+          // We don't schedule here to avoid potential iOS crashes when requesting multiple permissions
         } else {
           permissionResults.push("❌ Notification access denied");
         }
       } catch (error) {
+        console.error("Notification permission error:", error);
         permissionResults.push("❌ Notification permission failed");
       }
 
