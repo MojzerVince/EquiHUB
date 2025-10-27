@@ -3616,7 +3616,7 @@ const MapScreen = () => {
                           backgroundColor:
                             media.type === "photo" ? "#4CAF50" : "#2196F3",
                           borderRadius: 20,
-                          padding: 8,
+                          padding: 4,
                           borderWidth: 2,
                           borderColor: "#FFFFFF",
                           shadowColor: "#000",
@@ -3626,7 +3626,7 @@ const MapScreen = () => {
                           elevation: 5,
                         }}
                       >
-                        <Text style={{ fontSize: 20 }}>
+                        <Text style={{ fontSize: 18 , marginTop: -4}}>
                           {media.type === "photo" ? "📸" : "🎥"}
                         </Text>
                       </View>
