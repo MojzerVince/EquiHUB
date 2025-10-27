@@ -368,6 +368,9 @@ const MapScreen = () => {
   const [isUsingBackgroundLocation, setIsUsingBackgroundLocation] =
     useState(false);
 
+  // MapView ref for programmatic control
+  const mapRef = useRef<MapView>(null);
+
   // Fall detection state
   const [fallDetectionEnabled, setFallDetectionEnabled] = useState(false);
   const [fallDetectionConfig, setFallDetectionConfig] =
@@ -1054,6 +1057,9 @@ const MapScreen = () => {
                 longitudeDelta: 0.01,
               };
               setRegion(newRegion);
+              
+              // Animate map to user location only on first fix
+              mapRef.current?.animateToRegion(newRegion, 1000);
             }
 
             // Update GPS strength
@@ -2152,6 +2158,9 @@ const MapScreen = () => {
       };
       setRegion(newRegion);
       setUserLocation({ latitude, longitude });
+      
+      // Animate map to new location
+      mapRef.current?.animateToRegion(newRegion, 1000);
     } catch (error) {
       try {
         // If high accuracy fails, try balanced accuracy
@@ -2171,6 +2180,9 @@ const MapScreen = () => {
         };
         setRegion(newRegion);
         setUserLocation({ latitude, longitude });
+        
+        // Animate map to new location
+        mapRef.current?.animateToRegion(newRegion, 1000);
       } catch (secondError) {
         const errorMessage =
           secondError instanceof Error
@@ -2335,6 +2347,9 @@ const MapScreen = () => {
         longitudeDelta: 0.01,
       };
       setRegion(newRegion);
+      
+      // Animate map to current location
+      mapRef.current?.animateToRegion(newRegion, 500);
     } else {
       // If no location, try multiple times with increasing accuracy
       setLoading(true);
@@ -2356,6 +2371,9 @@ const MapScreen = () => {
         };
         setRegion(newRegion);
         setUserLocation({ latitude, longitude });
+        
+        // Animate map to new location
+        mapRef.current?.animateToRegion(newRegion, 500);
       } catch (error) {
         try {
           // If high accuracy fails, try balanced accuracy
@@ -2375,6 +2393,9 @@ const MapScreen = () => {
           };
           setRegion(newRegion);
           setUserLocation({ latitude, longitude });
+          
+          // Animate map to new location
+          mapRef.current?.animateToRegion(newRegion, 500);
         } catch (secondError) {
           const errorMessage =
             secondError instanceof Error
@@ -3532,9 +3553,10 @@ const MapScreen = () => {
             )}
 
             <MapView
+              ref={mapRef}
               style={styles.map}
               provider={PROVIDER_GOOGLE}
-              region={region}
+              initialRegion={region}
               onRegionChangeComplete={onRegionChange}
               showsUserLocation={true}
               showsMyLocationButton={false}
