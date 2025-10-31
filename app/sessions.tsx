@@ -8,7 +8,6 @@ import {
   Dimensions,
   FlatList,
   Image,
-  Modal,
   PanResponder,
   Platform,
   ScrollView,
@@ -73,7 +72,6 @@ const SessionsScreen = () => {
   );
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
-  const [showCalendar, setShowCalendar] = useState(false);
   const [earliestSessionDate, setEarliestSessionDate] = useState<Date | null>(
     null
   );
@@ -191,13 +189,6 @@ const SessionsScreen = () => {
     }
   };
 
-  // Handle calendar date selection
-  const handleDateSelect = (selectedDate: Date) => {
-    const weekOffset = getWeekOffsetFromDate(selectedDate);
-    setCurrentWeekOffset(weekOffset);
-    setShowCalendar(false);
-  };
-
   // Find the earliest training session to determine calendar range
   const findEarliestSession = useCallback(async () => {
     try {
@@ -227,20 +218,6 @@ const SessionsScreen = () => {
       setEarliestSessionDate(null);
     }
   }, [user?.id]);
-
-  // Calculate the number of weeks to show in calendar
-  const getCalendarWeeksCount = () => {
-    if (!earliestSessionDate) {
-      return 4; // Default to 4 weeks if no sessions found
-    }
-
-    // Calculate weeks from earliest session to current week
-    const earliestWeekOffset = getWeekOffsetFromDate(earliestSessionDate);
-    const weeksCount = Math.abs(earliestWeekOffset) + 1; // +1 to include current week
-
-    // Cap at reasonable maximum (e.g., 5 years = ~260 weeks)
-    return Math.min(weeksCount, 260);
-  };
 
   // Load training sessions from AsyncStorage
   const loadTrainingSessions = useCallback(async () => {
@@ -587,7 +564,7 @@ const SessionsScreen = () => {
           <Text style={styles.header}>Training History</Text>
           <TouchableOpacity
             style={styles.calendarButton}
-            onPress={() => setShowCalendar(true)}
+            onPress={() => router.push("/calendar")}
             activeOpacity={0.7}
           >
             <Text style={styles.calendarIcon}>📅</Text>
@@ -731,116 +708,6 @@ const SessionsScreen = () => {
 
         {/* Pro Subscription Prompt Overlay - Removed since non-pro users can't access previous weeks */}
       </View>
-
-      {/* Calendar Modal */}
-      <Modal
-        visible={showCalendar}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowCalendar(false)}
-      >
-        <View style={styles.calendarOverlay}>
-          <View
-            style={[
-              styles.calendarContainer,
-              { backgroundColor: currentTheme.colors.surface },
-            ]}
-          >
-            <View style={styles.calendarHeader}>
-              <Text
-                style={[
-                  styles.calendarTitle,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                Select Week
-              </Text>
-              <TouchableOpacity
-                style={styles.calendarCloseButton}
-                onPress={() => setShowCalendar(false)}
-              >
-                <Text
-                  style={[
-                    styles.calendarCloseText,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  ✕
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.calendarContent}>
-              {/* Generate calendar weeks */}
-              {Array.from({ length: getCalendarWeeksCount() }, (_, index) => {
-                const weekOffset = -index;
-                const { startOfWeek, endOfWeek } = getWeekBounds(weekOffset);
-                const isCurrentWeek = weekOffset === 0;
-                const isSelectedWeek = weekOffset === currentWeekOffset;
-
-                return (
-                  <TouchableOpacity
-                    key={weekOffset}
-                    style={[
-                      styles.calendarWeekItem,
-                      {
-                        backgroundColor: isSelectedWeek
-                          ? currentTheme.colors.primary
-                          : isCurrentWeek
-                          ? currentTheme.colors.accent + "20"
-                          : "transparent",
-                        borderBottomColor: currentTheme.colors.border,
-                      },
-                    ]}
-                    onPress={() => handleDateSelect(startOfWeek)}
-                  >
-                    <View style={styles.calendarWeekInfo}>
-                      <Text
-                        style={[
-                          styles.calendarWeekTitle,
-                          {
-                            color: isSelectedWeek
-                              ? "#FFFFFF"
-                              : currentTheme.colors.text,
-                            fontWeight: isCurrentWeek ? "bold" : "normal",
-                          },
-                        ]}
-                      >
-                        {formatWeekDisplay(weekOffset)}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.calendarWeekDate,
-                          {
-                            color: isSelectedWeek
-                              ? "#FFFFFF"
-                              : currentTheme.colors.textSecondary,
-                          },
-                        ]}
-                      >
-                        {startOfWeek.toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}{" "}
-                        -{" "}
-                        {endOfWeek.toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </Text>
-                    </View>
-                    {isCurrentWeek && (
-                      <View style={styles.currentWeekBadge}>
-                        <Text style={styles.currentWeekBadgeText}>Today</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
