@@ -21,6 +21,7 @@ import {
   deletePlannedSession as deletePlannedSessionAPI,
   getPlannedSessions,
 } from "../lib/plannedSessionAPI";
+import { cancelSessionNotifications } from "../lib/plannedSessionNotifications";
 
 const CalendarScreen = () => {
   const { currentTheme } = useTheme();
@@ -176,6 +177,9 @@ const CalendarScreen = () => {
           style: "destructive",
           onPress: async () => {
             try {
+              // Cancel all scheduled notifications for this session
+              await cancelSessionNotifications(sessionId);
+              
               const result = await deletePlannedSessionAPI(sessionId);
               if (result.success) {
                 loadPlannedSessions();

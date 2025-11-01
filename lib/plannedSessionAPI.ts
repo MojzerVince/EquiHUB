@@ -13,7 +13,7 @@ export interface PlannedSession {
   plannedDate: string; // ISO string
   reminderEnabled: boolean;
   repeatEnabled: boolean;
-  repeatPattern?: "daily" | "weekly" | "monthly";
+  repeatPattern?: "daily" | "weekly" | "biweekly" | "monthly";
   imageUrl?: string;
   isCompleted: boolean;
   completedAt?: string;
@@ -31,7 +31,7 @@ export interface CreatePlannedSessionInput {
   plannedDate: Date;
   reminderEnabled: boolean;
   repeatEnabled: boolean;
-  repeatPattern?: "daily" | "weekly" | "monthly";
+  repeatPattern?: "daily" | "weekly" | "biweekly" | "monthly";
   imageUrl?: string;
 }
 
@@ -44,7 +44,7 @@ export interface UpdatePlannedSessionInput {
   plannedDate?: Date;
   reminderEnabled?: boolean;
   repeatEnabled?: boolean;
-  repeatPattern?: "daily" | "weekly" | "monthly";
+  repeatPattern?: "daily" | "weekly" | "biweekly" | "monthly";
   imageUrl?: string;
   isCompleted?: boolean;
   completedAt?: Date;
@@ -123,6 +123,7 @@ export async function createPlannedSession(
 
 /**
  * Get planned sessions for a specific date range
+ * This function handles repeating sessions by generating virtual instances
  */
 export async function getPlannedSessions(
   startDate: Date,
@@ -138,12 +139,12 @@ export async function getPlannedSessions(
       return { success: false, error: "User not authenticated" };
     }
 
+    // Fetch all sessions that could potentially appear in this date range
+    // For repeating sessions, we need to check if their original date could repeat into this range
     const { data, error } = await supabase
       .from("planned_sessions")
       .select("*")
       .eq("user_id", user.id)
-      .gte("planned_date", startDate.toISOString())
-      .lte("planned_date", endDate.toISOString())
       .order("planned_date", { ascending: true });
 
     if (error) {
@@ -151,27 +152,54 @@ export async function getPlannedSessions(
       return { success: false, error: error.message };
     }
 
-    const sessions: PlannedSession[] = (data || []).map((session: any) => ({
-      id: session.id,
-      userId: session.user_id,
-      horseId: session.horse_id,
-      horseName: session.horse_name,
-      trainingType: session.training_type,
-      title: session.title,
-      description: session.description,
-      plannedDate: session.planned_date,
-      reminderEnabled: session.reminder_enabled,
-      repeatEnabled: session.repeat_enabled,
-      repeatPattern: session.repeat_pattern,
-      imageUrl: session.image_url,
-      isCompleted: session.is_completed,
-      completedAt: session.completed_at,
-      actualSessionId: session.actual_session_id,
-      createdAt: session.created_at,
-      updatedAt: session.updated_at,
-    }));
+    const allSessions: PlannedSession[] = [];
 
-    return { success: true, data: sessions };
+    (data || []).forEach((session: any) => {
+      const baseSession: PlannedSession = {
+        id: session.id,
+        userId: session.user_id,
+        horseId: session.horse_id,
+        horseName: session.horse_name,
+        trainingType: session.training_type,
+        title: session.title,
+        description: session.description,
+        plannedDate: session.planned_date,
+        reminderEnabled: session.reminder_enabled,
+        repeatEnabled: session.repeat_enabled,
+        repeatPattern: session.repeat_pattern,
+        imageUrl: session.image_url,
+        isCompleted: session.is_completed,
+        completedAt: session.completed_at,
+        actualSessionId: session.actual_session_id,
+        createdAt: session.created_at,
+        updatedAt: session.updated_at,
+      };
+
+      const sessionDate = new Date(session.planned_date);
+
+      // Check if original session falls in range
+      if (sessionDate >= startDate && sessionDate <= endDate) {
+        allSessions.push(baseSession);
+      }
+
+      // Handle repeating sessions
+      if (session.repeat_enabled && session.repeat_pattern) {
+        const instances = generateRepeatingInstances(
+          baseSession,
+          sessionDate,
+          startDate,
+          endDate
+        );
+        allSessions.push(...instances);
+      }
+    });
+
+    // Sort by planned date
+    allSessions.sort((a, b) => 
+      new Date(a.plannedDate).getTime() - new Date(b.plannedDate).getTime()
+    );
+
+    return { success: true, data: allSessions };
   } catch (error) {
     console.error("Error fetching planned sessions:", error);
     return {
@@ -182,7 +210,81 @@ export async function getPlannedSessions(
 }
 
 /**
+ * Generate repeating instances of a session within a date range
+ */
+function generateRepeatingInstances(
+  baseSession: PlannedSession,
+  originalDate: Date,
+  startDate: Date,
+  endDate: Date
+): PlannedSession[] {
+  const instances: PlannedSession[] = [];
+  
+  if (!baseSession.repeatPattern) return instances;
+
+  let currentDate = new Date(originalDate);
+  
+  // Start from the next occurrence after the original date
+  switch (baseSession.repeatPattern) {
+    case "daily":
+      currentDate.setDate(currentDate.getDate() + 1);
+      break;
+    case "weekly":
+      currentDate.setDate(currentDate.getDate() + 7);
+      break;
+    case "biweekly":
+      currentDate.setDate(currentDate.getDate() + 14);
+      break;
+    case "monthly":
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      break;
+  }
+
+  // Generate instances up to 1 year from original date or end date, whichever is sooner
+  const maxDate = new Date(originalDate);
+  maxDate.setFullYear(maxDate.getFullYear() + 1);
+  const limitDate = endDate < maxDate ? endDate : maxDate;
+
+  while (currentDate <= limitDate) {
+    // Only include if it falls within the requested range
+    if (currentDate >= startDate && currentDate <= endDate) {
+      instances.push({
+        ...baseSession,
+        // Create a virtual ID for this instance
+        id: `${baseSession.id}_repeat_${currentDate.toISOString()}`,
+        plannedDate: currentDate.toISOString(),
+        // Virtual instances are never completed (only the original can be marked complete)
+        isCompleted: false,
+        completedAt: undefined,
+        actualSessionId: undefined,
+      });
+    }
+
+    // Move to next occurrence
+    const nextDate = new Date(currentDate);
+    switch (baseSession.repeatPattern) {
+      case "daily":
+        nextDate.setDate(nextDate.getDate() + 1);
+        break;
+      case "weekly":
+        nextDate.setDate(nextDate.getDate() + 7);
+        break;
+      case "biweekly":
+        nextDate.setDate(nextDate.getDate() + 14);
+        break;
+      case "monthly":
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        break;
+    }
+    currentDate = nextDate;
+  }
+
+  return instances;
+}
+
+/**
  * Get today's planned sessions (not completed)
+ * Uses getPlannedSessions to handle repeating sessions
  */
 export async function getTodayPlannedSessions(): Promise<{
   success: boolean;
@@ -190,56 +292,23 @@ export async function getTodayPlannedSessions(): Promise<{
   error?: string;
 }> {
   try {
-    const supabase = getSupabaseClient();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { success: false, error: "User not authenticated" };
+    // Use getPlannedSessions which handles repeating sessions
+    const result = await getPlannedSessions(today, tomorrow);
+    
+    if (!result.success || !result.data) {
+      return result;
     }
 
-    const { data, error } = await supabase
-      .from("planned_sessions")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("is_completed", false)
-      .gte("planned_date", today.toISOString())
-      .lt("planned_date", tomorrow.toISOString())
-      .order("planned_date", { ascending: true });
+    // Filter out completed sessions
+    const incompleteSessions = result.data.filter(session => !session.isCompleted);
 
-    if (error) {
-      console.error("Error fetching today's planned sessions:", error);
-      return { success: false, error: error.message };
-    }
-
-    const sessions: PlannedSession[] = (data || []).map((session: any) => ({
-      id: session.id,
-      userId: session.user_id,
-      horseId: session.horse_id,
-      horseName: session.horse_name,
-      trainingType: session.training_type,
-      title: session.title,
-      description: session.description,
-      plannedDate: session.planned_date,
-      reminderEnabled: session.reminder_enabled,
-      repeatEnabled: session.repeat_enabled,
-      repeatPattern: session.repeat_pattern,
-      imageUrl: session.image_url,
-      isCompleted: session.is_completed,
-      completedAt: session.completed_at,
-      actualSessionId: session.actual_session_id,
-      createdAt: session.created_at,
-      updatedAt: session.updated_at,
-    }));
-
-    return { success: true, data: sessions };
+    return { success: true, data: incompleteSessions };
   } catch (error) {
     console.error("Error fetching today's planned sessions:", error);
     return {

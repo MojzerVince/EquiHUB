@@ -21,6 +21,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { createPlannedSession } from "../lib/plannedSessionAPI";
+import {
+  schedulePlannedSessionNotification,
+  scheduleRepeatingSessionNotifications
+} from "../lib/plannedSessionNotifications";
 
 interface Horse {
   id: string;
@@ -174,8 +178,19 @@ const AddPlannedSessionScreen = () => {
         imageUrl: uploadedImageUrl,
       });
 
-      if (!result.success) {
+      if (!result.success || !result.data) {
         throw new Error(result.error || "Failed to create planned session");
+      }
+
+      // Schedule notifications if reminders are enabled
+      if (reminderEnabled) {
+        if (repeatEnabled && repeatPattern) {
+          // Schedule repeating notifications
+          await scheduleRepeatingSessionNotifications(result.data);
+        } else {
+          // Schedule single notification
+          await schedulePlannedSessionNotification(result.data);
+        }
       }
 
       Alert.alert("Success", "Session planned successfully!", [
