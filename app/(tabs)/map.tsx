@@ -2690,6 +2690,7 @@ const MapScreen = () => {
       setRealTimeGaitSegments([]); // Reset gait segments
       setSessionMedia([]); // Initialize empty media array for the session
       setCurrentGait("halt"); // Reset gait to halt at session start
+      setSelectedPlannedSession(null); // Clear selected planned session when tracking starts
 
       // Clear any existing tracking points in storage
       await AsyncStorage.removeItem("current_tracking_points");
@@ -3770,19 +3771,23 @@ const MapScreen = () => {
                       }
                     ]}
                     onPress={() => {
-                      // Set this session as selected
-                      setSelectedPlannedSession(session.id);
-                      
-                      // Pre-fill form with planned session data
-                      const horse = userHorses.find(h => h.id === session.horseId);
-                      if (horse) {
-                        setSelectedHorse(horse.id);
-                        setSelectedTrainingType(session.trainingType);
+                      // Toggle selection - deselect if already selected
+                      if (selectedPlannedSession === session.id) {
+                        setSelectedPlannedSession(null);
+                        // Clear the form when deselecting
+                        setSelectedHorse("");
+                        setSelectedTrainingType("");
+                      } else {
+                        // Set this session as selected
+                        setSelectedPlannedSession(session.id);
+                        
+                        // Pre-fill form with planned session data
+                        const horse = userHorses.find(h => h.id === session.horseId);
+                        if (horse) {
+                          setSelectedHorse(horse.id);
+                          setSelectedTrainingType(session.trainingType);
+                        }
                       }
-                      Alert.alert(
-                        session.title,
-                        `${session.trainingType}\nHorse: ${session.horseName}\n${session.description || ''}\n\nPress "Start Tracking" to begin this session.`
-                      );
                     }}
                     activeOpacity={0.7}
                   >
@@ -3823,6 +3828,15 @@ const MapScreen = () => {
                   </TouchableOpacity>
                 ))}
               </ScrollView>
+            </View>
+          )}
+
+          {/* Selected Session Info Banner */}
+          {!isTracking && selectedPlannedSession && (
+            <View style={[styles.selectedSessionBanner, { backgroundColor: currentTheme.colors.primary + '20', borderColor: currentTheme.colors.primary }]}>
+              <Text style={[styles.selectedSessionBannerText, { color: currentTheme.colors.primary }]}>
+                ✓ Planned session selected. Tap the session card again to deselect and manually choose options.
+              </Text>
             </View>
           )}
 
@@ -3908,9 +3922,15 @@ const MapScreen = () => {
                               selectedHorse === horse.id
                                 ? currentTheme.colors.primary
                                 : currentTheme.colors.border,
+                            opacity: selectedPlannedSession ? 0.5 : 1,
                           },
                         ]}
-                        onPress={() => setSelectedHorse(horse.id)}
+                        onPress={() => {
+                          if (!selectedPlannedSession) {
+                            setSelectedHorse(horse.id);
+                          }
+                        }}
+                        disabled={!!selectedPlannedSession}
                         activeOpacity={0.7}
                       >
                         {horse.image_url || horse.image_base64 ? (
@@ -3977,11 +3997,15 @@ const MapScreen = () => {
                     {
                       backgroundColor: currentTheme.colors.background,
                       borderColor: currentTheme.colors.border,
+                      opacity: selectedPlannedSession ? 0.5 : 1,
                     },
                   ]}
-                  onPress={() =>
-                    setTrainingDropdownVisible(!trainingDropdownVisible)
-                  }
+                  onPress={() => {
+                    if (!selectedPlannedSession) {
+                      setTrainingDropdownVisible(!trainingDropdownVisible);
+                    }
+                  }}
+                  disabled={!!selectedPlannedSession}
                   activeOpacity={0.7}
                 >
                   <View style={styles.trainingDropdownContent}>
@@ -5946,6 +5970,18 @@ const styles = StyleSheet.create({
   plannedSessionBadgeText: {
     fontSize: 11,
     fontWeight: "500",
+  },
+  selectedSessionBanner: {
+    marginHorizontal: 20,
+    marginBottom: 15,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  selectedSessionBannerText: {
+    fontSize: 13,
+    fontWeight: "500",
+    textAlign: "center",
   },
 });
 
