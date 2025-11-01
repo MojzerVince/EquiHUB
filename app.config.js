@@ -2,7 +2,7 @@ module.exports = {
   expo: {
     name: "EquiHUB",
     slug: "EquiHUB",
-    version: "0.9.1",
+    version: "0.9.2",
     orientation: "portrait",
     icon: "./assets/icons/512x512.png",
     scheme: "EquiHUB",
@@ -118,7 +118,7 @@ module.exports = {
       },
       expoPublicApiServerUrl: "https://grdsqxwghajehneksxik.supabase.co",
       expoPublicBundleId: "com.mojzi1969.EquiHUB",
-      expoPublicAppVersion: "0.9.1",
+      expoPublicAppVersion: "0.9.2",
     },
   },
 };
