@@ -3807,7 +3807,12 @@ const MapScreen = () => {
                         const horse = userHorses.find(h => h.id === session.horseId);
                         if (horse) {
                           setSelectedHorse(horse.id);
-                          setSelectedTrainingType(session.trainingType);
+                          
+                          // Find the training type ID by matching the name
+                          const trainingType = trainingTypes.find(t => t.name === session.trainingType);
+                          if (trainingType) {
+                            setSelectedTrainingType(trainingType.id);
+                          }
                         }
                       }
                     }}
