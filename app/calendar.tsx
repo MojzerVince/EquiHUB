@@ -1,39 +1,26 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    PanResponder,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  PanResponder,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
-
-// Planned session interface
-interface PlannedSession {
-  id: string;
-  userId: string;
-  horseId: string;
-  horseName: string;
-  trainingType: string;
-  title: string;
-  description?: string;
-  date: number; // timestamp for the planned date
-  reminderEnabled: boolean;
-  repeatEnabled: boolean;
-  repeatPattern?: "daily" | "weekly" | "monthly";
-  imageUri?: string;
-  createdAt: number;
-}
+import {
+  PlannedSession,
+  deletePlannedSession as deletePlannedSessionAPI,
+  getPlannedSessions,
+} from "../lib/plannedSessionAPI";
 
 const CalendarScreen = () => {
   const { currentTheme } = useTheme();
@@ -135,25 +122,14 @@ const CalendarScreen = () => {
   const loadPlannedSessions = useCallback(async () => {
     try {
       setLoading(true);
-      const savedSessions = await AsyncStorage.getItem("planned_sessions");
+      const { startOfWeek, endOfWeek } = getWeekBounds(currentWeekOffset);
 
-      if (savedSessions) {
-        const parsedSessions: PlannedSession[] = JSON.parse(savedSessions);
+      const result = await getPlannedSessions(startOfWeek, endOfWeek);
 
-        // Filter sessions for current user and current week
-        const { startOfWeek, endOfWeek } = getWeekBounds(currentWeekOffset);
-
-        const weekSessions = parsedSessions.filter((session) => {
-          const sessionDate = new Date(session.date);
-          return (
-            session.userId === user?.id &&
-            sessionDate >= startOfWeek &&
-            sessionDate <= endOfWeek
-          );
-        });
-
-        setPlannedSessions(weekSessions);
+      if (result.success && result.data) {
+        setPlannedSessions(result.data);
       } else {
+        console.error("Error loading planned sessions:", result.error);
         setPlannedSessions([]);
       }
     } catch (error) {
@@ -168,11 +144,18 @@ const CalendarScreen = () => {
     loadPlannedSessions();
   }, [loadPlannedSessions]);
 
+  // Reload sessions when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadPlannedSessions();
+    }, [loadPlannedSessions])
+  );
+
   // Get sessions for specific day
   const getSessionsForDay = (dayIndex: number) => {
     const date = getDateForDay(dayIndex);
     return plannedSessions.filter((session) => {
-      const sessionDate = new Date(session.date);
+      const sessionDate = new Date(session.plannedDate);
       return (
         sessionDate.getDate() === date.getDate() &&
         sessionDate.getMonth() === date.getMonth() &&
@@ -193,20 +176,11 @@ const CalendarScreen = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              const savedSessions = await AsyncStorage.getItem(
-                "planned_sessions"
-              );
-              if (savedSessions) {
-                const parsedSessions: PlannedSession[] =
-                  JSON.parse(savedSessions);
-                const updatedSessions = parsedSessions.filter(
-                  (s) => s.id !== sessionId
-                );
-                await AsyncStorage.setItem(
-                  "planned_sessions",
-                  JSON.stringify(updatedSessions)
-                );
+              const result = await deletePlannedSessionAPI(sessionId);
+              if (result.success) {
                 loadPlannedSessions();
+              } else {
+                throw new Error(result.error);
               }
             } catch (error) {
               console.error("Error deleting session:", error);
@@ -326,9 +300,9 @@ const CalendarScreen = () => {
                 }}
               >
                 <View style={styles.sessionItemContent}>
-                  {session.imageUri && (
+                  {session.imageUrl && (
                     <Image
-                      source={{ uri: session.imageUri }}
+                      source={{ uri: session.imageUrl }}
                       style={styles.sessionImage}
                     />
                   )}

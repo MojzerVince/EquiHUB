@@ -22,8 +22,8 @@ import {
 } from "react-native";
 import MapView, {
   Marker,
-  PROVIDER_GOOGLE,
   Polyline,
+  PROVIDER_GOOGLE,
   Region,
 } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -40,6 +40,7 @@ import {
 } from "../../lib/fallDetectionAPI";
 import { GlobalChallengeAPI } from "../../lib/globalChallengeAPI";
 import { HorseAPI } from "../../lib/horseAPI";
+import { getTodayPlannedSessions, PlannedSession } from "../../lib/plannedSessionAPI";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { Horse, Profile } from "../../lib/supabase";
 import { ChallengeSession } from "../../types/challengeTypes";
@@ -348,6 +349,10 @@ const MapScreen = () => {
   const [trailsLoading, setTrailsLoading] = useState<boolean>(false);
   const [showPathUnavailableModal, setShowPathUnavailableModal] =
     useState<boolean>(false);
+
+  // Planned sessions state
+  const [todayPlannedSessions, setTodayPlannedSessions] = useState<PlannedSession[]>([]);
+  const [plannedSessionsLoading, setPlannedSessionsLoading] = useState<boolean>(false);
 
   // Real-time gait detection state
   const [currentGait, setCurrentGait] = useState<
@@ -1499,6 +1504,35 @@ const MapScreen = () => {
 
       checkForHorseRefresh();
     }, [lastHorsesRefreshTimestamp, user?.id])
+  );
+
+  // Load today's planned sessions
+  const loadTodayPlannedSessions = async () => {
+    try {
+      setPlannedSessionsLoading(true);
+      const result = await getTodayPlannedSessions();
+      
+      if (result.success && result.data) {
+        // Filter out completed sessions
+        const incompleteSessions = result.data.filter(session => !session.isCompleted);
+        setTodayPlannedSessions(incompleteSessions);
+      } else {
+        console.error("Error loading today's planned sessions:", result.error);
+        setTodayPlannedSessions([]);
+      }
+    } catch (error) {
+      console.error("Error loading today's planned sessions:", error);
+      setTodayPlannedSessions([]);
+    } finally {
+      setPlannedSessionsLoading(false);
+    }
+  };
+
+  // Load planned sessions when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadTodayPlannedSessions();
+    }, [user?.id])
   );
 
   // Save favorite training types to storage
@@ -3702,6 +3736,83 @@ const MapScreen = () => {
             </TouchableOpacity>
           </View>
 
+          {/* Today's Planned Sessions Card - Only show when not tracking and has incomplete sessions */}
+          {!isTracking && todayPlannedSessions.length > 0 && (
+            <View style={styles.plannedSessionsContainer}>
+              <View style={styles.plannedSessionsHeader}>
+                <Text style={[styles.plannedSessionsTitle, { color: currentTheme.colors.text }]}>
+                  📅 Today's Planned Sessions
+                </Text>
+                <Text style={[styles.plannedSessionsCount, { color: currentTheme.colors.textSecondary }]}>
+                  {todayPlannedSessions.length} session{todayPlannedSessions.length !== 1 ? 's' : ''}
+                </Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.plannedSessionsScroll}
+              >
+                {todayPlannedSessions.map((session) => (
+                  <TouchableOpacity
+                    key={session.id}
+                    style={[
+                      styles.plannedSessionCard,
+                      { backgroundColor: currentTheme.colors.surface }
+                    ]}
+                    onPress={() => {
+                      // Pre-fill form with planned session data
+                      const horse = userHorses.find(h => h.id === session.horseId);
+                      if (horse) {
+                        setSelectedHorse(horse.id);
+                        setSelectedTrainingType(session.trainingType);
+                      }
+                      Alert.alert(
+                        session.title,
+                        `${session.trainingType}\nHorse: ${session.horseName}\n${session.description || ''}\n\nPress "Start Tracking" to begin this session.`
+                      );
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    {session.imageUrl && (
+                      <Image
+                        source={{ uri: session.imageUrl }}
+                        style={styles.plannedSessionImage}
+                      />
+                    )}
+                    <View style={styles.plannedSessionInfo}>
+                      <Text style={[styles.plannedSessionTitle, { color: currentTheme.colors.text }]}>
+                        {session.title}
+                      </Text>
+                      <Text style={[styles.plannedSessionDetails, { color: currentTheme.colors.textSecondary }]}>
+                        {session.trainingType} • {session.horseName}
+                      </Text>
+                      {session.description && (
+                        <Text
+                          style={[styles.plannedSessionDescription, { color: currentTheme.colors.textSecondary }]}
+                          numberOfLines={2}
+                        >
+                          {session.description}
+                        </Text>
+                      )}
+                      <View style={styles.plannedSessionBadges}>
+                        {session.reminderEnabled && (
+                          <View style={[styles.plannedSessionBadge, { backgroundColor: currentTheme.colors.accent + '30' }]}>
+                            <Text style={styles.plannedSessionBadgeText}>🔔 Reminder</Text>
+                          </View>
+                        )}
+                        {session.repeatEnabled && (
+                          <View style={[styles.plannedSessionBadge, { backgroundColor: currentTheme.colors.primary + '30' }]}>
+                            <Text style={styles.plannedSessionBadgeText}>🔁 Repeating</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           <View style={styles.trackingControls}>
             {/* Horse Selection - Hidden during tracking */}
             {!isTracking && (
@@ -5745,6 +5856,83 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inder",
     fontWeight: "600",
+  },
+
+  // Planned Sessions Styles
+  plannedSessionsContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 16,
+    marginTop: 20,
+    marginHorizontal: 20,
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  plannedSessionsHeader: {
+    marginBottom: 12,
+  },
+  plannedSessionsTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  plannedSessionsCount: {
+    fontSize: 14,
+  },
+  plannedSessionsScroll: {
+    marginHorizontal: -5,
+  },
+  plannedSessionCard: {
+    width: 280,
+    borderRadius: 12,
+    marginHorizontal: 5,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  plannedSessionImage: {
+    width: "100%",
+    height: 120,
+    backgroundColor: "#E0E0E0",
+  },
+  plannedSessionInfo: {
+    padding: 12,
+  },
+  plannedSessionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  plannedSessionDetails: {
+    fontSize: 14,
+    marginBottom: 6,
+  },
+  plannedSessionDescription: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 8,
+  },
+  plannedSessionBadges: {
+    flexDirection: "row",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  plannedSessionBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  plannedSessionBadgeText: {
+    fontSize: 11,
+    fontWeight: "500",
   },
 });
 

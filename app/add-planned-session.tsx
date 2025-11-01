@@ -4,43 +4,28 @@ import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
+import { createPlannedSession } from "../lib/plannedSessionAPI";
 
 interface Horse {
   id: string;
   name: string;
   breed?: string;
-}
-
-interface PlannedSession {
-  id: string;
-  userId: string;
-  horseId: string;
-  horseName: string;
-  trainingType: string;
-  title: string;
-  description?: string;
-  date: number;
-  reminderEnabled: boolean;
-  repeatEnabled: boolean;
-  repeatPattern?: "daily" | "weekly" | "monthly";
-  imageUri?: string;
-  createdAt: number;
 }
 
 const TRAINING_TYPES = [
@@ -167,40 +152,38 @@ const AddPlannedSessionScreen = () => {
     try {
       setLoading(true);
 
-      // Create new planned session
-      const newSession: PlannedSession = {
-        id: `planned_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        userId: user?.id || "",
+      // Upload image to Supabase storage if present
+      let uploadedImageUrl: string | undefined = undefined;
+      if (imageUri) {
+        // TODO: Implement image upload to Supabase storage
+        // For now, we'll store the local URI
+        uploadedImageUrl = imageUri;
+      }
+
+      // Create new planned session in database
+      const result = await createPlannedSession({
         horseId: selectedHorse.id,
         horseName: selectedHorse.name,
         trainingType,
         title: title.trim(),
         description: description.trim(),
-        date: selectedDate.getTime(),
+        plannedDate: selectedDate,
         reminderEnabled,
         repeatEnabled,
         repeatPattern: repeatEnabled ? repeatPattern : undefined,
-        imageUri: imageUri || undefined,
-        createdAt: Date.now(),
-      };
+        imageUrl: uploadedImageUrl,
+      });
 
-      // Load existing sessions
-      const savedSessions = await AsyncStorage.getItem("planned_sessions");
-      const existingSessions: PlannedSession[] = savedSessions
-        ? JSON.parse(savedSessions)
-        : [];
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create planned session");
+      }
 
-      // Add new session
-      existingSessions.push(newSession);
-
-      // Save to storage
-      await AsyncStorage.setItem(
-        "planned_sessions",
-        JSON.stringify(existingSessions)
-      );
-
-      // Navigate back
-      router.back();
+      Alert.alert("Success", "Session planned successfully!", [
+        {
+          text: "OK",
+          onPress: () => router.back(),
+        },
+      ]);
     } catch (error) {
       console.error("Error saving planned session:", error);
       Alert.alert("Error", "Failed to save session. Please try again.");
