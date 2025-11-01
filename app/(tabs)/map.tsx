@@ -353,6 +353,7 @@ const MapScreen = () => {
   // Planned sessions state
   const [todayPlannedSessions, setTodayPlannedSessions] = useState<PlannedSession[]>([]);
   const [plannedSessionsLoading, setPlannedSessionsLoading] = useState<boolean>(false);
+  const [selectedPlannedSession, setSelectedPlannedSession] = useState<string | null>(null);
 
   // Real-time gait detection state
   const [currentGait, setCurrentGait] = useState<
@@ -1512,9 +1513,13 @@ const MapScreen = () => {
       setPlannedSessionsLoading(true);
       const result = await getTodayPlannedSessions();
       
+      console.log('📅 Planned Sessions API Result:', result.success, 'Data count:', result.data?.length);
+      
       if (result.success && result.data) {
         // Filter out completed sessions
         const incompleteSessions = result.data.filter(session => !session.isCompleted);
+        console.log('📅 Incomplete Sessions count:', incompleteSessions.length);
+        console.log('📅 Session details:', incompleteSessions.map(s => ({ id: s.id, title: s.title })));
         setTodayPlannedSessions(incompleteSessions);
       } else {
         console.error("Error loading today's planned sessions:", result.error);
@@ -3751,15 +3756,23 @@ const MapScreen = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={styles.plannedSessionsScroll}
+                contentContainerStyle={{ paddingHorizontal: 5 }}
               >
                 {todayPlannedSessions.map((session) => (
                   <TouchableOpacity
                     key={session.id}
                     style={[
                       styles.plannedSessionCard,
-                      { backgroundColor: currentTheme.colors.surface }
+                      { backgroundColor: currentTheme.colors.surface },
+                      selectedPlannedSession === session.id && {
+                        borderWidth: 3,
+                        borderColor: currentTheme.colors.primary,
+                      }
                     ]}
                     onPress={() => {
+                      // Set this session as selected
+                      setSelectedPlannedSession(session.id);
+                      
                       // Pre-fill form with planned session data
                       const horse = userHorses.find(h => h.id === session.horseId);
                       if (horse) {
@@ -5888,7 +5901,7 @@ const styles = StyleSheet.create({
     marginHorizontal: -5,
   },
   plannedSessionCard: {
-    width: 280,
+    width: 200,
     borderRadius: 12,
     marginHorizontal: 5,
     overflow: "hidden",
