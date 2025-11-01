@@ -42,6 +42,7 @@ interface TrainingSession {
   averageSpeed?: number; // in m/s
   maxSpeed?: number; // in m/s
   media?: MediaItem[]; // Photos and videos taken during session
+  plannedSessionId?: string; // Reference to planned session if this was a planned session
 }
 
 // Media item interface
@@ -350,11 +351,18 @@ const SessionsScreen = () => {
     >
       <View style={styles.sessionHeader}>
         <View style={styles.sessionInfo}>
-          <Text
-            style={[styles.sessionTitle, { color: currentTheme.colors.text }]}
-          >
-            {item.trainingType}
-          </Text>
+          <View style={styles.sessionTitleRow}>
+            <Text
+              style={[styles.sessionTitle, { color: currentTheme.colors.text }]}
+            >
+              {item.trainingType}
+            </Text>
+            {item.plannedSessionId && (
+              <View style={[styles.plannedBadge, { backgroundColor: currentTheme.colors.primary }]}>
+                <Text style={styles.plannedBadgeText}>📅 Planned</Text>
+              </View>
+            )}
+          </View>
           <Text
             style={[
               styles.sessionSubtitle,
@@ -863,11 +871,27 @@ const styles = StyleSheet.create({
   sessionInfo: {
     flex: 1,
   },
+  sessionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+    flexWrap: "wrap",
+  },
   sessionTitle: {
     fontSize: 18,
     fontFamily: "Inder",
     fontWeight: "600",
-    marginBottom: 4,
+    marginRight: 8,
+  },
+  plannedBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  plannedBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   sessionSubtitle: {
     fontSize: 14,

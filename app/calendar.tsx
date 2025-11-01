@@ -288,14 +288,17 @@ const CalendarScreen = () => {
                 key={session.id}
                 style={[
                   styles.sessionItem,
-                  { backgroundColor: currentTheme.colors.surface },
+                  { 
+                    backgroundColor: currentTheme.colors.surface,
+                    opacity: session.isCompleted ? 0.7 : 1,
+                  },
                 ]}
                 onPress={() => {
                   Alert.alert(
                     session.title,
                     `${session.trainingType}\nHorse: ${session.horseName}\n${
                       session.description ? `\n${session.description}` : ""
-                    }`
+                    }${session.isCompleted ? '\n\n✅ Completed' : ''}`
                   );
                 }}
               >
@@ -307,14 +310,22 @@ const CalendarScreen = () => {
                     />
                   )}
                   <View style={styles.sessionTextContainer}>
-                    <Text
-                      style={[
-                        styles.sessionTitle,
-                        { color: currentTheme.colors.text },
-                      ]}
-                    >
-                      {session.title}
-                    </Text>
+                    <View style={styles.sessionTitleRow}>
+                      <Text
+                        style={[
+                          styles.sessionTitle,
+                          { 
+                            color: currentTheme.colors.text,
+                            textDecorationLine: session.isCompleted ? 'line-through' : 'none',
+                          },
+                        ]}
+                      >
+                        {session.title}
+                      </Text>
+                      {session.isCompleted && (
+                        <Text style={styles.completedIcon}>✅</Text>
+                      )}
+                    </View>
                     <Text
                       style={[
                         styles.sessionType,
@@ -621,10 +632,19 @@ const styles = StyleSheet.create({
   sessionTextContainer: {
     flex: 1,
   },
+  sessionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
   sessionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 4,
+    flex: 1,
+  },
+  completedIcon: {
+    fontSize: 16,
+    marginLeft: 8,
   },
   sessionType: {
     fontSize: 14,

@@ -2,15 +2,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -85,6 +85,7 @@ interface TrainingSession {
   maxSpeed?: number;
   media?: MediaItem[]; // Photos and videos taken during session
   gaitAnalysis?: GaitAnalysis; // Horse gait analysis
+  plannedSessionId?: string; // Reference to planned session if this was a planned session
 }
 
 const SessionDetailsScreen = () => {
@@ -444,11 +445,18 @@ const SessionDetailsScreen = () => {
             ) : (
               <Text style={styles.sessionIcon}>🐎</Text>
             )}
-            <Text
-              style={[styles.sessionTitle, { color: currentTheme.colors.text }]}
-            >
-              {session.trainingType}
-            </Text>
+            <View style={styles.sessionTitleRow}>
+              <Text
+                style={[styles.sessionTitle, { color: currentTheme.colors.text }]}
+              >
+                {session.trainingType}
+              </Text>
+              {session.plannedSessionId && (
+                <View style={[styles.plannedBadge, { backgroundColor: currentTheme.colors.primary }]}>
+                  <Text style={styles.plannedBadgeText}>📅 Planned</Text>
+                </View>
+              )}
+            </View>
             <Text
               style={[
                 styles.sessionSubtitle,
@@ -1235,12 +1243,29 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     marginBottom: 10,
   },
+  sessionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+    flexWrap: "wrap",
+  },
   sessionTitle: {
     fontSize: 24,
     fontFamily: "Inder",
     fontWeight: "600",
     textAlign: "center",
-    marginBottom: 8,
+    marginRight: 8,
+  },
+  plannedBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  plannedBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   sessionSubtitle: {
     fontSize: 18,

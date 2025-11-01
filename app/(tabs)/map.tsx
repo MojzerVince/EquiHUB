@@ -40,7 +40,7 @@ import {
 } from "../../lib/fallDetectionAPI";
 import { GlobalChallengeAPI } from "../../lib/globalChallengeAPI";
 import { HorseAPI } from "../../lib/horseAPI";
-import { getTodayPlannedSessions, PlannedSession } from "../../lib/plannedSessionAPI";
+import { getTodayPlannedSessions, markPlannedSessionCompleted, PlannedSession } from "../../lib/plannedSessionAPI";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { Horse, Profile } from "../../lib/supabase";
 import { ChallengeSession } from "../../types/challengeTypes";
@@ -112,6 +112,7 @@ interface TrainingSession {
   maxSpeed?: number; // in m/s
   media?: MediaItem[]; // Photos and videos taken during session
   gaitAnalysis?: GaitAnalysis; // Horse gait analysis
+  plannedSessionId?: string; // Reference to planned session if this was a planned session
 }
 
 interface PublishedTrail {
@@ -2680,6 +2681,7 @@ const MapScreen = () => {
         trainingType: selectedTrainingData?.name || "Unknown Training",
         startTime,
         path: [],
+        plannedSessionId: selectedPlannedSession || undefined, // Store the planned session ID if one was selected
       };
 
       setCurrentSession(newSession);
@@ -2865,6 +2867,26 @@ const MapScreen = () => {
 
       // Save session to storage
       await saveSessionToStorage(completedSession);
+
+      // Mark planned session as completed if this was a planned session
+      if (completedSession.plannedSessionId) {
+        try {
+          // Don't pass actualSessionId since local session IDs are not UUIDs
+          const result = await markPlannedSessionCompleted(
+            completedSession.plannedSessionId
+          );
+          
+          if (result.success) {
+            console.log('✅ Planned session marked as completed');
+            // Reload today's planned sessions to update the list
+            await loadTodayPlannedSessions();
+          } else {
+            console.error('Failed to mark planned session as completed:', result.error);
+          }
+        } catch (error) {
+          console.error('Error marking planned session as completed:', error);
+        }
+      }
 
       // Update active challenge if user has one
       if (user?.id) {
