@@ -1,7 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useColorScheme } from "react-native";
 
-export type ThemeName = "Greenish" | "Pinky" | "Sunset";
+export type ThemeName = "Greenish" | "Pinky" | "Sunset" | "Dark";
 
 export interface Theme {
   name: ThemeName;
@@ -77,12 +78,31 @@ const themes: Record<ThemeName, Theme> = {
       error: "#FF6B6B",
     },
   },
+  Dark: {
+    name: "Dark",
+    colors: {
+      primary: "#1E1E1E",
+      primaryDark: "#121212",
+      secondary: "#BB86FC",
+      background: "#121212",
+      surface: "#3f3f3fff",
+      text: "#afafafff",
+      textSecondary: "#7f7f7fff",
+      accent: "#03DAC6",
+      border: "#2C2C2C",
+      card: "#2C2C2C",
+      success: "#4CAF50",
+      warning: "#FF9800",
+      error: "#CF6679",
+    },
+  },
 };
 
 interface ThemeContextType {
   currentTheme: Theme;
   setTheme: (themeName: ThemeName) => void;
   availableThemes: ThemeName[];
+  selectedThemeName: ThemeName;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -92,18 +112,29 @@ const THEME_STORAGE_KEY = "@equihub_theme";
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const systemColorScheme = useColorScheme(); // 'light' | 'dark' | null
+  const [selectedThemeName, setSelectedThemeName] = useState<ThemeName>("Sunset");
   const [currentTheme, setCurrentTheme] = useState<Theme>(themes.Sunset);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load saved theme on mount
   useEffect(() => {
     loadSavedTheme();
   }, []);
+
+  // Update theme when system theme or selected theme changes
+  useEffect(() => {
+    updateCurrentTheme();
+  }, [selectedThemeName, systemColorScheme]);
 
   const loadSavedTheme = async () => {
     try {
       const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
       if (savedTheme && savedTheme in themes) {
-        setCurrentTheme(themes[savedTheme as ThemeName]);
+        setSelectedThemeName(savedTheme as ThemeName);
+      } else {
+        // Default to Sunset if no saved theme
+        setSelectedThemeName("Sunset");
       }
     } catch (error) {
       console.error("Error loading saved theme:", error);
@@ -112,9 +143,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const updateCurrentTheme = () => {
+    // Use selected theme
+    setCurrentTheme(themes[selectedThemeName]);
+  };
+
   const setTheme = async (themeName: ThemeName) => {
     try {
-      setCurrentTheme(themes[themeName]);
+      setSelectedThemeName(themeName);
       await AsyncStorage.setItem(THEME_STORAGE_KEY, themeName);
     } catch (error) {
       console.error("Error saving theme:", error);
@@ -129,7 +165,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   return (
-    <ThemeContext.Provider value={{ currentTheme, setTheme, availableThemes }}>
+    <ThemeContext.Provider value={{ currentTheme, setTheme, availableThemes, selectedThemeName }}>
       {children}
     </ThemeContext.Provider>
   );

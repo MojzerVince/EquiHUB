@@ -39,7 +39,7 @@ import appConfig from "../../app.json";
 const OptionsScreen = () => {
   const router = useRouter();
   const { signOut, user } = useAuth();
-  const { currentTheme, setTheme, availableThemes } = useTheme();
+  const { currentTheme, setTheme, availableThemes, selectedThemeName } = useTheme();
   const { metricSystem, setMetricSystem } = useMetric();
   const { showLogout, showConfirm, showError } = useDialog();
 
@@ -1122,7 +1122,7 @@ ${
                   {
                     borderBottomColor: "rgba(255, 255, 255, 0.1)",
                     backgroundColor:
-                      currentTheme.name === theme
+                      selectedThemeName === theme
                         ? "rgba(255, 255, 255, 0.1)"
                         : "transparent",
                   },
@@ -1138,11 +1138,11 @@ ${
                     {
                       color: "#fff",
                       fontWeight:
-                        currentTheme.name === theme ? "bold" : "normal",
+                        selectedThemeName === theme ? "bold" : "normal",
                     },
                   ]}
                 >
-                  {theme}
+                  {theme === "Dark" ? "🌙 Dark" : theme}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -1421,7 +1421,7 @@ ${
                 title="Theme"
                 subtitle="Choose your preferred color theme"
                 type="dropdown"
-                dropdownValue={currentTheme.name}
+                dropdownValue={selectedThemeName === "Dark" ? "🌙 Dark" : selectedThemeName}
                 dropdownOptions={availableThemes}
                 onDropdownSelect={(theme) => setTheme(theme as ThemeName)}
                 dropdownVisible={themeDropdownVisible}
