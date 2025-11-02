@@ -37,9 +37,6 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
       const serverUrl =
         process.env.EXPO_PUBLIC_API_SERVER_URL ||
         Constants.expoConfig?.extra?.expoPublicApiServerUrl;
-      const apiSecret =
-        process.env.EXPO_PUBLIC_API_SECRET ||
-        Constants.expoConfig?.extra?.expoPublicApiSecret;
       const appVersion =
         process.env.EXPO_PUBLIC_APP_VERSION ||
         Constants.expoConfig?.extra?.expoPublicAppVersion ||
@@ -52,10 +49,6 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
       // Log environment variables for debugging
       console.log("🔍 Environment check:");
       console.log("- Server URL:", serverUrl);
-      console.log(
-        "- API Secret:",
-        apiSecret ? "***" + apiSecret.slice(-4) : "MISSING"
-      );
       console.log("- App Version:", appVersion);
       console.log("- Bundle ID:", bundleId);
 

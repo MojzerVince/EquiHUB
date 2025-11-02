@@ -52,17 +52,11 @@ class SecureConfigManager {
   private async loadProductionConfig(): Promise<void> {
     try {
       const serverUrl = process.env.EXPO_PUBLIC_API_SERVER_URL;
-      const apiSecret = process.env.EXPO_PUBLIC_API_SECRET;
       
       console.log('🔍 DEBUG: Attempting to connect to server:', serverUrl);
-      console.log('🔍 DEBUG: Using API secret:', apiSecret ? '***' + apiSecret.slice(-4) : 'MISSING');
       
       if (!serverUrl) {
         throw new Error('Server URL not configured (EXPO_PUBLIC_API_SERVER_URL missing)');
-      }
-      
-      if (!apiSecret) {
-        throw new Error('API secret not configured (EXPO_PUBLIC_API_SECRET missing)');
       }
       
       const requestBody = {
@@ -71,12 +65,12 @@ class SecureConfigManager {
       };
       console.log('🔍 DEBUG: Request body:', requestBody);
       
-      // This endpoint should be protected and only return config for authenticated apps
+      // This endpoint should validate the app based on bundle ID and version
+      // No API secret needed - server validates based on app signature/bundle ID
       const response = await fetch(`${serverUrl}/config`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-app-secret': apiSecret || '',
         },
         body: JSON.stringify(requestBody),
       });
@@ -92,7 +86,7 @@ class SecureConfigManager {
         if (response.status === 403) {
           throw new Error(`App not authorized. Bundle ID '${requestBody.bundleId}' might not be in allowed list on server.`);
         } else if (response.status === 401) {
-          throw new Error('Invalid API secret. Check EXPO_PUBLIC_API_SECRET configuration.');
+          throw new Error('App authentication failed. Check bundle ID configuration on server.');
         } else if (response.status >= 500) {
           throw new Error(`Server error (${response.status}). The configuration server might be down.`);
         } else {

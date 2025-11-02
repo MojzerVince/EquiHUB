@@ -756,19 +756,19 @@ export class AuthAPI {
   static async googleOAuth(authorizationCode: string, redirectUri?: string): Promise<{ user: any | null; error: string | null }> {
     try {
       const serverUrl = process.env.EXPO_PUBLIC_API_SERVER_URL;
-      const apiSecret = process.env.EXPO_PUBLIC_API_SECRET;
       
-      if (!serverUrl || !apiSecret) {
+      if (!serverUrl) {
         return { user: null, error: 'Server configuration missing' };
       }
 
       console.log('Exchanging Google authorization code via server...');
       
+      // The server will validate the authorization code directly with Google
+      // No API secret needed from client - server handles OAuth securely
       const response = await fetch(`${serverUrl}/auth/google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-app-secret': apiSecret,
         },
         body: JSON.stringify({
           code: authorizationCode,

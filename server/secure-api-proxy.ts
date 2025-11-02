@@ -138,29 +138,39 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Validate API secret for authentication
-const validateApiSecret = (req: Request, res: Response, next: NextFunction) => {
-  console.log('🔍 DEBUG: Incoming request to', req.path);
-  console.log('🔍 DEBUG: Request headers:', req.headers);
+// Validate app based on bundle ID (no API secret needed)
+const validateAppIdentity = (req: Request, res: Response, next: NextFunction) => {
+  console.log('🔍 DEBUG: Validating app identity for', req.path);
   console.log('🔍 DEBUG: Request body:', req.body);
   
-  const providedSecret = req.headers['x-app-secret'];
-  const expectedSecret = process.env.API_SECRET_KEY;
+  const { bundleId } = req.body;
+  const bundleIdFromQuery = req.query.bundleId as string;
+  const finalBundleId = bundleId || bundleIdFromQuery;
 
-  console.log('🔍 DEBUG: Provided secret:', providedSecret ? '***' + String(providedSecret).slice(-4) : 'MISSING');
-  console.log('🔍 DEBUG: Expected secret:', expectedSecret ? '***' + expectedSecret.slice(-4) : 'MISSING');
+  console.log('🔍 DEBUG: Bundle ID:', finalBundleId);
 
-  if (!providedSecret || !expectedSecret) {
-    console.log('🔍 DEBUG: Authentication failed - missing secrets');
-    return res.status(401).json({ error: 'Authentication required' });
+  // Whitelist of allowed bundle IDs
+  const allowedBundleIds = process.env.ALLOWED_BUNDLE_IDS?.split(',') || [
+    'com.mojzi1969.EquiHUB', // Production
+    // Add staging/test bundle IDs if needed
+  ];
+
+  console.log('🔍 DEBUG: Allowed bundle IDs:', allowedBundleIds);
+
+  if (!finalBundleId) {
+    console.log('🔍 DEBUG: Bundle ID missing');
+    return res.status(400).json({ error: 'Bundle ID required' });
   }
 
-  if (providedSecret !== expectedSecret) {
-    console.log('🔍 DEBUG: Authentication failed - secret mismatch');
-    return res.status(403).json({ error: 'Invalid authentication' });
+  if (!allowedBundleIds.includes(finalBundleId)) {
+    console.log('🔍 DEBUG: Bundle ID not authorized');
+    return res.status(403).json({ 
+      error: 'App not authorized',
+      message: 'Bundle ID not in allowed list'
+    });
   }
 
-  console.log('🔍 DEBUG: Authentication successful');
+  console.log('🔍 DEBUG: App identity validated successfully');
   next();
 };
 
@@ -227,26 +237,9 @@ app.post('/test-config', (req: Request, res: Response) => {
  * Secure configuration endpoint (GET version)
  * Returns API keys and configuration for authenticated apps only
  */
-app.get('/config', validateApiSecret, (req: Request, res: Response) => {
+app.get('/config', validateAppIdentity, (req: Request, res: Response) => {
   try {
     console.log('🔍 DEBUG: GET Config endpoint reached successfully');
-    
-    // For GET requests, we can't get appVersion/bundleId from body
-    // So we'll use query parameters or skip validation
-    const appVersion = req.query.appVersion as string || 'unknown';
-    const bundleId = req.query.bundleId as string || 'com.mojzi1969.EquiHUB';
-
-    console.log('🔍 DEBUG: App version:', appVersion);
-    console.log('🔍 DEBUG: Bundle ID:', bundleId);
-
-    // Validate app identity
-    const allowedBundleIds = process.env.ALLOWED_BUNDLE_IDS?.split(',') || [];
-    console.log('🔍 DEBUG: Allowed bundle IDs:', allowedBundleIds);
-    
-    if (allowedBundleIds.length > 0 && !allowedBundleIds.includes(bundleId)) {
-      console.log('🔍 DEBUG: Bundle ID not authorized');
-      return res.status(403).json({ error: 'App not authorized' });
-    }
 
     // Return secure configuration
     const config = {
@@ -274,22 +267,13 @@ app.get('/config', validateApiSecret, (req: Request, res: Response) => {
  * Secure configuration endpoint (POST version)
  * Returns API keys and configuration for authenticated apps only
  */
-app.post('/config', validateApiSecret, (req: Request, res: Response) => {
+app.post('/config', validateAppIdentity, (req: Request, res: Response) => {
   try {
-    console.log('🔍 DEBUG: Config endpoint reached successfully');
+    console.log('🔍 DEBUG: POST Config endpoint reached successfully');
     const { appVersion, bundleId } = req.body;
 
     console.log('🔍 DEBUG: App version:', appVersion);
     console.log('🔍 DEBUG: Bundle ID:', bundleId);
-
-    // Validate app identity (optional - add your app's bundle ID check)
-    const allowedBundleIds = process.env.ALLOWED_BUNDLE_IDS?.split(',') || [];
-    console.log('🔍 DEBUG: Allowed bundle IDs:', allowedBundleIds);
-    
-    if (allowedBundleIds.length > 0 && !allowedBundleIds.includes(bundleId)) {
-      console.log('🔍 DEBUG: Bundle ID not authorized');
-      return res.status(403).json({ error: 'App not authorized' });
-    }
 
     // Return secure configuration
     const config = {
@@ -319,7 +303,7 @@ app.post('/config', validateApiSecret, (req: Request, res: Response) => {
  * Proxy endpoint for Google Maps API
  * Keeps the API key on server side
  */
-app.get('/maps/geocode', validateApiSecret, async (req: Request, res: Response) => {
+app.get('/maps/geocode', validateAppIdentity, async (req: Request, res: Response) => {
   try {
     const { address, latlng } = req.query;
     
@@ -347,7 +331,7 @@ app.get('/maps/geocode', validateApiSecret, async (req: Request, res: Response) 
 /**
  * Proxy endpoint for Google Places API
  */
-app.get('/maps/places', validateApiSecret, async (req: Request, res: Response) => {
+app.get('/maps/places', validateAppIdentity, async (req: Request, res: Response) => {
   try {
     const { query, location, radius = 5000 } = req.query;
     
@@ -376,8 +360,9 @@ app.get('/maps/places', validateApiSecret, async (req: Request, res: Response) =
 /**
  * Google OAuth endpoint
  * Handles Google Sign In token exchange using client secret
+ * No bundle ID validation needed - the authorization code is proof of authenticity
  */
-app.post('/auth/google', validateApiSecret, async (req: Request, res: Response) => {
+app.post('/auth/google', async (req: Request, res: Response) => {
   try {
     const { code, redirectUri } = req.body;
     
@@ -486,7 +471,6 @@ const server = app.listen(PORT, HOST, () => {
   
   // Validate required environment variables
   const requiredEnvVars = [
-    'API_SECRET_KEY',
     'SUPABASE_URL',
     'SUPABASE_ANON_KEY',
     'GOOGLE_MAPS_API_KEY',
