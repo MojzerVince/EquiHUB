@@ -18,6 +18,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useMetric } from "../contexts/MetricContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { HorseAPI } from "../lib/horseAPI";
+import { getSessionById } from "../lib/sessionAPI";
 import { Horse } from "../lib/supabase";
 
 // Media item interface
@@ -106,23 +107,58 @@ const SessionDetailsScreen = () => {
   const loadSession = async () => {
     try {
       setLoading(true);
-      const savedSessions = await AsyncStorage.getItem("training_sessions");
-      if (savedSessions) {
-        const sessions: TrainingSession[] = JSON.parse(savedSessions);
-        const found = sessions.find((s) => s.id === sessionId);
-        setSession(found || null);
+      
+      if (!sessionId || typeof sessionId !== 'string') {
+        console.error("Invalid session ID");
+        setSession(null);
+        setLoading(false);
+        return;
+      }
+
+      // Try to load from database first
+      const result = await getSessionById(sessionId);
+      
+      if (result.success && result.session) {
+        // Convert DB session to local TrainingSession format
+        const dbSession = result.session;
+        const convertedSession: TrainingSession = {
+          id: dbSession.id || sessionId as string,
+          userId: dbSession.user_id,
+          horseId: dbSession.horse_id || '',
+          horseName: dbSession.horse_name || 'Unknown Horse',
+          trainingType: dbSession.training_type,
+          startTime: new Date(dbSession.started_at).getTime(),
+          endTime: dbSession.ended_at ? new Date(dbSession.ended_at).getTime() : undefined,
+          duration: dbSession.duration_seconds,
+          distance: dbSession.distance_meters,
+          path: dbSession.session_data.coordinates.map((coord: any) => ({
+            latitude: coord.lat || coord.latitude,
+            longitude: coord.lng || coord.longitude,
+            timestamp: new Date(coord.timestamp).getTime(),
+            speed: coord.speed ? coord.speed / 3.6 : undefined, // Convert km/h to m/s
+            accuracy: coord.accuracy,
+          })),
+          averageSpeed: dbSession.avg_speed_kmh ? dbSession.avg_speed_kmh / 3.6 : undefined, // Convert km/h to m/s
+          maxSpeed: dbSession.max_speed_kmh ? dbSession.max_speed_kmh / 3.6 : undefined, // Convert km/h to m/s
+          media: dbSession.session_data.metadata?.media_count ? [] : undefined,
+          gaitAnalysis: dbSession.session_data.metadata?.gait_analysis,
+          plannedSessionId: dbSession.session_data.metadata?.planned_session_id,
+        };
+        
+        setSession(convertedSession);
+        console.log("✅ Loaded session from database:", convertedSession.id);
 
         // Load horse data if session is found
-        if (found && found.horseId && found.userId) {
+        if (convertedSession.horseId && convertedSession.userId) {
           try {
             // First try to load horses from AsyncStorage
             const cachedHorses = await AsyncStorage.getItem(
-              `user_horses_${found.userId}`
+              `user_horses_${convertedSession.userId}`
             );
 
             if (cachedHorses) {
               const horses: Horse[] = JSON.parse(cachedHorses);
-              let sessionHorse = horses.find((h) => h.id === found.horseId);
+              let sessionHorse = horses.find((h) => h.id === convertedSession.horseId);
 
               // If horse found in cache, try to load its image from cache
               if (sessionHorse) {
@@ -156,24 +192,96 @@ const SessionDetailsScreen = () => {
                 console.log(
                   "⚠️ Horse not found in cache, falling back to API call"
                 );
-                await loadHorseFromAPI(found.userId, found.horseId);
+                await loadHorseFromAPI(convertedSession.userId, convertedSession.horseId);
               }
             } else {
               // No cached horses, fallback to API
               console.log(
                 "⚠️ No cached horses found, falling back to API call"
               );
-              await loadHorseFromAPI(found.userId, found.horseId);
+              await loadHorseFromAPI(convertedSession.userId, convertedSession.horseId);
             }
           } catch (error) {
             console.error("Error loading horse data:", error);
             // Fallback to API on error
-            await loadHorseFromAPI(found.userId, found.horseId);
+            await loadHorseFromAPI(convertedSession.userId, convertedSession.horseId);
           }
+        }
+      } else {
+        // Fallback to AsyncStorage if not found in database
+        console.log("⚠️ Session not found in database, trying AsyncStorage");
+        const savedSessions = await AsyncStorage.getItem("training_sessions");
+        if (savedSessions) {
+          const sessions: TrainingSession[] = JSON.parse(savedSessions);
+          const found = sessions.find((s) => s.id === sessionId);
+          setSession(found || null);
+
+          // Load horse data if session is found
+          if (found && found.horseId && found.userId) {
+            try {
+              // First try to load horses from AsyncStorage
+              const cachedHorses = await AsyncStorage.getItem(
+                `user_horses_${found.userId}`
+              );
+
+              if (cachedHorses) {
+                const horses: Horse[] = JSON.parse(cachedHorses);
+                let sessionHorse = horses.find((h) => h.id === found.horseId);
+
+                // If horse found in cache, try to load its image from cache
+                if (sessionHorse) {
+                  try {
+                    const cachedImage = await AsyncStorage.getItem(
+                      `horse_image_${sessionHorse.id}`
+                    );
+                    if (cachedImage) {
+                      const imageData = JSON.parse(cachedImage);
+                      sessionHorse = {
+                        ...sessionHorse,
+                        image_url: imageData.image_url,
+                        image_base64: imageData.image_base64,
+                      };
+                    }
+                  } catch (imageError) {
+                    console.warn(
+                      `⚠️ Failed to load cached image for horse ${sessionHorse.name}:`,
+                      imageError
+                    );
+                    // Continue without image if image loading fails
+                  }
+
+                  setHorse(sessionHorse);
+                  console.log(
+                    "✅ Loaded horse from AsyncStorage:",
+                    sessionHorse.name
+                  );
+                } else {
+                  // Horse not found in cache, fallback to API
+                  console.log(
+                    "⚠️ Horse not found in cache, falling back to API call"
+                  );
+                  await loadHorseFromAPI(found.userId, found.horseId);
+                }
+              } else {
+                // No cached horses, fallback to API
+                console.log(
+                  "⚠️ No cached horses found, falling back to API call"
+                );
+                await loadHorseFromAPI(found.userId, found.horseId);
+              }
+            } catch (error) {
+              console.error("Error loading horse data:", error);
+              // Fallback to API on error
+              await loadHorseFromAPI(found.userId, found.horseId);
+            }
+          }
+        } else {
+          setSession(null);
         }
       }
     } catch (error) {
       console.error("Error loading session:", error);
+      setSession(null);
     } finally {
       setLoading(false);
     }
