@@ -5097,15 +5097,12 @@ const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: "#335C67",
   },
-  content: {
-    flex: 1,
-  },
   headerContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginBottom: Platform.OS === "ios" ? -20 : -45,
     marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   header: {

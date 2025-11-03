@@ -282,7 +282,6 @@ const AddPlannedSessionScreen = () => {
             />
           </TouchableOpacity>
           <Text style={styles.header}>Add Session Plan</Text>
-          <View style={styles.placeholder} />
         </View>
       </SafeAreaView>
 
@@ -748,7 +747,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginBottom: Platform.OS === "ios" ? -15 : -45,
     marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   backButton: {
@@ -768,7 +767,7 @@ const styles = StyleSheet.create({
     height: 30,
   },
   header: {
-    fontSize: 30,
+    fontSize: 28,
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",

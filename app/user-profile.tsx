@@ -1,14 +1,15 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
@@ -44,6 +45,10 @@ const UserProfileScreen = () => {
     "none" | "pending" | "friends"
   >("none");
   const [sendingRequest, setSendingRequest] = useState(false);
+  
+  // Stable state
+  const [stableName, setStableName] = useState<string | null>(null);
+  const [stableLoading, setStableLoading] = useState(true);
 
   // Badges state
   const [userBadges, setUserBadges] = useState<UserBadgeWithDetails[]>([]);
@@ -69,6 +74,7 @@ const UserProfileScreen = () => {
       loadProfile();
       loadCounters();
       loadUserBadges();
+      loadUserStable();
       if (!isOwnProfile) {
         checkFriendshipStatus();
       }
@@ -129,6 +135,45 @@ const UserProfileScreen = () => {
       setHorsesCount(0);
     } finally {
       setCountersLoading(false);
+    }
+  };
+
+  const loadUserStable = async () => {
+    if (!userId) return;
+
+    setStableLoading(true);
+    try {
+      const supabaseUrl = "https://grdsqxwghajehneksxik.supabase.co";
+      const apiKey =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZHNxeHdnaGFqZWhuZWtzeGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzIwMDUsImV4cCI6MjA2OTgwODAwNX0.PL2kAvrRGZbjnJcvKXMLVAaIF-ZfOWBOvzoPNVr9Fms";
+
+      // Get stable membership
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/stable_members?user_id=eq.${userId}&select=stable:stables(name)`,
+        {
+          headers: {
+            apikey: apiKey,
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const memberships = await response.json();
+        if (memberships && memberships.length > 0 && memberships[0].stable) {
+          setStableName(memberships[0].stable.name);
+        } else {
+          setStableName(null);
+        }
+      } else {
+        setStableName(null);
+      }
+    } catch (error) {
+      console.error("Error loading user stable:", error);
+      setStableName(null);
+    } finally {
+      setStableLoading(false);
     }
   };
 
@@ -414,10 +459,12 @@ const UserProfileScreen = () => {
               onPress={() => router.back()}
               style={styles.backButton}
             >
-              <Text style={styles.backIcon}>←</Text>
+              <Image
+                source={require("../assets/in_app_icons/back.png")}
+                style={styles.backIcon}
+              />
             </TouchableOpacity>
             <Text style={[styles.header, { color: "#FFFFFF" }]}>Profile</Text>
-            <View style={styles.headerSpacer} />
           </View>
         </SafeAreaView>
         <View
@@ -464,10 +511,12 @@ const UserProfileScreen = () => {
               onPress={() => router.back()}
               style={styles.backButton}
             >
-              <Text style={styles.backIcon}>←</Text>
+              <Image
+                source={require("../assets/in_app_icons/back.png")}
+                style={styles.backIcon}
+              />
             </TouchableOpacity>
             <Text style={[styles.header, { color: "#FFFFFF" }]}>Profile</Text>
-            <View style={styles.headerSpacer} />
           </View>
         </SafeAreaView>
         <View
@@ -516,12 +565,14 @@ const UserProfileScreen = () => {
             onPress={() => router.back()}
             style={styles.backButton}
           >
-            <Text style={styles.backIcon}>←</Text>
+            <Image
+              source={require("../assets/in_app_icons/back.png")}
+              style={styles.backIcon}
+            />
           </TouchableOpacity>
           <Text style={[styles.header, { color: "#FFFFFF" }]}>
             {profile.name}
           </Text>
-          <View style={styles.headerSpacer} />
         </View>
       </SafeAreaView>
 
@@ -584,6 +635,35 @@ const UserProfileScreen = () => {
                 {profile.experience} years
               </Text>
             </View>
+
+            {/* Stable Container */}
+            {stableLoading ? (
+              <View style={styles.stableContainer}>
+                <ActivityIndicator
+                  size="small"
+                  color={currentTheme.colors.primary}
+                />
+              </View>
+            ) : stableName ? (
+              <View style={styles.stableContainer}>
+                <Text
+                  style={[
+                    styles.stableLabel,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  🏠 Stable
+                </Text>
+                <Text
+                  style={[
+                    styles.stableValue,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  {stableName}
+                </Text>
+              </View>
+            ) : null}
 
             {/* Counters Container */}
             <View style={styles.countersContainer}>
@@ -834,31 +914,43 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -45,
-    marginTop: -5,
+    marginBottom: Platform.OS === "ios" ? -20 : -45,
+    marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   header: {
-    fontSize: 30,
+    fontSize: 24,
     fontFamily: "Inder",
     color: "#fff",
     textAlign: "center",
     flex: 1,
     fontWeight: "600",
+    marginTop: 8,
   },
   backButton: {
     position: "absolute",
     left: 20,
-    padding: 5,
+    padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
   },
   backIcon: {
-    fontSize: 24,
-    color: "#fff",
-  },
-  headerSpacer: {
-    width: 50,
+    width: 26,
+    height: 26,
+    tintColor: "#fff",
   },
   viewPort: {
+    backgroundColor: "#FFFFFF",
     flex: 1,
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    marginTop: -4,
+    paddingTop: 5,
+    paddingBottom: 110,
   },
   profileContainer: {
     flex: 1,
@@ -948,6 +1040,25 @@ const styles = StyleSheet.create({
   },
   experienceValue: {
     fontSize: 24,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  stableContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    marginBottom: 15,
+    width: "100%",
+    alignItems: "center",
+  },
+  stableLabel: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    marginBottom: 5,
+  },
+  stableValue: {
+    fontSize: 20,
     fontWeight: "bold",
     fontFamily: "Inder",
   },

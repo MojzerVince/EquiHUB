@@ -230,7 +230,7 @@ const ProFeaturesPage = () => {
             activeOpacity={0.7}
           >
             <Image
-              source={require("../assets/UI_resources/UI_white/arrow_white.png")}
+              source={require("../assets/in_app_icons/back.png")}
               style={styles.backIcon}
             />
           </TouchableOpacity>
@@ -551,10 +551,11 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -45,
-    marginTop: -5,
+    marginBottom: Platform.OS === "ios" ? -23 : -45,
+    marginTop: Platform.OS === "ios" ? -12 : -5,
   },
   backButton: {
     position: "absolute",
@@ -563,15 +564,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     minWidth: 40,
     minHeight: 40,
-    marginTop: 10,
+    marginTop: 5,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     zIndex: 10,
   },
   backIcon: {
-    width: 24,
-    height: 24,
+    width: 30,
+    height: 30,
     tintColor: "#fff",
   },
   header: {
@@ -587,8 +587,8 @@ const styles = StyleSheet.create({
     flex: 1,
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
-    marginTop: 5,
-    paddingTop: 15,
+    marginTop: -5,
+    paddingTop: 10,
   },
   profileContainer: {
     paddingHorizontal: 20,

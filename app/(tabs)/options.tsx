@@ -2815,7 +2815,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginBottom: Platform.OS === "ios" ? -20 : -45,
     marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   header: {

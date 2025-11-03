@@ -878,144 +878,148 @@ const CoachScreen = () => {
     <Modal
       visible={showEmergencyModal}
       animationType="slide"
-      presentationStyle="fullScreen"
+      presentationStyle="pageSheet"
       onRequestClose={() => setShowEmergencyModal(false)}
     >
-      <View style={[styles.container, { backgroundColor: theme.primary }]}>
-        <SafeAreaView
-          style={[styles.safeArea, { backgroundColor: theme.primary }]}
+      <View
+        style={[
+          styles.emergencyModalContainer,
+          { backgroundColor: currentTheme.colors.surface },
+        ]}
+      >
+        {/* Header */}
+        <View
+          style={[
+            styles.emergencyModalHeader,
+            { backgroundColor: currentTheme.colors.primary },
+          ]}
         >
-          <View style={styles.headerContainer}>
-            <View style={styles.headerWithBack}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => setShowEmergencyModal(false)}
-              >
-                <Image
-                  source={require("../../assets/in_app_icons/back.png")}
-                  style={{ width: 26, height: 26 }}
-                />
-              </TouchableOpacity>
-              <Text style={styles.header}>Emergency First Aid</Text>
-            </View>
-          </View>
-        </SafeAreaView>
+          <Text
+            style={[
+              styles.emergencyModalTitle,
+              { color: "#FFFFFF" },
+            ]}
+          >
+            🚨 Emergency First Aid
+          </Text>
+          <TouchableOpacity
+            style={styles.emergencyModalCloseButton}
+            onPress={() => setShowEmergencyModal(false)}
+          >
+            <Text style={styles.emergencyModalCloseText}>✕</Text>
+          </TouchableOpacity>
+        </View>
 
         <ScrollView
-          style={[
-            styles.viewPort,
-            { backgroundColor: currentTheme.colors.background },
-          ]}
+          style={styles.emergencyModalContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.contentContainer}>
-            {/* Search Bar */}
-            <View
-              style={[
-                styles.searchContainer,
-                { backgroundColor: theme.surface },
-              ]}
-            >
-              <Text style={styles.searchIcon}>🔍</Text>
-              <TextInput
-                style={[styles.searchInput, { color: theme.text }]}
-                placeholder="Search emergency situations..."
-                placeholderTextColor={theme.textSecondary}
-                value={emergencySearchQuery}
-                onChangeText={setEmergencySearchQuery}
-              />
-            </View>
+          {/* Search Bar */}
+          <View
+            style={[
+              styles.searchContainer,
+              { backgroundColor: theme.surface },
+            ]}
+          >
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={[styles.searchInput, { color: theme.text }]}
+              placeholder="Search emergency situations..."
+              placeholderTextColor={theme.textSecondary}
+              value={emergencySearchQuery}
+              onChangeText={setEmergencySearchQuery}
+            />
+          </View>
 
-            {/* Emergency Instructions */}
-            <View style={styles.emergencyInstructions}>
-              <Text style={[styles.emergencyTitle, { color: "#F44336" }]}>
-                ⚠️ EMERGENCY PROTOCOL
-              </Text>
-              <Text style={[styles.emergencySubtitle, { color: theme.text }]}>
-                In any life-threatening situation, call your veterinarian
-                immediately!
-              </Text>
-            </View>
+          {/* Emergency Instructions */}
+          <View style={styles.emergencyInstructions}>
+            <Text style={[styles.emergencyTitle, { color: "#F44336" }]}>
+              ⚠️ EMERGENCY PROTOCOL
+            </Text>
+            <Text style={[styles.emergencySubtitle, { color: theme.text }]}>
+              In any life-threatening situation, call your veterinarian
+              immediately!
+            </Text>
+          </View>
 
-            {/* Emergency Steps */}
-            <View style={styles.emergencyStepsContainer}>
-              {filteredEmergencySteps.map((step) => (
-                <View
-                  key={step.id}
-                  style={[
-                    styles.emergencyCard,
-                    { backgroundColor: theme.surface },
-                  ]}
-                >
-                  <View style={styles.emergencyHeader}>
-                    <View style={styles.emergencyTitleContainer}>
-                      <Text style={styles.emergencyIcon}>{step.icon}</Text>
-                      <View style={styles.emergencyInfo}>
-                        <Text
-                          style={[
-                            styles.emergencyCardTitle,
-                            { color: theme.text },
-                          ]}
-                        >
-                          {step.title}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.emergencyDescription,
-                            { color: theme.textSecondary },
-                          ]}
-                        >
-                          {step.description}
-                        </Text>
-                      </View>
-                      <View
+          {/* Emergency Steps */}
+          <View style={styles.emergencyStepsContainer}>
+            {filteredEmergencySteps.map((step) => (
+              <View
+                key={step.id}
+                style={[
+                  styles.emergencyCard,
+                  { backgroundColor: theme.surface },
+                ]}
+              >
+                <View style={styles.emergencyHeader}>
+                  <View style={styles.emergencyTitleContainer}>
+                    <Text style={styles.emergencyIcon}>{step.icon}</Text>
+                    <View style={styles.emergencyInfo}>
+                      <Text
                         style={[
-                          styles.urgencyBadge,
-                          { backgroundColor: getUrgencyColor(step.urgency) },
+                          styles.emergencyCardTitle,
+                          { color: theme.text },
                         ]}
                       >
-                        <Text style={styles.urgencyText}>{step.urgency}</Text>
-                      </View>
+                        {step.title}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.emergencyDescription,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        {step.description}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.urgencyBadge,
+                        { backgroundColor: getUrgencyColor(step.urgency) },
+                      ]}
+                    >
+                      <Text style={styles.urgencyText}>{step.urgency}</Text>
                     </View>
                   </View>
-
-                  <View style={styles.emergencySteps}>
-                    {step.steps.map((stepText, index) => (
-                      <View key={index} style={styles.emergencyStep}>
-                        <View
-                          style={[
-                            styles.stepNumber,
-                            { backgroundColor: theme.primary },
-                          ]}
-                        >
-                          <Text style={styles.stepNumberText}>{index + 1}</Text>
-                        </View>
-                        <Text style={[styles.stepText, { color: theme.text }]}>
-                          {stepText}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
                 </View>
-              ))}
-            </View>
 
-            {filteredEmergencySteps.length === 0 && (
-              <View style={styles.noResultsContainer}>
-                <Text
-                  style={[styles.noResultsText, { color: theme.textSecondary }]}
-                >
-                  No emergency procedures found for "{emergencySearchQuery}"
-                </Text>
-                <Text
-                  style={[styles.noResultsTip, { color: theme.textSecondary }]}
-                >
-                  Try searching for terms like "colic", "wound", "lameness", or
-                  "choking"
-                </Text>
+                <View style={styles.emergencySteps}>
+                  {step.steps.map((stepText, index) => (
+                    <View key={index} style={styles.emergencyStep}>
+                      <View
+                        style={[
+                          styles.stepNumber,
+                          { backgroundColor: theme.primary },
+                        ]}
+                      >
+                        <Text style={styles.stepNumberText}>{index + 1}</Text>
+                      </View>
+                      <Text style={[styles.stepText, { color: theme.text }]}>
+                        {stepText}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-            )}
+            ))}
           </View>
+
+          {filteredEmergencySteps.length === 0 && (
+            <View style={styles.noResultsContainer}>
+              <Text
+                style={[styles.noResultsText, { color: theme.textSecondary }]}
+              >
+                No emergency procedures found for "{emergencySearchQuery}"
+              </Text>
+              <Text
+                style={[styles.noResultsTip, { color: theme.textSecondary }]}
+              >
+                Try searching for terms like "colic", "wound", "lameness", or
+                "choking"
+              </Text>
+            </View>
+          )}
         </ScrollView>
       </View>
     </Modal>
@@ -1179,7 +1183,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginBottom: Platform.OS === "ios" ? -20 : -45,
     marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   header: {
@@ -1529,12 +1533,49 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   // Emergency Modal Styles
+  emergencyModalContainer: {
+    flex: 1,
+  },
+  emergencyModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.2)",
+  },
+  emergencyModalTitle: {
+    fontSize: 24,
+    fontFamily: "Inder",
+    fontWeight: "bold",
+    flex: 1,
+  },
+  emergencyModalCloseButton: {
+    backgroundColor: "#666",
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emergencyModalCloseText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  emergencyModalContent: {
+    flex: 1,
+  },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 16,
     padding: 6,
+    marginTop: 15,
     marginBottom: 20,
+    marginHorizontal: 10,
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -1552,6 +1593,7 @@ const styles = StyleSheet.create({
   },
   emergencyInstructions: {
     marginBottom: 20,
+    marginHorizontal: 10,
     padding: 16,
     backgroundColor: "#FFF3E0",
     borderRadius: 12,
@@ -1571,6 +1613,8 @@ const styles = StyleSheet.create({
   },
   emergencyStepsContainer: {
     gap: 16,
+    paddingHorizontal: 10,
+    marginBottom: 45,
   },
   emergencyCard: {
     borderRadius: 16,
@@ -1652,6 +1696,7 @@ const styles = StyleSheet.create({
   noResultsContainer: {
     alignItems: "center",
     padding: 40,
+    marginHorizontal: 20,
   },
   noResultsText: {
     fontSize: 16,

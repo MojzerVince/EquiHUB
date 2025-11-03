@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -275,8 +276,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: -45,
-    marginTop: -5,
+    marginBottom: Platform.OS === "ios" ? -20 : -45,
+    marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   header: {
     fontSize: 24,
@@ -310,7 +311,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: -4,
-    paddingTop: 15,
+    paddingTop: 5,
     paddingBottom: 110,
   },
   centered: {

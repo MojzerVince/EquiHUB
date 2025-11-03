@@ -385,7 +385,6 @@ const CalendarScreen = () => {
             />
           </TouchableOpacity>
           <Text style={styles.header}>Calendar</Text>
-          <View style={styles.placeholder} />
         </View>
       </SafeAreaView>
 
@@ -491,8 +490,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: Platform.OS === "ios" ? -50 : -45,
+    marginBottom: Platform.OS === "ios" ? -20 : -45,
     marginTop: Platform.OS === "ios" ? -15 : -5,
+  },
+  header: {
+    fontSize: 30,
+    fontFamily: "Inder",
+    color: "#fff",
+    textAlign: "center",
+    flex: 1,
+    fontWeight: "600",
   },
   backButton: {
     position: "absolute",
@@ -510,14 +517,6 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
   },
-  header: {
-    fontSize: 30,
-    fontFamily: "Inder",
-    color: "#fff",
-    textAlign: "center",
-    flex: 1,
-    fontWeight: "600",
-  },
   placeholder: {
     width: 60,
   },
@@ -527,7 +526,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 50,
     borderTopRightRadius: 50,
     marginTop: -8,
-    paddingTop: 30,
+    paddingTop: 20,
   },
   weekNavigationContainer: {
     flexDirection: "row",
