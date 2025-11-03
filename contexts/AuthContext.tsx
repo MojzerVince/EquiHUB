@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { AppState } from "react-native";
 import { AuthAPI, AuthUser } from "../lib/authAPI";
@@ -188,7 +189,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Check for Google OAuth session
       console.log("🔍 Checking for Google OAuth session...");
-      const AsyncStorage = require('@react-native-async-storage/async-storage');
       const googleUserData = await AsyncStorage.getItem('google_oauth_user_data');
       
       if (googleUserData) {

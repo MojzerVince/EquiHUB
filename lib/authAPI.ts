@@ -626,17 +626,18 @@ export class AuthAPI {
 
       const supabase = getSupabase();
 
+      // For mobile apps, use Supabase's auth callback URL
+      // This is the standard pattern for Supabase OAuth in React Native/Expo
+      const redirectUrl = Platform.OS === 'web'
+        ? `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081'}/auth/callback`
+        : 'https://grdsqxwghajehneksxik.supabase.co/auth/v1/callback';
+
       // Initiate Google OAuth - this will redirect the user to Google
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: Platform.OS === 'web' 
-            ? `${window.location.origin}/auth/google-callback` 
-            : 'com.mojzi1969.EquiHUB://oauth/google-callback',
-          // Store profile data in the state parameter to retrieve after OAuth
-          queryParams: {
-            state: btoa(JSON.stringify(profileData)) // Base64 encode the profile data
-          }
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: false, // Let Supabase handle the redirect
         }
       });
 
