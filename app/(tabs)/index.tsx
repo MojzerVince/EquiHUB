@@ -5767,7 +5767,7 @@ const MyHorsesScreen = () => {
                                         <TouchableOpacity
                                           style={[
                                             styles.eventTypeButton,
-                                            eventType === "ultrasound" && styles.eventTypeButtonActive,
+                                            eventType === "ultrasound" && {backgroundColor: currentTheme.colors.accent},
                                             { borderColor: currentTheme.colors.primary }
                                           ]}
                                           onPress={() => setEventType("ultrasound")}
@@ -5784,7 +5784,7 @@ const MyHorsesScreen = () => {
                                         <TouchableOpacity
                                           style={[
                                             styles.eventTypeButton,
-                                            eventType === "vaccine" && styles.eventTypeButtonActive,
+                                            eventType === "vaccine" && {backgroundColor: currentTheme.colors.accent},
                                             { borderColor: currentTheme.colors.primary }
                                           ]}
                                           onPress={() => setEventType("vaccine")}
@@ -5801,7 +5801,7 @@ const MyHorsesScreen = () => {
                                         <TouchableOpacity
                                           style={[
                                             styles.eventTypeButton,
-                                            eventType === "deworming" && styles.eventTypeButtonActive,
+                                            eventType === "deworming" && {backgroundColor: currentTheme.colors.accent},
                                             { borderColor: currentTheme.colors.primary }
                                           ]}
                                           onPress={() => setEventType("deworming")}
@@ -5818,7 +5818,7 @@ const MyHorsesScreen = () => {
                                         <TouchableOpacity
                                           style={[
                                             styles.eventTypeButton,
-                                            eventType === "note" && styles.eventTypeButtonActive,
+                                            eventType === "note" && {backgroundColor: currentTheme.colors.accent},
                                             { borderColor: currentTheme.colors.primary }
                                           ]}
                                           onPress={() => setEventType("note")}
@@ -8176,6 +8176,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     marginVertical: 20,
+    marginTop: -20,
   },
   statusActionsContainer: {
     marginTop: 20,
