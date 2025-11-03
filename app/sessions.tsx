@@ -3,23 +3,24 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  Image,
-  PanResponder,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    FlatList,
+    Image,
+    PanResponder,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useMetric } from "../contexts/MetricContext";
 import { useTheme } from "../contexts/ThemeContext";
+import { getSessionsForWeek } from "../lib/sessionAPI";
 
 // Training session interface to match map.tsx
 interface TrainingSession {
@@ -72,6 +73,7 @@ const SessionsScreen = () => {
     []
   );
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
   const [earliestSessionDate, setEarliestSessionDate] = useState<Date | null>(
     null
@@ -220,40 +222,66 @@ const SessionsScreen = () => {
     }
   }, [user?.id]);
 
-  // Load training sessions from AsyncStorage
+  // Load training sessions from database for the selected week
   const loadTrainingSessions = useCallback(async () => {
+    if (!user?.id) {
+      setTrainingSessions([]);
+      return;
+    }
+
     try {
       setLoadingSessions(true);
-      const savedSessions = await AsyncStorage.getItem("training_sessions");
+      
+      // Calculate the date for the selected week
+      const { startOfWeek } = getWeekBounds(currentWeekOffset);
+      
+      // Fetch sessions from database for the specific week
+      const result = await getSessionsForWeek(user.id, startOfWeek);
+      
+      if (result.success && result.sessions) {
+        // Convert DB sessions to local TrainingSession format
+        const convertedSessions: TrainingSession[] = result.sessions.map(dbSession => ({
+          id: dbSession.id || '',
+          userId: dbSession.user_id,
+          horseId: dbSession.horse_id || '',
+          horseName: dbSession.horse_name || 'Unknown',
+          trainingType: dbSession.training_type,
+          startTime: new Date(dbSession.started_at).getTime(),
+          endTime: new Date(dbSession.ended_at).getTime(),
+          duration: dbSession.duration_seconds,
+          distance: dbSession.distance_meters,
+          path: dbSession.session_data.coordinates.map(coord => ({
+            latitude: coord.latitude,
+            longitude: coord.longitude,
+            timestamp: new Date(coord.timestamp).getTime(),
+            accuracy: coord.accuracy,
+            speed: coord.speed,
+          })),
+          averageSpeed: dbSession.avg_speed_kmh ? dbSession.avg_speed_kmh / 3.6 : undefined, // Convert km/h to m/s
+          maxSpeed: dbSession.max_speed_kmh ? dbSession.max_speed_kmh / 3.6 : undefined, // Convert km/h to m/s
+          plannedSessionId: dbSession.session_data.metadata?.planned_session_id,
+        }));
 
-      if (savedSessions) {
-        const parsedSessions: TrainingSession[] = JSON.parse(savedSessions);
-
-        // Filter sessions for current user if user ID is available
-        const userSessions = user?.id
-          ? parsedSessions.filter((session) => session.userId === user.id)
-          : parsedSessions;
-
-        // Filter sessions by week
-        const { startOfWeek, endOfWeek } = getWeekBounds(currentWeekOffset);
-
-        const weekSessions = userSessions.filter((session) => {
-          const sessionDate = new Date(session.startTime);
-          return sessionDate >= startOfWeek && sessionDate <= endOfWeek;
-        });
-
-        // Sort by start time (newest first)
-        weekSessions.sort((a, b) => b.startTime - a.startTime);
-        setTrainingSessions(weekSessions);
+        setTrainingSessions(convertedSessions);
+        console.log(`✅ Loaded ${convertedSessions.length} sessions from database for week offset ${currentWeekOffset}`);
       } else {
+        console.error('Failed to load sessions:', result.error);
         setTrainingSessions([]);
       }
     } catch (error) {
+      console.error("Error loading training sessions:", error);
       setTrainingSessions([]);
     } finally {
       setLoadingSessions(false);
     }
-  }, [currentWeekOffset, user?.id]);
+  }, [user?.id, currentWeekOffset]);
+
+  // Refresh sessions for the current week
+  const refreshSessions = useCallback(async () => {
+    setRefreshing(true);
+    await loadTrainingSessions();
+    setRefreshing(false);
+  }, [loadTrainingSessions]);
 
   // Load training sessions when component mounts
   useEffect(() => {
@@ -641,6 +669,22 @@ const SessionsScreen = () => {
               style={[styles.backIcon]}
             />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.refreshButton,
+              {
+                backgroundColor: currentTheme.colors.primary,
+                opacity: refreshing ? 0.6 : 1,
+              },
+            ]}
+            onPress={refreshSessions}
+            disabled={refreshing}
+          >
+            <Text style={styles.refreshButtonText}>
+              {refreshing ? "⟳" : "↻"}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {loadingSessions ? (
@@ -967,6 +1011,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
+  },
+  refreshButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  refreshButtonText: {
+    fontSize: 24,
+    color: "#FFFFFF",
+    fontWeight: "bold",
   },
   proRequiredBadge: {
     position: "absolute",

@@ -42,6 +42,7 @@ import { GlobalChallengeAPI } from "../../lib/globalChallengeAPI";
 import { HorseAPI } from "../../lib/horseAPI";
 import { getTodayPlannedSessions, markPlannedSessionCompleted, PlannedSession } from "../../lib/plannedSessionAPI";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
+import { uploadSession } from "../../lib/sessionAPI";
 import { Horse, Profile } from "../../lib/supabase";
 import { ChallengeSession } from "../../types/challengeTypes";
 
@@ -2867,6 +2868,46 @@ const MapScreen = () => {
 
       // Save session to storage
       await saveSessionToStorage(completedSession);
+
+      // Upload session to database
+      if (user?.id) {
+        try {
+          const uploadResult = await uploadSession({
+            user_id: user.id,
+            horse_id: completedSession.horseId,
+            horse_name: completedSession.horseName,
+            training_type: completedSession.trainingType,
+            session_data: {
+              coordinates: trackingPoints.map(point => ({
+                latitude: point.latitude,
+                longitude: point.longitude,
+                timestamp: new Date(point.timestamp).toISOString(),
+                speed: point.speed,
+                accuracy: point.accuracy,
+              })),
+              metadata: {
+                gait_analysis: gaitAnalysis,
+                media_count: sessionMedia.length,
+                planned_session_id: completedSession.plannedSessionId,
+              },
+            },
+            started_at: new Date(currentSession.startTime).toISOString(),
+            ended_at: new Date(endTime).toISOString(),
+            duration_seconds: duration,
+            distance_meters: totalDistance,
+            max_speed_kmh: (maxSpeed * 3.6), // Convert m/s to km/h
+            avg_speed_kmh: (averageSpeed * 3.6), // Convert m/s to km/h
+          });
+
+          if (uploadResult.success) {
+            console.log('✅ Session uploaded to database:', uploadResult.sessionId);
+          } else {
+            console.error('❌ Failed to upload session:', uploadResult.error);
+          }
+        } catch (error) {
+          console.error('❌ Error uploading session:', error);
+        }
+      }
 
       // Mark planned session as completed if this was a planned session
       if (completedSession.plannedSessionId) {
