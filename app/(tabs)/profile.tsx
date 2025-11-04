@@ -60,9 +60,6 @@ const ProfileScreen = () => {
     useState<SimpleStable | null>(null);
   const [savedNewStableData, setSavedNewStableData] = useState<any>(null);
 
-  // State for custom success modal
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-
   // State for custom image picker modal
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
 
@@ -1145,7 +1142,6 @@ const ProfileScreen = () => {
       setSavedProfileImage(profileImage);
 
       setIsEditing(false);
-      setShowSuccessModal(true);
 
       // Check for new badges after successful save using direct API
       try {
@@ -1191,42 +1187,6 @@ const ProfileScreen = () => {
     setShowTimeoutModal(false);
   };
 
-  const SuccessModal = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={showSuccessModal}
-      onRequestClose={() => setShowSuccessModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalIcon}>
-            <Text style={styles.checkIcon}>✓</Text>
-          </View>
-          <Text
-            style={[styles.modalTitle, { color: currentTheme.colors.text }]}
-          >
-            Success!
-          </Text>
-          <Text
-            style={[
-              styles.modalMessage,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            Your profile has been updated successfully
-          </Text>
-          <TouchableOpacity
-            style={styles.modalButton}
-            onPress={() => setShowSuccessModal(false)}
-          >
-            <Text style={styles.modalButtonText}>OK</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
   const ImagePickerModal = () => (
     <Modal
       animationType="fade"
@@ -1236,7 +1196,7 @@ const ProfileScreen = () => {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <View style={styles.imagePickerIcon}>
+          <View style={[styles.imagePickerIcon, {backgroundColor: currentTheme.colors.accent}]}>
             <Text style={styles.cameraIcon}>📷</Text>
           </View>
           <Text
@@ -1254,26 +1214,26 @@ const ProfileScreen = () => {
           </Text>
           <View style={styles.imagePickerButtons}>
             <TouchableOpacity
-              style={[styles.modalButton, styles.imagePickerButton]}
+              style={[styles.modalButton, styles.imagePickerButton, {backgroundColor: currentTheme.colors.accent}]}
               onPress={openCamera}
             >
-              <Text style={styles.modalButtonText}>📸 Camera</Text>
+              <Text style={styles.modalButtonText}>Camera</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalButton, styles.imagePickerButton]}
+              style={[styles.modalButton, styles.imagePickerButton, {backgroundColor: currentTheme.colors.accent}]}
               onPress={openImageLibrary}
             >
-              <Text style={styles.modalButtonText}>🖼️ Gallery</Text>
+              <Text style={styles.modalButtonText}>Gallery</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity
-            style={[styles.modalButton, styles.deleteImageButton]}
+            style={[styles.modalButton, styles.deleteImageButton, {backgroundColor: currentTheme.colors.error}]}
             onPress={deleteProfileImage}
           >
             <Text style={styles.deleteImageButtonText}>🗑️ Delete Current</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.modalButton, styles.cancelModalButton]}
+            style={[styles.modalButton, styles.cancelModalButton, {backgroundColor: currentTheme.colors.card}]}
             onPress={() => setShowImagePickerModal(false)}
           >
             <Text style={styles.cancelModalButtonText}>Cancel</Text>
@@ -2042,9 +2002,6 @@ const ProfileScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Custom Success Modal */}
-      <SuccessModal />
-
       {/* Custom Image Picker Modal */}
       <ImagePickerModal />
 
@@ -2642,7 +2599,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     padding: 30,
     alignItems: "center",
-    marginHorizontal: 40,
+    marginHorizontal: 20,
     elevation: 10,
     shadowColor: "#000",
     shadowOffset: {
@@ -2706,6 +2663,7 @@ const styles = StyleSheet.create({
   cameraIcon: {
     fontSize: 40,
     color: "#fff",
+    marginTop: -10,
   },
   imagePickerButtons: {
     flexDirection: "row",

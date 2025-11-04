@@ -151,17 +151,17 @@ const SimpleStableSelection: React.FC<SimpleStableSelectionProps> = ({
           <Text style={[styles.stableName, { color: "#1f2937" }]}>
             {stable.name}
           </Text>
-          {stable.is_verified && (
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedBadgeText}>✓ Verified</Text>
-            </View>
-          )}
         </View>
         <Text style={[styles.stableLocation, { color: "#6b7280" }]}>
           {stable.city && stable.state_province
             ? `${stable.city}, ${stable.state_province}`
             : stable.location || "Location not specified"}
         </Text>
+        {stable.is_verified && (
+            <View style={styles.verifiedBadge}>
+              <Text style={styles.verifiedBadgeText}>✓ Verified</Text>
+            </View>
+          )}
       </View>
       <View style={[styles.selectButton, { backgroundColor: "#3b82f6" }]}>
         <Text style={styles.selectButtonText}>Select</Text>
@@ -723,10 +723,11 @@ const styles = StyleSheet.create({
   },
   verifiedBadge: {
     backgroundColor: "#059669",
-    paddingHorizontal: 10,
+    width: 70,
+    paddingHorizontal: 6,
     paddingVertical: 4,
     borderRadius: 12,
-    marginLeft: 12,
+    marginTop: 4,
   },
   verifiedBadgeText: {
     color: "#ffffff",
