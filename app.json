@@ -5,7 +5,7 @@
     "version": "0.9.2",
     "orientation": "portrait",
     "icon": "./assets/icons/512x512.png",
-    "scheme": "EquiHUB",
+    "scheme": "equihub",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

@@ -1,8 +1,12 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { makeRedirectUri } from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
+import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
-import { useGoogleAuth } from './googleAuth';
 import { getSupabase } from './supabase';
+
+// Required for proper browser behavior
+WebBrowser.maybeCompleteAuthSession();
 
 export interface AuthUser {
   id: string;
@@ -31,31 +35,106 @@ export class OAuthService {
 
   /**
    * Google Sign-In (Available on both iOS and Android)
+   * Uses Supabase's built-in OAuth with proper redirect handling
    */
   public async signInWithGoogle(): Promise<AuthResult> {
     try {
-      const { promptAsync } = useGoogleAuth();
-      const result = await promptAsync() as any;
+      const supabase = getSupabase();
+      
+      console.log('🔐 Starting Google OAuth with Supabase...');
+      
+      // Use the Supabase project URL as redirect - Supabase will handle the OAuth callback
+      // and then we'll get the session from the URL
+      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
+      const redirectTo = `${supabaseUrl}/auth/v1/callback`;
+      
+      // For mobile apps, we also need to tell Supabase where to send users after OAuth
+      // This is done via the redirect_to parameter
+      const appRedirect = makeRedirectUri({
+        scheme: 'equihub',
+        path: ''
+      });
+      
+      console.log('📍 OAuth redirect URI:', redirectTo);
+      console.log('📍 App redirect URI:', appRedirect);
+      
+      // Initiate OAuth with Supabase
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectTo,
+          skipBrowserRedirect: true, // We'll handle the browser ourselves
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
 
-      if (result?.type === 'success' && result?.user) {
-        // Save user to Supabase
-        const authResult = await this.saveUserToSupabase({
-          id: result.user.id,
-          email: result.user.email,
-          name: result.user.name,
-          avatar_url: result.user.picture,
-          provider: 'google'
-        });
-
-        return authResult;
-      } else if (result?.type === 'cancelled') {
-        return { success: false, error: 'Google sign-in was cancelled' };
-      } else {
-        return { success: false, error: result?.error || 'Google sign-in failed' };
+      if (error) {
+        console.error('❌ OAuth initiation error:', error);
+        return { success: false, error: error.message };
       }
+
+      if (!data?.url) {
+        console.error('❌ No OAuth URL received');
+        return { success: false, error: 'Failed to get OAuth URL' };
+      }
+
+      console.log('🌐 Opening browser for authentication...');
+
+      // Open the OAuth URL in browser with app redirect as the return URL
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        appRedirect
+      );
+
+      console.log('📱 Browser result:', result.type);
+
+      if (result.type === 'cancel') {
+        console.log('❌ User cancelled');
+        return { success: false, error: 'Google sign-in was cancelled' };
+      }
+
+      if (result.type !== 'success' || !result.url) {
+        console.log('❌ Authentication failed');
+        return { success: false, error: 'Authentication failed' };
+      }
+
+      console.log('✅ Got callback URL, extracting session...');
+
+      // Extract session from the callback URL
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSessionFromUrl({ url: result.url });
+
+      if (sessionError) {
+        console.error('❌ Session extraction error:', sessionError);
+        return { success: false, error: sessionError.message };
+      }
+
+      if (!sessionData?.session?.user) {
+        console.error('❌ No user in session');
+        return { success: false, error: 'No user data received' };
+      }
+
+      const user = sessionData.session.user;
+      console.log('✅ User authenticated:', user.email);
+
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email || '',
+          name: user.user_metadata?.name || 
+                user.user_metadata?.full_name || 
+                user.email?.split('@')[0] || 'User',
+          avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+          provider: 'google'
+        },
+        session: sessionData.session
+      };
     } catch (error: any) {
-      console.error('Google sign-in error:', error);
-      return { success: false, error: 'Failed to sign in with Google' };
+      console.error('❌ Google sign-in error:', error);
+      return { success: false, error: error.message || 'Failed to sign in with Google' };
     }
   }
 

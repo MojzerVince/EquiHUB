@@ -209,7 +209,21 @@ const initiateWebGoogleAuth = async () => {
       throw new Error('Google Web Client ID not configured. Please check your environment variables.');
     }
     
-    const redirectUri = Platform.OS === 'web' ? `${window.location.origin}/auth/callback` : 'com.mojzi1969.EquiHUB://oauth/callback';
+    // Use Supabase redirect URI for all mobile platforms (works for both Expo Go and standalone builds)
+    // This URI is already configured in Google Cloud Console
+    let redirectUri: string;
+    
+    if (Platform.OS === 'web') {
+      redirectUri = `${window.location.origin}/auth/callback`;
+      console.log('🔍 Running on web - using web redirect URI');
+    } else {
+      // For all mobile (iOS/Android, Expo Go or standalone), use Supabase callback
+      // This is the only HTTPS redirect URI that Google accepts and is already configured
+      redirectUri = 'https://grdsqxwghajehneksxik.supabase.co/auth/v1/callback';
+      console.log('🔍 Running on mobile - using Supabase redirect URI');
+    }
+    
+    console.log('📍 Using redirect URI:', redirectUri);
     
     // Generate secure random state parameter for CSRF protection
     const state = generateSecureState();

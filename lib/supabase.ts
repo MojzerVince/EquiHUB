@@ -28,7 +28,7 @@ export const initializeSupabase = async () => {
         storage: AsyncStorage,
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: false,
+        detectSessionInUrl: true, // Enable URL session detection for OAuth
       },
     });
     
