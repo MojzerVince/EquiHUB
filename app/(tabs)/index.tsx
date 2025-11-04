@@ -3438,7 +3438,7 @@ const MyHorsesScreen = () => {
             </Text>
             <TouchableOpacity
               style={styles.addHorseButton}
-              onPress={() => user?.id && loadHorses(user.id)}
+              onPress={() => router.push('/login')}
             >
               <Text style={styles.addHorseButtonText}>Try Again</Text>
             </TouchableOpacity>
