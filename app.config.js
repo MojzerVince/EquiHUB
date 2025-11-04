@@ -2,7 +2,7 @@ module.exports = {
   expo: {
     name: "EquiHUB",
     slug: "EquiHUB",
-    version: "0.9.2",
+    version: "0.9.3",
     orientation: "portrait",
     icon: "./assets/icons/512x512.png",
     scheme: "EquiHUB",
@@ -39,7 +39,7 @@ module.exports = {
         googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY,
       },
       bundleIdentifier: "com.mojzi1969.EquiHUB",
-      buildNumber: "47",
+      buildNumber: "49",
       ITSAppUsesNonExemptEncryption: false,
     },
     android: {
@@ -118,7 +118,7 @@ module.exports = {
       },
       expoPublicApiServerUrl: "https://grdsqxwghajehneksxik.supabase.co",
       expoPublicBundleId: "com.mojzi1969.EquiHUB",
-      expoPublicAppVersion: "0.9.2",
+      expoPublicAppVersion: "0.9.3",
     },
   },
 };

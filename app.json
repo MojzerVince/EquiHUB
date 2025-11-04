@@ -2,7 +2,7 @@
   "expo": {
     "name": "EquiHUB",
     "slug": "EquiHUB",
-    "version": "0.9.2",
+    "version": "0.9.3",
     "orientation": "portrait",
     "icon": "./assets/icons/512x512.png",
     "scheme": "equihub",
@@ -33,7 +33,7 @@
         "googleMapsApiKey": "AIzaSyCP75Jhvf0wyDvucFB1Wte7fQS4ppJ2IKQ"
       },
       "bundleIdentifier": "com.mojzi1969.EquiHUB",
-      "buildNumber": "48",
+      "buildNumber": "50",
       "ITSAppUsesNonExemptEncryption": false
     },
     "android": {
@@ -43,7 +43,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
-      "versionCode": 44,
+      "versionCode": 45,
       "permissions": [
         "INTERNET",
         "FOREGROUND_SERVICE",
@@ -111,7 +111,7 @@
       },
       "expoPublicApiServerUrl": "https://grdsqxwghajehneksxik.supabase.co",
       "expoPublicBundleId": "com.mojzi1969.EquiHUB",
-      "expoPublicAppVersion": "0.9.2"
+      "expoPublicAppVersion": "0.9.3"
     }
   }
 }
