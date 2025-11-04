@@ -102,12 +102,28 @@ export class OAuthService {
       }
 
       console.log('✅ Got callback URL, extracting session...');
+      console.log('🔍 Callback URL:', result.url);
 
-      // Extract session from the callback URL
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSessionFromUrl({ url: result.url });
+      // Parse the URL to extract the tokens
+      const url = new URL(result.url);
+      const access_token = url.searchParams.get('access_token') || url.hash.split('access_token=')[1]?.split('&')[0];
+      const refresh_token = url.searchParams.get('refresh_token') || url.hash.split('refresh_token=')[1]?.split('&')[0];
+
+      if (!access_token) {
+        console.error('❌ No access token in callback URL');
+        return { success: false, error: 'No access token received' };
+      }
+
+      console.log('✅ Tokens extracted, setting session...');
+
+      // Set the session with the tokens
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token,
+        refresh_token: refresh_token || ''
+      });
 
       if (sessionError) {
-        console.error('❌ Session extraction error:', sessionError);
+        console.error('❌ Session set error:', sessionError);
         return { success: false, error: sessionError.message };
       }
 
