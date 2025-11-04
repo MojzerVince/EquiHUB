@@ -61,8 +61,6 @@ module.exports = {
         "VIBRATE",
         "WAKE_LOCK",
         "POST_NOTIFICATIONS",
-        "SCHEDULE_EXACT_ALARM",
-        "USE_EXACT_ALARM",
         "com.android.vending.BILLING",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",

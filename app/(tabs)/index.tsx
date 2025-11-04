@@ -1197,9 +1197,8 @@ const MyHorsesScreen = () => {
   };
 
   const openPregnancyManager = () => {
-    // Check if user is PRO member
+    // Only PRO members can access Pregnancy Timeline
     if (!isProMember) {
-      router.push("/pro-features");
       return;
     }
     
@@ -2050,14 +2049,7 @@ const MyHorsesScreen = () => {
   const toggleDocumentSync = () => {
     console.log("toggleDocumentSync called, isProMember:", isProMember);
     if (!isProMember) {
-      console.log("Non-PRO user, navigating to pro-features");
-      showConfirm(
-        "PRO Feature Required",
-        "Cloud sync is a PRO feature. Would you like to upgrade to PRO to sync your documents to the cloud?",
-        () => {
-          router.push("/pro-features");
-        }
-      );
+      console.log("Non-PRO user, cannot enable sync");
       return;
     }
     console.log("PRO user, toggling sync state");
@@ -4629,9 +4621,13 @@ const MyHorsesScreen = () => {
                           <TouchableOpacity
                             style={[
                               styles.recordsMenuItem,
-                              { backgroundColor: '#ff69b4' },
+                              { 
+                                backgroundColor: !isProMember ? currentTheme.colors.textSecondary : '#ff69b4',
+                                opacity: !isProMember ? 0.6 : 1
+                              },
                             ]}
                             onPress={openPregnancyManager}
+                            disabled={!isProMember}
                           >
                             <Text style={styles.recordsMenuIcon}>🤰</Text>
                             <View style={styles.recordsMenuContent}>
@@ -4690,6 +4686,52 @@ const MyHorsesScreen = () => {
                         </TouchableOpacity>
                       </View>
                     </View>
+                  )}
+
+                  {/* PRO Upgrade Card */}
+                  {!isProMember && (
+                    <TouchableOpacity
+                      style={[
+                        styles.proUpgradeCard,
+                        { backgroundColor: currentTheme.colors.surface },
+                      ]}
+                      onPress={() => {
+                        setRecordsModalVisible(false);
+                        setTimeout(() => {
+                          router.push("/pro-features");
+                        }, 300);
+                      }}
+                    >
+                      <View style={styles.proUpgradeContent}>
+                        <Text style={styles.proUpgradeIcon}>✨</Text>
+                        <View style={styles.proUpgradeTextContainer}>
+                          <Text
+                            style={[
+                              styles.proUpgradeTitle,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            Upgrade to PRO
+                          </Text>
+                          <Text
+                            style={[
+                              styles.proUpgradeSubtitle,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            Unlock cloud sync, unlimited history, and more benefits
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.proUpgradeArrow,
+                            { color: currentTheme.colors.primary },
+                          ]}
+                        >
+                          →
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
                   )}
 
                   {/* Vaccination Manager Section */}
@@ -6156,21 +6198,6 @@ const MyHorsesScreen = () => {
                                 ? "Sync documents to cloud for backup and sharing"
                                 : "Upgrade to PRO to sync documents to cloud"}
                             </Text>
-                            {!isProMember && (
-                              <Text
-                                style={[
-                                  styles.documentSyncSubtitle,
-                                  {
-                                    color: currentTheme.colors.primary,
-                                    fontSize: 12,
-                                    fontWeight: "600",
-                                    marginTop: 4,
-                                  },
-                                ]}
-                              >
-                                Tap to upgrade →
-                              </Text>
-                            )}
                           </View>
                           <TouchableOpacity
                             style={[
@@ -6181,14 +6208,10 @@ const MyHorsesScreen = () => {
                                     ? currentTheme.colors.primary
                                     : currentTheme.colors.textSecondary,
                                 opacity: isProMember ? 1 : 0.3,
-                                borderWidth: !isProMember ? 2 : 0,
-                                borderColor: !isProMember
-                                  ? currentTheme.colors.error
-                                  : "transparent",
                               },
                             ]}
                             onPress={toggleDocumentSync}
-                            disabled={false} // Always allow press to show pro-features page for non-pro users
+                            disabled={!isProMember}
                             activeOpacity={isProMember ? 0.7 : 1}
                           >
                             <View
@@ -8888,6 +8911,45 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     lineHeight: 24,
+  },
+  proUpgradeCard: {
+    marginVertical: 12,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    padding: 16,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: "#FFD700",
+  },
+  proUpgradeContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  proUpgradeIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  proUpgradeTextContainer: {
+    flex: 1,
+  },
+  proUpgradeTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+    marginBottom: 4,
+  },
+  proUpgradeSubtitle: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 18,
+  },
+  proUpgradeArrow: {
+    fontSize: 24,
+    fontWeight: "bold",
   },
 });
 
