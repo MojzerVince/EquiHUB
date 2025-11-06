@@ -5,7 +5,7 @@ module.exports = {
     version: "0.9.3",
     orientation: "portrait",
     icon: "./assets/icons/512x512.png",
-    scheme: "EquiHUB",
+    scheme: "equihub",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     ios: {
@@ -44,8 +44,9 @@ module.exports = {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/icons/512x512.png",
-        backgroundColor: "#ffffff",
+        foregroundImage: "./assets/icons/adaptive-foreground.png",
+        backgroundImage: "./assets/icons/adaptive-background.png",
+        monochromeImage: "./assets/icons/adaptive-monochrome.png",
       },
       edgeToEdgeEnabled: true,
       package: "com.mojzi1969.EquiHUB",

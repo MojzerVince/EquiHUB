@@ -17,10 +17,7 @@
         "NSCameraUsageDescription": "This app needs camera access to take photos of your rides and horses.",
         "NSPhotoLibraryUsageDescription": "This app needs photo library access to select photos of your rides and horses.",
         "NSPhotoLibraryAddUsageDescription": "This app needs photo library access to save photos of your rides and horses.",
-        "UIBackgroundModes": [
-          "location",
-          "fetch"
-        ],
+        "UIBackgroundModes": ["location", "fetch"],
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
@@ -38,8 +35,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icons/512x512.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/icons/adaptive-foreground.png",
+        "backgroundImage": "./assets/icons/adaptive-background.png",
+        "monochromeImage": "./assets/icons/adaptive-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mojzi1969.EquiHUB",
@@ -86,9 +84,7 @@
           "locationWhenInUsePermission": "This app needs location access to track your riding routes and show your position on the map."
         }
       ],
-      [
-        "expo-task-manager"
-      ],
+      ["expo-task-manager"],
       "expo-font",
       [
         "expo-notifications",
