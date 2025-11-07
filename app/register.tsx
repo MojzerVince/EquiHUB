@@ -1,7 +1,8 @@
 import { useDialog } from "@/contexts/DialogContext";
+import { oauthService } from "@/lib/oauthService";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -14,25 +15,22 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useGoogleRegistration } from "../lib/useGoogleRegistration";
 
 const RegisterScreen = () => {
   const router = useRouter();
   const { showError } = useDialog();
-  const { getGoogleUserInfo, loading: googleLoading } = useGoogleRegistration();
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleGoogleRegister = async () => {
     try {
-      const result = await getGoogleUserInfo();
+      setGoogleLoading(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      if (result.success && result.userInfo) {
-        // Store Google user info and navigate to registration form
-        router.push({
-          pathname: "/register-complex-backup",
-          params: {
-            googleUser: JSON.stringify(result.userInfo),
-          },
-        });
+      const result = await oauthService.signInWithGoogle();
+
+      if (result.success && result.user) {
+        // OAuth successful - user is either registered or will be redirected by AuthContext
+        console.log("Google OAuth successful");
       } else {
         showError(
           result.error ||
@@ -42,6 +40,8 @@ const RegisterScreen = () => {
     } catch (error) {
       console.error("Google auth error:", error);
       showError("Failed to authenticate with Google. Please try again.");
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
