@@ -403,10 +403,17 @@ export async function deletePlannedSession(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = getSupabaseClient();
+    
+    // Extract base UUID from compound ID (for repeating sessions)
+    // Format: "uuid_repeat_timestamp" -> extract just "uuid"
+    const baseId = sessionId.includes('_repeat_') 
+      ? sessionId.split('_repeat_')[0] 
+      : sessionId;
+    
     const { error } = await supabase
       .from("planned_sessions")
       .delete()
-      .eq("id", sessionId);
+      .eq("id", baseId);
 
     if (error) {
       console.error("Error deleting planned session:", error);
@@ -432,6 +439,13 @@ export async function markPlannedSessionCompleted(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = getSupabaseClient();
+    
+    // Extract base UUID from compound ID (for repeating sessions)
+    // Format: "uuid_repeat_timestamp" -> extract just "uuid"
+    const baseId = sessionId.includes('_repeat_') 
+      ? sessionId.split('_repeat_')[0] 
+      : sessionId;
+    
     const { error } = await supabase
       .from("planned_sessions")
       .update({
@@ -439,7 +453,7 @@ export async function markPlannedSessionCompleted(
         completed_at: new Date().toISOString(),
         actual_session_id: actualSessionId,
       })
-      .eq("id", sessionId);
+      .eq("id", baseId);
 
     if (error) {
       console.error("Error marking planned session as completed:", error);
