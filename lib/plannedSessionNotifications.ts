@@ -39,7 +39,7 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 
 /**
  * Schedule a notification for a planned session
- * Sends notification at 9:00 AM on the session date
+ * Sends notification at 8:00 AM on the session date
  */
 export async function schedulePlannedSessionNotification(
   session: PlannedSession
@@ -60,9 +60,9 @@ export async function schedulePlannedSessionNotification(
     // Parse the planned date
     const plannedDate = new Date(session.plannedDate);
     
-    // Set notification time to 9:00 AM on the planned date
+    // Set notification time to 8:00 AM on the planned date
     const notificationDate = new Date(plannedDate);
-    notificationDate.setHours(9, 0, 0, 0);
+    notificationDate.setHours(8, 0, 0, 0);
 
     // Don't schedule if the time has already passed
     if (notificationDate <= new Date()) {
@@ -70,10 +70,7 @@ export async function schedulePlannedSessionNotification(
       return null;
     }
 
-    // Calculate trigger time
-    const trigger = notificationDate.getTime();
-
-    // Schedule the notification
+    // Schedule the notification using DATE trigger (not time-based trigger)
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title: '🐴 Planned Session Reminder',
@@ -85,11 +82,9 @@ export async function schedulePlannedSessionNotification(
         sound: true,
       },
       trigger: {
-        hour: 9,
-        minute: 0,
-        repeats: false,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: notificationDate,
-      } as any, // Type issue with expo-notifications
+      },
     });
 
     console.log(`✅ Scheduled notification ${notificationId} for ${session.title} at ${notificationDate.toISOString()}`);
