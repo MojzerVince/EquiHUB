@@ -22,6 +22,7 @@ import {
   getPlannedSessions,
 } from "../lib/plannedSessionAPI";
 import { cancelSessionNotifications } from "../lib/plannedSessionNotifications";
+import * as vaccinationAPI from "../lib/vaccinationAPI";
 
 const CalendarScreen = () => {
   const { currentTheme } = useTheme();
@@ -29,6 +30,7 @@ const CalendarScreen = () => {
   const router = useRouter();
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [plannedSessions, setPlannedSessions] = useState<PlannedSession[]>([]);
+  const [vaccinations, setVaccinations] = useState<vaccinationAPI.VaccinationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const screenWidth = Dimensions.get("window").width;
 
@@ -125,17 +127,44 @@ const CalendarScreen = () => {
       setLoading(true);
       const { startOfWeek, endOfWeek } = getWeekBounds(currentWeekOffset);
 
-      const result = await getPlannedSessions(startOfWeek, endOfWeek);
+      // Load planned sessions
+      const sessionsResult = await getPlannedSessions(startOfWeek, endOfWeek);
 
-      if (result.success && result.data) {
-        setPlannedSessions(result.data);
+      if (sessionsResult.success && sessionsResult.data) {
+        setPlannedSessions(sessionsResult.data);
       } else {
-        console.error("Error loading planned sessions:", result.error);
+        console.error("Error loading planned sessions:", sessionsResult.error);
         setPlannedSessions([]);
       }
+
+      // Load all vaccinations (we'll filter by date in the UI)
+      // This is because we need to check both vaccination_date and next_due_date
+      const vaccinationsResult = await vaccinationAPI.getUserVaccinations();
+
+      if (vaccinationsResult.success && vaccinationsResult.data) {
+        // Filter to only include vaccinations relevant to this week
+        const filteredVaccinations = vaccinationsResult.data.filter((vaccination) => {
+          const vaccinationDate = new Date(vaccination.vaccinationDate);
+          const nextDueDate = vaccination.nextDueDate ? new Date(vaccination.nextDueDate) : null;
+          
+          // Include if vaccination date is in range
+          const vaccinationInRange = vaccinationDate >= startOfWeek && vaccinationDate <= endOfWeek;
+          
+          // Include if next due date is in range
+          const nextDueInRange = nextDueDate && nextDueDate >= startOfWeek && nextDueDate <= endOfWeek;
+          
+          return vaccinationInRange || nextDueInRange;
+        });
+        
+        setVaccinations(filteredVaccinations);
+      } else {
+        console.error("Error loading vaccinations:", vaccinationsResult.error);
+        setVaccinations([]);
+      }
     } catch (error) {
-      console.error("Error loading planned sessions:", error);
+      console.error("Error loading calendar data:", error);
       setPlannedSessions([]);
+      setVaccinations([]);
     } finally {
       setLoading(false);
     }
@@ -162,6 +191,30 @@ const CalendarScreen = () => {
         sessionDate.getMonth() === date.getMonth() &&
         sessionDate.getFullYear() === date.getFullYear()
       );
+    });
+  };
+
+  // Get vaccinations for specific day
+  const getVaccinationsForDay = (dayIndex: number) => {
+    const date = getDateForDay(dayIndex);
+    return vaccinations.filter((vaccination) => {
+      // Check both vaccination date and next due date
+      const vaccinationDate = new Date(vaccination.vaccinationDate);
+      const nextDueDate = vaccination.nextDueDate ? new Date(vaccination.nextDueDate) : null;
+      
+      const matchesVaccinationDate = (
+        vaccinationDate.getDate() === date.getDate() &&
+        vaccinationDate.getMonth() === date.getMonth() &&
+        vaccinationDate.getFullYear() === date.getFullYear()
+      );
+      
+      const matchesNextDueDate = nextDueDate && (
+        nextDueDate.getDate() === date.getDate() &&
+        nextDueDate.getMonth() === date.getMonth() &&
+        nextDueDate.getFullYear() === date.getFullYear()
+      );
+      
+      return matchesVaccinationDate || matchesNextDueDate;
     });
   };
 
@@ -220,6 +273,7 @@ const CalendarScreen = () => {
   const renderDaySection = (dayIndex: number) => {
     const { dayName, dayNumber, fullDate } = formatDayDisplay(dayIndex);
     const daySessions = getSessionsForDay(dayIndex);
+    const dayVaccinations = getVaccinationsForDay(dayIndex);
     const isTodayDay = isToday(dayIndex);
 
     return (
@@ -275,85 +329,157 @@ const CalendarScreen = () => {
           )}
         </View>
 
-        {/* Sessions for this day */}
+        {/* Sessions and Vaccinations for this day */}
         <View style={styles.daySessionsContainer}>
-          {daySessions.length === 0 ? (
+          {daySessions.length === 0 && dayVaccinations.length === 0 ? (
             <Text
               style={[
                 styles.noSessionsText,
                 { color: currentTheme.colors.textSecondary },
               ]}
             >
-              No sessions planned
+              No sessions or vaccinations planned
             </Text>
           ) : (
-            daySessions.map((session) => (
-              <TouchableOpacity
-                key={session.id}
-                style={[
-                  styles.sessionItem,
-                  { 
-                    backgroundColor: currentTheme.colors.surface,
-                    opacity: session.isCompleted ? 0.7 : 1,
-                  },
-                ]}
-                onPress={() => {
-                  Alert.alert(
-                    session.title,
-                    `${session.trainingType}\nHorse: ${session.horseName}\n${
-                      session.description ? `\n${session.description}` : ""
-                    }${session.isCompleted ? '\n\n✅ Completed' : ''}`
-                  );
-                }}
-              >
-                <View style={styles.sessionItemContent}>
-                  {session.imageUrl && (
-                    <Image
-                      source={{ uri: session.imageUrl }}
-                      style={styles.sessionImage}
-                    />
-                  )}
-                  <View style={styles.sessionTextContainer}>
-                    <View style={styles.sessionTitleRow}>
+            <>
+              {/* Render Sessions */}
+              {daySessions.map((session) => (
+                <TouchableOpacity
+                  key={session.id}
+                  style={[
+                    styles.sessionItem,
+                    { 
+                      backgroundColor: currentTheme.colors.surface,
+                      opacity: session.isCompleted ? 0.7 : 1,
+                    },
+                  ]}
+                  onPress={() => {
+                    Alert.alert(
+                      session.title,
+                      `${session.trainingType}\nHorse: ${session.horseName}\n${
+                        session.description ? `\n${session.description}` : ""
+                      }${session.isCompleted ? '\n\n✅ Completed' : ''}`
+                    );
+                  }}
+                >
+                  <View style={styles.sessionItemContent}>
+                    {session.imageUrl && (
+                      <Image
+                        source={{ uri: session.imageUrl }}
+                        style={styles.sessionImage}
+                      />
+                    )}
+                    <View style={styles.sessionTextContainer}>
+                      <View style={styles.sessionTitleRow}>
+                        <Text
+                          style={[
+                            styles.sessionTitle,
+                            { 
+                              color: currentTheme.colors.text,
+                              textDecorationLine: session.isCompleted ? 'line-through' : 'none',
+                            },
+                          ]}
+                        >
+                          {session.title}
+                        </Text>
+                        {session.isCompleted && (
+                          <Text style={styles.completedIcon}>✅</Text>
+                        )}
+                      </View>
                       <Text
                         style={[
-                          styles.sessionTitle,
-                          { 
-                            color: currentTheme.colors.text,
-                            textDecorationLine: session.isCompleted ? 'line-through' : 'none',
-                          },
+                          styles.sessionType,
+                          { color: currentTheme.colors.textSecondary },
                         ]}
                       >
-                        {session.title}
+                        {session.trainingType} • {session.horseName}
                       </Text>
-                      {session.isCompleted && (
-                        <Text style={styles.completedIcon}>✅</Text>
+                      {session.reminderEnabled && (
+                        <Text style={styles.reminderIcon}>🔔</Text>
+                      )}
+                      {session.repeatEnabled && (
+                        <Text style={styles.repeatIcon}>🔁</Text>
                       )}
                     </View>
-                    <Text
-                      style={[
-                        styles.sessionType,
-                        { color: currentTheme.colors.textSecondary },
-                      ]}
-                    >
-                      {session.trainingType} • {session.horseName}
-                    </Text>
-                    {session.reminderEnabled && (
-                      <Text style={styles.reminderIcon}>🔔</Text>
-                    )}
-                    {session.repeatEnabled && (
-                      <Text style={styles.repeatIcon}>🔁</Text>
-                    )}
                   </View>
-                </View>
-                <TouchableOpacity
-                  style={styles.deleteSessionButton}
-                  onPress={() => handleDeleteSession(session.id)}
-                >
-                  <Text style={styles.deleteSessionText}>🗑️</Text>
+                  <TouchableOpacity
+                    style={styles.deleteSessionButton}
+                    onPress={() => handleDeleteSession(session.id)}
+                  >
+                    <Text style={styles.deleteSessionText}>🗑️</Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
-              </TouchableOpacity>
-            ))
+              ))}
+
+              {/* Render Vaccinations */}
+              {dayVaccinations.map((vaccination) => {
+                const date = getDateForDay(dayIndex);
+                const nextDueDate = vaccination.nextDueDate ? new Date(vaccination.nextDueDate) : null;
+                const isDueDate = nextDueDate && (
+                  nextDueDate.getDate() === date.getDate() &&
+                  nextDueDate.getMonth() === date.getMonth() &&
+                  nextDueDate.getFullYear() === date.getFullYear()
+                );
+
+                return (
+                  <TouchableOpacity
+                    key={vaccination.id}
+                    style={[
+                      styles.vaccinationItem,
+                      { 
+                        backgroundColor: isDueDate 
+                          ? currentTheme.colors.accent + "20"
+                          : currentTheme.colors.surface + "80"
+                      },
+                    ]}
+                    onPress={() => {
+                      Alert.alert(
+                        `💉 ${vaccination.vaccineName}`,
+                        `Horse: ${vaccination.horseName}\n${
+                          isDueDate 
+                            ? `Due Date: ${nextDueDate?.toLocaleDateString()}`
+                            : `Vaccination Date: ${new Date(vaccination.vaccinationDate).toLocaleDateString()}`
+                        }${vaccination.notes ? `\n\nNotes: ${vaccination.notes}` : ''}${
+                          vaccination.batchNumber ? `\nBatch: ${vaccination.batchNumber}` : ''
+                        }${
+                          vaccination.repeatEnabled 
+                            ? `\n\n🔁 Repeating every ${vaccination.repeatIntervalMonths} months` 
+                            : ''
+                        }`
+                      );
+                    }}
+                  >
+                    <View style={styles.vaccinationContent}>
+                      <Text style={styles.vaccinationIcon}>💉</Text>
+                      <View style={styles.vaccinationTextContainer}>
+                        <Text
+                          style={[
+                            styles.vaccinationTitle,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          {vaccination.vaccineName}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.vaccinationType,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          {vaccination.horseName} • {isDueDate ? 'Due' : 'Vaccination'}
+                        </Text>
+                        {vaccination.repeatEnabled && (
+                          <Text style={styles.repeatIcon}>🔁</Text>
+                        )}
+                        {vaccination.reminderEnabled && (
+                          <Text style={styles.reminderIcon}>🔔</Text>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </>
           )}
         </View>
       </View>
@@ -669,6 +795,38 @@ const styles = StyleSheet.create({
   },
   deleteSessionText: {
     fontSize: 16,
+  },
+  vaccinationItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  vaccinationContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  vaccinationIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  vaccinationTextContainer: {
+    flex: 1,
+  },
+  vaccinationTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  vaccinationType: {
+    fontSize: 14,
   },
   loadingContainer: {
     flex: 1,
