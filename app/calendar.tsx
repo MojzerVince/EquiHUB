@@ -677,8 +677,8 @@ const styles = StyleSheet.create({
   },
   addButton: {
     position: "absolute",
-    bottom: 30,
-    right: 30,
+    bottom: 60,
+    right: 20,
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -694,6 +694,7 @@ const styles = StyleSheet.create({
     fontSize: 36,
     color: "#FFFFFF",
     fontWeight: "300",
+    marginTop: -4,
   },
 });
 
