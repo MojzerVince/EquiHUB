@@ -4,26 +4,26 @@ import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { createPlannedSession } from "../lib/plannedSessionAPI";
 import {
-  schedulePlannedSessionNotification,
-  scheduleRepeatingSessionNotifications
+    schedulePlannedSessionNotification,
+    scheduleRepeatingSessionNotifications
 } from "../lib/plannedSessionNotifications";
 
 interface Horse {
@@ -74,14 +74,23 @@ const AddPlannedSessionScreen = () => {
   // Calculate initial date based on week offset
   useEffect(() => {
     const now = new Date();
-    const currentDay = now.getDay();
-    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+    
+    // If no week offset, start with today
+    if (weekOffset === 0) {
+      const today = new Date(now);
+      today.setHours(12, 0, 0, 0);
+      setSelectedDate(today);
+    } else {
+      // For other weeks, calculate based on Monday of that week
+      const currentDay = now.getDay();
+      const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
 
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() + mondayOffset + weekOffset * 7);
-    startOfWeek.setHours(12, 0, 0, 0);
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() + mondayOffset + weekOffset * 7);
+      startOfWeek.setHours(12, 0, 0, 0);
 
-    setSelectedDate(startOfWeek);
+      setSelectedDate(startOfWeek);
+    }
   }, [weekOffset]);
 
   // Load user's horses
