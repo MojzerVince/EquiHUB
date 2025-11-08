@@ -7325,6 +7325,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 12,
     borderWidth: 1,
+    width: "100%",
   },
   vaccinationSectionTitle: {
     fontSize: 16,
@@ -7364,6 +7365,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 12,
     borderWidth: 1,
+    width: "100%",
   },
   pregnancySectionHeader: {
     flexDirection: "row",
@@ -7412,7 +7414,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   pregnancyStageLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: "Inder",
     color: "#666",
     flex: 1,
