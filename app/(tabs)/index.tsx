@@ -290,8 +290,23 @@ const MyHorsesScreen = () => {
   const [selectedHorseForRecords, setSelectedHorseForRecords] =
     useState<Horse | null>(null);
   const [recordsSection, setRecordsSection] = useState<
-    "main" | "vaccination" | "document" | "rider" | "pregnancy"
+    "main" | "vaccination" | "document" | "rider" | "pregnancy" | "horseshoe"
   >("main");
+
+  // Horseshoe tracking state
+  const [horseHorseshoes, setHorseHorseshoes] = useState<{
+    [horseId: string]: {
+      id: string;
+      startDate: Date;
+      intervalDays: number;
+      lastChangeDate: Date;
+    } | null;
+  }>({});
+  const [horseshoeStartDate, setHorseshoeStartDate] = useState<Date | null>(null);
+  const [horseshoeIntervalDays, setHorseshoeIntervalDays] = useState<number>(45);
+  const [showHorseshoeDatePicker, setShowHorseshoeDatePicker] = useState(false);
+  const [showHorseshoeDeleteConfirm, setShowHorseshoeDeleteConfirm] = useState(false);
+  const [isEditingHorseshoeInterval, setIsEditingHorseshoeInterval] = useState(false);
 
   // Pregnancy state
   const [pregnancies, setPregnancies] = useState<Record<string, Pregnancy>>({});
@@ -1208,6 +1223,15 @@ const MyHorsesScreen = () => {
     setShowVaccinationDatePicker(false);
   };
 
+  const openHorseshoeManager = () => {
+    setRecordsSection("horseshoe");
+    setHorseshoeStartDate(null);
+    setHorseshoeIntervalDays(45);
+    setShowHorseshoeDatePicker(false);
+    setShowHorseshoeDeleteConfirm(false);
+    setIsEditingHorseshoeInterval(false);
+  };
+
   const openDocumentManager = () => {
     setRecordsSection("document");
   };
@@ -1228,6 +1252,73 @@ const MyHorsesScreen = () => {
       setRecordsSection("pregnancy");
     }
   };
+
+  // Horseshoe tracking functions
+  const startHorseshoeTracking = () => {
+    if (!selectedHorseForRecords || !horseshoeIntervalDays) {
+      showError("Please select a change interval");
+      return;
+    }
+
+    const today = new Date();
+    const updatedHorseshoes = { ...horseHorseshoes };
+    updatedHorseshoes[selectedHorseForRecords.id] = {
+      id: Date.now().toString(),
+      startDate: today,
+      intervalDays: horseshoeIntervalDays,
+      lastChangeDate: today,
+    };
+
+    setHorseHorseshoes(updatedHorseshoes);
+    setHorseshoeStartDate(null);
+    setHorseshoeIntervalDays(45);
+    setSuccessMessage(`Horseshoe tracking started for ${selectedHorseForRecords.name}`);
+    setShowSuccessModal(true);
+  };
+
+  const updateHorseshoeInterval = (horseId: string, newIntervalDays: number) => {
+    const updatedHorseshoes = { ...horseHorseshoes };
+    if (updatedHorseshoes[horseId]) {
+      updatedHorseshoes[horseId] = {
+        ...updatedHorseshoes[horseId]!,
+        intervalDays: newIntervalDays,
+      };
+      setHorseHorseshoes(updatedHorseshoes);
+      setSuccessMessage(`Interval updated to ${newIntervalDays} days`);
+      setShowSuccessModal(true);
+    }
+  };
+
+  const deleteHorseshoeTracking = (horseId: string) => {
+    console.log("Deleting horseshoe tracking for:", horseId);
+    console.log("Current horseshoes:", horseHorseshoes);
+    
+    const updatedHorseshoes = { ...horseHorseshoes };
+    delete updatedHorseshoes[horseId];
+    
+    console.log("Updated horseshoes:", updatedHorseshoes);
+    setHorseHorseshoes(updatedHorseshoes);
+    
+    setSuccessMessage("Horseshoe tracking deleted");
+    setShowSuccessModal(true);
+  };
+
+  const calculateHorseshoeDaysUsed = (horseId: string) => {
+    const tracking = horseHorseshoes[horseId];
+    if (!tracking) return { daysUsed: 0, totalDays: 45, percentage: 0 };
+
+    const now = new Date();
+    const lastChange = new Date(tracking.lastChangeDate);
+    const daysUsed = Math.floor((now.getTime() - lastChange.getTime()) / (1000 * 60 * 60 * 24));
+    const percentage = Math.min((daysUsed / tracking.intervalDays) * 100, 100);
+
+    return {
+      daysUsed: Math.min(daysUsed, tracking.intervalDays),
+      totalDays: tracking.intervalDays,
+      percentage,
+    };
+  };
+
 
   const backToRecordsMain = () => {
     setRecordsSection("main");
@@ -4467,6 +4558,7 @@ const MyHorsesScreen = () => {
                 >
                   {recordsSection === "main" && "📋 RECORDS"}
                   {recordsSection === "vaccination" && "Vaccination Manager"}
+                  {recordsSection === "horseshoe" && "Horseshoe Manager"}
                   {recordsSection === "pregnancy" && "Pregnancy Timeline"}
                   {recordsSection === "document" && "Document Manager"}
                   {recordsSection === "rider" && "Rider Manager"}
@@ -4510,6 +4602,25 @@ const MyHorsesScreen = () => {
                             </Text>
                             <Text style={styles.recordsMenuSubtitle}>
                               Set reminders and track vaccination history
+                            </Text>
+                          </View>
+                          <Text style={styles.recordsMenuArrow}>→</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.recordsMenuItem,
+                            { backgroundColor: "#8B4513" },
+                          ]}
+                          onPress={openHorseshoeManager}
+                        >
+                          <Text style={styles.recordsMenuIcon}>🐴</Text>
+                          <View style={styles.recordsMenuContent}>
+                            <Text style={styles.recordsMenuTitle}>
+                              Horseshoe Manager
+                            </Text>
+                            <Text style={styles.recordsMenuSubtitle}>
+                              Track horseshoe changes and maintenance
                             </Text>
                           </View>
                           <Text style={styles.recordsMenuArrow}>→</Text>
@@ -5151,6 +5262,338 @@ const MyHorsesScreen = () => {
                             </View>
                           )}
                       </View>
+                    </View>
+                  )}
+
+                  {/* Horseshoe Manager Section */}
+                  {recordsSection === "horseshoe" && (
+                    <View>
+                      <Text
+                        style={[
+                          styles.vaccinationHorseName,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        Horseshoe Manager for: {selectedHorseForRecords.name}
+                      </Text>
+
+                      {/* Existing Horseshoe Tracking */}
+                      {horseHorseshoes[selectedHorseForRecords.id] ? (
+                        <View style={styles.horseshoeTrackingContainer}>
+                          <View style={styles.horseshoeTrackingCard}>
+                            <Text
+                              style={[
+                                styles.horseshoeTrackingTitle,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              Active Tracking
+                            </Text>
+
+                            {/* Circular Progress Bar */}
+                            <View style={styles.horseshoeProgressContainer}>
+                              <View style={styles.horseshoeProgressCircle}>
+                                <Text
+                                  style={[
+                                    styles.horseshoeProgressText,
+                                    { color: currentTheme.colors.text },
+                                  ]}
+                                >
+                                  {calculateHorseshoeDaysUsed(selectedHorseForRecords.id).daysUsed}/
+                                  {calculateHorseshoeDaysUsed(selectedHorseForRecords.id).totalDays}
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.horseshoeProgressLabel,
+                                    { color: currentTheme.colors.textSecondary },
+                                  ]}
+                                >
+                                  days of use
+                                </Text>
+                              </View>
+                              
+                              {/* Simple progress indicator */}
+                              <View style={styles.horseshoeProgressBarContainer}>
+                                <View
+                                  style={[
+                                    styles.horseshoeProgressBar,
+                                    {
+                                      width: `${calculateHorseshoeDaysUsed(selectedHorseForRecords.id).percentage}%`,
+                                      backgroundColor:
+                                        calculateHorseshoeDaysUsed(selectedHorseForRecords.id).percentage >= 90
+                                          ? currentTheme.colors.error
+                                          : calculateHorseshoeDaysUsed(selectedHorseForRecords.id).percentage >= 70
+                                          ? "#FFA500"
+                                          : currentTheme.colors.success,
+                                    },
+                                  ]}
+                                />
+                              </View>
+                            </View>
+
+                            <View style={styles.horseshoeTrackingDetails}>
+                              <View style={styles.horseshoeDetailRow}>
+                                <Text
+                                  style={[
+                                    styles.horseshoeDetailLabel,
+                                    { color: currentTheme.colors.textSecondary },
+                                  ]}
+                                >
+                                  Last Change:
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.horseshoeDetailValue,
+                                    { color: currentTheme.colors.text },
+                                  ]}
+                                >
+                                  {horseHorseshoes[selectedHorseForRecords.id] && new Date(
+                                    horseHorseshoes[selectedHorseForRecords.id]!.lastChangeDate
+                                  ).toLocaleDateString()}
+                                </Text>
+                              </View>
+                              <View style={styles.horseshoeDetailRow}>
+                                <Text
+                                  style={[
+                                    styles.horseshoeDetailLabel,
+                                    { color: currentTheme.colors.textSecondary },
+                                  ]}
+                                >
+                                  Next Change:
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.horseshoeDetailValue,
+                                    { color: currentTheme.colors.text },
+                                  ]}
+                                >
+                                  {(() => {
+                                    const tracking = horseHorseshoes[selectedHorseForRecords.id];
+                                    if (!tracking) return '';
+                                    const lastChange = new Date(tracking.lastChangeDate);
+                                    const nextChange = new Date(lastChange);
+                                    nextChange.setDate(
+                                      lastChange.getDate() + tracking.intervalDays
+                                    );
+                                    return nextChange.toLocaleDateString();
+                                  })()}
+                                </Text>
+                              </View>
+                              <View style={styles.horseshoeDetailRow}>
+                                <Text
+                                  style={[
+                                    styles.horseshoeDetailLabel,
+                                    { color: currentTheme.colors.textSecondary },
+                                  ]}
+                                >
+                                  Interval:
+                                </Text>
+                                <TouchableOpacity
+                                  onPress={() => setIsEditingHorseshoeInterval(!isEditingHorseshoeInterval)}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.horseshoeDetailValue,
+                                      { 
+                                        color: currentTheme.colors.primary,
+                                        textDecorationLine: 'underline',
+                                      },
+                                    ]}
+                                  >
+                                    Every {horseHorseshoes[selectedHorseForRecords.id]?.intervalDays} days ✏️
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+
+                            {/* Edit Interval Section */}
+                            {isEditingHorseshoeInterval && (
+                              <View style={styles.horseshoeEditIntervalContainer}>
+                                <Text
+                                  style={[
+                                    styles.horseshoeEditIntervalTitle,
+                                    { color: currentTheme.colors.text },
+                                  ]}
+                                >
+                                  Change Interval
+                                </Text>
+                                <View style={styles.horseshoeIntervalContainer}>
+                                  {[30, 35, 40, 45, 50, 60].map((days) => (
+                                    <TouchableOpacity
+                                      key={days}
+                                      style={[
+                                        styles.horseshoeIntervalButton,
+                                        {
+                                          backgroundColor:
+                                            horseHorseshoes[selectedHorseForRecords.id]?.intervalDays === days
+                                              ? currentTheme.colors.primary
+                                              : currentTheme.colors.surface,
+                                          borderColor:
+                                            horseHorseshoes[selectedHorseForRecords.id]?.intervalDays === days
+                                              ? currentTheme.colors.primary
+                                              : currentTheme.colors.border,
+                                        },
+                                      ]}
+                                      onPress={() => {
+                                        if (selectedHorseForRecords) {
+                                          updateHorseshoeInterval(selectedHorseForRecords.id, days);
+                                          setIsEditingHorseshoeInterval(false);
+                                        }
+                                      }}
+                                    >
+                                      <Text
+                                        style={[
+                                          styles.horseshoeIntervalButtonText,
+                                          {
+                                            color:
+                                              horseHorseshoes[selectedHorseForRecords.id]?.intervalDays === days
+                                                ? "#FFFFFF"
+                                                : currentTheme.colors.text,
+                                          },
+                                        ]}
+                                      >
+                                        {days} days
+                                      </Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              </View>
+                            )}
+
+                            {/* Delete Button or Confirmation */}
+                            {!showHorseshoeDeleteConfirm ? (
+                              <TouchableOpacity
+                                style={[
+                                  styles.deleteHorseshoeButton,
+                                  { backgroundColor: currentTheme.colors.error },
+                                ]}
+                                onPress={() => setShowHorseshoeDeleteConfirm(true)}
+                              >
+                                <Text style={styles.deleteHorseshoeButtonText}>
+                                  🗑️ Delete Tracking
+                                </Text>
+                              </TouchableOpacity>
+                            ) : (
+                              <View style={styles.horseshoeDeleteConfirmContainer}>
+                                <Text
+                                  style={[
+                                    styles.horseshoeDeleteConfirmText,
+                                    { color: currentTheme.colors.text },
+                                  ]}
+                                >
+                                  Delete horseshoe tracking?
+                                </Text>
+                                <View style={styles.horseshoeDeleteConfirmButtons}>
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.horseshoeConfirmButton,
+                                      { backgroundColor: currentTheme.colors.textSecondary },
+                                    ]}
+                                    onPress={() => setShowHorseshoeDeleteConfirm(false)}
+                                  >
+                                    <Text style={styles.horseshoeConfirmButtonText}>
+                                      Cancel
+                                    </Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.horseshoeConfirmButton,
+                                      { backgroundColor: currentTheme.colors.error },
+                                    ]}
+                                    onPress={() => {
+                                      if (selectedHorseForRecords) {
+                                        deleteHorseshoeTracking(selectedHorseForRecords.id);
+                                        setShowHorseshoeDeleteConfirm(false);
+                                      }
+                                    }}
+                                  >
+                                    <Text style={styles.horseshoeConfirmButtonText}>
+                                      Delete
+                                    </Text>
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      ) : (
+                        /* Start New Horseshoe Tracking */
+                        <View style={styles.startHorseshoeContainer}>
+                          <Text
+                            style={[
+                              styles.startHorseshoeTitle,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            Start Horseshoe Tracking
+                          </Text>
+                          <Text
+                            style={[
+                              styles.startHorseshoeSubtitle,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            Track when your horse needs new horseshoes
+                          </Text>
+
+                          {/* Interval Selector */}
+                          <Text
+                            style={[
+                              styles.horseshoeFormLabel,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            Change Interval *
+                          </Text>
+                          <View style={styles.horseshoeIntervalContainer}>
+                            {[30, 35, 40, 45, 50, 60].map((days) => (
+                              <TouchableOpacity
+                                key={days}
+                                style={[
+                                  styles.horseshoeIntervalButton,
+                                  {
+                                    backgroundColor:
+                                      horseshoeIntervalDays === days
+                                        ? currentTheme.colors.primary
+                                        : currentTheme.colors.surface,
+                                    borderColor:
+                                      horseshoeIntervalDays === days
+                                        ? currentTheme.colors.primary
+                                        : currentTheme.colors.border,
+                                  },
+                                ]}
+                                onPress={() => setHorseshoeIntervalDays(days)}
+                              >
+                                <Text
+                                  style={[
+                                    styles.horseshoeIntervalButtonText,
+                                    {
+                                      color:
+                                        horseshoeIntervalDays === days
+                                          ? "#FFFFFF"
+                                          : currentTheme.colors.text,
+                                    },
+                                  ]}
+                                >
+                                  {days} days
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+
+                          <TouchableOpacity
+                            style={[
+                              styles.startHorseshoeButton,
+                              { backgroundColor: currentTheme.colors.primary },
+                            ]}
+                            onPress={startHorseshoeTracking}
+                          >
+                            <Text style={styles.startHorseshoeButtonText}>
+                              Start Tracking
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
                     </View>
                   )}
 
@@ -7725,6 +8168,251 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inder",
     flex: 1,
+  },
+
+  // Horseshoe Manager Styles
+  horseshoeTrackingContainer: {
+    marginTop: 20,
+  },
+  horseshoeTrackingCard: {
+    backgroundColor: "rgba(139, 69, 19, 0.1)",
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: "#8B4513",
+  },
+  horseshoeTrackingTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  horseshoeProgressContainer: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  horseshoeProgressCircle: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 12,
+    borderColor: "#8B4513",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  horseshoeProgressText: {
+    fontSize: 28,
+    fontWeight: "bold",
+    fontFamily: "Inder",
+  },
+  horseshoeProgressLabel: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    marginTop: 4,
+  },
+  horseshoeProgressBarContainer: {
+    width: "100%",
+    height: 12,
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+    borderRadius: 6,
+    overflow: "hidden",
+  },
+  horseshoeProgressBar: {
+    height: "100%",
+    borderRadius: 6,
+  },
+  horseshoeTrackingDetails: {
+    marginTop: 20,
+    gap: 12,
+  },
+  horseshoeDetailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  horseshoeDetailLabel: {
+    fontSize: 16,
+    fontFamily: "Inder",
+  },
+  horseshoeDetailValue: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  deleteHorseshoeButton: {
+    marginTop: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  deleteHorseshoeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  horseshoeDeleteConfirmContainer: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: "rgba(255, 0, 0, 0.1)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 0, 0, 0.3)",
+  },
+  horseshoeDeleteConfirmText: {
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 16,
+    fontFamily: "Inder",
+  },
+  horseshoeDeleteConfirmButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  horseshoeConfirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  horseshoeConfirmButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  startHorseshoeContainer: {
+    marginTop: 20,
+    backgroundColor: "rgba(139, 69, 19, 0.05)",
+    borderRadius: 16,
+    padding: 20,
+  },
+  startHorseshoeTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 8,
+    fontFamily: "Inder",
+    textAlign: "center",
+  },
+  startHorseshoeSubtitle: {
+    fontSize: 14,
+    marginBottom: 24,
+    fontFamily: "Inder",
+    textAlign: "center",
+  },
+  horseshoeFormLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 8,
+    fontFamily: "Inder",
+  },
+  horseshoeDateButton: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  horseshoeDateButtonText: {
+    fontSize: 16,
+    fontFamily: "Inder",
+  },
+  horseshoeDateButtonIcon: {
+    fontSize: 20,
+  },
+  horseshoeIntervalContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 24,
+  },
+  horseshoeIntervalButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    minWidth: 90,
+    alignItems: "center",
+  },
+  horseshoeIntervalButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  horseshoeEditIntervalContainer: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: "rgba(139, 69, 19, 0.1)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(139, 69, 19, 0.3)",
+  },
+  horseshoeEditIntervalTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  startHorseshoeButton: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  startHorseshoeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  datePickerModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  datePickerModalContent: {
+    width: "80%",
+    borderRadius: 16,
+    padding: 24,
+  },
+  datePickerModalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+    fontFamily: "Inder",
+  },
+  datePickerQuickButtons: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  datePickerQuickButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  datePickerQuickButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inder",
+  },
+  datePickerCloseButton: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  datePickerCloseButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Inder",
   },
 
   // Document Manager Styles
