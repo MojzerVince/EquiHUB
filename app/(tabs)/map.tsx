@@ -8,23 +8,23 @@ import { useRouter } from "expo-router";
 import * as TaskManager from "expo-task-manager";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  AppState,
-  Image,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    AppState,
+    Image,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import MapView, {
-  Marker,
-  Polyline,
-  PROVIDER_GOOGLE,
-  Region,
+    Marker,
+    Polyline,
+    PROVIDER_GOOGLE,
+    Region,
 } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -34,9 +34,9 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { ChallengeStorageService } from "../../lib/challengeStorage";
 import { EmergencyFriendsAPI } from "../../lib/emergencyFriendsAPI";
 import {
-  FallDetectionAPI,
-  FallDetectionConfig,
-  FallEvent,
+    FallDetectionAPI,
+    FallDetectionConfig,
+    FallEvent,
 } from "../../lib/fallDetectionAPI";
 import { GlobalChallengeAPI } from "../../lib/globalChallengeAPI";
 import { HorseAPI } from "../../lib/horseAPI";
@@ -3658,7 +3658,7 @@ const MapScreen = () => {
             <MapView
               ref={mapRef}
               style={styles.map}
-              provider={PROVIDER_GOOGLE}
+              provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
               initialRegion={region}
               onRegionChangeComplete={onRegionChange}
               showsUserLocation={true}
