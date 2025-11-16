@@ -3721,18 +3721,6 @@ const MapScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Coordinates display box */}
-            {userLocation && (
-              <View style={styles.coordinatesBox}>
-                <Text style={styles.coordinatesBoxText}>
-                  {userLocation.latitude.toFixed(4)}°
-                </Text>
-                <Text style={styles.coordinatesBoxText}>
-                  {userLocation.longitude.toFixed(4)}°
-                </Text>
-              </View>
-            )}
-
             <MapView
               ref={mapRef}
               style={styles.map}
@@ -5269,22 +5257,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  coordinatesContainer: {
-    marginTop: 10,
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: "#E0E0E0",
-  },
-  coordinatesLabel: {
-    fontSize: 12,
-    fontFamily: "Inder",
-    marginBottom: 5,
-  },
-  coordinatesText: {
-    fontSize: 14,
-    fontFamily: "Inder",
-    fontWeight: "500",
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -5451,34 +5423,6 @@ const styles = StyleSheet.create({
   },
   mapControlButtonText: {
     fontSize: 20,
-  },
-  coordinatesBox: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: 12,
-    padding: 8,
-    minWidth: 100,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.1)",
-    zIndex: 15,
-  },
-  coordinatesBoxText: {
-    fontSize: 10,
-    fontFamily: "Inder",
-    color: "#333",
-    fontWeight: "500",
-    lineHeight: 12,
   },
   trackingControls: {
     marginTop: 0,
