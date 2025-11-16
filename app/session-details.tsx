@@ -363,15 +363,15 @@ const SessionDetailsScreen = () => {
   const getGaitColor = (gait: string): string => {
     switch (gait) {
       case "walk":
-        return "#4CAF50";
+        return "#a1c39a";
       case "trot":
-        return "#FF9800";
+        return "#d2ea4b";
       case "canter":
-        return "#F44336";
+        return "#eaa74b";
       case "gallop":
-        return "#9C27B0";
+        return "#ea4b4b";
       case "halt":
-        return "#757575";
+        return "#b2bcbf";
       default:
         return "#335C67";
     }
