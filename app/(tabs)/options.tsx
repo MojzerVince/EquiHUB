@@ -20,7 +20,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Image,
   Linking,
   Modal,
@@ -31,7 +30,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import appConfig from "../../app.config.js";
@@ -133,7 +132,7 @@ const OptionsScreen = () => {
 
       if (result.success) {
         await loadEmergencyContacts();
-        setShowAddFriend(false);
+        setEmergencyModalView('list');
         setSearchQuery("");
         Alert.alert(
           "✅ Success!",
@@ -316,7 +315,7 @@ const OptionsScreen = () => {
     []
   );
   const [showEmergencyContacts, setShowEmergencyContacts] = useState(false);
-  const [showAddFriend, setShowAddFriend] = useState(false);
+  const [emergencyModalView, setEmergencyModalView] = useState<'list' | 'add'>('list');
   const [loadingEmergencyContacts, setLoadingEmergencyContacts] =
     useState(false);
   const [userFriends, setUserFriends] = useState<any[]>([]);
@@ -1827,7 +1826,11 @@ ${
         visible={showEmergencyContacts}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setShowEmergencyContacts(false)}
+        onRequestClose={() => {
+          setShowEmergencyContacts(false);
+          setEmergencyModalView('list');
+          setSearchQuery('');
+        }}
       >
         <View style={styles.modalOverlay}>
           <View
@@ -1842,17 +1845,18 @@ ${
                 { borderBottomColor: currentTheme.colors.accent },
               ]}
             >
-              <Text
-                style={[
-                  styles.emergencyContactsTitle,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                Emergency Contacts
-              </Text>
               <TouchableOpacity
-                style={styles.emergencyContactsCloseButton}
-                onPress={() => setShowEmergencyContacts(false)}
+                style={[styles.emergencyContactsCloseButton, { marginRight: 'auto' }]}
+                onPress={() => {
+                  if (emergencyModalView === 'add') {
+                    setEmergencyModalView('list');
+                    setSearchQuery('');
+                  } else {
+                    setShowEmergencyContacts(false);
+                    setEmergencyModalView('list');
+                    setSearchQuery('');
+                  }
+                }}
               >
                 <Text
                   style={[
@@ -1860,42 +1864,53 @@ ${
                     { color: currentTheme.colors.textSecondary },
                   ]}
                 >
-                  ✕
+                  {emergencyModalView === 'add' ? '←' : '✕'}
                 </Text>
               </TouchableOpacity>
+              <Text
+                style={[
+                  styles.emergencyContactsTitle,
+                  { color: currentTheme.colors.text, flex: 1, textAlign: 'center', marginRight: 40 },
+                ]}
+              >
+                {emergencyModalView === 'list' ? 'Emergency Contacts' : 'Add Emergency Friend'}
+              </Text>
             </View>
 
             <ScrollView style={styles.emergencyContactsContent}>
-              {/* Add Friend Button - Only show if under limit */}
-              {emergencyFriends.length < 3 ? (
-                <TouchableOpacity
-                  style={[
-                    styles.addContactButton,
-                    { backgroundColor: currentTheme.colors.primary },
-                  ]}
-                  onPress={() => {
-                    setShowAddFriend(true);
-                  }}
-                >
-                  <Text style={styles.addContactButtonText}>
-                    + Add Emergency Friend
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <View
-                  style={[
-                    styles.addContactButton,
-                    { backgroundColor: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  <Text style={[styles.addContactButtonText, { opacity: 0.8 }]}>
-                    ✓ Emergency Friend Limit Reached (3/3)
-                  </Text>
-                </View>
-              )}
+              {emergencyModalView === 'list' ? (
+                <>
+                  {/* Add Friend Button - Only show if under limit */}
+                  {emergencyFriends.length < 3 ? (
+                    <TouchableOpacity
+                      style={[
+                        styles.addContactButton,
+                        { backgroundColor: currentTheme.colors.primary },
+                      ]}
+                      onPress={() => {
+                        setEmergencyModalView('add');
+                        loadUserFriends();
+                      }}
+                    >
+                      <Text style={styles.addContactButtonText}>
+                        + Add Emergency Friend
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View
+                      style={[
+                        styles.addContactButton,
+                        { backgroundColor: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      <Text style={[styles.addContactButtonText, { opacity: 0.8 }]}>
+                        ✓ Emergency Friend Limit Reached (3/3)
+                      </Text>
+                    </View>
+                  )}
 
-              {/* Emergency Friends List */}
-              {loadingEmergencyContacts ? (
+                  {/* Emergency Friends List */}
+                  {loadingEmergencyContacts ? (
                 <View style={styles.emergencyContactsLoading}>
                   <ActivityIndicator
                     color={currentTheme.colors.primary}
@@ -1984,76 +1999,28 @@ ${
                   </Text>
                 </View>
               )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Add Contact Modal */}
-      <Modal
-        visible={showAddFriend}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowAddFriend(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.addContactModal,
-              { backgroundColor: currentTheme.colors.background },
-            ]}
-          >
-            <View
-              style={[
-                styles.addContactHeader,
-                { borderBottomColor: currentTheme.colors.accent },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.addContactTitle,
-                  { color: currentTheme.colors.text },
-                ]}
-              >
-                Add Emergency Friend
-              </Text>
-              <TouchableOpacity
-                style={styles.addContactCloseButton}
-                onPress={() => {
-                  setShowAddFriend(false);
-                  setSearchQuery("");
-                }}
-              >
-                <Text
+                </>
+              ) : (
+                /* Add Friend View */
+                <>
+                {/* Search Bar */}
+                <TextInput
                   style={[
-                    styles.addContactCloseText,
-                    { color: currentTheme.colors.textSecondary },
+                    styles.searchInput,
+                    {
+                      backgroundColor: currentTheme.colors.surface,
+                      color: currentTheme.colors.text,
+                      borderColor: currentTheme.colors.accent,
+                    },
                   ]}
-                >
-                  ✕
-                </Text>
-              </TouchableOpacity>
-            </View>
+                  placeholder="Search friends..."
+                  placeholderTextColor={currentTheme.colors.textSecondary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
 
-            <View style={styles.addContactContent}>
-              {/* Search Bar */}
-              <TextInput
-                style={[
-                  styles.searchInput,
-                  {
-                    backgroundColor: currentTheme.colors.surface,
-                    color: currentTheme.colors.text,
-                    borderColor: currentTheme.colors.accent,
-                  },
-                ]}
-                placeholder="Search friends..."
-                placeholderTextColor={currentTheme.colors.textSecondary}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-
-              {/* Friends List */}
-              {loadingFriends ? (
+                {/* Friends List */}
+                {loadingFriends ? (
                 <View style={styles.emergencyContactsLoading}>
                   <ActivityIndicator
                     color={currentTheme.colors.primary}
@@ -2068,9 +2035,17 @@ ${
                     Loading friends...
                   </Text>
                 </View>
-              ) : (
-                <FlatList
-                  data={userFriends.filter(
+              ) : userFriends.filter(
+                  (friend) =>
+                    friend.name
+                      ?.toLowerCase()
+                      .includes(searchQuery.toLowerCase()) ||
+                    friend.username
+                      ?.toLowerCase()
+                      .includes(searchQuery.toLowerCase())
+                ).length > 0 ? (
+                userFriends
+                  .filter(
                     (friend) =>
                       friend.name
                         ?.toLowerCase()
@@ -2078,10 +2053,10 @@ ${
                       friend.username
                         ?.toLowerCase()
                         .includes(searchQuery.toLowerCase())
-                  )}
-                  keyExtractor={(item) => item.id}
-                  renderItem={({ item }) => (
+                  )
+                  .map((item) => (
                     <TouchableOpacity
+                      key={item.id}
                       style={[
                         styles.deviceContactItem,
                         { backgroundColor: currentTheme.colors.surface },
@@ -2107,32 +2082,30 @@ ${
                         </Text>
                       </View>
                     </TouchableOpacity>
-                  )}
-                  style={styles.contactsList}
-                  showsVerticalScrollIndicator={false}
-                  ListEmptyComponent={
-                    <View style={styles.addContactNoPermission}>
-                      <Text
-                        style={[
-                          styles.addContactNoPermissionTitle,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        No friends found
-                      </Text>
-                      <Text
-                        style={[
-                          styles.addContactNoPermissionText,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        Try adjusting your search or add friends first.
-                      </Text>
-                    </View>
-                  }
-                />
+                  ))
+              ) : (
+                <View style={styles.addContactNoPermission}>
+                  <Text
+                    style={[
+                      styles.addContactNoPermissionTitle,
+                      { color: currentTheme.colors.text },
+                    ]}
+                  >
+                    No friends found
+                  </Text>
+                  <Text
+                    style={[
+                      styles.addContactNoPermissionText,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Try adjusting your search or add friends first.
+                  </Text>
+                </View>
               )}
-            </View>
+                </>
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -3119,6 +3092,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
+    paddingTop: 5,
+    paddingBottom: 5,
     borderBottomWidth: 1,
   },
   emergencyContactsTitle: {
