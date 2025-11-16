@@ -44,9 +44,8 @@ module.exports = {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/icons/adaptive-foreground.png",
-        backgroundImage: "./assets/icons/adaptive-background.png",
-        monochromeImage: "./assets/icons/adaptive-monochrome.png",
+        "foregroundImage": "./assets/icons/512x512.png",
+        "backgroundColor": "#ffffff"
       },
       edgeToEdgeEnabled: true,
       package: "com.mojzi1969.EquiHUB",
