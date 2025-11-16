@@ -1,4 +1,5 @@
 import { useDialog } from "@/contexts/DialogContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -39,21 +40,26 @@ const RegisterScreen = () => {
               <OAuthButtons
                 onSuccess={async (result) => {
                   console.log("OAuth registration successful:", result);
+                  console.log("OAuth result structure:", JSON.stringify(result, null, 2));
                   
                   // Save Google OAuth user data to AsyncStorage for session persistence
                   if (result.user && result.user.provider === 'google') {
                     try {
-                      const AsyncStorage = require('@react-native-async-storage/async-storage');
                       const userAuthData = {
                         id: result.user.id,
                         email: result.user.email,
                         created_at: new Date().toISOString(),
                       };
+                      console.log("💾 Saving OAuth data to AsyncStorage:", userAuthData);
                       await AsyncStorage.setItem('google_oauth_user_data', JSON.stringify(userAuthData));
                       await AsyncStorage.setItem('google_oauth_user_id', result.user.id);
                       console.log("✅ Saved Google OAuth session to AsyncStorage");
+                      
+                      // Verify it was saved
+                      const savedData = await AsyncStorage.getItem('google_oauth_user_data');
+                      console.log("🔍 Verification - Data saved:", !!savedData);
                     } catch (storageError) {
-                      console.error("Error saving OAuth session to AsyncStorage:", storageError);
+                      console.error("❌ Error saving OAuth session to AsyncStorage:", storageError);
                     }
                   }
                   

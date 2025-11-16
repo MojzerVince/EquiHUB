@@ -201,23 +201,64 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         );
       }
 
-      // Check for Google OAuth session
-      console.log("🔍 Checking for Google OAuth session...");
+      // Check for Google OAuth session stored by us (fallback)
+      console.log("🔍 Checking for custom Google OAuth session...");
       const googleUserData = await AsyncStorage.getItem('google_oauth_user_data');
+      
+      console.log("🔍 Google OAuth data found:", !!googleUserData);
       
       if (googleUserData) {
         try {
           const userData = JSON.parse(googleUserData);
-          console.log("✅ Found Google OAuth session for:", userData.email);
-          setUser(userData);
-          await SessionManager.markUserAsUsedApp();
-          setHasUserData(true);
-          return;
+          console.log("✅ Found custom Google OAuth session for:", userData.email);
+          
+          // Try to restore the Supabase session if it exists
+          const { data: { session: supabaseSession } } = await supabase.auth.getSession();
+          
+          if (supabaseSession) {
+            console.log("✅ Supabase session also exists - session is valid");
+            setUser(userData);
+            await SessionManager.markUserAsUsedApp();
+            setHasUserData(true);
+            return;
+          } else {
+            console.log("⚠️ Custom OAuth data exists but Supabase session is gone - clearing custom data");
+            await AsyncStorage.removeItem('google_oauth_user_data');
+            await AsyncStorage.removeItem('google_oauth_user_id');
+          }
         } catch (parseError) {
           console.error("Error parsing Google OAuth user data:", parseError);
           // Clear corrupted data
           await AsyncStorage.removeItem('google_oauth_user_data');
           await AsyncStorage.removeItem('google_oauth_user_id');
+        }
+      } else {
+        console.log("❌ No custom Google OAuth session data in AsyncStorage");
+        
+        // Debug: Check what IS in AsyncStorage
+        try {
+          const allKeys = await AsyncStorage.getAllKeys();
+          console.log("📱 All AsyncStorage keys:", allKeys);
+          
+          // Check specifically for Supabase session keys (including custom key)
+          const supabaseKeys = allKeys.filter(k => 
+            k.includes('supabase') || k.includes('@supabase') || k.includes('equihub-auth')
+          );
+          console.log("🔍 Supabase-related keys:", supabaseKeys);
+          
+          // Check specifically for our custom auth token
+          const customAuthToken = await AsyncStorage.getItem('equihub-auth-token');
+          console.log("🔐 Custom auth token exists:", !!customAuthToken);
+          
+          if (supabaseKeys.length > 0) {
+            console.log("📋 Supabase stores session under these keys - let's check them");
+            for (const key of supabaseKeys) {
+              const value = await AsyncStorage.getItem(key);
+              console.log(`  - ${key}: ${value ? 'exists' : 'null'}`);
+            }
+          }
+        } catch (e) {
+          console.error("Error listing AsyncStorage keys:", e);
         }
       }
 
