@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
+import * as FileSystem from "expo-file-system";
 import { useRouter } from "expo-router";
+import * as Sharing from "expo-sharing";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -168,6 +170,7 @@ const StatisticsScreen = () => {
   });
 
   const [horseStats, setHorseStats] = useState<HorseStatistics>({});
+  const [isExporting, setIsExporting] = useState(false);
 
   // Load sessions on component mount and when focused
   useFocusEffect(
@@ -523,6 +526,109 @@ const StatisticsScreen = () => {
 
   const currentStats = getCurrentStats();
 
+  const exportStatistics = async () => {
+    if (!currentStats) {
+      Alert.alert("No Data", "No statistics available to export");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Prepare CSV data
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const viewName = viewType === "rider" 
+        ? "Rider" 
+        : (viewType === "horse" && selectedHorseId && horseStats[selectedHorseId])
+          ? horseStats[selectedHorseId].horseName
+          : "Horse";
+      const fileName = `EquiHUB_${viewName}_${timeRange}_${timestamp}.csv`;
+
+      // Build CSV content
+      let csvContent = "";
+      
+      // Header
+      csvContent += `EquiHUB Statistics Export\n`;
+      csvContent += `Export Date,${new Date().toLocaleString()}\n`;
+      csvContent += `View Type,${viewType === "rider" ? "Rider Statistics" : "Horse Statistics"}\n`;
+      csvContent += `Time Range,${timeRange.charAt(0).toUpperCase() + timeRange.slice(1)}\n`;
+      if (viewType === "horse" && selectedHorseId && horseStats[selectedHorseId]) {
+        csvContent += `Horse Name,${horseStats[selectedHorseId].horseName}\n`;
+      }
+      csvContent += `\n`;
+
+      // Summary Statistics
+      csvContent += `Summary Statistics\n`;
+      csvContent += `Metric,Value\n`;
+      csvContent += `Total Sessions,${currentStats.sessionCount}\n`;
+      csvContent += `Total Duration,${formatDuration(currentStats.totalDuration)}\n`;
+      csvContent += `Total Distance,${formatDistance(currentStats.totalDistance)}\n`;
+      csvContent += `Average Session Duration,${formatDuration(currentStats.averageSessionDuration)}\n`;
+      csvContent += `Average Distance,${formatDistance(currentStats.averageDistance)}\n`;
+      if (currentStats.favoriteTrainingType) {
+        csvContent += `Favorite Training Type,${currentStats.favoriteTrainingType}\n`;
+      }
+      csvContent += `\n`;
+
+      // Gait Distribution
+      csvContent += `Gait Distribution\n`;
+      csvContent += `Gait,Duration (seconds),Percentage\n`;
+      Object.entries(currentStats.gaitDurations).forEach(([gait, duration]) => {
+        const percentage = currentStats.gaitPercentages[gait as keyof typeof currentStats.gaitPercentages];
+        csvContent += `${gait.charAt(0).toUpperCase() + gait.slice(1)},${duration.toFixed(2)},${percentage.toFixed(2)}%\n`;
+      });
+      csvContent += `\n`;
+
+      // Session Details
+      const filteredSessions = getFilteredSessions();
+      const relevantSessions = viewType === "rider" 
+        ? filteredSessions 
+        : filteredSessions.filter(s => s.horseId === selectedHorseId);
+
+      csvContent += `Individual Sessions\n`;
+      csvContent += `Date,Time,Horse,Training Type,Duration,Distance,Avg Speed,Max Speed,Predominant Gait\n`;
+      relevantSessions.forEach(session => {
+        const sessionDate = new Date(session.startTime);
+        const avgSpeed = session.averageSpeed ? (session.averageSpeed * 3.6).toFixed(2) : "N/A";
+        const maxSpeed = session.maxSpeed ? (session.maxSpeed * 3.6).toFixed(2) : "N/A";
+        const predominantGait = session.gaitAnalysis?.predominantGait || "N/A";
+        
+        csvContent += `${sessionDate.toLocaleDateString()},${sessionDate.toLocaleTimeString()},${session.horseName},${session.trainingType},${formatDuration(session.duration || 0)},${formatDistance(session.distance || 0)},${avgSpeed} km/h,${maxSpeed} km/h,${predominantGait}\n`;
+      });
+
+      // Save to file
+      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.writeAsStringAsync(fileUri, csvContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      // Share the file
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: "text/csv",
+          dialogTitle: "Export Statistics",
+          UTI: "public.comma-separated-values-text",
+        });
+      } else {
+        Alert.alert(
+          "Export Complete",
+          `Statistics exported to:\n${fileUri}`,
+          [{ text: "OK" }]
+        );
+      }
+
+      console.log("✅ Statistics exported successfully to:", fileUri);
+    } catch (error) {
+      console.error("Error exporting statistics:", error);
+      Alert.alert(
+        "Export Failed",
+        "Failed to export statistics. Please try again."
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <View
@@ -828,6 +934,21 @@ const StatisticsScreen = () => {
                   </Text>
                 </View>
               )}
+
+              {/* Export Button */}
+              <TouchableOpacity
+                style={[
+                  styles.exportButton,
+                  { backgroundColor: currentTheme.colors.primary },
+                  isExporting && styles.exportButtonDisabled,
+                ]}
+                onPress={exportStatistics}
+                disabled={isExporting}
+              >
+                <Text style={styles.exportButtonText}>
+                  {isExporting ? "Exporting..." : "📊 Export Data"}
+                </Text>
+              </TouchableOpacity>
             </>
           ) : (
             <View style={styles.noDataContainer}>
@@ -1074,6 +1195,29 @@ const styles = StyleSheet.create({
   noDataText: {
     fontSize: 16,
     textAlign: "center",
+  },
+  exportButton: {
+    marginVertical: 15,
+    marginBottom: 30,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 25,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  exportButtonDisabled: {
+    opacity: 0.6,
+  },
+  exportButtonText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
   },
 });
 
