@@ -60,8 +60,8 @@ class SecureConfigManager {
       }
       
       const requestBody = {
-        appVersion: require('../app.json').expo.version,
-        bundleId: require('../app.json').expo.android.package,
+        appVersion: require('../app.config.js').expo.version,
+        bundleId: require('../app.config.js').expo.android.package,
       };
       console.log('🔍 DEBUG: Request body:', requestBody);
       
