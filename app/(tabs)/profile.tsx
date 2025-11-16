@@ -494,12 +494,13 @@ const ProfileScreen = () => {
       setUserExperience(loadedExperience.toString());
       setIsProMember(finalProStatus);
 
-      // Load user's stable information from stable_members table
+      // Load user's stable information from stable_members table with timeout
       try {
         const supabase = getSupabase();
         console.log("Loading stable for user ID:", USER_ID);
 
-        const { data: stableMemberships, error: stableError } = await supabase
+        // Add 10-second timeout for stable query
+        const stableQueryPromise = supabase
           .from("stable_members")
           .select(
             `
@@ -516,6 +517,18 @@ const ProfileScreen = () => {
           `
           )
           .eq("user_id", USER_ID);
+
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Stable query timeout after 10 seconds")),
+            10000
+          )
+        );
+
+        const { data: stableMemberships, error: stableError } = await Promise.race([
+          stableQueryPromise,
+          timeoutPromise
+        ]);
 
         console.log("Stable query result:", { stableMemberships, stableError });
 
@@ -554,6 +567,13 @@ const ProfileScreen = () => {
         }
       } catch (stableError) {
         console.error("Exception loading user stable:", stableError);
+        
+        // Handle timeout specifically
+        if (stableError instanceof Error && stableError.message.includes("timeout")) {
+          console.warn("Stable query timed out, continuing without stable data");
+        }
+        
+        // Clear stable state on any error
         setSelectedStable(null);
         setSavedSelectedStable(null);
         setUserStableRanch("");
@@ -626,10 +646,12 @@ const ProfileScreen = () => {
         setUserExperience(loadedExperience.toString());
         setIsProMember(finalProStatus);
 
-        // Load user's stable information from stable_members table
+        // Load user's stable information from stable_members table with timeout
         try {
           const supabase = getSupabase();
-          const { data: stableMemberships, error: stableError } = await supabase
+          
+          // Add 10-second timeout for stable query
+          const stableQueryPromise = supabase
             .from("stable_members")
             .select(
               `
@@ -646,6 +668,18 @@ const ProfileScreen = () => {
             `
             )
             .eq("user_id", USER_ID);
+
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Stable refresh timeout after 10 seconds")),
+              10000
+            )
+          );
+
+          const { data: stableMemberships, error: stableError } = await Promise.race([
+            stableQueryPromise,
+            timeoutPromise
+          ]);
 
           if (stableError) {
             console.error("Stable refresh error:", stableError);
@@ -676,6 +710,13 @@ const ProfileScreen = () => {
           }
         } catch (stableError) {
           console.error("Error refreshing user stable:", stableError);
+          
+          // Handle timeout specifically
+          if (stableError instanceof Error && stableError.message.includes("timeout")) {
+            console.warn("Stable refresh query timed out, continuing without stable data");
+          }
+          
+          // Clear stable state on any error
           setSelectedStable(null);
           setSavedSelectedStable(null);
           setUserStableRanch("");
