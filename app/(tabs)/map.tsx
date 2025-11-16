@@ -3246,37 +3246,23 @@ const MapScreen = () => {
     setShowPathUnavailableModal(true);
   };
 
-  // Get difficulty color for trails
-  const getDifficultyColor = (difficulty: string): string => {
-    switch (difficulty) {
-      case "easy":
-        return "#4CAF50"; // Green
-      case "moderate":
-        return "#FF9800"; // Orange
-      case "difficult":
-        return "#F44336"; // Red
-      default:
-        return "#757575"; // Gray
-    }
-  };
-
-  // Get gait color for path visualization
+  // Gait colors
   const getGaitColor = (
     gait: "walk" | "trot" | "canter" | "gallop" | "halt"
   ): string => {
     switch (gait) {
       case "halt":
-        return "#757575"; // Gray - stationary
+        return "#b2bcbf"; // Gray - stationary
       case "walk":
-        return "#4CAF50"; // Green - slow and steady
+        return "#a1c39a"; // Green - slow and steady
       case "trot":
-        return "#2196F3"; // Blue - moderate pace
+        return "#d2ea4b"; // Yellow - moderate pace
       case "canter":
-        return "#FF9800"; // Orange - faster pace
+        return "#eaa74b"; // Orange - faster pace
       case "gallop":
-        return "#F44336"; // Red - high speed
+        return "#ea4b4b"; // Red - high speed
       default:
-        return "#757575"; // Default gray
+        return "#b2bcbf"; // Default gray
     }
   };
 
@@ -3747,40 +3733,6 @@ const MapScreen = () => {
                     lineCap="round"
                     lineJoin="round"
                   />
-                ))}
-
-              {/* Show published trails */}
-              {showPublishedTrails &&
-                publishedTrails.map((trail) => (
-                  <React.Fragment key={trail.id}>
-                    {/* Trail path */}
-                    <Polyline
-                      coordinates={trail.path.map((point) => ({
-                        latitude: point.latitude,
-                        longitude: point.longitude,
-                      }))}
-                      strokeColor={getDifficultyColor(trail.difficulty)}
-                      strokeWidth={3}
-                    />
-
-                    {/* Trail start marker */}
-                    {trail.path.length > 0 && (
-                      <Marker
-                        coordinate={{
-                          latitude: trail.path[0].latitude,
-                          longitude: trail.path[0].longitude,
-                        }}
-                        title={trail.name}
-                        description={`${
-                          trail.difficulty.charAt(0).toUpperCase() +
-                          trail.difficulty.slice(1)
-                        } • ${(trail.distance / 1000).toFixed(
-                          1
-                        )} km • ⭐ ${trail.rating.toFixed(1)}`}
-                        pinColor={getDifficultyColor(trail.difficulty)}
-                      />
-                    )}
-                  </React.Fragment>
                 ))}
 
               {/* Media markers - show photos/videos taken during tracking */}
@@ -4840,44 +4792,6 @@ const MapScreen = () => {
                     >
                       {trackingPoints.length}
                     </Text>
-                  </View>
-                </View>
-
-                {/* Gait Color Legend */}
-                <View style={styles.gaitLegendContainer}>
-                  <Text
-                    style={[
-                      styles.gaitLegendTitle,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    Path Colors
-                  </Text>
-                  <View style={styles.gaitLegendRow}>
-                    {[
-                      { gait: "halt", label: "Halt" },
-                      { gait: "walk", label: "Walk" },
-                      { gait: "trot", label: "Trot" },
-                      { gait: "canter", label: "Canter" },
-                      { gait: "gallop", label: "Gallop" },
-                    ].map((item) => (
-                      <View key={item.gait} style={styles.gaitLegendItem}>
-                        <View
-                          style={[
-                            styles.gaitColorDot,
-                            { backgroundColor: getGaitColor(item.gait as any) },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.gaitLegendLabel,
-                            { color: currentTheme.colors.textSecondary },
-                          ]}
-                        >
-                          {item.label}
-                        </Text>
-                      </View>
-                    ))}
                   </View>
                 </View>
 
