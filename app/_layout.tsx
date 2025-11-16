@@ -7,13 +7,12 @@ import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import "react-native-reanimated";
 
 import AppInitializer from "@/components/AppInitializer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import CustomSplashScreen from "@/components/SplashScreen";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { DialogProvider } from "@/contexts/DialogContext";
 import { MetricProvider } from "@/contexts/MetricContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
@@ -27,30 +26,12 @@ import { useRouter } from "expo-router";
 // Hide Expo's default splash screen immediately
 SplashScreen.hideAsync();
 
-const SplashWithAuth = ({ onFinish }: { onFinish: () => void }) => {
-  const { user, loading } = useAuth();
-
-  const handleSplashFinish = () => {
-    // Call onFinish to hide splash screen
-    onFinish();
-  };
-
-  return (
-    <CustomSplashScreen
-      onFinish={handleSplashFinish}
-      loading={loading}
-      user={user}
-    />
-  );
-};
-
 const AppContent = () => {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const [loaded] = useFonts({
     Inder: require("../assets/fonts/Inder-Regular.ttf"),
   });
-  const [showSplash, setShowSplash] = useState(true);
 
   // Set up global notification handlers when app starts
   useEffect(() => {
@@ -124,18 +105,12 @@ const AppContent = () => {
     };
   }, [router]);
 
-  // Show splash screen while fonts are loading or splash is active
-  if (!loaded || showSplash) {
-    if (!loaded) {
-      // Still loading fonts, don't show splash yet
-      return null;
-    }
-
-    // Fonts are loaded, show splash screen immediately with auth integration
-    return <SplashWithAuth onFinish={() => setShowSplash(false)} />;
+  // Show null while fonts are loading
+  if (!loaded) {
+    return null;
   }
 
-  // Main app with auth loading
+  // Main app - no splash screen, load directly
   return (
     <CustomThemeProvider>
       <MetricProvider>
