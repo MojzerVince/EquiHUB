@@ -1,7 +1,7 @@
 import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
+    DarkTheme,
+    DefaultTheme,
+    ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
@@ -178,10 +178,6 @@ const AppContent = () => {
                       options={{ headerShown: false }}
                     />
                     <Stack.Screen
-                      name="session-summary"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
                       name="subscription"
                       options={{ headerShown: false }}
                     />
@@ -195,10 +191,6 @@ const AppContent = () => {
                     />
                     <Stack.Screen
                       name="user-profile"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="user-friends"
                       options={{ headerShown: false }}
                     />
                     <Stack.Screen
