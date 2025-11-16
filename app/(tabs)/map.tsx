@@ -8,23 +8,23 @@ import { useRouter } from "expo-router";
 import * as TaskManager from "expo-task-manager";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    AppState,
-    Image,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  AppState,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import MapView, {
-    Marker,
-    Polyline,
-    PROVIDER_GOOGLE,
-    Region,
+  Marker,
+  Polyline,
+  PROVIDER_GOOGLE,
+  Region,
 } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -34,9 +34,9 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { ChallengeStorageService } from "../../lib/challengeStorage";
 import { EmergencyFriendsAPI } from "../../lib/emergencyFriendsAPI";
 import {
-    FallDetectionAPI,
-    FallDetectionConfig,
-    FallEvent,
+  FallDetectionAPI,
+  FallDetectionConfig,
+  FallEvent,
 } from "../../lib/fallDetectionAPI";
 import { GlobalChallengeAPI } from "../../lib/globalChallengeAPI";
 import { HorseAPI } from "../../lib/horseAPI";
@@ -2029,25 +2029,37 @@ const MapScreen = () => {
     trainingType: string
   ) => {
     try {
-      const now = Date.now();
-      const elapsedSeconds = Math.floor((now - startTime) / 1000);
-      const hours = Math.floor(elapsedSeconds / 3600);
-      const minutes = Math.floor((elapsedSeconds % 3600) / 60);
-      const seconds = elapsedSeconds % 60;
+      // On iOS, show simple notification without time counter
+      // On Android, show notification with real-time elapsed time
+      let notificationBody: string;
+      
+      if (Platform.OS === 'ios') {
+        // iOS: Simple message without time (no updates will be sent)
+        notificationBody = `${horseName} • ${trainingType}\nTracking in progress...`;
+      } else {
+        // Android: Include elapsed time (updates every second)
+        const now = Date.now();
+        const elapsedSeconds = Math.floor((now - startTime) / 1000);
+        const hours = Math.floor(elapsedSeconds / 3600);
+        const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+        const seconds = elapsedSeconds % 60;
 
-      const timeString =
-        hours > 0
-          ? `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
-              .toString()
-              .padStart(2, "0")}`
-          : `${minutes}:${seconds.toString().padStart(2, "0")}`;
+        const timeString =
+          hours > 0
+            ? `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
+                .toString()
+                .padStart(2, "0")}`
+            : `${minutes}:${seconds.toString().padStart(2, "0")}`;
+        
+        notificationBody = `${horseName} • ${trainingType}\nElapsed time: ${timeString}`;
+      }
 
       // Use scheduleNotificationAsync with the same identifier to update in place
-      // The channel settings will make it silent
+      // The channel settings will make it silent on Android
       await Notifications.scheduleNotificationAsync({
         content: {
           title: "🐎 GPS Tracking Active",
-          body: `${horseName} • ${trainingType}\nElapsed time: ${timeString}`,
+          body: notificationBody,
           data: {
             type: "tracking",
             startTime,
@@ -2103,12 +2115,17 @@ const MapScreen = () => {
     );
     setNotificationId(initialNotificationId);
 
-    // Set up interval to update notification every second
-    const interval = setInterval(async () => {
-      await updateTrackingNotification(startTime, horseName, trainingType);
-    }, 1000);
+    // Only update notification on Android (every second with elapsed time)
+    // On iOS, show notification once and never update (no time counter)
+    if (Platform.OS === 'android') {
+      // Android: Set up interval to update notification every second with elapsed time
+      const interval = setInterval(async () => {
+        await updateTrackingNotification(startTime, horseName, trainingType);
+      }, 1000);
 
-    notificationIntervalRef.current = interval;
+      notificationIntervalRef.current = interval;
+    }
+    // iOS: No interval - notification sent once and persists without updates
   };
 
   // Stop tracking notification
