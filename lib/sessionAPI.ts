@@ -40,14 +40,58 @@ export interface TrackingSession {
 
 /**
  * Upload a completed tracking session to the database
+ * Supports both old format (object) and new format (individual parameters)
  */
-export async function uploadSession(session: Omit<TrackingSession, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; sessionId?: string; error?: string }> {
+export async function uploadSession(
+  userIdOrSession: string | Omit<TrackingSession, 'id' | 'created_at' | 'updated_at'>,
+  horseId?: string | null,
+  horseName?: string | null,
+  trainingType?: string,
+  sessionData?: any,
+  startedAt?: Date,
+  endedAt?: Date,
+  durationSeconds?: number,
+  distanceMeters?: number,
+  maxSpeedKmh?: number,
+  avgSpeedKmh?: number,
+  riderPerformance?: number,
+  horsePerformance?: number,
+  groundType?: string,
+  notes?: string | null
+): Promise<{ success: boolean; sessionId?: string; error?: string }> {
   try {
     const supabase = getSupabase();
     
+    // Handle both old and new function signatures
+    let sessionToInsert: any;
+    
+    if (typeof userIdOrSession === 'string') {
+      // New format with individual parameters
+      sessionToInsert = {
+        user_id: userIdOrSession,
+        horse_id: horseId,
+        horse_name: horseName,
+        training_type: trainingType,
+        session_data: sessionData,
+        started_at: startedAt?.toISOString(),
+        ended_at: endedAt?.toISOString(),
+        duration_seconds: durationSeconds,
+        distance_meters: distanceMeters,
+        max_speed_kmh: maxSpeedKmh,
+        avg_speed_kmh: avgSpeedKmh,
+        rider_performance: riderPerformance,
+        horse_performance: horsePerformance,
+        ground_type: groundType,
+        notes: notes,
+      };
+    } else {
+      // Old format with session object
+      sessionToInsert = userIdOrSession;
+    }
+    
     const { data, error } = await supabase
       .from('sessions')
-      .insert([session])
+      .insert([sessionToInsert])
       .select('id')
       .single();
 

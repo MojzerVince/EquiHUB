@@ -44,7 +44,6 @@ import { GlobalChallengeAPI } from "../../lib/globalChallengeAPI";
 import { HorseAPI } from "../../lib/horseAPI";
 import { getTodayPlannedSessions, markPlannedSessionCompleted, PlannedSession } from "../../lib/plannedSessionAPI";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
-import { uploadSession } from "../../lib/sessionAPI";
 import { Horse, Profile } from "../../lib/supabase";
 import { ChallengeSession } from "../../types/challengeTypes";
 
@@ -345,6 +344,10 @@ const MapScreen = () => {
   const notificationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
   );
+
+  // Next ride note state
+  const [nextRideNote, setNextRideNote] = useState<string | null>(null);
+  const [showNextRideNote, setShowNextRideNote] = useState<boolean>(false);
 
   // Published trails state
   const [showPublishedTrails, setShowPublishedTrails] =
@@ -1255,6 +1258,65 @@ const MapScreen = () => {
 
     loadUserHorses();
   }, [user]);
+
+  // Load next ride note when horse is selected
+  useEffect(() => {
+    const loadNextRideNote = async () => {
+      if (!user?.id || !selectedHorse) {
+        setNextRideNote(null);
+        setShowNextRideNote(false);
+        return;
+      }
+
+      try {
+        const noteKey = `nextRideNote_${user.id}_${selectedHorse}`;
+        const savedNote = await AsyncStorage.getItem(noteKey);
+        
+        if (savedNote) {
+          const noteData = JSON.parse(savedNote);
+          
+          // Only show if not already shown
+          if (!noteData.shown) {
+            setNextRideNote(noteData.note);
+            setShowNextRideNote(true);
+          } else {
+            setNextRideNote(null);
+            setShowNextRideNote(false);
+          }
+        } else {
+          setNextRideNote(null);
+          setShowNextRideNote(false);
+        }
+      } catch (error) {
+        console.error('Error loading next ride note:', error);
+        setNextRideNote(null);
+        setShowNextRideNote(false);
+      }
+    };
+
+    loadNextRideNote();
+  }, [user?.id, selectedHorse]);
+
+  // Function to dismiss the next ride note
+  const dismissNextRideNote = async () => {
+    if (!user?.id || !selectedHorse) return;
+
+    try {
+      const noteKey = `nextRideNote_${user.id}_${selectedHorse}`;
+      const savedNote = await AsyncStorage.getItem(noteKey);
+      
+      if (savedNote) {
+        const noteData = JSON.parse(savedNote);
+        noteData.shown = true;
+        await AsyncStorage.setItem(noteKey, JSON.stringify(noteData));
+      }
+      
+      setShowNextRideNote(false);
+      setNextRideNote(null);
+    } catch (error) {
+      console.error('Error dismissing next ride note:', error);
+    }
+  };
 
   // Helper function to load horses from API (with caching and optimization)
   const loadHorsesFromAPI = async () => {
@@ -2937,70 +2999,6 @@ const MapScreen = () => {
       // Save session to storage
       await saveSessionToStorage(completedSession);
 
-      // Upload session to database
-      if (user?.id) {
-        try {
-          // Prepare session data with explicit gait segments structure
-          const sessionDataToUpload = {
-            coordinates: trackingPoints.map(point => ({
-              latitude: point.latitude,
-              longitude: point.longitude,
-              timestamp: new Date(point.timestamp).toISOString(),
-              speed: point.speed,
-              accuracy: point.accuracy,
-            })),
-            metadata: {
-              gait_analysis: {
-                totalDuration: gaitAnalysis.totalDuration,
-                gaitDurations: gaitAnalysis.gaitDurations,
-                gaitPercentages: gaitAnalysis.gaitPercentages,
-                segments: gaitAnalysis.segments.map(segment => ({
-                  gait: segment.gait,
-                  startTime: segment.startTime,
-                  endTime: segment.endTime,
-                  duration: segment.duration,
-                  distance: segment.distance,
-                  averageSpeed: segment.averageSpeed,
-                  startIndex: segment.startIndex,
-                  endIndex: segment.endIndex,
-                })),
-                transitionCount: gaitAnalysis.transitionCount,
-                predominantGait: gaitAnalysis.predominantGait,
-              },
-              media_count: sessionMedia.length,
-              planned_session_id: completedSession.plannedSessionId,
-            },
-          };
-          
-          console.log('📤 Uploading session with gait data:', {
-            segments: sessionDataToUpload.metadata.gait_analysis.segments.length,
-            predominantGait: sessionDataToUpload.metadata.gait_analysis.predominantGait,
-          });
-
-          const uploadResult = await uploadSession({
-            user_id: user.id,
-            horse_id: completedSession.horseId,
-            horse_name: completedSession.horseName,
-            training_type: completedSession.trainingType,
-            session_data: sessionDataToUpload,
-            started_at: new Date(currentSession.startTime).toISOString(),
-            ended_at: new Date(endTime).toISOString(),
-            duration_seconds: duration,
-            distance_meters: totalDistance,
-            max_speed_kmh: (maxSpeed * 3.6), // Convert m/s to km/h
-            avg_speed_kmh: (averageSpeed * 3.6), // Convert m/s to km/h
-          });
-
-          if (uploadResult.success) {
-            console.log('✅ Session uploaded to database:', uploadResult.sessionId);
-          } else {
-            console.error('❌ Failed to upload session:', uploadResult.error);
-          }
-        } catch (error) {
-          console.error('❌ Error uploading session:', error);
-        }
-      }
-
       // Mark planned session as completed if this was a planned session
       if (completedSession.plannedSessionId) {
         try {
@@ -3097,37 +3095,21 @@ const MapScreen = () => {
       // Restart location watcher with normal settings
       await startLocationWatcher();
 
-      // Show custom completion dialog
-      const durationMinutes = Math.floor(duration / 60);
-      const durationSeconds = duration % 60;
-      const formattedDistance = formatDistance(totalDistance);
-      const formattedSpeed = formatSpeed(averageSpeed);
-      const predominantGaitName =
-        gaitAnalysis.predominantGait.charAt(0).toUpperCase() +
-        gaitAnalysis.predominantGait.slice(1);
-
-      showDialog({
-        title: "🎉 Session Completed!",
-        message: `Congratulations! Your training session with ${completedSession.horseName} has been successfully completed.\n\n📊 Session Summary:\n• Duration: ${durationMinutes}m ${durationSeconds}s\n• Distance: ${formattedDistance}\n• Average Speed: ${formattedSpeed}\n• Predominant Gait: ${predominantGaitName}\n• Gait Transitions: ${gaitAnalysis.transitionCount}`,
-        buttons: [
-          {
-            text: "View Details",
-            style: "default",
-            onPress: () => {
-              router.push({
-                pathname: "/session-details",
-                params: { sessionId: completedSession.id },
-              });
+      // Navigate to session summary screen instead of showing dialog
+      router.push({
+        pathname: "/session-summary" as any,
+        params: {
+          sessionData: JSON.stringify({
+            ...completedSession,
+            path: trackingPoints,
+            horse: {
+              id: completedSession.horseId,
+              name: completedSession.horseName,
             },
-          },
-          {
-            text: "Back to Map",
-            style: "cancel",
-            onPress: () => {
-              // Just close the dialog
-            },
-          },
-        ],
+            trainingType: completedSession.trainingType,
+            plannedSessionId: completedSession.plannedSessionId,
+          }),
+        },
       });
     } catch (error) {
       const errorMessage =
@@ -3836,6 +3818,28 @@ const MapScreen = () => {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Next Ride Note Display */}
+          {!isTracking && showNextRideNote && nextRideNote && (
+            <View style={[styles.nextRideNoteContainer, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.primary }]}>
+              <View style={styles.nextRideNoteHeader}>
+                <Text style={[styles.nextRideNoteTitle, { color: currentTheme.colors.primary }]}>
+                  📝 Note from Last Ride
+                </Text>
+                <TouchableOpacity
+                  onPress={dismissNextRideNote}
+                  style={styles.nextRideNoteClose}
+                >
+                  <Text style={[styles.nextRideNoteCloseText, { color: currentTheme.colors.textSecondary }]}>
+                    ✕
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.nextRideNoteText, { color: currentTheme.colors.text }]}>
+                {nextRideNote}
+              </Text>
+            </View>
+          )}
 
           {/* Today's Planned Sessions Card - Only show when not tracking and has incomplete sessions */}
           {!isTracking && todayPlannedSessions.length > 0 && (
@@ -6098,6 +6102,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
     textAlign: "center",
+  },
+  nextRideNoteContainer: {
+    marginHorizontal: 20,
+    marginTop: 15,
+    marginBottom: 10,
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  nextRideNoteHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  nextRideNoteTitle: {
+    fontSize: 16,
+    fontFamily: "Inder",
+    fontWeight: "600",
+  },
+  nextRideNoteClose: {
+    padding: 4,
+  },
+  nextRideNoteCloseText: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  nextRideNoteText: {
+    fontSize: 14,
+    fontFamily: "Inder",
+    lineHeight: 20,
   },
 });
 
