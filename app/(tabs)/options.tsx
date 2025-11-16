@@ -34,7 +34,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import appConfig from "../../app.json";
+import appConfig from "../../app.config.js";
 
 const OptionsScreen = () => {
   const router = useRouter();
