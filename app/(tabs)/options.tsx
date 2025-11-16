@@ -2730,28 +2730,28 @@ ${
                 <Text style={styles.aboutSectionTitle}>
                   ✨ Key Features{"\n"}
                 </Text>
-                <Text style={styles.aboutFeatureItem}>🐴 Horse Management</Text>
+                <Text style={styles.aboutFeatureItem}>🐴 Horse Management{"\n"}</Text>
                 Comprehensive profiles for all your horses with health records,
                 training progress, and care schedules.{"\n\n"}
                 <Text style={styles.aboutFeatureItem}>
-                  📊 Training Tracking
+                  📊 Training Tracking{"\n"}
                 </Text>
                 Record and analyze your riding sessions with detailed metrics,
                 GPS tracking, and progress visualization.{"\n\n"}
                 <Text style={styles.aboutFeatureItem}>
-                  🏆 Community Challenges
+                  🏆 Community Challenges{"\n"}
                 </Text>
                 Join global and stable-specific challenges to stay motivated and
                 connect with fellow riders.{"\n\n"}
-                <Text style={styles.aboutFeatureItem}>💬 Social Features</Text>
+                <Text style={styles.aboutFeatureItem}>💬 Social Features{"\n"}</Text>
                 Share your achievements, connect with friends, and engage with
                 the equestrian community.{"\n\n"}
-                <Text style={styles.aboutFeatureItem}>🚨 Safety First</Text>
+                <Text style={styles.aboutFeatureItem}>🚨 Safety First{"\n"}</Text>
                 Emergency contacts, first aid guidance, and safety features
                 designed specifically for equestrians.{"\n\n"}
-                <Text style={styles.aboutFeatureItem}>📚 Tips & Guides</Text>
+                <Text style={styles.aboutFeatureItem}>📚 Tips & Guides{"\n"}</Text>
                 Expert advice, training tips, and educational content to improve
-                your horsemanship skills.{"\n\n"}
+                your horsemanship skills.{"\n\n\n"}
                 <Text style={styles.aboutSectionTitle}>
                   🌟 Pro Features{"\n"}
                 </Text>
@@ -2787,11 +2787,11 @@ ${
                     { color: currentTheme.colors.textSecondary },
                   ]}
                 >
-                  Made with ❤️ for the equestrian community{"\n"}© 2025 EquiHUB.
-                  All rights reserved.{"\n\n"}
                   Follow your passion. Track your progress. Connect with your
                   community.{"\n"}
-                  Happy riding! 🐎✨
+                  Happy riding! 🐎✨{"\n\n"}
+                  Made with ❤️ for the equestrian community{"\n"}© 2025 EquiHUB.
+                  All rights reserved.{"\n\n"}
                 </Text>
               </Text>
             </ScrollView>
@@ -3459,8 +3459,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingTop: 5,
+    paddingBottom: 5,
     borderBottomWidth: 1,
   },
   feedbackTitle: {
@@ -3646,8 +3646,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
-    paddingTop: 10,
-    paddingBottom: 15,
+    paddingTop: 5,
+    paddingBottom: 5,
     borderBottomWidth: 1,
   },
   aboutTitle: {
@@ -3698,14 +3698,14 @@ const styles = StyleSheet.create({
     textAlign: "left",
   },
   aboutSectionTitle: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "bold",
     fontFamily: "Inder",
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 10,
+    marginBottom: 8,
   },
   aboutFeatureItem: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "600",
     fontFamily: "Inder",
     marginBottom: 4,
