@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
+import * as Battery from "expo-battery";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import * as MediaLibrary from "expo-media-library";
@@ -12,6 +13,7 @@ import {
   Alert,
   AppState,
   Image,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -397,6 +399,7 @@ const MapScreen = () => {
   const [showFallDetectionDisclaimer, setShowFallDetectionDisclaimer] =
     useState(false);
   const [fallDisclaimerAccepted, setFallDisclaimerAccepted] = useState(false);
+  const [showPowerSaveModal, setShowPowerSaveModal] = useState(false);
   const [pendingFallConfirmation, setPendingFallConfirmation] = useState<{
     event: FallEvent;
     timestamp: number;
@@ -2648,6 +2651,30 @@ const MapScreen = () => {
   };
 
   // Start GPS tracking
+  const checkPowerSavingMode = async (): Promise<boolean> => {
+    try {
+      const powerState = await Battery.getPowerStateAsync();
+      return powerState.lowPowerMode;
+    } catch (error) {
+      console.log("Could not check power saving mode:", error);
+      return false; // If we can't check, assume it's off
+    }
+  };
+
+  const initiateTracking = async () => {
+    // Check if power saving mode is enabled
+    const isPowerSaveOn = await checkPowerSavingMode();
+    
+    if (isPowerSaveOn) {
+      // Show warning modal
+      setShowPowerSaveModal(true);
+      return;
+    }
+    
+    // If power save is off, start tracking normally
+    await startTrackingInternal();
+  };
+
   const startTracking = async () => {
     if (horsesLoading) {
       showError("Please wait for horses to load");
@@ -2669,6 +2696,11 @@ const MapScreen = () => {
       showError("Location not available. Please wait for GPS signal");
       return;
     }
+
+    await initiateTracking();
+  };
+
+  const startTrackingInternal = async () => {
 
     try {
       // Request background location permission for continuous tracking
@@ -2769,6 +2801,20 @@ const MapScreen = () => {
         `Failed to start tracking. Please try again.\n\nError: ${errorMessage}`
       );
     }
+  };
+
+  const handleOpenBatterySettings = () => {
+    setShowPowerSaveModal(false);
+    if (Platform.OS === "ios") {
+      Linking.openURL("App-Prefs:BATTERY_USAGE");
+    } else {
+      Linking.sendIntent("android.settings.BATTERY_SAVER_SETTINGS");
+    }
+  };
+
+  const handleStartAnywayFromPowerSave = async () => {
+    setShowPowerSaveModal(false);
+    await startTrackingInternal();
   };
 
   // Stop GPS tracking and save session
@@ -5052,6 +5098,107 @@ const MapScreen = () => {
             >
               <Text style={styles.batteryInfoButtonText}>Close</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Power Saving Mode Warning Modal */}
+      <Modal
+        visible={showPowerSaveModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPowerSaveModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.batteryInfoModal,
+              { backgroundColor: currentTheme.colors.background },
+            ]}
+          >
+            <Text
+              style={[
+                styles.batteryInfoTitle,
+                { color: currentTheme.colors.text },
+              ]}
+            >
+              ⚠️ Battery Saver Active
+            </Text>
+            
+            <View style={styles.batteryInfoContent}>
+              <Text
+                style={[
+                  styles.batteryRecommendationText,
+                  { color: currentTheme.colors.text, marginBottom: 16, fontSize: 15 },
+                ]}
+              >
+                Your device is in Battery Saver mode, which may significantly impact tracking performance:
+              </Text>
+              
+              <View style={{ marginLeft: 12, marginBottom: 16 }}>
+                <Text
+                  style={[
+                    styles.batteryRecommendationText,
+                    { color: currentTheme.colors.textSecondary, marginBottom: 8 },
+                  ]}
+                >
+                  • GPS accuracy may be reduced
+                </Text>
+                <Text
+                  style={[
+                    styles.batteryRecommendationText,
+                    { color: currentTheme.colors.textSecondary, marginBottom: 8 },
+                  ]}
+                >
+                  • Fall detection sensors could be disabled
+                </Text>
+                <Text
+                  style={[
+                    styles.batteryRecommendationText,
+                    { color: currentTheme.colors.textSecondary, marginBottom: 8 },
+                  ]}
+                >
+                  • Location updates may be delayed or skipped
+                </Text>
+              </View>
+              
+              <Text
+                style={[
+                  styles.batteryRecommendationText,
+                  { color: currentTheme.colors.text, fontWeight: '600' },
+                ]}
+              >
+                For optimal tracking, we recommend disabling Battery Saver during your ride.
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'column', gap: 12, marginTop: 20 }}>
+              <TouchableOpacity
+                style={[
+                  styles.batteryInfoButton,
+                  { backgroundColor: currentTheme.colors.primary },
+                ]}
+                onPress={handleOpenBatterySettings}
+              >
+                <Text style={styles.batteryInfoButtonText}>Open Battery Settings</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.batteryInfoButton,
+                  { 
+                    backgroundColor: 'transparent',
+                    borderWidth: 1,
+                    borderColor: currentTheme.colors.border,
+                  },
+                ]}
+                onPress={handleStartAnywayFromPowerSave}
+              >
+                <Text style={[styles.batteryInfoButtonText, { color: currentTheme.colors.text }]}>
+                  Continue Anyway
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
