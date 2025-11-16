@@ -64,6 +64,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           created_at: session.user.created_at!,
         };
         setUser(authUser);
+        
+        // Save OAuth session data to AsyncStorage for persistence
+        // Check if this is a Google OAuth sign-in
+        const provider = session.user.app_metadata?.provider;
+        if (provider === 'google') {
+          try {
+            await AsyncStorage.setItem('google_oauth_user_data', JSON.stringify(authUser));
+            await AsyncStorage.setItem('google_oauth_user_id', session.user.id);
+            console.log("✅ Saved Google OAuth session to AsyncStorage via auth state change");
+          } catch (storageError) {
+            console.error("Error saving OAuth session to AsyncStorage:", storageError);
+          }
+        }
+        
         // Mark user as having used the app whenever they successfully authenticate
         await SessionManager.markUserAsUsedApp();
         setHasUserData(true);

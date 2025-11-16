@@ -3,13 +3,13 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import OAuthButtons from "../components/OAuthButtons";
@@ -37,8 +37,27 @@ const RegisterScreen = () => {
             {/* OAuth Sign Up Buttons */}
             <View style={styles.oauthContainer}>
               <OAuthButtons
-                onSuccess={(user) => {
-                  console.log("OAuth registration successful:", user);
+                onSuccess={async (result) => {
+                  console.log("OAuth registration successful:", result);
+                  
+                  // Save Google OAuth user data to AsyncStorage for session persistence
+                  if (result.user && result.user.provider === 'google') {
+                    try {
+                      const AsyncStorage = require('@react-native-async-storage/async-storage');
+                      const userAuthData = {
+                        id: result.user.id,
+                        email: result.user.email,
+                        created_at: new Date().toISOString(),
+                      };
+                      await AsyncStorage.setItem('google_oauth_user_data', JSON.stringify(userAuthData));
+                      await AsyncStorage.setItem('google_oauth_user_id', result.user.id);
+                      console.log("✅ Saved Google OAuth session to AsyncStorage");
+                    } catch (storageError) {
+                      console.error("Error saving OAuth session to AsyncStorage:", storageError);
+                    }
+                  }
+                  
+                  // Navigate to tabs - AuthContext will pick up the session
                   router.push("/(tabs)");
                 }}
                 onError={(error) => {
