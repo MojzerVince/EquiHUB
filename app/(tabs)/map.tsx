@@ -2916,6 +2916,11 @@ const MapScreen = () => {
 
       // Analyze horse gaits from tracking data
       const gaitAnalysis = analyzeGaits(trackingPoints);
+      
+      console.log('📊 Gait Analysis Results:');
+      console.log('- Total segments:', gaitAnalysis.segments.length);
+      console.log('- Predominant gait:', gaitAnalysis.predominantGait);
+      console.log('- Transition count:', gaitAnalysis.transitionCount);
 
       const completedSession: TrainingSession = {
         ...currentSession,
@@ -2935,25 +2940,49 @@ const MapScreen = () => {
       // Upload session to database
       if (user?.id) {
         try {
+          // Prepare session data with explicit gait segments structure
+          const sessionDataToUpload = {
+            coordinates: trackingPoints.map(point => ({
+              latitude: point.latitude,
+              longitude: point.longitude,
+              timestamp: new Date(point.timestamp).toISOString(),
+              speed: point.speed,
+              accuracy: point.accuracy,
+            })),
+            metadata: {
+              gait_analysis: {
+                totalDuration: gaitAnalysis.totalDuration,
+                gaitDurations: gaitAnalysis.gaitDurations,
+                gaitPercentages: gaitAnalysis.gaitPercentages,
+                segments: gaitAnalysis.segments.map(segment => ({
+                  gait: segment.gait,
+                  startTime: segment.startTime,
+                  endTime: segment.endTime,
+                  duration: segment.duration,
+                  distance: segment.distance,
+                  averageSpeed: segment.averageSpeed,
+                  startIndex: segment.startIndex,
+                  endIndex: segment.endIndex,
+                })),
+                transitionCount: gaitAnalysis.transitionCount,
+                predominantGait: gaitAnalysis.predominantGait,
+              },
+              media_count: sessionMedia.length,
+              planned_session_id: completedSession.plannedSessionId,
+            },
+          };
+          
+          console.log('📤 Uploading session with gait data:', {
+            segments: sessionDataToUpload.metadata.gait_analysis.segments.length,
+            predominantGait: sessionDataToUpload.metadata.gait_analysis.predominantGait,
+          });
+
           const uploadResult = await uploadSession({
             user_id: user.id,
             horse_id: completedSession.horseId,
             horse_name: completedSession.horseName,
             training_type: completedSession.trainingType,
-            session_data: {
-              coordinates: trackingPoints.map(point => ({
-                latitude: point.latitude,
-                longitude: point.longitude,
-                timestamp: new Date(point.timestamp).toISOString(),
-                speed: point.speed,
-                accuracy: point.accuracy,
-              })),
-              metadata: {
-                gait_analysis: gaitAnalysis,
-                media_count: sessionMedia.length,
-                planned_session_id: completedSession.plannedSessionId,
-              },
-            },
+            session_data: sessionDataToUpload,
             started_at: new Date(currentSession.startTime).toISOString(),
             ended_at: new Date(endTime).toISOString(),
             duration_seconds: duration,
