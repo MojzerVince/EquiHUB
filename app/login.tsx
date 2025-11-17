@@ -232,34 +232,26 @@ const LoginScreen = () => {
               {/* OAuth Sign In Buttons */}
               <OAuthButtons
                 onSuccess={async (result) => {
-                  console.log("OAuth login successful:", result);
-                  console.log("OAuth result structure:", JSON.stringify(result, null, 2));
+                  console.log("✅ OAuth login successful:", result.user?.email);
+                  console.log("🔍 OAuth provider:", result.user?.provider);
                   
-                  // Save Google OAuth user data to AsyncStorage for session persistence
-                  if (result.user && result.user.provider === 'google') {
-                    try {
-                      const userAuthData = {
-                        id: result.user.id,
-                        email: result.user.email,
-                        created_at: new Date().toISOString(),
-                      };
-                      console.log("💾 Saving OAuth data to AsyncStorage:", userAuthData);
-                      await AsyncStorage.setItem('google_oauth_user_data', JSON.stringify(userAuthData));
-                      await AsyncStorage.setItem('google_oauth_user_id', result.user.id);
-                      console.log("✅ Saved Google OAuth session to AsyncStorage");
-                      
-                      // Verify it was saved
-                      const savedData = await AsyncStorage.getItem('google_oauth_user_data');
-                      console.log("🔍 Verification - Data saved:", !!savedData);
-                    } catch (storageError) {
-                      console.error("❌ Error saving OAuth session to AsyncStorage:", storageError);
-                    }
+                  // Don't manually save or navigate - let AuthContext handle everything
+                  // The onAuthStateChange listener will:
+                  // 1. Save the OAuth session to AsyncStorage
+                  // 2. Update the user state
+                  // 3. ProtectedRoute will automatically navigate to tabs
+                  
+                  console.log("⏳ Waiting for AuthContext to process OAuth session...");
+                  
+                  // Just mark that user has used the app
+                  try {
+                    await AsyncStorage.setItem('user_has_used_app', 'true');
+                  } catch (e) {
+                    console.error("Error marking user as used app:", e);
                   }
-                  
-                  // Navigate to tabs - AuthContext will pick up the session
-                  router.push("/(tabs)");
                 }}
                 onError={(error) => {
+                  console.error("❌ OAuth error:", error);
                   showError(error);
                 }}
               />

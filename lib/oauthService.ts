@@ -43,27 +43,29 @@ export class OAuthService {
       
       console.log('🔐 Starting Google OAuth with Supabase...');
       
-      // Use the Supabase project URL as redirect - Supabase will handle the OAuth callback
-      // and then we'll get the session from the URL
-      const supabaseUrl = 'https://grdsqxwghajehneksxik.supabase.co';
-      const redirectTo = `${supabaseUrl}/auth/v1/callback`;
+      // Warm up the browser session
+      try {
+        await WebBrowser.warmUpAsync();
+        console.log('✅ Browser warmed up');
+      } catch (warmupError) {
+        console.warn('⚠️ Browser warmup failed (non-critical):', warmupError);
+      }
       
-      // For mobile apps, we also need to tell Supabase where to send users after OAuth
-      // This is done via the redirect_to parameter
+      // Use a custom URL scheme for the redirect - this will work on both dev and production
       const appRedirect = makeRedirectUri({
         scheme: 'equihub',
-        path: ''
+        path: 'auth/callback'
       });
       
-      console.log('📍 OAuth redirect URI:', redirectTo);
       console.log('📍 App redirect URI:', appRedirect);
       
       // Initiate OAuth with Supabase
+      // The redirectTo should point back to our app, not to Supabase callback
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectTo,
-          skipBrowserRedirect: true, // We'll handle the browser ourselves
+          redirectTo: appRedirect, // Redirect directly to our app
+          skipBrowserRedirect: false, // Let Supabase handle the browser redirect
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -82,45 +84,122 @@ export class OAuthService {
       }
 
       console.log('🌐 Opening browser for authentication...');
+      console.log('🔗 OAuth URL:', data.url);
 
-      // Open the OAuth URL in browser with app redirect as the return URL
-      const result = await WebBrowser.openAuthSessionAsync(
+      // Open browser and let Supabase handle the redirect
+      // The browser will close automatically when the callback URL is triggered
+      const browserPromise = WebBrowser.openAuthSessionAsync(
         data.url,
-        appRedirect
+        appRedirect,
+        {
+          showInRecents: false,
+        }
+      );
+      
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => {
+          console.error('⏰ Browser session timeout reached');
+          reject(new Error('Browser authentication timed out after 90 seconds'));
+        }, 90000) // Increased to 90 seconds
       );
 
-      console.log('📱 Browser result:', result.type);
+      let result;
+      try {
+        console.log('⏳ Waiting for browser response...');
+        result = await Promise.race([browserPromise, timeoutPromise]);
+        console.log('📱 Browser returned with type:', result.type);
+      } catch (timeoutError: any) {
+        console.error('❌ Browser timeout:', timeoutError.message);
+        try {
+          await WebBrowser.coolDownAsync();
+        } catch (e) {
+          // Ignore cooldown errors
+        }
+        return { success: false, error: 'Authentication timed out. Please try again.' };
+      }
+
+      // Cool down the browser session
+      try {
+        await WebBrowser.coolDownAsync();
+        console.log('✅ Browser cooled down');
+      } catch (cooldownError) {
+        console.warn('⚠️ Browser cooldown failed (non-critical):', cooldownError);
+      }
+
+      console.log('📱 Browser result type:', result.type);
 
       if (result.type === 'cancel') {
         console.log('❌ User cancelled');
         return { success: false, error: 'Google sign-in was cancelled' };
       }
 
+      if (result.type === 'dismiss') {
+        console.log('❌ Browser dismissed');
+        return { success: false, error: 'Authentication was dismissed' };
+      }
+
+      if (result.type === 'locked') {
+        console.log('❌ Browser locked');
+        return { success: false, error: 'Browser authentication is locked. Please try again.' };
+      }
+
       if (result.type !== 'success' || !result.url) {
-        console.log('❌ Authentication failed');
+        console.log('❌ Authentication failed, result type:', result.type);
         return { success: false, error: 'Authentication failed' };
       }
 
-      console.log('✅ Got callback URL, extracting session...');
+      console.log('✅ Got callback URL from browser');
       console.log('🔍 Callback URL:', result.url);
 
-      // Parse the URL to extract the tokens
+      // The callback URL contains the tokens in either query params or hash fragment
       const url = new URL(result.url);
-      const access_token = url.searchParams.get('access_token') || url.hash.split('access_token=')[1]?.split('&')[0];
-      const refresh_token = url.searchParams.get('refresh_token') || url.hash.split('refresh_token=')[1]?.split('&')[0];
+      
+      // Try to extract tokens from hash first (Supabase OAuth returns them in hash)
+      let access_token = url.hash.includes('access_token') 
+        ? url.hash.split('access_token=')[1]?.split('&')[0]
+        : url.searchParams.get('access_token');
+        
+      let refresh_token = url.hash.includes('refresh_token')
+        ? url.hash.split('refresh_token=')[1]?.split('&')[0]
+        : url.searchParams.get('refresh_token');
+
+      console.log('🔍 Token extraction - access_token found:', !!access_token);
+      console.log('🔍 Token extraction - refresh_token found:', !!refresh_token);
 
       if (!access_token) {
         console.error('❌ No access token in callback URL');
-        return { success: false, error: 'No access token received' };
+        console.log('🔍 Full callback URL:', result.url);
+        console.log('🔍 URL hash:', url.hash);
+        console.log('🔍 URL search params:', Array.from(url.searchParams.entries()));
+        return { success: false, error: 'No access token received from OAuth provider' };
       }
 
-      console.log('✅ Tokens extracted, setting session...');
+      console.log('✅ Tokens extracted successfully');
+      console.log('🔄 Setting up Supabase session with tokens...');
 
-      // Set the session with the tokens
-      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+      // Set the session with the extracted tokens
+      const setSessionPromise = supabase.auth.setSession({
         access_token,
         refresh_token: refresh_token || ''
       });
+      
+      const sessionTimeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => {
+          console.error('❌ Session setup exceeded 20 second timeout');
+          reject(new Error('Session setup timed out'));
+        }, 20000) // Increased to 20 seconds
+      );
+
+      let sessionData, sessionError;
+      try {
+        const sessionResult = await Promise.race([setSessionPromise, sessionTimeoutPromise]);
+        sessionData = sessionResult.data;
+        sessionError = sessionResult.error;
+        console.log('✅ Session setup completed');
+      } catch (sessionTimeout: any) {
+        console.error('❌ Session setup timeout:', sessionTimeout.message);
+        return { success: false, error: 'Session setup timed out. Please check your internet connection.' };
+      }
 
       if (sessionError) {
         console.error('❌ Session set error:', sessionError);
@@ -128,12 +207,13 @@ export class OAuthService {
       }
 
       if (!sessionData?.session?.user) {
-        console.error('❌ No user in session');
+        console.error('❌ No user in session after setup');
         return { success: false, error: 'No user data received' };
       }
 
       const user = sessionData.session.user;
-      console.log('✅ User authenticated:', user.email);
+      console.log('✅ User authenticated successfully:', user.email);
+      console.log('✅ Session established, user ID:', user.id);
 
       return {
         success: true,
@@ -150,6 +230,15 @@ export class OAuthService {
       };
     } catch (error: any) {
       console.error('❌ Google sign-in error:', error);
+      console.error('❌ Error stack:', error.stack);
+      
+      // Clean up browser state
+      try {
+        await WebBrowser.coolDownAsync();
+      } catch (e) {
+        // Ignore
+      }
+      
       return { success: false, error: error.message || 'Failed to sign in with Google' };
     }
   }
