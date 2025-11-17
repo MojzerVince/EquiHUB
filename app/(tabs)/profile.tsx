@@ -1,3 +1,4 @@
+import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -1019,36 +1020,18 @@ const ProfileScreen = () => {
             `📷 Processing image upload (${fileSizeMB.toFixed(2)} MB)...`
           );
 
-          // Convert image to base64 directly here instead of using separate upload function
-          const response = await fetch(profileImage.uri);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch image: ${response.status}`);
-          }
-
-          const blob = await response.blob();
-
-          // Log final upload size
-          const finalSizeKB = blob.size / 1024;
-          console.log(`📷 Final upload size: ${finalSizeKB.toFixed(2)} KB`);
-
-          // Convert blob to Base64
-          const base64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              if (reader.result) {
-                const base64 = (reader.result as string).split(",")[1];
-                resolve(base64);
-              } else {
-                reject(new Error("Failed to convert blob to Base64"));
-              }
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
+          // Read image as Base64 using expo-file-system (more reliable on Expo)
+          const base64String = await FileSystem.readAsStringAsync(profileImage.uri, {
+            encoding: FileSystem.EncodingType.Base64,
           });
 
-          // Create data URL
-          const mimeType = blob.type || "image/jpeg";
-          const dataUrl = `data:${mimeType};base64,${base64}`;
+          // Approximate final size (in KB) from Base64 length
+          const finalSizeKB = (base64String.length * (3 / 4)) / 1024;
+          console.log(`📷 Final upload size (approx): ${finalSizeKB.toFixed(2)} KB`);
+
+          // Compression returns JPEG; use JPEG mime type for the data URL
+          const mimeType = "image/jpeg";
+          const dataUrl = `data:${mimeType};base64,${base64String}`;
 
           updateData.profile_image_url = dataUrl;
         } catch (imageError) {
