@@ -107,7 +107,12 @@ export class SessionManager {
         AsyncStorage.removeItem('user_preferences'),
         AsyncStorage.removeItem('app_settings'),
         AsyncStorage.removeItem('user_has_used_app'),
-        // Clear Google OAuth data
+        // Clear all OAuth data
+        AsyncStorage.removeItem('oauth_session'),
+        AsyncStorage.removeItem('oauth_user_data'),
+        AsyncStorage.removeItem('oauth_user_id'),
+        AsyncStorage.removeItem('oauth_provider'),
+        // Clear legacy Google OAuth data
         AsyncStorage.removeItem('google_oauth_user_data'),
         AsyncStorage.removeItem('google_oauth_user_id')
       ];
@@ -118,12 +123,16 @@ export class SessionManager {
       // Log any failures but don't throw
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
-          const keys = ['last_login_time', 'user_preferences', 'app_settings', 'user_has_used_app', 'google_oauth_user_data', 'google_oauth_user_id'];
+          const keys = [
+            'last_login_time', 'user_preferences', 'app_settings', 'user_has_used_app',
+            'oauth_session', 'oauth_user_data', 'oauth_user_id', 'oauth_provider',
+            'google_oauth_user_data', 'google_oauth_user_id'
+          ];
           console.warn(`Failed to clear ${keys[index]}:`, result.reason);
         }
       });
 
-      console.log('Session data cleared (including OAuth data)');
+      console.log('Session data cleared (including all OAuth data)');
     } catch (error) {
       console.error('Error clearing session data:', error);
       // Don't throw the error to prevent crashes during logout

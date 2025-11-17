@@ -172,6 +172,22 @@ const AppContent = () => {
                       name="user-horses"
                       options={{ headerShown: false }}
                     />
+                    <Stack.Screen
+                      name="session-summary"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="emergency-notification"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="add-planned-session"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="calendar"
+                      options={{ headerShown: false }}
+                    />
                   </Stack>
                 </ProtectedRoute>
               </ThemeProvider>

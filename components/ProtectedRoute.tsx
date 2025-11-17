@@ -31,8 +31,25 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       segments[0] === "login" ||
       segments[0] === "register" ||
       (segments[0] && segments[0].startsWith("register"));
-    const onWelcome = !segments[0]; // Root level (/) is the welcome screen (index.tsx)
+    const onWelcome = !segments[0] || segments[0] === "index"; // Root level (/) or /index is the welcome screen
     const inTabsGroup = segments[0] === "(tabs)";
+    
+    // Check if we're on a valid standalone screen (not in auth, tabs, or welcome)
+    const validStandaloneScreens = [
+      "sessions",
+      "statistics", 
+      "session-details",
+      "session-summary",
+      "subscription",
+      "pro-features",
+      "session-share",
+      "user-profile",
+      "user-horses",
+      "emergency-notification",
+      "add-planned-session",
+      "calendar"
+    ];
+    const onStandaloneScreen = validStandaloneScreens.includes(segments[0] || "");
 
     console.log(
       "ProtectedRoute: user=",
@@ -45,6 +62,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       inTabsGroup,
       "onWelcome=",
       onWelcome,
+      "onStandaloneScreen=",
+      onStandaloneScreen,
       "hasUserData=",
       hasUserData,
       "loading=",
@@ -61,32 +80,32 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       }
     };
 
-    // NEW LOGIC: If user is authenticated, always redirect to tabs (skip welcome)
+    // NEW LOGIC: If user is authenticated, redirect to tabs (skip welcome)
     if (user && (inAuthGroup || onWelcome)) {
-      navigateIfNeeded("/(tabs)", "User authenticated - redirecting to tabs");
+      navigateIfNeeded("/(tabs)/map", "User authenticated - redirecting to tabs/map");
       return;
     }
 
-    // If user is authenticated and already in tabs, allow it
-    if (user && inTabsGroup) {
+    // If user is authenticated and in tabs or standalone screen, allow it
+    if (user && (inTabsGroup || onStandaloneScreen)) {
       console.log(
-        "ProtectedRoute: User authenticated and in tabs - allowing access"
+        "ProtectedRoute: User authenticated and on valid screen - allowing access"
       );
       lastNavigationRef.current = null; // Reset navigation tracking
       return;
     }
 
-    // If user is NOT authenticated but still in tabs group, redirect to welcome
-    if (!user && inTabsGroup) {
+    // If user is NOT authenticated but in protected areas, redirect to welcome
+    if (!user && (inTabsGroup || onStandaloneScreen)) {
       navigateIfNeeded(
         "/index",
-        "Not authenticated in tabs - redirecting to welcome"
+        "Not authenticated in protected area - redirecting to welcome"
       );
       return;
     }
 
     // If not authenticated and not in auth/welcome, redirect to welcome
-    if (!user && !inAuthGroup && !onWelcome && !inTabsGroup) {
+    if (!user && !inAuthGroup && !onWelcome) {
       navigateIfNeeded("/index", "Redirecting to welcome screen");
     } else {
       console.log("ProtectedRoute: No action taken - staying on current route");

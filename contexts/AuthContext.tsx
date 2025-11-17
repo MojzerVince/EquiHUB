@@ -66,16 +66,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(authUser);
         
         // Save OAuth session data to AsyncStorage for persistence
-        // Check if this is a Google OAuth sign-in
+        // Check if this is an OAuth sign-in (Google, Apple, etc.)
         const provider = session.user.app_metadata?.provider;
-        if (provider === 'google') {
-          try {
-            await AsyncStorage.setItem('google_oauth_user_data', JSON.stringify(authUser));
-            await AsyncStorage.setItem('google_oauth_user_id', session.user.id);
-            console.log("✅ Saved Google OAuth session to AsyncStorage via auth state change");
-          } catch (storageError) {
-            console.error("Error saving OAuth session to AsyncStorage:", storageError);
+        console.log("🔐 Provider detected:", provider);
+        
+        try {
+          // Save user data for all OAuth providers
+          if (provider === 'google' || provider === 'apple' || provider === 'facebook') {
+            await AsyncStorage.setItem('oauth_user_data', JSON.stringify(authUser));
+            await AsyncStorage.setItem('oauth_user_id', session.user.id);
+            await AsyncStorage.setItem('oauth_provider', provider);
+            console.log(`✅ Saved ${provider} OAuth session to AsyncStorage`);
+            
+            // Also save the full session object for better restoration
+            try {
+              await AsyncStorage.setItem('oauth_session', JSON.stringify({
+                access_token: session.access_token,
+                refresh_token: session.refresh_token,
+                expires_at: session.expires_at,
+                user: authUser
+              }));
+              console.log("✅ Saved full OAuth session data");
+            } catch (sessionSaveError) {
+              console.error("Error saving full session:", sessionSaveError);
+            }
           }
+        } catch (storageError) {
+          console.error("Error saving OAuth session to AsyncStorage:", storageError);
         }
         
         // Mark user as having used the app whenever they successfully authenticate
@@ -91,6 +108,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await SessionManager.clearSessionData();
         setHasUserData(false);
         setLoading(false);
+      } else if (event === "TOKEN_REFRESHED" && session?.user) {
+        console.log("🔄 Token refreshed, updating session data");
+        const authUser: AuthUser = {
+          id: session.user.id,
+          email: session.user.email!,
+          created_at: session.user.created_at!,
+        };
+        
+        // Update stored session data after refresh
+        try {
+          const provider = await AsyncStorage.getItem('oauth_provider');
+          if (provider) {
+            await AsyncStorage.setItem('oauth_session', JSON.stringify({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+              expires_at: session.expires_at,
+              user: authUser
+            }));
+            console.log("✅ Updated OAuth session after token refresh");
+          }
+        } catch (error) {
+          console.error("Error updating session after refresh:", error);
+        }
       }
       // For INITIAL_SESSION, we rely on our REST API getInitialSession call
       // Note: setLoading(false) is now handled in each event branch above
@@ -201,61 +241,99 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         );
       }
 
-      // Check for Google OAuth session stored by us (fallback)
-      console.log("🔍 Checking for custom Google OAuth session...");
-      const googleUserData = await AsyncStorage.getItem('google_oauth_user_data');
+      // Check for OAuth session stored by us (fallback)
+      console.log("🔍 Checking for custom OAuth session...");
+      const oauthSessionData = await AsyncStorage.getItem('oauth_session');
       
-      console.log("🔍 Google OAuth data found:", !!googleUserData);
+      console.log("🔍 OAuth session data found:", !!oauthSessionData);
       
-      if (googleUserData) {
+      if (oauthSessionData) {
         try {
-          const userData = JSON.parse(googleUserData);
-          console.log("✅ Found custom Google OAuth session for:", userData.email);
+          const sessionData = JSON.parse(oauthSessionData);
+          console.log("✅ Found custom OAuth session for:", sessionData.user?.email);
           
-          // Try to restore the Supabase session if it exists
-          const { data: { session: supabaseSession } } = await supabase.auth.getSession();
-          
-          if (supabaseSession) {
-            console.log("✅ Supabase session also exists - session is valid");
-            setUser(userData);
-            await SessionManager.markUserAsUsedApp();
-            setHasUserData(true);
-            return;
+          // Try to restore the Supabase session with the stored tokens
+          if (sessionData.access_token && sessionData.refresh_token) {
+            try {
+              console.log("🔄 Attempting to restore Supabase session with stored tokens...");
+              const { data: restoredSession, error: restoreError } = await supabase.auth.setSession({
+                access_token: sessionData.access_token,
+                refresh_token: sessionData.refresh_token
+              });
+              
+              if (restoreError) {
+                console.error("❌ Failed to restore session:", restoreError);
+                // Try to refresh the session
+                console.log("🔄 Attempting to refresh the session...");
+                const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession({
+                  refresh_token: sessionData.refresh_token
+                });
+                
+                if (refreshError || !refreshedSession.session) {
+                  console.error("❌ Session refresh also failed:", refreshError);
+                  // Clear invalid session data
+                  await AsyncStorage.multiRemove(['oauth_session', 'oauth_user_data', 'oauth_user_id', 'oauth_provider']);
+                } else {
+                  console.log("✅ Session refreshed successfully!");
+                  setUser(sessionData.user);
+                  await SessionManager.markUserAsUsedApp();
+                  setHasUserData(true);
+                  
+                  // Update stored session with new tokens
+                  await AsyncStorage.setItem('oauth_session', JSON.stringify({
+                    access_token: refreshedSession.session.access_token,
+                    refresh_token: refreshedSession.session.refresh_token,
+                    expires_at: refreshedSession.session.expires_at,
+                    user: sessionData.user
+                  }));
+                  return;
+                }
+              } else {
+                console.log("✅ Supabase session restored successfully!");
+                setUser(sessionData.user);
+                await SessionManager.markUserAsUsedApp();
+                setHasUserData(true);
+                return;
+              }
+            } catch (restoreError) {
+              console.error("❌ Error restoring session:", restoreError);
+            }
           } else {
-            console.log("⚠️ Custom OAuth data exists but Supabase session is gone - clearing custom data");
-            await AsyncStorage.removeItem('google_oauth_user_data');
-            await AsyncStorage.removeItem('google_oauth_user_id');
+            console.log("⚠️ OAuth data exists but no tokens - clearing");
+            await AsyncStorage.multiRemove(['oauth_session', 'oauth_user_data', 'oauth_user_id', 'oauth_provider']);
           }
         } catch (parseError) {
-          console.error("Error parsing Google OAuth user data:", parseError);
+          console.error("Error parsing OAuth session data:", parseError);
           // Clear corrupted data
-          await AsyncStorage.removeItem('google_oauth_user_data');
-          await AsyncStorage.removeItem('google_oauth_user_id');
+          await AsyncStorage.multiRemove(['oauth_session', 'oauth_user_data', 'oauth_user_id', 'oauth_provider']);
         }
       } else {
-        console.log("❌ No custom Google OAuth session data in AsyncStorage");
+        console.log("❌ No custom OAuth session data in AsyncStorage");
         
         // Debug: Check what IS in AsyncStorage
         try {
+          console.log("🔍 Searching all AsyncStorage keys for Supabase session...");
           const allKeys = await AsyncStorage.getAllKeys();
-          console.log("📱 All AsyncStorage keys:", allKeys);
           
-          // Check specifically for Supabase session keys (including custom key)
-          const supabaseKeys = allKeys.filter(k => 
-            k.includes('supabase') || k.includes('@supabase') || k.includes('equihub-auth')
+          // Check specifically for Supabase session keys
+          const authKeys = allKeys.filter(k => 
+            k.includes('supabase') || 
+            k.includes('@supabase') || 
+            k.includes('auth') ||
+            k.includes('sb-')
           );
-          console.log("🔍 Supabase-related keys:", supabaseKeys);
+          console.log("📋 Found auth-related keys:", JSON.stringify(authKeys));
           
-          // Check specifically for our custom auth token
-          const customAuthToken = await AsyncStorage.getItem('equihub-auth-token');
-          console.log("🔐 Custom auth token exists:", !!customAuthToken);
-          
-          if (supabaseKeys.length > 0) {
-            console.log("📋 Supabase stores session under these keys - let's check them");
-            for (const key of supabaseKeys) {
+          if (authKeys.length > 0) {
+            console.log("📋 Checking stored Supabase session data...");
+            for (const key of authKeys) {
               const value = await AsyncStorage.getItem(key);
-              console.log(`  - ${key}: ${value ? 'exists' : 'null'}`);
+              if (value) {
+                console.log(`  ✓ ${key}: ${value.substring(0, 50)}...`);
+              }
             }
+          } else {
+            console.log("❌ No stored session data available");
           }
         } catch (e) {
           console.error("Error listing AsyncStorage keys:", e);
@@ -322,14 +400,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Use session manager to clear all session data
       await SessionManager.clearSessionData();
       
-      // Clear Google OAuth session data
+      // Clear all OAuth session data
       const AsyncStorage = require('@react-native-async-storage/async-storage');
-      await AsyncStorage.removeItem('google_oauth_user_data');
-      await AsyncStorage.removeItem('google_oauth_user_id');
+      await AsyncStorage.multiRemove([
+        'oauth_session',
+        'oauth_user_data',
+        'oauth_user_id',
+        'oauth_provider',
+        'google_oauth_user_data',
+        'google_oauth_user_id'
+      ]);
       
       // Reset the user data flag
       setHasUserData(false);
-      console.log("Cleared stored credentials and Google OAuth data");
+      console.log("Cleared stored credentials and OAuth data");
     } catch (error) {
       console.error("Error clearing stored credentials:", error);
     }
@@ -353,7 +437,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         SessionManager.hasUserUsedApp(),
         SessionManager.getLastLoginTime(),
         SessionManager.getUserPreferences(),
-        // Check for Google OAuth session data
+        // Check for OAuth session data
+        import("@react-native-async-storage/async-storage").then(
+          async (AsyncStorage) => {
+            const oauthSession = await AsyncStorage.default.getItem('oauth_session');
+            return !!oauthSession;
+          }
+        ),
+        // Check for legacy Google OAuth data
         import("@react-native-async-storage/async-storage").then(
           async (AsyncStorage) => {
             const googleData = await AsyncStorage.default.getItem('google_oauth_user_data');
