@@ -1272,8 +1272,6 @@ const MyHorsesScreen = () => {
     setHorseHorseshoes(updatedHorseshoes);
     setHorseshoeStartDate(null);
     setHorseshoeIntervalDays(45);
-    setSuccessMessage(`Horseshoe tracking started for ${selectedHorseForRecords.name}`);
-    setShowSuccessModal(true);
   };
 
   const updateHorseshoeInterval = (horseId: string, newIntervalDays: number) => {
@@ -1284,8 +1282,6 @@ const MyHorsesScreen = () => {
         intervalDays: newIntervalDays,
       };
       setHorseHorseshoes(updatedHorseshoes);
-      setSuccessMessage(`Interval updated to ${newIntervalDays} days`);
-      setShowSuccessModal(true);
     }
   };
 
@@ -1298,9 +1294,6 @@ const MyHorsesScreen = () => {
     
     console.log("Updated horseshoes:", updatedHorseshoes);
     setHorseHorseshoes(updatedHorseshoes);
-    
-    setSuccessMessage("Horseshoe tracking deleted");
-    setShowSuccessModal(true);
   };
 
   const calculateHorseshoeDaysUsed = (horseId: string) => {
