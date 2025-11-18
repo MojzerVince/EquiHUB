@@ -1464,7 +1464,20 @@ ${
               <ActionButton title="About" onPress={() => setShowAbout(true)} />
               <ActionButton
                 title="Help & Support"
-                onPress={() => console.log("Help pressed")}
+                onPress={async () => {
+                  const url = "https://support.equihubapp.com";
+                  try {
+                    const supported = await Linking.canOpenURL(url);
+                    if (supported) {
+                      await Linking.openURL(url);
+                    } else {
+                      showError("Unable to open the support page.");
+                    }
+                  } catch (error) {
+                    console.error("Error opening support page:", error);
+                    showError("Failed to open the support page.");
+                  }
+                }}
               />
               <ActionButton
                 title="Terms of Service"
