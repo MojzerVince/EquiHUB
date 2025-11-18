@@ -178,27 +178,21 @@ export class OAuthService {
       console.log('🔄 Setting up Supabase session with tokens...');
 
       // Set the session with the extracted tokens
-      const setSessionPromise = supabase.auth.setSession({
-        access_token,
-        refresh_token: refresh_token || ''
-      });
+      console.log('🔄 Setting up Supabase session with tokens...');
       
-      const sessionTimeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => {
-          console.error('❌ Session setup exceeded 20 second timeout');
-          reject(new Error('Session setup timed out'));
-        }, 20000) // Increased to 20 seconds
-      );
-
       let sessionData, sessionError;
       try {
-        const sessionResult = await Promise.race([setSessionPromise, sessionTimeoutPromise]);
+        // Try to set the session without timeout - let it complete naturally
+        const sessionResult = await supabase.auth.setSession({
+          access_token,
+          refresh_token: refresh_token || ''
+        });
         sessionData = sessionResult.data;
         sessionError = sessionResult.error;
-        console.log('✅ Session setup completed');
-      } catch (sessionTimeout: any) {
-        console.error('❌ Session setup timeout:', sessionTimeout.message);
-        return { success: false, error: 'Session setup timed out. Please check your internet connection.' };
+        console.log('✅ Session setup completed successfully');
+      } catch (sessionSetupError: any) {
+        console.error('❌ Session setup error:', sessionSetupError);
+        sessionError = sessionSetupError;
       }
 
       if (sessionError) {

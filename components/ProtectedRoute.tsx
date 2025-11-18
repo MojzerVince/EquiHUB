@@ -30,9 +30,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const inAuthGroup =
       segments[0] === "login" ||
       segments[0] === "register" ||
+      segments[0] === "auth" ||
       (segments[0] && segments[0].startsWith("register"));
     const onWelcome = !segments[0] || segments[0] === "index"; // Root level (/) or /index is the welcome screen
     const inTabsGroup = segments[0] === "(tabs)";
+    
+    // Check if we're on the OAuth callback route (allow without authentication)
+    const onAuthCallback = segments[0] === "auth" && segments[1] === "callback";
     
     // Check if we're on a valid standalone screen (not in auth, tabs, or welcome)
     const validStandaloneScreens = [
@@ -62,6 +66,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       inTabsGroup,
       "onWelcome=",
       onWelcome,
+      "onAuthCallback=",
+      onAuthCallback,
       "onStandaloneScreen=",
       onStandaloneScreen,
       "hasUserData=",
@@ -79,6 +85,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         setTimeout(() => router.replace(path as any), 0);
       }
     };
+
+    // Allow OAuth callback route without authentication
+    if (onAuthCallback) {
+      console.log("ProtectedRoute: OAuth callback - allowing access");
+      lastNavigationRef.current = null; // Reset navigation tracking
+      return;
+    }
 
     // NEW LOGIC: If user is authenticated, redirect to tabs (skip welcome)
     if (user && (inAuthGroup || onWelcome)) {

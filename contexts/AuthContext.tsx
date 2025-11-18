@@ -148,9 +148,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log("📱 App became active - checking session status...");
 
         if (user) {
-          // If we have a user, refresh the session to ensure it's still valid
-          console.log("🔄 Refreshing existing session...");
-          await refreshUser();
+          // If we have a user, just verify the session is still valid without forcing a refresh
+          console.log("🔍 User exists - verifying session is still valid...");
+          
+          try {
+            const supabase = getSupabase();
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (session && session.user) {
+              console.log("✅ Session still valid after app resume");
+              // Session is good, no action needed
+            } else {
+              console.log("⚠️ Session not found after resume, trying to restore from storage...");
+              // Try to restore from stored OAuth session
+              const oauthSession = await AsyncStorage.getItem('oauth_session');
+              if (oauthSession) {
+                const sessionData = JSON.parse(oauthSession);
+                console.log("🔄 Restoring session from storage...");
+                await supabase.auth.setSession({
+                  access_token: sessionData.access_token,
+                  refresh_token: sessionData.refresh_token
+                });
+                console.log("✅ Session restored from storage");
+              } else {
+                console.log("⚠️ No stored session found, user will need to re-login");
+                setUser(null);
+              }
+            }
+          } catch (error) {
+            console.error("Error checking session after resume:", error);
+          }
         } else {
           // If no user, check for stored session
           console.log("🔍 No user session - checking for stored session...");

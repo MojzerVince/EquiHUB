@@ -3,17 +3,17 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Modal,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SimpleStableSelection from "../../components/SimpleStableSelection";
@@ -500,7 +500,11 @@ const ProfileScreen = () => {
         const supabase = getSupabase();
         console.log("Loading stable for user ID:", USER_ID);
 
-        // Add 10-second timeout for stable query
+        // Wait a bit for Supabase client to be fully initialized after OAuth
+        // This prevents timeout issues when profile loads immediately after OAuth login
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Add 15-second timeout for stable query (increased from 10s)
         const stableQueryPromise = supabase
           .from("stable_members")
           .select(
@@ -521,8 +525,8 @@ const ProfileScreen = () => {
 
         const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(
-            () => reject(new Error("Stable query timeout after 10 seconds")),
-            10000
+            () => reject(new Error("Stable query timeout after 15 seconds")),
+            15000
           )
         );
 
@@ -651,7 +655,7 @@ const ProfileScreen = () => {
         try {
           const supabase = getSupabase();
           
-          // Add 10-second timeout for stable query
+          // Add 15-second timeout for stable query (increased from 10s)
           const stableQueryPromise = supabase
             .from("stable_members")
             .select(
@@ -672,8 +676,8 @@ const ProfileScreen = () => {
 
           const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(
-              () => reject(new Error("Stable refresh timeout after 10 seconds")),
-              10000
+              () => reject(new Error("Stable refresh timeout after 15 seconds")),
+              15000
             )
           );
 

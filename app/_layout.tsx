@@ -188,6 +188,10 @@ const AppContent = () => {
                       name="calendar"
                       options={{ headerShown: false }}
                     />
+                    <Stack.Screen
+                      name="auth/callback"
+                      options={{ headerShown: false }}
+                    />
                   </Stack>
                 </ProtectedRoute>
               </ThemeProvider>
