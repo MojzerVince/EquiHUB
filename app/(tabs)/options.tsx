@@ -20,6 +20,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Clipboard,
   Image,
   Linking,
   Modal,
@@ -1493,6 +1494,37 @@ ${
                 { backgroundColor: currentTheme.colors.surface },
               ]}
             >
+              {/* User ID Display */}
+              <TouchableOpacity
+                style={[
+                  styles.userIdContainer,
+                  { borderBottomColor: currentTheme.colors.accent },
+                ]}
+                onPress={() => {
+                  if (user?.id) {
+                    Clipboard.setString(user.id);
+                    Alert.alert(
+                      "Copied!",
+                      "User ID copied to clipboard",
+                      [{ text: "OK" }]
+                    );
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.userIdContent}>
+                  <Text
+                    style={[
+                      styles.userIdText,
+                      { color: currentTheme.colors.text },
+                    ]}
+                    numberOfLines={1}
+                    ellipsizeMode="middle"
+                  >
+                    {user?.id || "Not available"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
               <ActionButton
                 title="Logout"
                 onPress={handleLogout}
@@ -3333,6 +3365,21 @@ const styles = StyleSheet.create({
     fontFamily: "Inder",
     textAlign: "center",
     opacity: 0.7,
+  },
+
+  // User ID Display Styles
+  userIdContainer: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+  },
+  userIdContent: {
+    alignItems: "center",
+  },
+  userIdText: {
+    fontSize: 13,
+    fontFamily: "Courier",
+    fontWeight: "500",
   },
 
   // Push Notification Settings Modal Styles
