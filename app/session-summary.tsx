@@ -3,16 +3,16 @@ import Slider from "@react-native-community/slider";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import MapView, { Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -38,7 +38,7 @@ const SessionSummaryScreen = () => {
 
   // Parse session data from params
   const sessionData = useMemo(() => {
-    if (params.sessionData && typeof params.sessionData === 'string') {
+    if (params.sessionData && typeof params.sessionData === "string") {
       return JSON.parse(params.sessionData);
     }
     return null;
@@ -89,8 +89,11 @@ const SessionSummaryScreen = () => {
       };
     }
 
-    const trimmedPath = sessionData.path.slice(trimStartIndex, trimEndIndex + 1);
-    
+    const trimmedPath = sessionData.path.slice(
+      trimStartIndex,
+      trimEndIndex + 1
+    );
+
     if (trimmedPath.length === 0) {
       return {
         path: [],
@@ -219,10 +222,14 @@ const SessionSummaryScreen = () => {
 
       // Calculate speeds
       const maxSpeed = Math.max(
-        ...trimmedData.path.filter((p: TrackingPoint) => p.speed).map((p: TrackingPoint) => p.speed || 0)
+        ...trimmedData.path
+          .filter((p: TrackingPoint) => p.speed)
+          .map((p: TrackingPoint) => p.speed || 0)
       );
       const avgSpeed =
-        trimmedData.duration > 0 ? trimmedData.distance / trimmedData.duration : 0;
+        trimmedData.duration > 0
+          ? trimmedData.distance / trimmedData.duration
+          : 0;
 
       // Upload session
       const result = await uploadSession(
@@ -277,334 +284,446 @@ const SessionSummaryScreen = () => {
 
   if (!sessionData) {
     return (
-      <View style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
-        <Text style={{ color: currentTheme.colors.text }}>No session data found</Text>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: currentTheme.colors.background },
+        ]}
+      >
+        <Text style={{ color: currentTheme.colors.text }}>
+          No session data found
+        </Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: currentTheme.colors.primary }]}
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.colors.background },
+      ]}
     >
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            Alert.alert(
-              "Discard Session?",
-              "Are you sure you want to discard this session? All data will be lost.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Discard",
-                  style: "destructive",
-                  onPress: () => router.replace("/(tabs)/map"),
-                },
-              ]
-            );
-          }}
-        >
-          <Image
-            source={require("../assets/in_app_icons/back.png")}
-            style={[styles.backIcon, { tintColor: "#fff" }]}
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Session Summary</Text>
-        <View style={{ width: 26 }} />
-      </View>
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: currentTheme.colors.primary },
+        ]}
+      >
+        <View style={styles.headerContainer}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => {
+              Alert.alert(
+                "Discard Session?",
+                "Are you sure you want to discard this session? All data will be lost.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Discard",
+                    style: "destructive",
+                    onPress: () => router.replace("/(tabs)/map"),
+                  },
+                ]
+              );
+            }}
+          >
+            <Image
+              source={require("../assets/in_app_icons/back.png")}
+              style={styles.backIcon}
+            />
+          </TouchableOpacity>
+          <Text style={styles.header}>Session Summary</Text>
+        </View>
+      </SafeAreaView>
 
       <ScrollView
-        style={[styles.content, { backgroundColor: currentTheme.colors.background }]}
-        contentContainerStyle={styles.scrollContent}
+        style={[
+          styles.viewPort,
+          { backgroundColor: currentTheme.colors.background },
+        ]}
       >
-        {/* Map Preview */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
-            Route Preview
-          </Text>
-          <View style={styles.mapContainer}>
-            <MapView
-              style={styles.map}
-              provider={Platform.OS === "ios" ? undefined : PROVIDER_GOOGLE}
-              region={getMapRegion()}
-              scrollEnabled={false}
-              zoomEnabled={false}
-              pitchEnabled={false}
-              rotateEnabled={false}
+        <View style={styles.contentContainer}>
+          {/* Map Preview */}
+          <View style={styles.section}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
             >
-              {trimmedData.path.length > 1 && (
-                <Polyline
-                  coordinates={trimmedData.path.map((p: TrackingPoint) => ({
-                    latitude: p.latitude,
-                    longitude: p.longitude,
-                  }))}
-                  strokeColor={currentTheme.colors.primary}
-                  strokeWidth={4}
-                />
-              )}
-            </MapView>
-          </View>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
-                Duration
-              </Text>
-              <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
-                {formatDuration(trimmedData.duration)}
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
-                Distance
-              </Text>
-              <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>
-                {formatDistance(trimmedData.distance)}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Trimming Controls */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
-            Trim Session
-          </Text>
-          <Text style={[styles.sectionDescription, { color: currentTheme.colors.textSecondary }]}>
-            Adjust the sliders to trim unwanted parts from the beginning and end of your session
-          </Text>
-          
-          <View style={styles.trimControl}>
-            <Text style={[styles.trimLabel, { color: currentTheme.colors.text }]}>
-              Start Point
+              Route Preview
             </Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={0}
-              maximumValue={Math.max(sessionData.path.length - 1, 0)}
-              value={trimStartIndex}
-              onValueChange={(value) => {
-                const newValue = Math.floor(value);
-                if (newValue < trimEndIndex) {
-                  setTrimStartIndex(newValue);
-                }
-              }}
-              minimumTrackTintColor={currentTheme.colors.primary}
-              maximumTrackTintColor={currentTheme.colors.accent}
-              thumbTintColor={currentTheme.colors.primary}
-              step={1}
-            />
-            <Text style={[styles.trimValue, { color: currentTheme.colors.textSecondary }]}>
-              Point {trimStartIndex + 1} / {sessionData.path.length}
-            </Text>
-          </View>
-
-          <View style={styles.trimControl}>
-            <Text style={[styles.trimLabel, { color: currentTheme.colors.text }]}>
-              End Point
-            </Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={0}
-              maximumValue={Math.max(sessionData.path.length - 1, 0)}
-              value={trimEndIndex}
-              onValueChange={(value) => {
-                const newValue = Math.floor(value);
-                if (newValue > trimStartIndex) {
-                  setTrimEndIndex(newValue);
-                }
-              }}
-              minimumTrackTintColor={currentTheme.colors.primary}
-              maximumTrackTintColor={currentTheme.colors.accent}
-              thumbTintColor={currentTheme.colors.primary}
-              step={1}
-            />
-            <Text style={[styles.trimValue, { color: currentTheme.colors.textSecondary }]}>
-              Point {trimEndIndex + 1} / {sessionData.path.length}
-            </Text>
-          </View>
-        </View>
-
-        {/* Performance Ratings */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
-            Rider Performance
-          </Text>
-          <View style={styles.ratingContainer}>
-            <Text style={[styles.ratingValue, { color: currentTheme.colors.primary }]}>
-              {riderPerformance}/10
-            </Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={1}
-              maximumValue={10}
-              value={riderPerformance}
-              onValueChange={(value) => setRiderPerformance(Math.round(value))}
-              minimumTrackTintColor={currentTheme.colors.primary}
-              maximumTrackTintColor={currentTheme.colors.accent}
-              thumbTintColor={currentTheme.colors.primary}
-              step={1}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
-            Horse Performance
-          </Text>
-          <View style={styles.ratingContainer}>
-            <Text style={[styles.ratingValue, { color: currentTheme.colors.primary }]}>
-              {horsePerformance}/10
-            </Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={1}
-              maximumValue={10}
-              value={horsePerformance}
-              onValueChange={(value) => setHorsePerformance(Math.round(value))}
-              minimumTrackTintColor={currentTheme.colors.primary}
-              maximumTrackTintColor={currentTheme.colors.accent}
-              thumbTintColor={currentTheme.colors.primary}
-              step={1}
-            />
-          </View>
-        </View>
-
-        {/* Ground Type */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
-            Ground Type
-          </Text>
-          <View style={styles.groundTypeContainer}>
-            {groundTypes.map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.groundTypeButton,
-                  {
-                    backgroundColor:
-                      groundType === type
-                        ? currentTheme.colors.primary
-                        : currentTheme.colors.surface,
-                    borderColor: currentTheme.colors.accent,
-                  },
-                ]}
-                onPress={() => setGroundType(type)}
+            <View style={styles.mapContainer}>
+              <MapView
+                style={styles.map}
+                provider={Platform.OS === "ios" ? undefined : PROVIDER_GOOGLE}
+                region={getMapRegion()}
+                scrollEnabled={false}
+                zoomEnabled={false}
+                pitchEnabled={false}
+                rotateEnabled={false}
               >
+                {trimmedData.path.length > 1 && (
+                  <Polyline
+                    coordinates={trimmedData.path.map((p: TrackingPoint) => ({
+                      latitude: p.latitude,
+                      longitude: p.longitude,
+                    }))}
+                    strokeColor={currentTheme.colors.primary}
+                    strokeWidth={4}
+                  />
+                )}
+              </MapView>
+            </View>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
                 <Text
                   style={[
-                    styles.groundTypeText,
-                    {
-                      color:
-                        groundType === type
-                          ? "#fff"
-                          : currentTheme.colors.text,
-                    },
+                    styles.statLabel,
+                    { color: currentTheme.colors.textSecondary },
                   ]}
                 >
-                  {type}
+                  Duration
                 </Text>
-              </TouchableOpacity>
-            ))}
+                <Text
+                  style={[
+                    styles.statValue,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  {formatDuration(trimmedData.duration)}
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Distance
+                </Text>
+                <Text
+                  style={[
+                    styles.statValue,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
+                  {formatDistance(trimmedData.distance)}
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
 
-        {/* Notes */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
-            Notes for Next Ride
-          </Text>
-          <TextInput
-            style={[
-              styles.notesInput,
-              {
-                backgroundColor: currentTheme.colors.surface,
-                color: currentTheme.colors.text,
-                borderColor: currentTheme.colors.accent,
-              },
-            ]}
-            placeholder="Add notes for your next ride..."
-            placeholderTextColor={currentTheme.colors.textSecondary}
-            multiline
-            numberOfLines={4}
-            value={notes}
-            onChangeText={setNotes}
-          />
-          <TouchableOpacity
-            style={styles.checkboxContainer}
-            onPress={() => setShowNotesNextRide(!showNotesNextRide)}
-          >
-            <View
+          {/* Trimming Controls */}
+          <View style={styles.section}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              Trim Session
+            </Text>
+            <Text
               style={[
-                styles.checkbox,
-                {
-                  borderColor: currentTheme.colors.accent,
-                  backgroundColor: showNotesNextRide
-                    ? currentTheme.colors.primary
-                    : "transparent",
-                },
+                styles.sectionDescription,
+                { color: currentTheme.colors.textSecondary },
               ]}
             >
-              {showNotesNextRide && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </View>
-            <Text style={[styles.checkboxLabel, { color: currentTheme.colors.text }]}>
-              Show this note before the next ride
+              Adjust the sliders to trim unwanted parts from the beginning and
+              end of your session
             </Text>
+
+            <View style={styles.trimControl}>
+              <Text
+                style={[styles.trimLabel, { color: currentTheme.colors.text }]}
+              >
+                Start Point
+              </Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={0}
+                maximumValue={Math.max(sessionData.path.length - 1, 0)}
+                value={trimStartIndex}
+                onValueChange={(value) => {
+                  const newValue = Math.floor(value);
+                  if (newValue < trimEndIndex) {
+                    setTrimStartIndex(newValue);
+                  }
+                }}
+                minimumTrackTintColor={currentTheme.colors.primary}
+                maximumTrackTintColor={currentTheme.colors.accent}
+                thumbTintColor={currentTheme.colors.primary}
+                step={1}
+              />
+              <Text
+                style={[
+                  styles.trimValue,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                Point {trimStartIndex + 1} / {sessionData.path.length}
+              </Text>
+            </View>
+
+            <View style={styles.trimControl}>
+              <Text
+                style={[styles.trimLabel, { color: currentTheme.colors.text }]}
+              >
+                End Point
+              </Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={0}
+                maximumValue={Math.max(sessionData.path.length - 1, 0)}
+                value={trimEndIndex}
+                onValueChange={(value) => {
+                  const newValue = Math.floor(value);
+                  if (newValue > trimStartIndex) {
+                    setTrimEndIndex(newValue);
+                  }
+                }}
+                minimumTrackTintColor={currentTheme.colors.primary}
+                maximumTrackTintColor={currentTheme.colors.accent}
+                thumbTintColor={currentTheme.colors.primary}
+                step={1}
+              />
+              <Text
+                style={[
+                  styles.trimValue,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                Point {trimEndIndex + 1} / {sessionData.path.length}
+              </Text>
+            </View>
+          </View>
+
+          {/* Performance Ratings */}
+          <View style={styles.section}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              Rider Performance
+            </Text>
+            <View style={styles.ratingContainer}>
+              <Text
+                style={[
+                  styles.ratingValue,
+                  { color: currentTheme.colors.primary },
+                ]}
+              >
+                {riderPerformance}/10
+              </Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={1}
+                maximumValue={10}
+                value={riderPerformance}
+                onValueChange={(value) =>
+                  setRiderPerformance(Math.round(value))
+                }
+                minimumTrackTintColor={currentTheme.colors.primary}
+                maximumTrackTintColor={currentTheme.colors.accent}
+                thumbTintColor={currentTheme.colors.primary}
+                step={1}
+              />
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              Horse Performance
+            </Text>
+            <View style={styles.ratingContainer}>
+              <Text
+                style={[
+                  styles.ratingValue,
+                  { color: currentTheme.colors.primary },
+                ]}
+              >
+                {horsePerformance}/10
+              </Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={1}
+                maximumValue={10}
+                value={horsePerformance}
+                onValueChange={(value) =>
+                  setHorsePerformance(Math.round(value))
+                }
+                minimumTrackTintColor={currentTheme.colors.primary}
+                maximumTrackTintColor={currentTheme.colors.accent}
+                thumbTintColor={currentTheme.colors.primary}
+                step={1}
+              />
+            </View>
+          </View>
+
+          {/* Ground Type */}
+          <View style={styles.section}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              Ground Type
+            </Text>
+            <View style={styles.groundTypeContainer}>
+              {groundTypes.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.groundTypeButton,
+                    {
+                      backgroundColor:
+                        groundType === type
+                          ? currentTheme.colors.primary
+                          : currentTheme.colors.surface,
+                      borderColor: currentTheme.colors.accent,
+                    },
+                  ]}
+                  onPress={() => setGroundType(type)}
+                >
+                  <Text
+                    style={[
+                      styles.groundTypeText,
+                      {
+                        color:
+                          groundType === type
+                            ? "#fff"
+                            : currentTheme.colors.text,
+                      },
+                    ]}
+                  >
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Notes */}
+          <View style={styles.section}>
+            <Text
+              style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+            >
+              Notes for Next Ride
+            </Text>
+            <TextInput
+              style={[
+                styles.notesInput,
+                {
+                  backgroundColor: currentTheme.colors.surface,
+                  color: currentTheme.colors.text,
+                  borderColor: currentTheme.colors.accent,
+                },
+              ]}
+              placeholder="Add notes for your next ride..."
+              placeholderTextColor={currentTheme.colors.textSecondary}
+              multiline
+              numberOfLines={4}
+              value={notes}
+              onChangeText={setNotes}
+            />
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => setShowNotesNextRide(!showNotesNextRide)}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  {
+                    borderColor: currentTheme.colors.accent,
+                    backgroundColor: showNotesNextRide
+                      ? currentTheme.colors.primary
+                      : "transparent",
+                  },
+                ]}
+              >
+                {showNotesNextRide && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text
+                style={[
+                  styles.checkboxLabel,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
+                Show this note before the next ride
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Finish Button */}
+          <TouchableOpacity
+            style={[
+              styles.finishButton,
+              { backgroundColor: currentTheme.colors.primary },
+              isSaving && styles.finishButtonDisabled,
+            ]}
+            onPress={handleFinishSession}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.finishButtonText}>Finish Session</Text>
+            )}
           </TouchableOpacity>
         </View>
-
-        {/* Finish Button */}
-        <TouchableOpacity
-          style={[
-            styles.finishButton,
-            { backgroundColor: currentTheme.colors.primary },
-            isSaving && styles.finishButtonDisabled,
-          ]}
-          onPress={handleFinishSession}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.finishButtonText}>Finish Session</Text>
-          )}
-        </TouchableOpacity>
-
-        <View style={{ height: 40 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#335C67",
+  },
+  safeArea: {
+    backgroundColor: "#335C67",
+  },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    marginBottom: Platform.OS === "ios" ? 10 : -45,
+    marginTop: Platform.OS === "ios" ? -15 : -5,
   },
   header: {
-    flexDirection: "row",
+    fontSize: 30,
+    fontFamily: "Inder",
+    color: "#fff",
+    textAlign: "center",
+    flex: 1,
+    fontWeight: "600",
+  },
+  backButton: {
+    position: "absolute",
+    left: 20,
+    padding: 10,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    marginTop: 10,
+    justifyContent: "center",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    zIndex: 10,
   },
   backIcon: {
     width: 26,
     height: 26,
+    tintColor: "#fff",
   },
-  headerTitle: {
-    fontSize: 24,
-    fontFamily: "Inder",
-    fontWeight: "600",
-    color: "#fff",
-  },
-  content: {
+  viewPort: {
+    backgroundColor: "#FFFFFF",
     flex: 1,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    marginTop: -45,
+    paddingTop: 15,
   },
-  scrollContent: {
-    padding: 20,
+  contentContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 60,
   },
   section: {
     marginBottom: 25,
