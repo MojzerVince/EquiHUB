@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -32,6 +33,7 @@ const CalendarScreen = () => {
   const [plannedSessions, setPlannedSessions] = useState<PlannedSession[]>([]);
   const [vaccinations, setVaccinations] = useState<vaccinationAPI.VaccinationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasHorses, setHasHorses] = useState(false);
   const screenWidth = Dimensions.get("window").width;
 
   // Get the start and end dates for a specific week offset
@@ -170,15 +172,38 @@ const CalendarScreen = () => {
     }
   }, [currentWeekOffset, user?.id]);
 
+  // Check if user has horses in local storage
+  const checkHorses = useCallback(async () => {
+    try {
+      if (!user?.id) {
+        setHasHorses(false);
+        return;
+      }
+
+      const cachedHorses = await AsyncStorage.getItem(`user_horses_${user.id}`);
+      if (cachedHorses) {
+        const horses = JSON.parse(cachedHorses);
+        setHasHorses(horses.length > 0);
+      } else {
+        setHasHorses(false);
+      }
+    } catch (error) {
+      console.error("Error checking horses:", error);
+      setHasHorses(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     loadPlannedSessions();
-  }, [loadPlannedSessions]);
+    checkHorses();
+  }, [loadPlannedSessions, checkHorses]);
 
-  // Reload sessions when screen comes into focus
+  // Reload sessions and check horses when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadPlannedSessions();
-    }, [loadPlannedSessions])
+      checkHorses();
+    }, [loadPlannedSessions, checkHorses])
   );
 
   // Get sessions for specific day
@@ -580,14 +605,33 @@ const CalendarScreen = () => {
           </ScrollView>
         )}
 
-        {/* Add Session Button - Only show for current and future weeks */}
+        {/* Add Session Button - Only show for current and future weeks and if user has horses */}
         {!isWeekInPast(currentWeekOffset) && (
           <TouchableOpacity
             style={[
               styles.addButton,
-              { backgroundColor: currentTheme.colors.primary },
+              { 
+                backgroundColor: hasHorses 
+                  ? currentTheme.colors.primary 
+                  : currentTheme.colors.textSecondary,
+              },
             ]}
             onPress={() => {
+              if (!hasHorses) {
+                Alert.alert(
+                  "No Horses Added",
+                  "You need to add at least one horse before you can create calendar events. Would you like to add a horse now?",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Add Horse",
+                      onPress: () => router.push("/(tabs)"),
+                    },
+                  ]
+                );
+                return;
+              }
+              
               router.push({
                 pathname: "/add-planned-session",
                 params: { weekOffset: currentWeekOffset.toString() },
