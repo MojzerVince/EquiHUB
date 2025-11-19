@@ -23,6 +23,7 @@ import {
   getPlannedSessions,
 } from "../lib/plannedSessionAPI";
 import { cancelSessionNotifications } from "../lib/plannedSessionNotifications";
+import { TrackingSession, getSessionsForWeek } from "../lib/sessionAPI";
 import * as vaccinationAPI from "../lib/vaccinationAPI";
 
 const CalendarScreen = () => {
@@ -31,7 +32,12 @@ const CalendarScreen = () => {
   const router = useRouter();
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [plannedSessions, setPlannedSessions] = useState<PlannedSession[]>([]);
-  const [vaccinations, setVaccinations] = useState<vaccinationAPI.VaccinationRecord[]>([]);
+  const [vaccinations, setVaccinations] = useState<
+    vaccinationAPI.VaccinationRecord[]
+  >([]);
+  const [completedSessions, setCompletedSessions] = useState<TrackingSession[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [hasHorses, setHasHorses] = useState(false);
   const screenWidth = Dimensions.get("window").width;
@@ -139,25 +145,47 @@ const CalendarScreen = () => {
         setPlannedSessions([]);
       }
 
+      // Load completed sessions
+      if (user?.id) {
+        const completedResult = await getSessionsForWeek(user.id, startOfWeek);
+        if (completedResult.success && completedResult.sessions) {
+          setCompletedSessions(completedResult.sessions);
+        } else {
+          console.error(
+            "Error loading completed sessions:",
+            completedResult.error
+          );
+          setCompletedSessions([]);
+        }
+      }
+
       // Load all vaccinations (we'll filter by date in the UI)
       // This is because we need to check both vaccination_date and next_due_date
       const vaccinationsResult = await vaccinationAPI.getUserVaccinations();
 
       if (vaccinationsResult.success && vaccinationsResult.data) {
         // Filter to only include vaccinations relevant to this week
-        const filteredVaccinations = vaccinationsResult.data.filter((vaccination) => {
-          const vaccinationDate = new Date(vaccination.vaccinationDate);
-          const nextDueDate = vaccination.nextDueDate ? new Date(vaccination.nextDueDate) : null;
-          
-          // Include if vaccination date is in range
-          const vaccinationInRange = vaccinationDate >= startOfWeek && vaccinationDate <= endOfWeek;
-          
-          // Include if next due date is in range
-          const nextDueInRange = nextDueDate && nextDueDate >= startOfWeek && nextDueDate <= endOfWeek;
-          
-          return vaccinationInRange || nextDueInRange;
-        });
-        
+        const filteredVaccinations = vaccinationsResult.data.filter(
+          (vaccination) => {
+            const vaccinationDate = new Date(vaccination.vaccinationDate);
+            const nextDueDate = vaccination.nextDueDate
+              ? new Date(vaccination.nextDueDate)
+              : null;
+
+            // Include if vaccination date is in range
+            const vaccinationInRange =
+              vaccinationDate >= startOfWeek && vaccinationDate <= endOfWeek;
+
+            // Include if next due date is in range
+            const nextDueInRange =
+              nextDueDate &&
+              nextDueDate >= startOfWeek &&
+              nextDueDate <= endOfWeek;
+
+            return vaccinationInRange || nextDueInRange;
+          }
+        );
+
         setVaccinations(filteredVaccinations);
       } else {
         console.error("Error loading vaccinations:", vaccinationsResult.error);
@@ -225,21 +253,35 @@ const CalendarScreen = () => {
     return vaccinations.filter((vaccination) => {
       // Check both vaccination date and next due date
       const vaccinationDate = new Date(vaccination.vaccinationDate);
-      const nextDueDate = vaccination.nextDueDate ? new Date(vaccination.nextDueDate) : null;
-      
-      const matchesVaccinationDate = (
+      const nextDueDate = vaccination.nextDueDate
+        ? new Date(vaccination.nextDueDate)
+        : null;
+
+      const matchesVaccinationDate =
         vaccinationDate.getDate() === date.getDate() &&
         vaccinationDate.getMonth() === date.getMonth() &&
-        vaccinationDate.getFullYear() === date.getFullYear()
-      );
-      
-      const matchesNextDueDate = nextDueDate && (
+        vaccinationDate.getFullYear() === date.getFullYear();
+
+      const matchesNextDueDate =
+        nextDueDate &&
         nextDueDate.getDate() === date.getDate() &&
         nextDueDate.getMonth() === date.getMonth() &&
-        nextDueDate.getFullYear() === date.getFullYear()
-      );
-      
+        nextDueDate.getFullYear() === date.getFullYear();
+
       return matchesVaccinationDate || matchesNextDueDate;
+    });
+  };
+
+  // Get completed sessions for specific day
+  const getCompletedSessionsForDay = (dayIndex: number) => {
+    const date = getDateForDay(dayIndex);
+    return completedSessions.filter((session) => {
+      const sessionDate = new Date(session.started_at);
+      return (
+        sessionDate.getDate() === date.getDate() &&
+        sessionDate.getMonth() === date.getMonth() &&
+        sessionDate.getFullYear() === date.getFullYear()
+      );
     });
   };
 
@@ -257,7 +299,7 @@ const CalendarScreen = () => {
             try {
               // Cancel all scheduled notifications for this session
               await cancelSessionNotifications(sessionId);
-              
+
               const result = await deletePlannedSessionAPI(sessionId);
               if (result.success) {
                 loadPlannedSessions();
@@ -299,6 +341,7 @@ const CalendarScreen = () => {
     const { dayName, dayNumber, fullDate } = formatDayDisplay(dayIndex);
     const daySessions = getSessionsForDay(dayIndex);
     const dayVaccinations = getVaccinationsForDay(dayIndex);
+    const dayCompletedSessions = getCompletedSessionsForDay(dayIndex);
     const isTodayDay = isToday(dayIndex);
 
     return (
@@ -356,14 +399,16 @@ const CalendarScreen = () => {
 
         {/* Sessions and Vaccinations for this day */}
         <View style={styles.daySessionsContainer}>
-          {daySessions.length === 0 && dayVaccinations.length === 0 ? (
+          {daySessions.length === 0 &&
+          dayVaccinations.length === 0 &&
+          dayCompletedSessions.length === 0 ? (
             <Text
               style={[
                 styles.noSessionsText,
                 { color: currentTheme.colors.textSecondary },
               ]}
             >
-              No sessions or vaccinations planned
+              No sessions or vaccinations
             </Text>
           ) : (
             <>
@@ -373,7 +418,7 @@ const CalendarScreen = () => {
                   key={session.id}
                   style={[
                     styles.sessionItem,
-                    { 
+                    {
                       backgroundColor: currentTheme.colors.surface,
                       opacity: session.isCompleted ? 0.7 : 1,
                     },
@@ -383,7 +428,7 @@ const CalendarScreen = () => {
                       session.title,
                       `${session.trainingType}\nHorse: ${session.horseName}\n${
                         session.description ? `\n${session.description}` : ""
-                      }${session.isCompleted ? '\n\n✅ Completed' : ''}`
+                      }${session.isCompleted ? "\n\n✅ Completed" : ""}`
                     );
                   }}
                 >
@@ -399,9 +444,11 @@ const CalendarScreen = () => {
                         <Text
                           style={[
                             styles.sessionTitle,
-                            { 
+                            {
                               color: currentTheme.colors.text,
-                              textDecorationLine: session.isCompleted ? 'line-through' : 'none',
+                              textDecorationLine: session.isCompleted
+                                ? "line-through"
+                                : "none",
                             },
                           ]}
                         >
@@ -436,40 +483,96 @@ const CalendarScreen = () => {
                 </TouchableOpacity>
               ))}
 
+              {/* Render Completed Sessions */}
+              {dayCompletedSessions.map((session) => {
+                return (
+                  <TouchableOpacity
+                    key={session.id}
+                    style={[
+                      styles.completedSessionItem,
+                      { backgroundColor: currentTheme.colors.surface + "80" },
+                    ]}
+                    onPress={() => {
+                      router.push({
+                        pathname: "/session-details",
+                        params: { sessionId: session.id },
+                      });
+                    }}
+                  >
+                    <View style={styles.completedSessionContent}>
+                      <Image
+                        source={require("../assets/in_app_icons/diary.png")}
+                        style={styles.completedSessionIcon}
+                      />
+                      <View style={styles.completedSessionTextContainer}>
+                        <Text
+                          style={[
+                            styles.completedSessionTitle,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          {session.training_type}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.completedSessionType,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          {session.horse_name || "No horse"} •{" "}
+                          {(session.distance_meters / 1000).toFixed(2)} km •{" "}
+                          {Math.floor(session.duration_seconds / 60)} min
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+
               {/* Render Vaccinations */}
               {dayVaccinations.map((vaccination) => {
                 const date = getDateForDay(dayIndex);
-                const nextDueDate = vaccination.nextDueDate ? new Date(vaccination.nextDueDate) : null;
-                const isDueDate = nextDueDate && (
+                const nextDueDate = vaccination.nextDueDate
+                  ? new Date(vaccination.nextDueDate)
+                  : null;
+                const isDueDate =
+                  nextDueDate &&
                   nextDueDate.getDate() === date.getDate() &&
                   nextDueDate.getMonth() === date.getMonth() &&
-                  nextDueDate.getFullYear() === date.getFullYear()
-                );
+                  nextDueDate.getFullYear() === date.getFullYear();
 
                 return (
                   <TouchableOpacity
                     key={vaccination.id}
                     style={[
                       styles.vaccinationItem,
-                      { 
-                        backgroundColor: isDueDate 
+                      {
+                        backgroundColor: isDueDate
                           ? currentTheme.colors.accent + "20"
-                          : currentTheme.colors.surface + "80"
+                          : currentTheme.colors.surface + "80",
                       },
                     ]}
                     onPress={() => {
                       Alert.alert(
                         `💉 ${vaccination.vaccineName}`,
                         `Horse: ${vaccination.horseName}\n${
-                          isDueDate 
+                          isDueDate
                             ? `Due Date: ${nextDueDate?.toLocaleDateString()}`
-                            : `Vaccination Date: ${new Date(vaccination.vaccinationDate).toLocaleDateString()}`
-                        }${vaccination.notes ? `\n\nNotes: ${vaccination.notes}` : ''}${
-                          vaccination.batchNumber ? `\nBatch: ${vaccination.batchNumber}` : ''
+                            : `Vaccination Date: ${new Date(
+                                vaccination.vaccinationDate
+                              ).toLocaleDateString()}`
                         }${
-                          vaccination.repeatEnabled 
-                            ? `\n\n🔁 Repeating every ${vaccination.repeatIntervalMonths} months` 
-                            : ''
+                          vaccination.notes
+                            ? `\n\nNotes: ${vaccination.notes}`
+                            : ""
+                        }${
+                          vaccination.batchNumber
+                            ? `\nBatch: ${vaccination.batchNumber}`
+                            : ""
+                        }${
+                          vaccination.repeatEnabled
+                            ? `\n\n🔁 Repeating every ${vaccination.repeatIntervalMonths} months`
+                            : ""
                         }`
                       );
                     }}
@@ -491,7 +594,8 @@ const CalendarScreen = () => {
                             { color: currentTheme.colors.textSecondary },
                           ]}
                         >
-                          {vaccination.horseName} • {isDueDate ? 'Due' : 'Vaccination'}
+                          {vaccination.horseName} •{" "}
+                          {isDueDate ? "Due" : "Vaccination"}
                         </Text>
                         {vaccination.repeatEnabled && (
                           <Text style={styles.repeatIcon}>🔁</Text>
@@ -610,9 +714,9 @@ const CalendarScreen = () => {
           <TouchableOpacity
             style={[
               styles.addButton,
-              { 
-                backgroundColor: hasHorses 
-                  ? currentTheme.colors.primary 
+              {
+                backgroundColor: hasHorses
+                  ? currentTheme.colors.primary
                   : currentTheme.colors.textSecondary,
               },
             ]}
@@ -631,7 +735,7 @@ const CalendarScreen = () => {
                 );
                 return;
               }
-              
+
               router.push({
                 pathname: "/add-planned-session",
                 params: { weekOffset: currentWeekOffset.toString() },
@@ -842,13 +946,14 @@ const styles = StyleSheet.create({
   },
   vaccinationItem: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     padding: 12,
     borderRadius: 12,
     marginBottom: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.6,
     shadowRadius: 2,
     elevation: 2,
   },
@@ -870,6 +975,42 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   vaccinationType: {
+    fontSize: 14,
+  },
+  completedSessionItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    zIndex: 1,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  completedSessionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  completedSessionIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 12,
+    opacity: 0.7,
+  },
+  completedSessionTextContainer: {
+    flex: 1,
+  },
+  completedSessionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  completedSessionType: {
     fontSize: 14,
   },
   loadingContainer: {

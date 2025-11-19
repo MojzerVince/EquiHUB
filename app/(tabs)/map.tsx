@@ -3574,11 +3574,11 @@ const MapScreen = () => {
             <Text style={styles.header}>Map</Text>
             <TouchableOpacity
               style={styles.historyButton}
-              onPress={() => router.push("/sessions")}
+              onPress={() => router.push("/calendar")}
             >
               <Image
                 style={{ width: 38, height: 38 }}
-                source={require("../../assets/in_app_icons/history.png")}
+                source={require("../../assets/in_app_icons/calendar.png")}
               />
             </TouchableOpacity>
           </View>
@@ -3631,11 +3631,11 @@ const MapScreen = () => {
           <Text style={[styles.header, { color: "#FFFFFF" }]}>Map</Text>
           <TouchableOpacity
             style={styles.historyButton}
-            onPress={() => router.push("/sessions")}
+            onPress={() => router.push("/calendar")}
           >
             <Image
-              style={{ width: 42, height: 42 }}
-              source={require("../../assets/in_app_icons/history.png")}
+              style={{ width: 32, height: 32 }}
+              source={require("../../assets/in_app_icons/calendar.png")}
             />
           </TouchableOpacity>
         </View>
