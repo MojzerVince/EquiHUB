@@ -11,6 +11,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   AppState,
   Dimensions,
   Image,
@@ -391,6 +392,20 @@ const MapScreen = () => {
   const [isUsingBackgroundLocation, setIsUsingBackgroundLocation] =
     useState(false);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+  const mapSizeAnimation = useRef(new Animated.Value(0)).current;
+
+  // Toggle fullscreen with animation
+  const toggleMapFullscreen = () => {
+    const toValue = isMapFullscreen ? 0 : 1;
+    setIsMapFullscreen(!isMapFullscreen);
+
+    Animated.spring(mapSizeAnimation, {
+      toValue,
+      useNativeDriver: false,
+      friction: 8,
+      tension: 40,
+    }).start();
+  };
 
   // MapView ref for programmatic control
   const mapRef = useRef<MapView>(null);
@@ -3657,10 +3672,30 @@ const MapScreen = () => {
             </View>
           )}
 
-          <View
+          <Animated.View
             style={[
               styles.mapViewContainer,
-              isMapFullscreen && styles.mapViewFullscreen,
+              {
+                height: mapSizeAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [400, Dimensions.get("window").height - 65],
+                }),
+                width: mapSizeAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [368, Dimensions.get("window").width],
+                }),
+                borderRadius: mapSizeAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [12, 0],
+                }),
+                position: isMapFullscreen ? "absolute" : "relative",
+                top: isMapFullscreen ? 0 : undefined,
+                left: isMapFullscreen ? 0 : undefined,
+                right: isMapFullscreen ? 0 : undefined,
+                bottom: isMapFullscreen ? 0 : undefined,
+                zIndex: isMapFullscreen ? 1000 : undefined,
+                marginTop: isMapFullscreen ? -20 : undefined,
+              },
             ]}
           >
             {renderGpsStrengthBar()}
@@ -3809,14 +3844,14 @@ const MapScreen = () => {
                 styles.expandMapButton,
                 isMapFullscreen && styles.expandMapButtonFullscreen,
               ]}
-              onPress={() => setIsMapFullscreen(!isMapFullscreen)}
+              onPress={toggleMapFullscreen}
               activeOpacity={0.7}
             >
               <Text style={styles.expandMapButtonText}>
                 {isMapFullscreen ? "⬇️" : "⬆️"}
               </Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
 
           {/* Start/Stop Tracking Button */}
           <View style={styles.trackingControls}>
