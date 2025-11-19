@@ -3847,8 +3847,16 @@ const MapScreen = () => {
               onPress={toggleMapFullscreen}
               activeOpacity={0.7}
             >
-              <Text style={styles.expandMapButtonText}>
-                {isMapFullscreen ? "⬇️" : "⬆️"}
+              <Text style={styles.expandMapButtonIcon}>
+                {isMapFullscreen ? (
+                  <Image
+                    source={require("../../assets/in_app_icons/shrink.png")}
+                  />
+                ) : (
+                  <Image
+                    source={require("../../assets/in_app_icons/expand.png")}
+                  />
+                )}
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -5463,8 +5471,9 @@ const styles = StyleSheet.create({
   expandMapButtonFullscreen: {
     bottom: 150,
   },
-  expandMapButtonText: {
-    fontSize: 20,
+  expandMapButtonIcon: {
+    width: 20,
+    height: 20,
   },
   map: {
     flex: 1,
