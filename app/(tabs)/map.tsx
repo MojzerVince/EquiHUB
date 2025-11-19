@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
   AppState,
+  Dimensions,
   Image,
   Linking,
   Modal,
@@ -42,7 +43,11 @@ import {
 } from "../../lib/fallDetectionAPI";
 import { GlobalChallengeAPI } from "../../lib/globalChallengeAPI";
 import { HorseAPI } from "../../lib/horseAPI";
-import { getTodayPlannedSessions, markPlannedSessionCompleted, PlannedSession } from "../../lib/plannedSessionAPI";
+import {
+  getTodayPlannedSessions,
+  markPlannedSessionCompleted,
+  PlannedSession,
+} from "../../lib/plannedSessionAPI";
 import { ProfileAPIBase64 } from "../../lib/profileAPIBase64";
 import { Horse, Profile } from "../../lib/supabase";
 import { ChallengeSession } from "../../types/challengeTypes";
@@ -358,9 +363,14 @@ const MapScreen = () => {
     useState<boolean>(false);
 
   // Planned sessions state
-  const [todayPlannedSessions, setTodayPlannedSessions] = useState<PlannedSession[]>([]);
-  const [plannedSessionsLoading, setPlannedSessionsLoading] = useState<boolean>(false);
-  const [selectedPlannedSession, setSelectedPlannedSession] = useState<string | null>(null);
+  const [todayPlannedSessions, setTodayPlannedSessions] = useState<
+    PlannedSession[]
+  >([]);
+  const [plannedSessionsLoading, setPlannedSessionsLoading] =
+    useState<boolean>(false);
+  const [selectedPlannedSession, setSelectedPlannedSession] = useState<
+    string | null
+  >(null);
 
   // Real-time gait detection state
   const [currentGait, setCurrentGait] = useState<
@@ -380,6 +390,7 @@ const MapScreen = () => {
   const [appState, setAppState] = useState(AppState.currentState);
   const [isUsingBackgroundLocation, setIsUsingBackgroundLocation] =
     useState(false);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
 
   // MapView ref for programmatic control
   const mapRef = useRef<MapView>(null);
@@ -1071,7 +1082,7 @@ const MapScreen = () => {
                 longitudeDelta: 0.01,
               };
               setRegion(newRegion);
-              
+
               // Animate map to user location only on first fix
               mapRef.current?.animateToRegion(newRegion, 1000);
             }
@@ -1271,10 +1282,10 @@ const MapScreen = () => {
       try {
         const noteKey = `nextRideNote_${user.id}_${selectedHorse}`;
         const savedNote = await AsyncStorage.getItem(noteKey);
-        
+
         if (savedNote) {
           const noteData = JSON.parse(savedNote);
-          
+
           // Only show if not already shown
           if (!noteData.shown) {
             setNextRideNote(noteData.note);
@@ -1288,7 +1299,7 @@ const MapScreen = () => {
           setShowNextRideNote(false);
         }
       } catch (error) {
-        console.error('Error loading next ride note:', error);
+        console.error("Error loading next ride note:", error);
         setNextRideNote(null);
         setShowNextRideNote(false);
       }
@@ -1304,17 +1315,17 @@ const MapScreen = () => {
     try {
       const noteKey = `nextRideNote_${user.id}_${selectedHorse}`;
       const savedNote = await AsyncStorage.getItem(noteKey);
-      
+
       if (savedNote) {
         const noteData = JSON.parse(savedNote);
         noteData.shown = true;
         await AsyncStorage.setItem(noteKey, JSON.stringify(noteData));
       }
-      
+
       setShowNextRideNote(false);
       setNextRideNote(null);
     } catch (error) {
-      console.error('Error dismissing next ride note:', error);
+      console.error("Error dismissing next ride note:", error);
     }
   };
 
@@ -1579,14 +1590,24 @@ const MapScreen = () => {
     try {
       setPlannedSessionsLoading(true);
       const result = await getTodayPlannedSessions();
-      
-      console.log('📅 Planned Sessions API Result:', result.success, 'Data count:', result.data?.length);
-      
+
+      console.log(
+        "📅 Planned Sessions API Result:",
+        result.success,
+        "Data count:",
+        result.data?.length
+      );
+
       if (result.success && result.data) {
         // Filter out completed sessions
-        const incompleteSessions = result.data.filter(session => !session.isCompleted);
-        console.log('📅 Incomplete Sessions count:', incompleteSessions.length);
-        console.log('📅 Session details:', incompleteSessions.map(s => ({ id: s.id, title: s.title })));
+        const incompleteSessions = result.data.filter(
+          (session) => !session.isCompleted
+        );
+        console.log("📅 Incomplete Sessions count:", incompleteSessions.length);
+        console.log(
+          "📅 Session details:",
+          incompleteSessions.map((s) => ({ id: s.id, title: s.title }))
+        );
         setTodayPlannedSessions(incompleteSessions);
       } else {
         console.error("Error loading today's planned sessions:", result.error);
@@ -2097,8 +2118,8 @@ const MapScreen = () => {
       // On iOS, show simple notification without time counter
       // On Android, show notification with real-time elapsed time
       let notificationBody: string;
-      
-      if (Platform.OS === 'ios') {
+
+      if (Platform.OS === "ios") {
         // iOS: Simple message without time (no updates will be sent)
         notificationBody = `${horseName} • ${trainingType}\nTracking in progress...`;
       } else {
@@ -2115,7 +2136,7 @@ const MapScreen = () => {
                 .toString()
                 .padStart(2, "0")}`
             : `${minutes}:${seconds.toString().padStart(2, "0")}`;
-        
+
         notificationBody = `${horseName} • ${trainingType}\nElapsed time: ${timeString}`;
       }
 
@@ -2182,7 +2203,7 @@ const MapScreen = () => {
 
     // Only update notification on Android (every second with elapsed time)
     // On iOS, show notification once and never update (no time counter)
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       // Android: Set up interval to update notification every second with elapsed time
       const interval = setInterval(async () => {
         await updateTrackingNotification(startTime, horseName, trainingType);
@@ -2281,7 +2302,7 @@ const MapScreen = () => {
       };
       setRegion(newRegion);
       setUserLocation({ latitude, longitude });
-      
+
       // Animate map to new location
       mapRef.current?.animateToRegion(newRegion, 1000);
     } catch (error) {
@@ -2303,7 +2324,7 @@ const MapScreen = () => {
         };
         setRegion(newRegion);
         setUserLocation({ latitude, longitude });
-        
+
         // Animate map to new location
         mapRef.current?.animateToRegion(newRegion, 1000);
       } catch (secondError) {
@@ -2340,7 +2361,8 @@ const MapScreen = () => {
 
       // Request media library permission if not already granted
       if (!mediaLibraryPermission) {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
         setMediaLibraryPermission(status === "granted");
         // Continue even if media library permission is denied - we can still take the photo
       }
@@ -2405,7 +2427,8 @@ const MapScreen = () => {
 
       // Request media library permission if not already granted
       if (!mediaLibraryPermission) {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
         setMediaLibraryPermission(status === "granted");
         // Continue even if media library permission is denied
       }
@@ -2470,7 +2493,7 @@ const MapScreen = () => {
         longitudeDelta: 0.01,
       };
       setRegion(newRegion);
-      
+
       // Animate map to current location
       mapRef.current?.animateToRegion(newRegion, 500);
     } else {
@@ -2494,7 +2517,7 @@ const MapScreen = () => {
         };
         setRegion(newRegion);
         setUserLocation({ latitude, longitude });
-        
+
         // Animate map to new location
         mapRef.current?.animateToRegion(newRegion, 500);
       } catch (error) {
@@ -2516,7 +2539,7 @@ const MapScreen = () => {
           };
           setRegion(newRegion);
           setUserLocation({ latitude, longitude });
-          
+
           // Animate map to new location
           mapRef.current?.animateToRegion(newRegion, 500);
         } catch (secondError) {
@@ -2726,13 +2749,13 @@ const MapScreen = () => {
   const initiateTracking = async () => {
     // Check if power saving mode is enabled
     const isPowerSaveOn = await checkPowerSavingMode();
-    
+
     if (isPowerSaveOn) {
       // Show warning modal
       setShowPowerSaveModal(true);
       return;
     }
-    
+
     // If power save is off, start tracking normally
     await startTrackingInternal();
   };
@@ -2763,7 +2786,6 @@ const MapScreen = () => {
   };
 
   const startTrackingInternal = async () => {
-
     try {
       // Request background location permission for continuous tracking
       const { status } = await Location.requestBackgroundPermissionsAsync();
@@ -2978,11 +3000,11 @@ const MapScreen = () => {
 
       // Analyze horse gaits from tracking data
       const gaitAnalysis = analyzeGaits(trackingPoints);
-      
-      console.log('📊 Gait Analysis Results:');
-      console.log('- Total segments:', gaitAnalysis.segments.length);
-      console.log('- Predominant gait:', gaitAnalysis.predominantGait);
-      console.log('- Transition count:', gaitAnalysis.transitionCount);
+
+      console.log("📊 Gait Analysis Results:");
+      console.log("- Total segments:", gaitAnalysis.segments.length);
+      console.log("- Predominant gait:", gaitAnalysis.predominantGait);
+      console.log("- Transition count:", gaitAnalysis.transitionCount);
 
       const completedSession: TrainingSession = {
         ...currentSession,
@@ -3006,16 +3028,19 @@ const MapScreen = () => {
           const result = await markPlannedSessionCompleted(
             completedSession.plannedSessionId
           );
-          
+
           if (result.success) {
-            console.log('✅ Planned session marked as completed');
+            console.log("✅ Planned session marked as completed");
             // Reload today's planned sessions to update the list
             await loadTodayPlannedSessions();
           } else {
-            console.error('Failed to mark planned session as completed:', result.error);
+            console.error(
+              "Failed to mark planned session as completed:",
+              result.error
+            );
           }
         } catch (error) {
-          console.error('Error marking planned session as completed:', error);
+          console.error("Error marking planned session as completed:", error);
         }
       }
 
@@ -3632,7 +3657,12 @@ const MapScreen = () => {
             </View>
           )}
 
-          <View style={styles.mapViewContainer}>
+          <View
+            style={[
+              styles.mapViewContainer,
+              isMapFullscreen && styles.mapViewFullscreen,
+            ]}
+          >
             {renderGpsStrengthBar()}
 
             {/* Map control buttons */}
@@ -3706,7 +3736,7 @@ const MapScreen = () => {
             <MapView
               ref={mapRef}
               style={styles.map}
-              provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
+              provider={Platform.OS === "ios" ? undefined : PROVIDER_GOOGLE}
               initialRegion={region}
               onRegionChangeComplete={onRegionChange}
               showsUserLocation={true}
@@ -3765,13 +3795,27 @@ const MapScreen = () => {
                           elevation: 5,
                         }}
                       >
-                        <Text style={{ fontSize: 18 , marginTop: -4}}>
+                        <Text style={{ fontSize: 18, marginTop: -4 }}>
                           {media.type === "photo" ? "📸" : "🎥"}
                         </Text>
                       </View>
                     </Marker>
                   ))}
             </MapView>
+
+            {/* Expand/Shrink Map Button */}
+            <TouchableOpacity
+              style={[
+                styles.expandMapButton,
+                isMapFullscreen && styles.expandMapButtonFullscreen,
+              ]}
+              onPress={() => setIsMapFullscreen(!isMapFullscreen)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.expandMapButtonText}>
+                {isMapFullscreen ? "⬇️" : "⬆️"}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Start/Stop Tracking Button */}
@@ -3821,21 +3865,44 @@ const MapScreen = () => {
 
           {/* Next Ride Note Display */}
           {!isTracking && showNextRideNote && nextRideNote && (
-            <View style={[styles.nextRideNoteContainer, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.primary }]}>
+            <View
+              style={[
+                styles.nextRideNoteContainer,
+                {
+                  backgroundColor: currentTheme.colors.surface,
+                  borderColor: currentTheme.colors.primary,
+                },
+              ]}
+            >
               <View style={styles.nextRideNoteHeader}>
-                <Text style={[styles.nextRideNoteTitle, { color: currentTheme.colors.primary }]}>
+                <Text
+                  style={[
+                    styles.nextRideNoteTitle,
+                    { color: currentTheme.colors.primary },
+                  ]}
+                >
                   📝 Note from Last Ride
                 </Text>
                 <TouchableOpacity
                   onPress={dismissNextRideNote}
                   style={styles.nextRideNoteClose}
                 >
-                  <Text style={[styles.nextRideNoteCloseText, { color: currentTheme.colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.nextRideNoteCloseText,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
                     ✕
                   </Text>
                 </TouchableOpacity>
               </View>
-              <Text style={[styles.nextRideNoteText, { color: currentTheme.colors.text }]}>
+              <Text
+                style={[
+                  styles.nextRideNoteText,
+                  { color: currentTheme.colors.text },
+                ]}
+              >
                 {nextRideNote}
               </Text>
             </View>
@@ -3845,11 +3912,22 @@ const MapScreen = () => {
           {!isTracking && todayPlannedSessions.length > 0 && (
             <View style={styles.plannedSessionsContainer}>
               <View style={styles.plannedSessionsHeader}>
-                <Text style={[styles.plannedSessionsTitle, { color: currentTheme.colors.text }]}>
+                <Text
+                  style={[
+                    styles.plannedSessionsTitle,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
                   📅 Today's Planned Sessions
                 </Text>
-                <Text style={[styles.plannedSessionsCount, { color: currentTheme.colors.textSecondary }]}>
-                  {todayPlannedSessions.length} session{todayPlannedSessions.length !== 1 ? 's' : ''}
+                <Text
+                  style={[
+                    styles.plannedSessionsCount,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  {todayPlannedSessions.length} session
+                  {todayPlannedSessions.length !== 1 ? "s" : ""}
                 </Text>
               </View>
               <ScrollView
@@ -3867,7 +3945,7 @@ const MapScreen = () => {
                       selectedPlannedSession === session.id && {
                         borderWidth: 3,
                         borderColor: currentTheme.colors.primary,
-                      }
+                      },
                     ]}
                     onPress={() => {
                       // Toggle selection - deselect if already selected
@@ -3879,14 +3957,18 @@ const MapScreen = () => {
                       } else {
                         // Set this session as selected
                         setSelectedPlannedSession(session.id);
-                        
+
                         // Pre-fill form with planned session data
-                        const horse = userHorses.find(h => h.id === session.horseId);
+                        const horse = userHorses.find(
+                          (h) => h.id === session.horseId
+                        );
                         if (horse) {
                           setSelectedHorse(horse.id);
-                          
+
                           // Find the training type ID by matching the name
-                          const trainingType = trainingTypes.find(t => t.name === session.trainingType);
+                          const trainingType = trainingTypes.find(
+                            (t) => t.name === session.trainingType
+                          );
                           if (trainingType) {
                             setSelectedTrainingType(trainingType.id);
                           }
@@ -3902,15 +3984,28 @@ const MapScreen = () => {
                       />
                     )}
                     <View style={styles.plannedSessionInfo}>
-                      <Text style={[styles.plannedSessionTitle, { color: currentTheme.colors.text }]}>
+                      <Text
+                        style={[
+                          styles.plannedSessionTitle,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
                         {session.title}
                       </Text>
-                      <Text style={[styles.plannedSessionDetails, { color: currentTheme.colors.textSecondary }]}>
+                      <Text
+                        style={[
+                          styles.plannedSessionDetails,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
                         {session.trainingType} • {session.horseName}
                       </Text>
                       {session.description && (
                         <Text
-                          style={[styles.plannedSessionDescription, { color: currentTheme.colors.textSecondary }]}
+                          style={[
+                            styles.plannedSessionDescription,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
                           numberOfLines={2}
                         >
                           {session.description}
@@ -3918,13 +4013,33 @@ const MapScreen = () => {
                       )}
                       <View style={styles.plannedSessionBadges}>
                         {session.reminderEnabled && (
-                          <View style={[styles.plannedSessionBadge, { backgroundColor: currentTheme.colors.accent + '30' }]}>
-                            <Text style={styles.plannedSessionBadgeText}>🔔 Reminder</Text>
+                          <View
+                            style={[
+                              styles.plannedSessionBadge,
+                              {
+                                backgroundColor:
+                                  currentTheme.colors.accent + "30",
+                              },
+                            ]}
+                          >
+                            <Text style={styles.plannedSessionBadgeText}>
+                              🔔 Reminder
+                            </Text>
                           </View>
                         )}
                         {session.repeatEnabled && (
-                          <View style={[styles.plannedSessionBadge, { backgroundColor: currentTheme.colors.primary + '30' }]}>
-                            <Text style={styles.plannedSessionBadgeText}>🔁 Repeating</Text>
+                          <View
+                            style={[
+                              styles.plannedSessionBadge,
+                              {
+                                backgroundColor:
+                                  currentTheme.colors.primary + "30",
+                              },
+                            ]}
+                          >
+                            <Text style={styles.plannedSessionBadgeText}>
+                              🔁 Repeating
+                            </Text>
                           </View>
                         )}
                       </View>
@@ -3937,9 +4052,23 @@ const MapScreen = () => {
 
           {/* Selected Session Info Banner */}
           {!isTracking && selectedPlannedSession && (
-            <View style={[styles.selectedSessionBanner, { backgroundColor: currentTheme.colors.primary + '20', borderColor: currentTheme.colors.primary }]}>
-              <Text style={[styles.selectedSessionBannerText, { color: currentTheme.colors.primary }]}>
-                ✓ Planned session selected. Tap the session card again to deselect and manually choose options.
+            <View
+              style={[
+                styles.selectedSessionBanner,
+                {
+                  backgroundColor: currentTheme.colors.primary + "20",
+                  borderColor: currentTheme.colors.primary,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.selectedSessionBannerText,
+                  { color: currentTheme.colors.primary },
+                ]}
+              >
+                ✓ Planned session selected. Tap the session card again to
+                deselect and manually choose options.
               </Text>
             </View>
           )}
@@ -5059,22 +5188,30 @@ const MapScreen = () => {
             >
               ⚠️ Battery Saver Active
             </Text>
-            
+
             <View style={styles.batteryInfoContent}>
               <Text
                 style={[
                   styles.batteryRecommendationText,
-                  { color: currentTheme.colors.text, marginBottom: 16, fontSize: 15 },
+                  {
+                    color: currentTheme.colors.text,
+                    marginBottom: 16,
+                    fontSize: 15,
+                  },
                 ]}
               >
-                Your device is in Battery Saver mode, which may significantly impact tracking performance:
+                Your device is in Battery Saver mode, which may significantly
+                impact tracking performance:
               </Text>
-              
+
               <View style={{ marginLeft: 12, marginBottom: 16 }}>
                 <Text
                   style={[
                     styles.batteryRecommendationText,
-                    { color: currentTheme.colors.textSecondary, marginBottom: 8 },
+                    {
+                      color: currentTheme.colors.textSecondary,
+                      marginBottom: 8,
+                    },
                   ]}
                 >
                   • GPS accuracy may be reduced
@@ -5082,7 +5219,10 @@ const MapScreen = () => {
                 <Text
                   style={[
                     styles.batteryRecommendationText,
-                    { color: currentTheme.colors.textSecondary, marginBottom: 8 },
+                    {
+                      color: currentTheme.colors.textSecondary,
+                      marginBottom: 8,
+                    },
                   ]}
                 >
                   • Fall detection sensors could be disabled
@@ -5090,24 +5230,28 @@ const MapScreen = () => {
                 <Text
                   style={[
                     styles.batteryRecommendationText,
-                    { color: currentTheme.colors.textSecondary, marginBottom: 8 },
+                    {
+                      color: currentTheme.colors.textSecondary,
+                      marginBottom: 8,
+                    },
                   ]}
                 >
                   • Location updates may be delayed or skipped
                 </Text>
               </View>
-              
+
               <Text
                 style={[
                   styles.batteryRecommendationText,
-                  { color: currentTheme.colors.text, fontWeight: '600' },
+                  { color: currentTheme.colors.text, fontWeight: "600" },
                 ]}
               >
-                For optimal tracking, we recommend disabling Battery Saver during your ride.
+                For optimal tracking, we recommend disabling Battery Saver
+                during your ride.
               </Text>
             </View>
 
-            <View style={{ flexDirection: 'column', gap: 12, marginTop: 20 }}>
+            <View style={{ flexDirection: "column", gap: 12, marginTop: 20 }}>
               <TouchableOpacity
                 style={[
                   styles.batteryInfoButton,
@@ -5115,21 +5259,28 @@ const MapScreen = () => {
                 ]}
                 onPress={handleOpenBatterySettings}
               >
-                <Text style={styles.batteryInfoButtonText}>Open Battery Settings</Text>
+                <Text style={styles.batteryInfoButtonText}>
+                  Open Battery Settings
+                </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.batteryInfoButton,
-                  { 
-                    backgroundColor: 'transparent',
+                  {
+                    backgroundColor: "transparent",
                     borderWidth: 1,
                     borderColor: currentTheme.colors.border,
                   },
                 ]}
                 onPress={handleStartAnywayFromPowerSave}
               >
-                <Text style={[styles.batteryInfoButtonText, { color: currentTheme.colors.text }]}>
+                <Text
+                  style={[
+                    styles.batteryInfoButtonText,
+                    { color: currentTheme.colors.text },
+                  ]}
+                >
                   Continue Anyway
                 </Text>
               </TouchableOpacity>
@@ -5239,6 +5390,46 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 8,
+  },
+  mapViewFullscreen: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: Dimensions.get("window").height - 65,
+    width: Dimensions.get("window").width,
+    zIndex: 1000,
+    borderRadius: 0,
+    marginTop: -20,
+    marginBottom: 0,
+  },
+  expandMapButton: {
+    position: "absolute",
+    bottom: 16,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
+  },
+  expandMapButtonFullscreen: {
+    bottom: 150,
+  },
+  expandMapButtonText: {
+    fontSize: 20,
   },
   map: {
     flex: 1,
