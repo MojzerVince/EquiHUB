@@ -231,41 +231,50 @@ const SessionsScreen = () => {
 
     try {
       setLoadingSessions(true);
-      
+
       // Calculate the date for the selected week
       const { startOfWeek } = getWeekBounds(currentWeekOffset);
-      
+
       // Fetch sessions from database for the specific week
       const result = await getSessionsForWeek(user.id, startOfWeek);
-      
+
       if (result.success && result.sessions) {
         // Convert DB sessions to local TrainingSession format
-        const convertedSessions: TrainingSession[] = result.sessions.map(dbSession => ({
-          id: dbSession.id || '',
-          userId: dbSession.user_id,
-          horseId: dbSession.horse_id || '',
-          horseName: dbSession.horse_name || 'Unknown',
-          trainingType: dbSession.training_type,
-          startTime: new Date(dbSession.started_at).getTime(),
-          endTime: new Date(dbSession.ended_at).getTime(),
-          duration: dbSession.duration_seconds,
-          distance: dbSession.distance_meters,
-          path: dbSession.session_data.coordinates.map(coord => ({
-            latitude: coord.latitude,
-            longitude: coord.longitude,
-            timestamp: new Date(coord.timestamp).getTime(),
-            accuracy: coord.accuracy,
-            speed: coord.speed,
-          })),
-          averageSpeed: dbSession.avg_speed_kmh ? dbSession.avg_speed_kmh / 3.6 : undefined, // Convert km/h to m/s
-          maxSpeed: dbSession.max_speed_kmh ? dbSession.max_speed_kmh / 3.6 : undefined, // Convert km/h to m/s
-          plannedSessionId: dbSession.session_data.metadata?.planned_session_id,
-        }));
+        const convertedSessions: TrainingSession[] = result.sessions.map(
+          (dbSession) => ({
+            id: dbSession.id || "",
+            userId: dbSession.user_id,
+            horseId: dbSession.horse_id || "",
+            horseName: dbSession.horse_name || "Unknown",
+            trainingType: dbSession.training_type,
+            startTime: new Date(dbSession.started_at).getTime(),
+            endTime: new Date(dbSession.ended_at).getTime(),
+            duration: dbSession.duration_seconds,
+            distance: dbSession.distance_meters,
+            path: dbSession.session_data.coordinates.map((coord) => ({
+              latitude: coord.latitude,
+              longitude: coord.longitude,
+              timestamp: new Date(coord.timestamp).getTime(),
+              accuracy: coord.accuracy,
+              speed: coord.speed,
+            })),
+            averageSpeed: dbSession.avg_speed_kmh
+              ? dbSession.avg_speed_kmh / 3.6
+              : undefined, // Convert km/h to m/s
+            maxSpeed: dbSession.max_speed_kmh
+              ? dbSession.max_speed_kmh / 3.6
+              : undefined, // Convert km/h to m/s
+            plannedSessionId:
+              dbSession.session_data.metadata?.planned_session_id,
+          })
+        );
 
         setTrainingSessions(convertedSessions);
-        console.log(`✅ Loaded ${convertedSessions.length} sessions from database for week offset ${currentWeekOffset}`);
+        console.log(
+          `✅ Loaded ${convertedSessions.length} sessions from database for week offset ${currentWeekOffset}`
+        );
       } else {
-        console.error('Failed to load sessions:', result.error);
+        console.error("Failed to load sessions:", result.error);
         setTrainingSessions([]);
       }
     } catch (error) {
@@ -386,7 +395,12 @@ const SessionsScreen = () => {
               {item.trainingType}
             </Text>
             {item.plannedSessionId && (
-              <View style={[styles.plannedBadge, { backgroundColor: currentTheme.colors.primary }]}>
+              <View
+                style={[
+                  styles.plannedBadge,
+                  { backgroundColor: currentTheme.colors.primary },
+                ]}
+              >
                 <Text style={styles.plannedBadgeText}>📅 Planned</Text>
               </View>
             )}
@@ -603,7 +617,10 @@ const SessionsScreen = () => {
             onPress={() => router.push("/calendar")}
             activeOpacity={0.7}
           >
-            <Text style={styles.calendarIcon}>📅</Text>
+            <Image
+              source={require("../assets/in_app_icons/calendar.png")}
+              style={styles.calendarIcon}
+            />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -817,8 +834,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   calendarIcon: {
-    fontSize: 20,
-    color: "#fff",
+    width: 30,
+    height: 30,
   },
   viewPort: {
     flex: 1,

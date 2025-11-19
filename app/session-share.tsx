@@ -26,6 +26,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { CommunityAPI } from "../lib/communityAPI";
 import { HorseAPI } from "../lib/horseAPI";
 import { convertImageToBase64 } from "../lib/imageUtils";
+import { getSessionById } from "../lib/sessionAPI";
 
 // Media item interface - same as session-details.tsx
 interface MediaItem {
@@ -130,47 +131,105 @@ export default function SessionShareScreen() {
     try {
       setLoading(true);
 
-      const savedSessions = await AsyncStorage.getItem("training_sessions");
-
-      if (!savedSessions) {
+      if (!sessionId) {
         setSession(null);
         setLoading(false);
         return;
       }
 
-      const sessions: TrainingSession[] = JSON.parse(savedSessions);
+      // Try to load from database first
+      const result = await getSessionById(sessionId);
 
-      const found = sessions.find((s) => s.id === sessionId);
+      if (result.success && result.session) {
+        // Convert DB session to local TrainingSession format
+        const dbSession = result.session;
+        const convertedSession: TrainingSession = {
+          id: dbSession.id || sessionId,
+          userId: dbSession.user_id,
+          horseId: dbSession.horse_id || "",
+          horseName: dbSession.horse_name || "Unknown Horse",
+          trainingType: dbSession.training_type,
+          startTime: new Date(dbSession.started_at).getTime(),
+          endTime: dbSession.ended_at
+            ? new Date(dbSession.ended_at).getTime()
+            : undefined,
+          duration: dbSession.duration_seconds,
+          distance: dbSession.distance_meters,
+          path: dbSession.session_data.coordinates.map((coord: any) => ({
+            latitude: coord.lat || coord.latitude,
+            longitude: coord.lng || coord.longitude,
+            timestamp: new Date(coord.timestamp).getTime(),
+            speed: coord.speed ? coord.speed / 3.6 : undefined, // Convert km/h to m/s
+            accuracy: coord.accuracy,
+          })),
+          averageSpeed: dbSession.avg_speed_kmh
+            ? dbSession.avg_speed_kmh / 3.6
+            : undefined, // Convert km/h to m/s
+          maxSpeed: dbSession.max_speed_kmh
+            ? dbSession.max_speed_kmh / 3.6
+            : undefined, // Convert km/h to m/s
+          media: dbSession.session_data.metadata?.media || [],
+        };
 
-      if (!found) {
-        setSession(null);
-        setLoading(false);
-        return;
-      }
+        setSession(convertedSession);
+        console.log(
+          "✅ Loaded session from database for sharing:",
+          convertedSession.id
+        );
 
-      // Found session - setting state
-      setSession(found);
+        // Set default post text
+        setPostText(
+          `Amazing training session with ${convertedSession.horseName}! 🐴`
+        );
 
-      // Debug logging for session data
-      console.log("📊 Session data loaded:", {
-        id: found.id,
-        horseName: found.horseName,
-        duration: found.duration,
-        distance: found.distance,
-        averageSpeed: found.averageSpeed,
-        hasPath: found.path?.length > 0,
-        pathLength: found.path?.length,
-        pathFirstPoint: found.path?.[0],
-        pathLastPoint: found.path?.[found.path?.length - 1],
-        durationCheck: !!found.duration,
-        distanceCheck: !!found.distance,
-        avgSpeedCheck: !!found.averageSpeed,
-        durationType: typeof found.duration,
-        distanceType: typeof found.distance,
-        avgSpeedType: typeof found.averageSpeed,
-      });
+        // Load horse data
+        if (convertedSession.horseId && convertedSession.userId) {
+          try {
+            const horses = await HorseAPI.getHorses(convertedSession.userId);
+            if (horses && horses.length > 0) {
+              const sessionHorse = horses.find(
+                (h) => h.id === convertedSession.horseId
+              );
+              setHorse(sessionHorse || null);
+            } else {
+              setHorse(null);
+            }
+          } catch (error) {
+            console.error("Error loading horse data:", error);
+            setHorse(null);
+          }
+        }
+      } else {
+        // Fallback to AsyncStorage if not found in database
+        console.log("⚠️ Session not found in database, trying AsyncStorage");
+        const savedSessions = await AsyncStorage.getItem("training_sessions");
 
-      if (found) {
+        if (!savedSessions) {
+          setSession(null);
+          setLoading(false);
+          return;
+        }
+
+        const sessions: TrainingSession[] = JSON.parse(savedSessions);
+        const found = sessions.find((s) => s.id === sessionId);
+
+        if (!found) {
+          setSession(null);
+          setLoading(false);
+          return;
+        }
+
+        // Found session in AsyncStorage - setting state
+        setSession(found);
+
+        // Debug logging for session data
+        console.log("📊 Session data loaded from AsyncStorage:", {
+          id: found.id,
+          horseName: found.horseName,
+          duration: found.duration,
+          distance: found.distance,
+        });
+
         // Set default post text with horse name
         setPostText(`Amazing training session with ${found.horseName}! 🐴`);
 
@@ -181,13 +240,7 @@ export default function SessionShareScreen() {
 
             if (horses && horses.length > 0) {
               const sessionHorse = horses.find((h) => h.id === found.horseId);
-
-              if (sessionHorse) {
-                // Found matching horse - setting state
-                setHorse(sessionHorse);
-              } else {
-                setHorse(null);
-              }
+              setHorse(sessionHorse || null);
             } else {
               setHorse(null);
             }
@@ -195,8 +248,6 @@ export default function SessionShareScreen() {
             console.error("Error loading horse data:", error);
             setHorse(null);
           }
-        } else {
-          setHorse(null);
         }
       }
     } catch (error) {
