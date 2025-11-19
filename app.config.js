@@ -117,6 +117,7 @@ module.exports = {
       expoPublicApiServerUrl: "https://grdsqxwghajehneksxik.supabase.co",
       expoPublicBundleId: "com.mojzi1969.EquiHUB",
       expoPublicAppVersion: "0.9.3",
+      //eas build:version:set --platform ios --profile iosPreview
     },
   },
 };
