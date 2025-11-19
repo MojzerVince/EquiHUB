@@ -4,16 +4,17 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import OAuthButtons from "../components/OAuthButtons";
+import { ProfileAPIBase64 } from "../lib/profileAPIBase64";
 
 const RegisterScreen = () => {
   const router = useRouter();
@@ -40,31 +41,91 @@ const RegisterScreen = () => {
               <OAuthButtons
                 onSuccess={async (result) => {
                   console.log("OAuth registration successful:", result);
-                  console.log("OAuth result structure:", JSON.stringify(result, null, 2));
-                  
-                  // Save Google OAuth user data to AsyncStorage for session persistence
-                  if (result.user && result.user.provider === 'google') {
+                  console.log(
+                    "OAuth result structure:",
+                    JSON.stringify(result, null, 2)
+                  );
+
+                  // Check if user has a profile in the database
+                  if (result.user && result.user.id) {
                     try {
-                      const userAuthData = {
-                        id: result.user.id,
-                        email: result.user.email,
-                        created_at: new Date().toISOString(),
-                      };
-                      console.log("💾 Saving OAuth data to AsyncStorage:", userAuthData);
-                      await AsyncStorage.setItem('google_oauth_user_data', JSON.stringify(userAuthData));
-                      await AsyncStorage.setItem('google_oauth_user_id', result.user.id);
-                      console.log("✅ Saved Google OAuth session to AsyncStorage");
-                      
-                      // Verify it was saved
-                      const savedData = await AsyncStorage.getItem('google_oauth_user_data');
-                      console.log("🔍 Verification - Data saved:", !!savedData);
-                    } catch (storageError) {
-                      console.error("❌ Error saving OAuth session to AsyncStorage:", storageError);
+                      console.log(
+                        "🔍 Checking if user has an existing profile..."
+                      );
+                      const profile = await ProfileAPIBase64.getProfile(
+                        result.user.id
+                      );
+
+                      if (profile) {
+                        console.log(
+                          "✅ User has existing profile - logging in"
+                        );
+
+                        // Existing user - save session and navigate to app
+                        const userAuthData = {
+                          id: result.user.id,
+                          email: result.user.email,
+                          created_at: new Date().toISOString(),
+                        };
+
+                        await AsyncStorage.setItem(
+                          "oauth_user_data",
+                          JSON.stringify(userAuthData)
+                        );
+                        await AsyncStorage.setItem(
+                          "oauth_user_id",
+                          result.user.id
+                        );
+                        await AsyncStorage.setItem(
+                          "oauth_provider",
+                          result.user.provider
+                        );
+
+                        if (result.session) {
+                          await AsyncStorage.setItem(
+                            "oauth_session",
+                            JSON.stringify({
+                              access_token: result.session.access_token,
+                              refresh_token: result.session.refresh_token,
+                              expires_at: result.session.expires_at,
+                              user: userAuthData,
+                            })
+                          );
+                        }
+
+                        console.log(
+                          "✅ Saved OAuth session - navigating to app"
+                        );
+                        router.replace("/(tabs)");
+                      } else {
+                        console.log(
+                          "⚠️ New user - no profile found, redirecting to registration form"
+                        );
+
+                        // New user - redirect to complex registration form with user data
+                        router.replace({
+                          pathname: "/register-complex-backup",
+                          params: {
+                            googleUser: JSON.stringify({
+                              id: result.user.id,
+                              email: result.user.email,
+                              name: result.user.name,
+                              avatar_url: result.user.avatar_url,
+                              provider: result.user.provider,
+                            }),
+                          },
+                        });
+                      }
+                    } catch (error) {
+                      console.error("❌ Error checking user profile:", error);
+                      showError(
+                        "Failed to verify account status. Please try again."
+                      );
                     }
+                  } else {
+                    console.error("❌ No user data in OAuth result");
+                    showError("Authentication failed. Please try again.");
                   }
-                  
-                  // Navigate to tabs - AuthContext will pick up the session
-                  router.push("/(tabs)");
                 }}
                 onError={(error) => {
                   showError(error);
