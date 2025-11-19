@@ -1774,13 +1774,28 @@ const MapScreen = () => {
   const trainingTypes = [
     { id: "dressage", name: "Dressage" },
     { id: "show_jumping", name: "Show Jumping" },
+    { id: "cross_country", name: "Cross Country" },
+    { id: "eventing", name: "Eventing" },
     { id: "trail", name: "Trail Riding" },
     { id: "endurance", name: "Endurance" },
     { id: "western", name: "Western" },
+    { id: "reining", name: "Reining" },
+    { id: "barrel_racing", name: "Barrel Racing" },
+    { id: "cutting", name: "Cutting" },
+    { id: "polo", name: "Polo" },
+    { id: "vaulting", name: "Vaulting" },
     { id: "leisure", name: "Leisure Ride" },
     { id: "groundwork", name: "Groundwork" },
     { id: "liberty", name: "Liberty Training" },
-    { id: "endurance_riding", name: "Endurance Riding" },
+    { id: "lunging", name: "Lunging" },
+    { id: "long_reining", name: "Long Reining" },
+    { id: "hunter", name: "Hunter" },
+    { id: "equitation", name: "Equitation" },
+    { id: "pleasure", name: "Pleasure Riding" },
+    { id: "ranch_work", name: "Ranch Work" },
+    { id: "mounted_games", name: "Mounted Games" },
+    { id: "driving", name: "Driving" },
+    { id: "working_equitation", name: "Working Equitation" },
   ];
 
   // Helper function to calculate GPS strength
@@ -5795,10 +5810,10 @@ const styles = StyleSheet.create({
   trainingDropdownList: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    marginTop: -100,
+    marginTop: -200,
     borderWidth: 2,
     borderColor: "#E0E0E0",
-    height: 450,
+    height: 500,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
