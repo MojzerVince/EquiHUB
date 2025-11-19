@@ -16,7 +16,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -32,9 +32,20 @@ import * as vaccinationAPI from "../../lib/vaccinationAPI";
 // Pregnancy Timeline Types
 type PregnancyStatus = "active" | "foaled" | "lost";
 type BreedingMethod = "natural" | "AI" | "ICSI";
-type CheckType = "US-14-16" | "Heartbeat-25-30" | "US-40-60" | "Sexing-55-70" | "Sexing-110-150" | "Fall-check";
+type CheckType =
+  | "US-14-16"
+  | "Heartbeat-25-30"
+  | "US-40-60"
+  | "Sexing-55-70"
+  | "Sexing-110-150"
+  | "Fall-check";
 type VaccineType = "EHV-1" | "Core-prefoal";
-type AlertType = "red-bag" | "placenta>3h" | "discharge" | "fever" | "udder-premature";
+type AlertType =
+  | "red-bag"
+  | "placenta>3h"
+  | "discharge"
+  | "fever"
+  | "udder-premature";
 
 interface PregnancyCheck {
   type: CheckType;
@@ -302,37 +313,53 @@ const MyHorsesScreen = () => {
       lastChangeDate: Date;
     } | null;
   }>({});
-  const [horseshoeStartDate, setHorseshoeStartDate] = useState<Date | null>(null);
-  const [horseshoeIntervalDays, setHorseshoeIntervalDays] = useState<number>(45);
+  const [horseshoeStartDate, setHorseshoeStartDate] = useState<Date | null>(
+    null
+  );
+  const [horseshoeIntervalDays, setHorseshoeIntervalDays] =
+    useState<number>(45);
   const [showHorseshoeDatePicker, setShowHorseshoeDatePicker] = useState(false);
-  const [showHorseshoeDeleteConfirm, setShowHorseshoeDeleteConfirm] = useState(false);
-  const [isEditingHorseshoeInterval, setIsEditingHorseshoeInterval] = useState(false);
+  const [showHorseshoeDeleteConfirm, setShowHorseshoeDeleteConfirm] =
+    useState(false);
+  const [isEditingHorseshoeInterval, setIsEditingHorseshoeInterval] =
+    useState(false);
 
   // Pregnancy state
   const [pregnancies, setPregnancies] = useState<Record<string, Pregnancy>>({});
-  const [selectedPregnancy, setSelectedPregnancy] = useState<Pregnancy | null>(null);
-  const [pregnancyView, setPregnancyView] = useState<"timeline" | "fruit" | "photos">("timeline");
+  const [selectedPregnancy, setSelectedPregnancy] = useState<Pregnancy | null>(
+    null
+  );
+  const [pregnancyView, setPregnancyView] = useState<
+    "timeline" | "fruit" | "photos"
+  >("timeline");
   const [pregnancyModalVisible, setPregnancyModalVisible] = useState(false);
-  
+
   // Pregnancy form state
-  const [pregnancyCoverDate, setPregnancyCoverDate] = useState<Date | null>(null);
-  const [pregnancyMethod, setPregnancyMethod] = useState<BreedingMethod>("natural");
+  const [pregnancyCoverDate, setPregnancyCoverDate] = useState<Date | null>(
+    null
+  );
+  const [pregnancyMethod, setPregnancyMethod] =
+    useState<BreedingMethod>("natural");
   const [pregnancyVetName, setPregnancyVetName] = useState("");
   const [pregnancyVetPhone, setPregnancyVetPhone] = useState("");
-  const [showPregnancyCoverDatePicker, setShowPregnancyCoverDatePicker] = useState(false);
+  const [showPregnancyCoverDatePicker, setShowPregnancyCoverDatePicker] =
+    useState(false);
 
   // Add Event Modal state
   const [addEventModalVisible, setAddEventModalVisible] = useState(false);
   const [showInlineAddEvent, setShowInlineAddEvent] = useState(false);
-  const [eventType, setEventType] = useState<"ultrasound" | "vaccine" | "deworming" | "note">("ultrasound");
+  const [eventType, setEventType] = useState<
+    "ultrasound" | "vaccine" | "deworming" | "note"
+  >("ultrasound");
   const [eventDate, setEventDate] = useState<Date | null>(null);
   const [eventNotes, setEventNotes] = useState("");
   const [showEventDatePicker, setShowEventDatePicker] = useState(false);
 
   // Photo capture state
-  const [photoCaptureModalVisible, setPhotoCaptureModalVisible] = useState(false);
-  const [showInlinePregnancyPhotoPicker, setShowInlinePregnancyPhotoPicker] = useState(false);
-
+  const [photoCaptureModalVisible, setPhotoCaptureModalVisible] =
+    useState(false);
+  const [showInlinePregnancyPhotoPicker, setShowInlinePregnancyPhotoPicker] =
+    useState(false);
 
   // Enhanced vaccination state
   const [vaccinationId, setVaccinationId] = useState("");
@@ -358,7 +385,9 @@ const MyHorsesScreen = () => {
   }>({});
   const [documentViewerVisible, setDocumentViewerVisible] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
-  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
+  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(
+    null
+  );
   const [editingDocumentName, setEditingDocumentName] = useState("");
 
   // Load horses when user is authenticated - from cache first, API only on refresh
@@ -428,17 +457,19 @@ const MyHorsesScreen = () => {
   // Daily pregnancy notification check
   useEffect(() => {
     if (user?.id && Object.keys(pregnancies).length > 0) {
-      const pregnancyList = Object.values(pregnancies).map(p => {
-        const horse = horses.find(h => h.id === p.horseId);
+      const pregnancyList = Object.values(pregnancies).map((p) => {
+        const horse = horses.find((h) => h.id === p.horseId);
         return {
           ...p,
-          horseName: horse?.name
+          horseName: horse?.name,
         };
       });
-      
-      PregnancyNotificationService.dailyPregnancyCheck(pregnancyList).catch(error => {
-        console.error('Failed to check pregnancy notifications:', error);
-      });
+
+      PregnancyNotificationService.dailyPregnancyCheck(pregnancyList).catch(
+        (error) => {
+          console.error("Failed to check pregnancy notifications:", error);
+        }
+      );
     }
   }, [user?.id, pregnancies, horses]);
 
@@ -1118,19 +1149,19 @@ const MyHorsesScreen = () => {
     try {
       // Load from database instead of AsyncStorage
       const response = await vaccinationAPI.getUserVaccinations();
-      
+
       if (!response.success || !response.data) {
         console.error("Error loading vaccinations:", response.error);
         return;
       }
-      
+
       // Group vaccinations by horse_id and transform to match UI expectations
       const vaccinationsByHorse: { [horseId: string]: any[] } = {};
       response.data.forEach((vaccination: vaccinationAPI.VaccinationRecord) => {
         if (!vaccinationsByHorse[vaccination.horseId]) {
           vaccinationsByHorse[vaccination.horseId] = [];
         }
-        
+
         // Transform database format to UI format
         const uiVaccination = {
           id: vaccination.id,
@@ -1140,21 +1171,24 @@ const MyHorsesScreen = () => {
           notes: vaccination.notes || "",
           type: vaccination.reminderEnabled ? "future" : "past",
           repeat: vaccination.repeatEnabled,
-          repeatInterval: vaccination.repeatIntervalMonths 
-            ? (vaccination.repeatIntervalMonths === 1 ? "monthly" 
-              : vaccination.repeatIntervalMonths === 3 ? "quarterly" 
-              : vaccination.repeatIntervalMonths === 12 ? "yearly" 
-              : "monthly")
+          repeatInterval: vaccination.repeatIntervalMonths
+            ? vaccination.repeatIntervalMonths === 1
+              ? "monthly"
+              : vaccination.repeatIntervalMonths === 3
+              ? "quarterly"
+              : vaccination.repeatIntervalMonths === 12
+              ? "yearly"
+              : "monthly"
             : null,
           createdAt: vaccination.createdAt,
           nextDueDate: vaccination.nextDueDate || null,
           lastCompletedDate: null,
           occurrenceCount: 0,
         };
-        
+
         vaccinationsByHorse[vaccination.horseId].push(uiVaccination);
       });
-      
+
       setHorseVaccinations(vaccinationsByHorse);
     } catch (error) {
       console.error("Error loading vaccination reminders:", error);
@@ -1245,7 +1279,7 @@ const MyHorsesScreen = () => {
     if (!isProMember) {
       return;
     }
-    
+
     if (selectedHorseForRecords && selectedHorseForRecords.gender === "Mare") {
       const pregnancy = pregnancies[selectedHorseForRecords.id];
       setSelectedPregnancy(pregnancy || null);
@@ -1274,7 +1308,10 @@ const MyHorsesScreen = () => {
     setHorseshoeIntervalDays(45);
   };
 
-  const updateHorseshoeInterval = (horseId: string, newIntervalDays: number) => {
+  const updateHorseshoeInterval = (
+    horseId: string,
+    newIntervalDays: number
+  ) => {
     const updatedHorseshoes = { ...horseHorseshoes };
     if (updatedHorseshoes[horseId]) {
       updatedHorseshoes[horseId] = {
@@ -1288,10 +1325,10 @@ const MyHorsesScreen = () => {
   const deleteHorseshoeTracking = (horseId: string) => {
     console.log("Deleting horseshoe tracking for:", horseId);
     console.log("Current horseshoes:", horseHorseshoes);
-    
+
     const updatedHorseshoes = { ...horseHorseshoes };
     delete updatedHorseshoes[horseId];
-    
+
     console.log("Updated horseshoes:", updatedHorseshoes);
     setHorseHorseshoes(updatedHorseshoes);
   };
@@ -1302,7 +1339,9 @@ const MyHorsesScreen = () => {
 
     const now = new Date();
     const lastChange = new Date(tracking.lastChangeDate);
-    const daysUsed = Math.floor((now.getTime() - lastChange.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUsed = Math.floor(
+      (now.getTime() - lastChange.getTime()) / (1000 * 60 * 60 * 24)
+    );
     const percentage = Math.min((daysUsed / tracking.intervalDays) * 100, 100);
 
     return {
@@ -1311,7 +1350,6 @@ const MyHorsesScreen = () => {
       percentage,
     };
   };
-
 
   const backToRecordsMain = () => {
     setRecordsSection("main");
@@ -1322,16 +1360,21 @@ const MyHorsesScreen = () => {
   const addDays = (date: Date, days: number): string => {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
-    return result.toISOString().split('T')[0];
+    return result.toISOString().split("T")[0];
   };
 
   const addMonths = (date: Date, months: number): string => {
     const result = new Date(date);
     result.setMonth(result.getMonth() + months);
-    return result.toISOString().split('T')[0];
+    return result.toISOString().split("T")[0];
   };
 
-  const buildPregnancyPlan = (coverDate: string): Omit<Pregnancy, 'id' | 'horseId' | 'createdAt' | 'updatedAt' | 'status'> => {
+  const buildPregnancyPlan = (
+    coverDate: string
+  ): Omit<
+    Pregnancy,
+    "id" | "horseId" | "createdAt" | "updatedAt" | "status"
+  > => {
     const cover = new Date(coverDate);
     return {
       coverDate,
@@ -1343,24 +1386,29 @@ const MyHorsesScreen = () => {
         { type: "Heartbeat-25-30", due: addDays(cover, 26), done: false },
         { type: "US-40-60", due: addDays(cover, 50), done: false },
         { type: "Sexing-55-70", due: addDays(cover, 62), done: false },
-        { type: "Fall-check", due: addDays(cover, 200), done: false }
+        { type: "Fall-check", due: addDays(cover, 200), done: false },
       ],
       vaccines: [
         { type: "EHV-1", due: addMonths(cover, 5), done: false },
         { type: "EHV-1", due: addMonths(cover, 7), done: false },
         { type: "EHV-1", due: addMonths(cover, 9), done: false },
-        { type: "Core-prefoal", due: addDays(cover, 305), done: false }
+        { type: "Core-prefoal", due: addDays(cover, 305), done: false },
       ],
       deworming: [
-        { type: "pre-foaling", due: addDays(cover, 338), done: false }
+        { type: "pre-foaling", due: addDays(cover, 338), done: false },
       ],
       milkCalcium: [],
       photos: [],
-      alerts: []
+      alerts: [],
     };
   };
 
-  const createPregnancy = (horseId: string, coverDate: string, stallion?: string, method?: BreedingMethod) => {
+  const createPregnancy = (
+    horseId: string,
+    coverDate: string,
+    stallion?: string,
+    method?: BreedingMethod
+  ) => {
     const pregnancyId = `pregnancy-${horseId}-${Date.now()}`;
     const plan = buildPregnancyPlan(coverDate);
     const newPregnancy: Pregnancy = {
@@ -1371,9 +1419,9 @@ const MyHorsesScreen = () => {
       stallion,
       method,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
-    setPregnancies(prev => ({ ...prev, [horseId]: newPregnancy }));
+    setPregnancies((prev) => ({ ...prev, [horseId]: newPregnancy }));
     setSelectedPregnancy(newPregnancy);
   };
 
@@ -1388,17 +1436,45 @@ const MyHorsesScreen = () => {
     return Math.min(Math.floor(daysPregnant / 30) + 1, 11);
   };
 
-  const getNextAction = (pregnancy: Pregnancy): { text: string; daysUntil: number; type: 'check' | 'vaccine' | 'deworming'; date: string } | null => {
+  const getNextAction = (
+    pregnancy: Pregnancy
+  ): {
+    text: string;
+    daysUntil: number;
+    type: "check" | "vaccine" | "deworming";
+    date: string;
+  } | null => {
     const today = new Date();
     const upcoming = [
-      ...pregnancy.checks.filter(c => !c.done && c.due).map(c => ({ text: `Ultrasound: ${c.type}`, date: c.due!, type: 'check' as const })),
-      ...pregnancy.vaccines.filter(v => !v.done).map(v => ({ text: `Vaccine: ${v.type}`, date: v.due, type: 'vaccine' as const })),
-      ...pregnancy.deworming.filter(d => !d.done).map(d => ({ text: `Deworm (pre-foaling)`, date: d.due, type: 'deworming' as const }))
+      ...pregnancy.checks
+        .filter((c) => !c.done && c.due)
+        .map((c) => ({
+          text: `Ultrasound: ${c.type}`,
+          date: c.due!,
+          type: "check" as const,
+        })),
+      ...pregnancy.vaccines
+        .filter((v) => !v.done)
+        .map((v) => ({
+          text: `Vaccine: ${v.type}`,
+          date: v.due,
+          type: "vaccine" as const,
+        })),
+      ...pregnancy.deworming
+        .filter((d) => !d.done)
+        .map((d) => ({
+          text: `Deworm (pre-foaling)`,
+          date: d.due,
+          type: "deworming" as const,
+        })),
     ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     if (upcoming.length > 0) {
       const next = upcoming[0];
-      const daysUntil = Math.ceil((new Date(next.date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const daysUntil = Math.ceil(
+        (new Date(next.date).getTime() - today.getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
       return { text: next.text, daysUntil, type: next.type, date: next.date };
     }
     return null;
@@ -1410,23 +1486,71 @@ const MyHorsesScreen = () => {
     earlyDate.setDate(dueDate.getDate() - 20);
     const lateDate = new Date(dueDate);
     lateDate.setDate(dueDate.getDate() + 20);
-    
+
     return `${earlyDate.toLocaleDateString()} - ${lateDate.toLocaleDateString()}`;
   };
 
-  const getMonthInfo = (month: number): { fruit: string; size: string; description: string } => {
+  const getMonthInfo = (
+    month: number
+  ): { fruit: string; size: string; description: string } => {
     const monthData = [
-      { fruit: "🫐", size: "Grape/Blueberry (~1 cm)", description: "Embryo visible; first ultrasound at D14-16; heartbeat by D24-26" },
-      { fruit: "🍑", size: "Plum/Kiwi (~3-4 cm)", description: "Rapid growth; confirm heartbeat; recheck for twins" },
-      { fruit: "🍋", size: "Lemon to Small Pear (~12-15 cm)", description: "Organs forming; major development phase" },
-      { fruit: "🍆", size: "Small Eggplant (~20 cm)", description: "Facial hair buds appear" },
-      { fruit: "🥒", size: "Butternut Squash (~30 cm)", description: "Eyelids and coat developing; EHV-1 vaccine due" },
-      { fruit: "🍉", size: "Small Watermelon (~40 cm)", description: "Clear weight gain begins in mare" },
-      { fruit: "🍉", size: "Medium Watermelon (~50 cm)", description: "Tail hair appears; EHV-1 vaccine due" },
-      { fruit: "🎃", size: "Large Pumpkin (~60 cm)", description: "Mane and back hair developing" },
-      { fruit: "🎃", size: "Giant Pumpkin (~70 cm)", description: "Fine coat over body; EHV-1 vaccine due; remove fescue" },
-      { fruit: "🍉", size: "Very Large Watermelon (~80 cm)", description: "Major growth spurt; increase feed; prep foaling area" },
-      { fruit: "🎃", size: "Massive Pumpkin (~90+ cm)", description: "Final preparations; watch for foaling signs; pre-foaling deworm" }
+      {
+        fruit: "🫐",
+        size: "Grape/Blueberry (~1 cm)",
+        description:
+          "Embryo visible; first ultrasound at D14-16; heartbeat by D24-26",
+      },
+      {
+        fruit: "🍑",
+        size: "Plum/Kiwi (~3-4 cm)",
+        description: "Rapid growth; confirm heartbeat; recheck for twins",
+      },
+      {
+        fruit: "🍋",
+        size: "Lemon to Small Pear (~12-15 cm)",
+        description: "Organs forming; major development phase",
+      },
+      {
+        fruit: "🍆",
+        size: "Small Eggplant (~20 cm)",
+        description: "Facial hair buds appear",
+      },
+      {
+        fruit: "🥒",
+        size: "Butternut Squash (~30 cm)",
+        description: "Eyelids and coat developing; EHV-1 vaccine due",
+      },
+      {
+        fruit: "🍉",
+        size: "Small Watermelon (~40 cm)",
+        description: "Clear weight gain begins in mare",
+      },
+      {
+        fruit: "🍉",
+        size: "Medium Watermelon (~50 cm)",
+        description: "Tail hair appears; EHV-1 vaccine due",
+      },
+      {
+        fruit: "🎃",
+        size: "Large Pumpkin (~60 cm)",
+        description: "Mane and back hair developing",
+      },
+      {
+        fruit: "🎃",
+        size: "Giant Pumpkin (~70 cm)",
+        description: "Fine coat over body; EHV-1 vaccine due; remove fescue",
+      },
+      {
+        fruit: "🍉",
+        size: "Very Large Watermelon (~80 cm)",
+        description: "Major growth spurt; increase feed; prep foaling area",
+      },
+      {
+        fruit: "🎃",
+        size: "Massive Pumpkin (~90+ cm)",
+        description:
+          "Final preparations; watch for foaling signs; pre-foaling deworm",
+      },
     ];
     return monthData[Math.min(month - 1, 10)];
   };
@@ -1437,8 +1561,8 @@ const MyHorsesScreen = () => {
       return;
     }
 
-    const coverDateStr = pregnancyCoverDate.toISOString().split('T')[0];
-    
+    const coverDateStr = pregnancyCoverDate.toISOString().split("T")[0];
+
     // Store temp variables
     const tempCoverDate = pregnancyCoverDate;
     const tempMethod = pregnancyMethod;
@@ -1458,32 +1582,35 @@ const MyHorsesScreen = () => {
       method: tempMethod,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      vet: (tempVetName || tempVetPhone) ? {
-        name: tempVetName || undefined,
-        phone: tempVetPhone || undefined
-      } : undefined
+      vet:
+        tempVetName || tempVetPhone
+          ? {
+              name: tempVetName || undefined,
+              phone: tempVetPhone || undefined,
+            }
+          : undefined,
     };
-    
+
     // Update all state together to prevent race conditions
     setPregnancyCoverDate(null);
     setPregnancyMethod("natural");
     setPregnancyVetName("");
     setPregnancyVetPhone("");
     setPregnancyModalVisible(false);
-    
+
     const updatedPregnancies = { ...pregnancies, [tempHorseId]: newPregnancy };
     setPregnancies(updatedPregnancies);
     setSelectedPregnancy(newPregnancy);
-    
+
     // Save to AsyncStorage
     savePregnancies(updatedPregnancies);
 
     // Schedule pregnancy notifications
     PregnancyNotificationService.scheduleAllNotifications({
       ...newPregnancy,
-      horseName: tempHorseName
-    }).catch(error => {
-      console.error('Failed to schedule pregnancy notifications:', error);
+      horseName: tempHorseName,
+    }).catch((error) => {
+      console.error("Failed to schedule pregnancy notifications:", error);
     });
 
     showSuccess(`Pregnancy tracking started for ${tempHorseName}!`);
@@ -1502,30 +1629,30 @@ const MyHorsesScreen = () => {
     }
 
     const updatedPregnancy = { ...selectedPregnancy };
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split("T")[0];
 
     // Mark the action as complete based on type and set completion date to TODAY
-    if (nextAction.type === 'check') {
+    if (nextAction.type === "check") {
       const checkIndex = updatedPregnancy.checks.findIndex(
-        c => !c.done && c.due === nextAction.date
+        (c) => !c.done && c.due === nextAction.date
       );
       if (checkIndex !== -1) {
         updatedPregnancy.checks[checkIndex].done = true;
         // Set the actual date when it was completed (today)
         updatedPregnancy.checks[checkIndex].date = todayStr;
       }
-    } else if (nextAction.type === 'vaccine') {
+    } else if (nextAction.type === "vaccine") {
       const vaccineIndex = updatedPregnancy.vaccines.findIndex(
-        v => !v.done && v.due === nextAction.date
+        (v) => !v.done && v.due === nextAction.date
       );
       if (vaccineIndex !== -1) {
         updatedPregnancy.vaccines[vaccineIndex].done = true;
         // Set the actual date when it was completed (today) - appears at top
         updatedPregnancy.vaccines[vaccineIndex].date = todayStr;
       }
-    } else if (nextAction.type === 'deworming') {
+    } else if (nextAction.type === "deworming") {
       const dewormIndex = updatedPregnancy.deworming.findIndex(
-        d => !d.done && d.due === nextAction.date
+        (d) => !d.done && d.due === nextAction.date
       );
       if (dewormIndex !== -1) {
         updatedPregnancy.deworming[dewormIndex].done = true;
@@ -1539,21 +1666,23 @@ const MyHorsesScreen = () => {
     // Update pregnancy
     const updatedPregnancies = {
       ...pregnancies,
-      [updatedPregnancy.horseId]: updatedPregnancy
+      [updatedPregnancy.horseId]: updatedPregnancy,
     };
     setPregnancies(updatedPregnancies);
     setSelectedPregnancy(updatedPregnancy);
-    
+
     // Save to AsyncStorage
     savePregnancies(updatedPregnancies);
 
     // Update notifications (reschedule based on remaining actions)
-    const horseName = horses.find(h => h.id === updatedPregnancy.horseId)?.name;
+    const horseName = horses.find(
+      (h) => h.id === updatedPregnancy.horseId
+    )?.name;
     PregnancyNotificationService.updatePregnancyNotifications({
       ...updatedPregnancy,
-      horseName
-    }).catch(error => {
-      console.error('Failed to update pregnancy notifications:', error);
+      horseName,
+    }).catch((error) => {
+      console.error("Failed to update pregnancy notifications:", error);
     });
 
     showSuccess("Action completed and added to Event Timeline!");
@@ -1565,7 +1694,7 @@ const MyHorsesScreen = () => {
       return;
     }
 
-    const eventDateStr = eventDate.toISOString().split('T')[0];
+    const eventDateStr = eventDate.toISOString().split("T")[0];
     const updatedPregnancy = { ...selectedPregnancy };
 
     if (eventType === "ultrasound") {
@@ -1573,21 +1702,21 @@ const MyHorsesScreen = () => {
         type: "US-40-60" as CheckType,
         date: eventDateStr,
         done: true,
-        notes: eventNotes || undefined
+        notes: eventNotes || undefined,
       });
     } else if (eventType === "vaccine") {
       updatedPregnancy.vaccines.push({
         type: "EHV-1" as VaccineType,
         due: eventDateStr,
         done: true,
-        notes: eventNotes || undefined
+        notes: eventNotes || undefined,
       });
     } else if (eventType === "deworming") {
       updatedPregnancy.deworming.push({
         type: "pre-foaling",
         due: eventDateStr,
         done: true,
-        notes: eventNotes || undefined
+        notes: eventNotes || undefined,
       });
     }
 
@@ -1596,11 +1725,11 @@ const MyHorsesScreen = () => {
     // Update pregnancy
     const updatedPregnancies = {
       ...pregnancies,
-      [updatedPregnancy.horseId]: updatedPregnancy
+      [updatedPregnancy.horseId]: updatedPregnancy,
     };
     setPregnancies(updatedPregnancies);
     setSelectedPregnancy(updatedPregnancy);
-    
+
     // Save to AsyncStorage
     savePregnancies(updatedPregnancies);
 
@@ -1618,14 +1747,14 @@ const MyHorsesScreen = () => {
     if (!selectedPregnancy) return;
 
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    
+
     if (!permissionResult.granted) {
       showError("Camera permission is required to capture photos.");
       return;
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
@@ -1633,26 +1762,26 @@ const MyHorsesScreen = () => {
 
     if (!result.canceled && result.assets[0]) {
       const photo: PregnancyPhoto = {
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().split("T")[0],
         dayPregnant: getDaysPregnant(selectedPregnancy),
         view: "left-lateral",
         url: result.assets[0].uri,
-        month: getPregnancyMonth(getDaysPregnant(selectedPregnancy))
+        month: getPregnancyMonth(getDaysPregnant(selectedPregnancy)),
       };
 
       const updatedPregnancy = {
         ...selectedPregnancy,
         photos: [...(selectedPregnancy.photos || []), photo],
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       const updatedPregnancies = {
         ...pregnancies,
-        [updatedPregnancy.horseId]: updatedPregnancy
+        [updatedPregnancy.horseId]: updatedPregnancy,
       };
       setPregnancies(updatedPregnancies);
       setSelectedPregnancy(updatedPregnancy);
-      
+
       // Save to AsyncStorage
       savePregnancies(updatedPregnancies);
 
@@ -1663,15 +1792,16 @@ const MyHorsesScreen = () => {
   const handlePickPhotoFromLibrary = async () => {
     if (!selectedPregnancy) return;
 
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (!permissionResult.granted) {
       showError("Photo library permission is required.");
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
@@ -1679,26 +1809,26 @@ const MyHorsesScreen = () => {
 
     if (!result.canceled && result.assets[0]) {
       const photo: PregnancyPhoto = {
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().split("T")[0],
         dayPregnant: getDaysPregnant(selectedPregnancy),
         view: "left-lateral",
         url: result.assets[0].uri,
-        month: getPregnancyMonth(getDaysPregnant(selectedPregnancy))
+        month: getPregnancyMonth(getDaysPregnant(selectedPregnancy)),
       };
 
       const updatedPregnancy = {
         ...selectedPregnancy,
         photos: [...(selectedPregnancy.photos || []), photo],
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       const updatedPregnancies = {
         ...pregnancies,
-        [updatedPregnancy.horseId]: updatedPregnancy
+        [updatedPregnancy.horseId]: updatedPregnancy,
       };
       setPregnancies(updatedPregnancies);
       setSelectedPregnancy(updatedPregnancy);
-      
+
       // Save to AsyncStorage
       savePregnancies(updatedPregnancies);
 
@@ -1837,10 +1967,10 @@ const MyHorsesScreen = () => {
     try {
       // Delete from database
       await vaccinationAPI.deleteVaccinationRecord(vaccinationId);
-      
+
       // Cancel notifications
       await cancelVaccinationNotifications(vaccinationId);
-      
+
       // Reload vaccinations to update local state
       await loadVaccinationReminders();
     } catch (error) {
@@ -1858,13 +1988,13 @@ const MyHorsesScreen = () => {
       // For non-repeating, we just need to mark it as completed
       // For now, we can reload the vaccinations after marking complete
       // TODO: Implement proper completion logic in the vaccination API
-      
+
       // Cancel notification
       await cancelVaccinationNotifications(vaccinationId);
-      
+
       // Reload vaccinations
       await loadVaccinationReminders();
-      
+
       setSuccessMessage("Vaccination marked as completed.");
       setShowSuccessModal(true);
     } catch (error) {
@@ -2803,217 +2933,218 @@ const MyHorsesScreen = () => {
                   borderColor: currentTheme.colors.border,
                 }}
               >
-              <Text
-                style={{
-                  color: currentTheme.colors.text,
-                  fontSize: 20,
-                  fontWeight: "bold",
-                  textAlign: "center",
-                  marginBottom: 20,
-                  fontFamily: "Inder",
-                }}
-              >
-                {vaccinationType === "past"
-                  ? "Select Completed Date"
-                  : "Select Due Date"}
-              </Text>
+                <Text
+                  style={{
+                    color: currentTheme.colors.text,
+                    fontSize: 20,
+                    fontWeight: "bold",
+                    textAlign: "center",
+                    marginBottom: 20,
+                    fontFamily: "Inder",
+                  }}
+                >
+                  {vaccinationType === "past"
+                    ? "Select Completed Date"
+                    : "Select Due Date"}
+                </Text>
 
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  marginBottom: 20,
-                }}
-              >
-                {/* Month Picker */}
-                <View style={{ flex: 1, marginRight: 10 }}>
-                  <Text
-                    style={{
-                      color: currentTheme.colors.text,
-                      marginBottom: 10,
-                      textAlign: "center",
-                      fontFamily: "Inder",
-                    }}
-                  >
-                    Month
-                  </Text>
-                  <ScrollView
-                    style={{
-                      maxHeight: 150,
-                      backgroundColor: currentTheme.colors.primaryDark,
-                      borderRadius: 8,
-                    }}
-                  >
-                    {months.map((month, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={{
-                          paddingVertical: 12,
-                          paddingHorizontal: 10,
-                          backgroundColor:
-                            selectedMonth === index
-                              ? currentTheme.colors.secondary
-                              : "transparent",
-                        }}
-                        onPress={() => setSelectedMonth(index)}
-                      >
-                        <Text
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    marginBottom: 20,
+                  }}
+                >
+                  {/* Month Picker */}
+                  <View style={{ flex: 1, marginRight: 10 }}>
+                    <Text
+                      style={{
+                        color: currentTheme.colors.text,
+                        marginBottom: 10,
+                        textAlign: "center",
+                        fontFamily: "Inder",
+                      }}
+                    >
+                      Month
+                    </Text>
+                    <ScrollView
+                      style={{
+                        maxHeight: 150,
+                        backgroundColor: currentTheme.colors.primaryDark,
+                        borderRadius: 8,
+                      }}
+                    >
+                      {months.map((month, index) => (
+                        <TouchableOpacity
+                          key={index}
                           style={{
-                            color: "#FFFFFF",
-                            textAlign: "center",
-                            fontFamily: "Inder",
-                            fontWeight:
-                              selectedMonth === index ? "bold" : "normal",
+                            paddingVertical: 12,
+                            paddingHorizontal: 10,
+                            backgroundColor:
+                              selectedMonth === index
+                                ? currentTheme.colors.secondary
+                                : "transparent",
                           }}
+                          onPress={() => setSelectedMonth(index)}
                         >
-                          {month}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              textAlign: "center",
+                              fontFamily: "Inder",
+                              fontWeight:
+                                selectedMonth === index ? "bold" : "normal",
+                            }}
+                          >
+                            {month}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  {/* Day Picker */}
+                  <View style={{ flex: 0.6, marginRight: 10 }}>
+                    <Text
+                      style={{
+                        color: currentTheme.colors.text,
+                        marginBottom: 10,
+                        textAlign: "center",
+                        fontFamily: "Inder",
+                      }}
+                    >
+                      Day
+                    </Text>
+                    <ScrollView
+                      style={{
+                        maxHeight: 150,
+                        backgroundColor: currentTheme.colors.primaryDark,
+                        borderRadius: 8,
+                      }}
+                    >
+                      {generateDays().map((day) => (
+                        <TouchableOpacity
+                          key={day}
+                          style={{
+                            paddingVertical: 12,
+                            paddingHorizontal: 10,
+                            backgroundColor:
+                              selectedDay === day
+                                ? currentTheme.colors.secondary
+                                : "transparent",
+                          }}
+                          onPress={() => setSelectedDay(day)}
+                        >
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              textAlign: "center",
+                              fontFamily: "Inder",
+                              fontWeight:
+                                selectedDay === day ? "bold" : "normal",
+                            }}
+                          >
+                            {day}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  {/* Year Picker */}
+                  <View style={{ flex: 0.8 }}>
+                    <Text
+                      style={{
+                        color: currentTheme.colors.text,
+                        marginBottom: 10,
+                        textAlign: "center",
+                        fontFamily: "Inder",
+                      }}
+                    >
+                      Year
+                    </Text>
+                    <ScrollView
+                      style={{
+                        maxHeight: 150,
+                        backgroundColor: currentTheme.colors.primaryDark,
+                        borderRadius: 8,
+                      }}
+                    >
+                      {generateYears().map((year) => (
+                        <TouchableOpacity
+                          key={year}
+                          style={{
+                            paddingVertical: 12,
+                            paddingHorizontal: 10,
+                            backgroundColor:
+                              selectedYear === year
+                                ? currentTheme.colors.secondary
+                                : "transparent",
+                          }}
+                          onPress={() => setSelectedYear(year)}
+                        >
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              textAlign: "center",
+                              fontFamily: "Inder",
+                              fontWeight:
+                                selectedYear === year ? "bold" : "normal",
+                            }}
+                          >
+                            {year}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
                 </View>
 
-                {/* Day Picker */}
-                <View style={{ flex: 0.6, marginRight: 10 }}>
-                  <Text
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <TouchableOpacity
                     style={{
-                      color: currentTheme.colors.text,
-                      marginBottom: 10,
-                      textAlign: "center",
-                      fontFamily: "Inder",
-                    }}
-                  >
-                    Day
-                  </Text>
-                  <ScrollView
-                    style={{
-                      maxHeight: 150,
-                      backgroundColor: currentTheme.colors.primaryDark,
+                      flex: 1,
+                      backgroundColor: currentTheme.colors.textSecondary,
                       borderRadius: 8,
+                      paddingVertical: 12,
                     }}
+                    onPress={() => setVisible(false)}
                   >
-                    {generateDays().map((day) => (
-                      <TouchableOpacity
-                        key={day}
-                        style={{
-                          paddingVertical: 12,
-                          paddingHorizontal: 10,
-                          backgroundColor:
-                            selectedDay === day
-                              ? currentTheme.colors.secondary
-                              : "transparent",
-                        }}
-                        onPress={() => setSelectedDay(day)}
-                      >
-                        <Text
-                          style={{
-                            color: "#FFFFFF",
-                            textAlign: "center",
-                            fontFamily: "Inder",
-                            fontWeight: selectedDay === day ? "bold" : "normal",
-                          }}
-                        >
-                          {day}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-
-                {/* Year Picker */}
-                <View style={{ flex: 0.8 }}>
-                  <Text
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        textAlign: "center",
+                        fontSize: 16,
+                        fontFamily: "Inder",
+                      }}
+                    >
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={{
-                      color: currentTheme.colors.text,
-                      marginBottom: 10,
-                      textAlign: "center",
-                      fontFamily: "Inder",
-                    }}
-                  >
-                    Year
-                  </Text>
-                  <ScrollView
-                    style={{
-                      maxHeight: 150,
-                      backgroundColor: currentTheme.colors.primaryDark,
+                      flex: 1,
+                      backgroundColor: currentTheme.colors.primary,
                       borderRadius: 8,
+                      paddingVertical: 12,
                     }}
+                    onPress={handleConfirm}
                   >
-                    {generateYears().map((year) => (
-                      <TouchableOpacity
-                        key={year}
-                        style={{
-                          paddingVertical: 12,
-                          paddingHorizontal: 10,
-                          backgroundColor:
-                            selectedYear === year
-                              ? currentTheme.colors.secondary
-                              : "transparent",
-                        }}
-                        onPress={() => setSelectedYear(year)}
-                      >
-                        <Text
-                          style={{
-                            color: "#FFFFFF",
-                            textAlign: "center",
-                            fontFamily: "Inder",
-                            fontWeight:
-                              selectedYear === year ? "bold" : "normal",
-                          }}
-                        >
-                          {year}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        textAlign: "center",
+                        fontSize: 16,
+                        fontFamily: "Inder",
+                      }}
+                    >
+                      Confirm
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    backgroundColor: currentTheme.colors.textSecondary,
-                    borderRadius: 8,
-                    paddingVertical: 12,
-                  }}
-                  onPress={() => setVisible(false)}
-                >
-                  <Text
-                    style={{
-                      color: "#FFFFFF",
-                      textAlign: "center",
-                      fontSize: 16,
-                      fontFamily: "Inder",
-                    }}
-                  >
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    backgroundColor: currentTheme.colors.primary,
-                    borderRadius: 8,
-                    paddingVertical: 12,
-                  }}
-                  onPress={handleConfirm}
-                >
-                  <Text
-                    style={{
-                      color: "#FFFFFF",
-                      textAlign: "center",
-                      fontSize: 16,
-                      fontFamily: "Inder",
-                    }}
-                  >
-                    Confirm
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </Modal>
+            </TouchableOpacity>
+          </Modal>
         ) : null}
       </View>
     );
@@ -3412,7 +3543,7 @@ const MyHorsesScreen = () => {
             </Text>
             <TouchableOpacity
               style={styles.addHorseButton}
-              onPress={() => router.push('/login')}
+              onPress={() => router.push("/login")}
             >
               <Text style={styles.addHorseButtonText}>Try Again</Text>
             </TouchableOpacity>
@@ -3656,72 +3787,126 @@ const MyHorsesScreen = () => {
                   )}
 
                   {/* Pregnancy Timeline Section */}
-                  {horse.gender === "Mare" && pregnancies[horse.id] && pregnancies[horse.id].status === "active" && (
-                    <View
-                      style={[
-                        styles.pregnancySection,
-                        {
-                          backgroundColor: currentTheme.colors.surface,
-                          borderColor: currentTheme.colors.border,
-                        },
-                      ]}
-                    >
-                      <View style={styles.pregnancySectionHeader}>
+                  {horse.gender === "Mare" &&
+                    pregnancies[horse.id] &&
+                    pregnancies[horse.id].status === "active" && (
+                      <View
+                        style={[
+                          styles.pregnancySection,
+                          {
+                            backgroundColor: currentTheme.colors.surface,
+                            borderColor: currentTheme.colors.border,
+                          },
+                        ]}
+                      >
+                        <View style={styles.pregnancySectionHeader}>
+                          <Text
+                            style={[
+                              styles.pregnancySectionTitle,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            Pregnancy Timeline
+                          </Text>
+                          <Text
+                            style={[
+                              styles.pregnancyDayCount,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            Day {getDaysPregnant(pregnancies[horse.id])}
+                          </Text>
+                        </View>
+
+                        {/* Segmented Progress Bar */}
+                        <View style={styles.pregnancyProgressContainer}>
+                          <View
+                            style={[
+                              styles.pregnancyProgressBar,
+                              {
+                                backgroundColor: currentTheme.colors.secondary,
+                              },
+                            ]}
+                          >
+                            {/* Progress Fill */}
+                            <View
+                              style={[
+                                styles.pregnancyProgressFill,
+                                {
+                                  width: `${Math.min(
+                                    (getDaysPregnant(pregnancies[horse.id]) /
+                                      340) *
+                                      100,
+                                    100
+                                  )}%`,
+                                  backgroundColor: currentTheme.colors.primary,
+                                },
+                              ]}
+                            />
+                            {/* Stage Dividers */}
+                            <View
+                              style={[
+                                styles.pregnancyStageDivider,
+                                {
+                                  left: "33.33%",
+                                  backgroundColor: currentTheme.colors.surface,
+                                },
+                              ]}
+                            />
+                            <View
+                              style={[
+                                styles.pregnancyStageDivider,
+                                {
+                                  left: "66.66%",
+                                  backgroundColor: currentTheme.colors.surface,
+                                },
+                              ]}
+                            />
+                          </View>
+
+                          {/* Stage Labels */}
+                          <View style={styles.pregnancyStageLabels}>
+                            <Text
+                              style={[
+                                styles.pregnancyStageLabel,
+                                { color: currentTheme.colors.textSecondary },
+                              ]}
+                            >
+                              Early
+                            </Text>
+                            <Text
+                              style={[
+                                styles.pregnancyStageLabel,
+                                { color: currentTheme.colors.textSecondary },
+                              ]}
+                            >
+                              Mid
+                            </Text>
+                            <Text
+                              style={[
+                                styles.pregnancyStageLabel,
+                                { color: currentTheme.colors.textSecondary },
+                              ]}
+                            >
+                              Late
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Due Date */}
                         <Text
                           style={[
-                            styles.pregnancySectionTitle,
-                            { color: currentTheme.colors.text },
-                          ]}
-                        >
-                          Pregnancy Timeline
-                        </Text>
-                        <Text
-                          style={[
-                            styles.pregnancyDayCount,
+                            styles.pregnancyDueDate,
                             { color: currentTheme.colors.textSecondary },
                           ]}
                         >
-                          Day {getDaysPregnant(pregnancies[horse.id])}
+                          Due:{" "}
+                          {formatDueDateRange(
+                            pregnancies[horse.id].dueDateEstimate
+                          )}
                         </Text>
                       </View>
-
-                      {/* Segmented Progress Bar */}
-                      <View style={styles.pregnancyProgressContainer}>
-                        <View style={[styles.pregnancyProgressBar, { backgroundColor: currentTheme.colors.secondary }]}>
-                          {/* Progress Fill */}
-                          <View 
-                            style={[
-                              styles.pregnancyProgressFill,
-                              { 
-                                width: `${Math.min((getDaysPregnant(pregnancies[horse.id]) / 340) * 100, 100)}%`,
-                                backgroundColor: currentTheme.colors.primary
-                              }
-                            ]}
-                          />
-                          {/* Stage Dividers */}
-                          <View style={[styles.pregnancyStageDivider, { left: '33.33%', backgroundColor: currentTheme.colors.surface }]} />
-                          <View style={[styles.pregnancyStageDivider, { left: '66.66%', backgroundColor: currentTheme.colors.surface }]} />
-                        </View>
-                        
-                        {/* Stage Labels */}
-                        <View style={styles.pregnancyStageLabels}>
-                          <Text style={[styles.pregnancyStageLabel, { color: currentTheme.colors.textSecondary }]}>Early</Text>
-                          <Text style={[styles.pregnancyStageLabel, { color: currentTheme.colors.textSecondary }]}>Mid</Text>
-                          <Text style={[styles.pregnancyStageLabel, { color: currentTheme.colors.textSecondary }]}>Late</Text>
-                        </View>
-                      </View>
-
-                      {/* Due Date */}
-                      <Text
-                        style={[
-                          styles.pregnancyDueDate,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        Due: {formatDueDateRange(pregnancies[horse.id].dueDateEstimate)}
-                      </Text>
-                    </View>
-                  )}
+                    )}
                 </View>
 
                 <View style={styles.actionButtons}>
@@ -3867,283 +4052,262 @@ const MyHorsesScreen = () => {
             { backgroundColor: currentTheme.colors.surface },
           ]}
         >
-            <View
-              style={[
-                styles.modalHeader,
-                { backgroundColor: currentTheme.colors.primary },
-              ]}
+          <View
+            style={[
+              styles.modalHeader,
+              { backgroundColor: currentTheme.colors.primary },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: "#FFFFFF" }]}>
+              Edit Horse
+            </Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={closeEditModal}
             >
-              <Text style={[styles.modalTitle, { color: "#FFFFFF" }]}>
-                Edit Horse
+              <Text style={[styles.modalCloseText, { color: "#FFFFFF" }]}>
+                ✕
               </Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={closeEditModal}
-              >
-                <Text style={[styles.modalCloseText, { color: "#FFFFFF" }]}>
-                  ✕
-                </Text>
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
+          </View>
 
-            <ScrollView style={styles.modalContent}>
-              <View style={styles.inputGroup}>
-                <Text
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Photo
+              </Text>
+              <View
+                style={[
+                  styles.imageContainer,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <Image
                   style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
+                    styles.selectedImage,
+                    { borderColor: currentTheme.colors.primary },
                   ]}
-                >
-                  Photo
-                </Text>
-                <View
-                  style={[
-                    styles.imageContainer,
-                    { backgroundColor: currentTheme.colors.surface },
-                  ]}
-                >
-                  <Image
+                  source={
+                    editImage
+                      ? editImage
+                      : editingHorse?.image_url
+                      ? { uri: editingHorse.image_url }
+                      : require("../../assets/in_app_icons/horse_withBG.png")
+                  }
+                  resizeMode="cover"
+                />
+                {!showInlineImagePicker ? (
+                  <TouchableOpacity
                     style={[
-                      styles.selectedImage,
-                      { borderColor: currentTheme.colors.primary },
+                      styles.changePhotoButton,
+                      { backgroundColor: currentTheme.colors.primary },
                     ]}
-                    source={
-                      editImage
-                        ? editImage
-                        : editingHorse?.image_url
-                        ? { uri: editingHorse.image_url }
-                        : require("../../assets/images/horses/pony.jpg")
-                    }
-                    resizeMode="cover"
-                  />
-                  {!showInlineImagePicker ? (
+                    onPress={() => setShowInlineImagePicker(true)}
+                  >
+                    <View style={styles.cameraIconContainer}>
+                      <Text style={styles.cameraIconText}>📷</Text>
+                    </View>
+                    <Text
+                      style={[styles.changePhotoText, { color: "#FFFFFF" }]}
+                    >
+                      Change Photo
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.inlineImagePickerButtons}>
                     <TouchableOpacity
                       style={[
-                        styles.changePhotoButton,
+                        styles.inlineImagePickerButton,
                         { backgroundColor: currentTheme.colors.primary },
                       ]}
-                      onPress={() => setShowInlineImagePicker(true)}
+                      onPress={() => {
+                        setShowInlineImagePicker(false);
+                        takePhoto();
+                      }}
                     >
-                      <View style={styles.cameraIconContainer}>
-                        <Text style={styles.cameraIconText}>📷</Text>
-                      </View>
-                      <Text
-                        style={[styles.changePhotoText, { color: "#FFFFFF" }]}
-                      >
-                        Change Photo
+                      <Text style={styles.inlineImagePickerEmoji}>📷</Text>
+                      <Text style={styles.inlineImagePickerButtonText}>
+                        Take Photo
                       </Text>
                     </TouchableOpacity>
-                  ) : (
-                    <View style={styles.inlineImagePickerButtons}>
-                      <TouchableOpacity
-                        style={[
-                          styles.inlineImagePickerButton,
-                          { backgroundColor: currentTheme.colors.primary },
-                        ]}
-                        onPress={() => {
-                          setShowInlineImagePicker(false);
-                          takePhoto();
-                        }}
-                      >
-                        <Text style={styles.inlineImagePickerEmoji}>📷</Text>
-                        <Text style={styles.inlineImagePickerButtonText}>
-                          Take Photo
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          styles.inlineImagePickerButton,
-                          { backgroundColor: currentTheme.colors.secondary },
-                        ]}
-                        onPress={() => {
-                          setShowInlineImagePicker(false);
-                          pickImageFromLibrary();
-                        }}
-                      >
-                        <Text style={styles.inlineImagePickerEmoji}>🖼️</Text>
-                        <Text style={styles.inlineImagePickerButtonText}>
-                          Choose from Library
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.inlineImagePickerButton,
+                        { backgroundColor: currentTheme.colors.secondary },
+                      ]}
+                      onPress={() => {
+                        setShowInlineImagePicker(false);
+                        pickImageFromLibrary();
+                      }}
+                    >
+                      <Text style={styles.inlineImagePickerEmoji}>🖼️</Text>
+                      <Text style={styles.inlineImagePickerButtonText}>
+                        Choose from Library
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Name
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    {
-                      backgroundColor: currentTheme.colors.surface,
-                      borderColor: currentTheme.colors.border,
-                      color: currentTheme.colors.text,
-                    },
-                  ]}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder="Horse name"
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  textContentType="none"
-                  keyboardType="default"
-                  returnKeyType="next"
-                  maxLength={50}
-                  multiline={false}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Gender
-                </Text>
-                <CustomDropdown
-                  value={editGender}
-                  placeholder="Select gender"
-                  options={genderOptions}
-                  onSelect={setEditGender}
-                  isVisible={genderDropdownVisible}
-                  setVisible={setGenderDropdownVisible}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Birth Date
-                </Text>
-                <DatePicker
-                  value={editBirthDate}
-                  placeholder="Select birth date"
-                  onSelect={setEditBirthDate}
-                  isVisible={datePickerVisible}
-                  setVisible={setDatePickerVisible}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Height ({formatHeightUnit()})
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    {
-                      backgroundColor: currentTheme.colors.surface,
-                      borderColor: currentTheme.colors.border,
-                      color: currentTheme.colors.text,
-                    },
-                  ]}
-                  value={editHeight}
-                  onChangeText={setEditHeight}
-                  placeholder={
-                    metricSystem === "metric" ? "Enter height" : "Enter height"
-                  }
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                  keyboardType="numeric"
-                  returnKeyType="done"
-                  maxLength={3}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Weight ({formatWeightUnit()}) - Optional
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    {
-                      backgroundColor: currentTheme.colors.surface,
-                      borderColor: currentTheme.colors.border,
-                      color: currentTheme.colors.text,
-                    },
-                  ]}
-                  value={editWeight}
-                  onChangeText={setEditWeight}
-                  placeholder="Enter weight"
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                  keyboardType="numeric"
-                  returnKeyType="done"
-                  maxLength={4}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Breed
-                </Text>
-                <CustomDropdown
-                  value={editBreed}
-                  placeholder="Select breed"
-                  options={breedOptions}
-                  onSelect={setEditBreed}
-                  isVisible={breedDropdownVisible}
-                  setVisible={setBreedDropdownVisible}
-                />
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.cancelButton,
-                  { backgroundColor: currentTheme.colors.textSecondary },
-                ]}
-                onPress={closeEditModal}
-              >
-                <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.saveButton,
-                  { backgroundColor: currentTheme.colors.primary },
-                ]}
-                onPress={saveHorseEdit}
-              >
-                <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
-                  Save Changes
-                </Text>
-              </TouchableOpacity>
             </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Name
+              </Text>
+              <TextInput
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: currentTheme.colors.surface,
+                    borderColor: currentTheme.colors.border,
+                    color: currentTheme.colors.text,
+                  },
+                ]}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Horse name"
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                autoCapitalize="words"
+                autoCorrect={false}
+                textContentType="none"
+                keyboardType="default"
+                returnKeyType="next"
+                maxLength={50}
+                multiline={false}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Gender
+              </Text>
+              <CustomDropdown
+                value={editGender}
+                placeholder="Select gender"
+                options={genderOptions}
+                onSelect={setEditGender}
+                isVisible={genderDropdownVisible}
+                setVisible={setGenderDropdownVisible}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Birth Date
+              </Text>
+              <DatePicker
+                value={editBirthDate}
+                placeholder="Select birth date"
+                onSelect={setEditBirthDate}
+                isVisible={datePickerVisible}
+                setVisible={setDatePickerVisible}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Height ({formatHeightUnit()})
+              </Text>
+              <TextInput
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: currentTheme.colors.surface,
+                    borderColor: currentTheme.colors.border,
+                    color: currentTheme.colors.text,
+                  },
+                ]}
+                value={editHeight}
+                onChangeText={setEditHeight}
+                placeholder={
+                  metricSystem === "metric" ? "Enter height" : "Enter height"
+                }
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                keyboardType="numeric"
+                returnKeyType="done"
+                maxLength={3}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Weight ({formatWeightUnit()}) - Optional
+              </Text>
+              <TextInput
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: currentTheme.colors.surface,
+                    borderColor: currentTheme.colors.border,
+                    color: currentTheme.colors.text,
+                  },
+                ]}
+                value={editWeight}
+                onChangeText={setEditWeight}
+                placeholder="Enter weight"
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                keyboardType="numeric"
+                returnKeyType="done"
+                maxLength={4}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Breed
+              </Text>
+              <CustomDropdown
+                value={editBreed}
+                placeholder="Select breed"
+                options={breedOptions}
+                onSelect={setEditBreed}
+                isVisible={breedDropdownVisible}
+                setVisible={setBreedDropdownVisible}
+              />
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={[
+                styles.modalButton,
+                styles.cancelButton,
+                { backgroundColor: currentTheme.colors.textSecondary },
+              ]}
+              onPress={closeEditModal}
+            >
+              <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.modalButton,
+                styles.saveButton,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
+              onPress={saveHorseEdit}
+            >
+              <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
+                Save Changes
+              </Text>
+            </TouchableOpacity>
           </View>
+        </View>
       </Modal>
 
       {/* Add Horse Modal */}
@@ -4159,278 +4323,258 @@ const MyHorsesScreen = () => {
             { backgroundColor: currentTheme.colors.surface },
           ]}
         >
-            <View
-              style={[
-                styles.modalHeader,
-                { backgroundColor: currentTheme.colors.primary },
-              ]}
+          <View
+            style={[
+              styles.modalHeader,
+              { backgroundColor: currentTheme.colors.primary },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: "#FFFFFF" }]}>
+              Add New Horse
+            </Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={closeAddModal}
             >
-              <Text style={[styles.modalTitle, { color: "#FFFFFF" }]}>
-                Add New Horse
+              <Text style={[styles.modalCloseText, { color: "#FFFFFF" }]}>
+                ✕
               </Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={closeAddModal}
-              >
-                <Text style={[styles.modalCloseText, { color: "#FFFFFF" }]}>
-                  ✕
-                </Text>
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
+          </View>
 
-            <ScrollView style={styles.modalContent}>
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Photo
-                </Text>
-                <View
-                  style={[
-                    styles.imageContainer,
-                    { backgroundColor: currentTheme.colors.surface },
-                  ]}
-                >
-                  <Image
-                    style={styles.selectedImage}
-                    source={
-                      addImage || require("../../assets/in_app_icons/horse_withBG.png")
-                    }
-                    resizeMode="cover"
-                  />
-                  {!showInlineImagePicker ? (
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Photo
+              </Text>
+              <View
+                style={[
+                  styles.imageContainer,
+                  { backgroundColor: currentTheme.colors.surface },
+                ]}
+              >
+                <Image
+                  style={styles.selectedImage}
+                  source={
+                    addImage ||
+                    require("../../assets/in_app_icons/horse_withBG.png")
+                  }
+                  resizeMode="cover"
+                />
+                {!showInlineImagePicker ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.changePhotoButton,
+                      { backgroundColor: currentTheme.colors.primary },
+                    ]}
+                    onPress={() => setShowInlineImagePicker(true)}
+                  >
+                    <View style={styles.cameraIconContainer}>
+                      <Text style={styles.cameraIconText}>📷</Text>
+                    </View>
+                    <Text
+                      style={[styles.changePhotoText, { color: "#FFFFFF" }]}
+                    >
+                      Add Photo
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.inlineImagePickerButtons}>
                     <TouchableOpacity
                       style={[
-                        styles.changePhotoButton,
+                        styles.inlineImagePickerButton,
                         { backgroundColor: currentTheme.colors.primary },
                       ]}
-                      onPress={() => setShowInlineImagePicker(true)}
+                      onPress={() => {
+                        setShowInlineImagePicker(false);
+                        takePhoto();
+                      }}
                     >
-                      <View style={styles.cameraIconContainer}>
-                        <Text style={styles.cameraIconText}>📷</Text>
-                      </View>
-                      <Text
-                        style={[styles.changePhotoText, { color: "#FFFFFF" }]}
-                      >
-                        Add Photo
+                      <Text style={styles.inlineImagePickerEmoji}>📷</Text>
+                      <Text style={styles.inlineImagePickerButtonText}>
+                        Take Photo
                       </Text>
                     </TouchableOpacity>
-                  ) : (
-                    <View style={styles.inlineImagePickerButtons}>
-                      <TouchableOpacity
-                        style={[
-                          styles.inlineImagePickerButton,
-                          { backgroundColor: currentTheme.colors.primary },
-                        ]}
-                        onPress={() => {
-                          setShowInlineImagePicker(false);
-                          takePhoto();
-                        }}
-                      >
-                        <Text style={styles.inlineImagePickerEmoji}>📷</Text>
-                        <Text style={styles.inlineImagePickerButtonText}>
-                          Take Photo
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          styles.inlineImagePickerButton,
-                          { backgroundColor: currentTheme.colors.secondary },
-                        ]}
-                        onPress={() => {
-                          setShowInlineImagePicker(false);
-                          pickImageFromLibrary();
-                        }}
-                      >
-                        <Text style={styles.inlineImagePickerEmoji}>🖼️</Text>
-                        <Text style={styles.inlineImagePickerButtonText}>
-                          Choose from Library
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.inlineImagePickerButton,
+                        { backgroundColor: currentTheme.colors.secondary },
+                      ]}
+                      onPress={() => {
+                        setShowInlineImagePicker(false);
+                        pickImageFromLibrary();
+                      }}
+                    >
+                      <Text style={styles.inlineImagePickerEmoji}>🖼️</Text>
+                      <Text style={styles.inlineImagePickerButtonText}>
+                        Choose from Library
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Name
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    {
-                      backgroundColor: currentTheme.colors.surface,
-                      borderColor: currentTheme.colors.border,
-                      color: currentTheme.colors.text,
-                    },
-                  ]}
-                  value={addName}
-                  onChangeText={setAddName}
-                  placeholder="Horse name"
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  textContentType="none"
-                  keyboardType="default"
-                  returnKeyType="next"
-                  maxLength={50}
-                  multiline={false}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Gender
-                </Text>
-                <CustomDropdown
-                  value={addGender}
-                  placeholder="Select gender"
-                  options={genderOptions}
-                  onSelect={setAddGender}
-                  isVisible={addGenderDropdownVisible}
-                  setVisible={setAddGenderDropdownVisible}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Birth Date
-                </Text>
-                <DatePicker
-                  value={addBirthDate}
-                  placeholder="Select birth date"
-                  onSelect={setAddBirthDate}
-                  isVisible={addDatePickerVisible}
-                  setVisible={setAddDatePickerVisible}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Height ({formatHeightUnit()})
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    {
-                      backgroundColor: currentTheme.colors.surface,
-                      borderColor: currentTheme.colors.border,
-                      color: currentTheme.colors.text,
-                    },
-                  ]}
-                  value={addHeight}
-                  onChangeText={setAddHeight}
-                  placeholder={
-                    metricSystem === "metric"
-                      ? "Enter height (100-220 cm)"
-                      : "Enter height (39-87 in)"
-                  }
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                  keyboardType="numeric"
-                  returnKeyType="done"
-                  maxLength={3}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Weight ({formatWeightUnit()}) - Optional
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    {
-                      backgroundColor: currentTheme.colors.surface,
-                      borderColor: currentTheme.colors.border,
-                      color: currentTheme.colors.text,
-                    },
-                  ]}
-                  value={addWeight}
-                  onChangeText={setAddWeight}
-                  placeholder="Enter weight"
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                  keyboardType="numeric"
-                  returnKeyType="done"
-                  maxLength={4}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: currentTheme.colors.text },
-                  ]}
-                >
-                  Breed
-                </Text>
-                <CustomDropdown
-                  value={addBreed}
-                  placeholder="Select breed"
-                  options={breedOptions}
-                  onSelect={setAddBreed}
-                  isVisible={addBreedDropdownVisible}
-                  setVisible={setAddBreedDropdownVisible}
-                />
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.cancelButton,
-                  { backgroundColor: currentTheme.colors.textSecondary },
-                ]}
-                onPress={closeAddModal}
-              >
-                <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.saveButton,
-                  { backgroundColor: currentTheme.colors.primary },
-                ]}
-                onPress={saveHorseAdd}
-              >
-                <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
-                  Add Horse
-                </Text>
-              </TouchableOpacity>
             </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Name
+              </Text>
+              <TextInput
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: currentTheme.colors.surface,
+                    borderColor: currentTheme.colors.border,
+                    color: currentTheme.colors.text,
+                  },
+                ]}
+                value={addName}
+                onChangeText={setAddName}
+                placeholder="Horse name"
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                autoCapitalize="words"
+                autoCorrect={false}
+                textContentType="none"
+                keyboardType="default"
+                returnKeyType="next"
+                maxLength={50}
+                multiline={false}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Gender
+              </Text>
+              <CustomDropdown
+                value={addGender}
+                placeholder="Select gender"
+                options={genderOptions}
+                onSelect={setAddGender}
+                isVisible={addGenderDropdownVisible}
+                setVisible={setAddGenderDropdownVisible}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Birth Date
+              </Text>
+              <DatePicker
+                value={addBirthDate}
+                placeholder="Select birth date"
+                onSelect={setAddBirthDate}
+                isVisible={addDatePickerVisible}
+                setVisible={setAddDatePickerVisible}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Height ({formatHeightUnit()})
+              </Text>
+              <TextInput
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: currentTheme.colors.surface,
+                    borderColor: currentTheme.colors.border,
+                    color: currentTheme.colors.text,
+                  },
+                ]}
+                value={addHeight}
+                onChangeText={setAddHeight}
+                placeholder={
+                  metricSystem === "metric"
+                    ? "Enter height (100-220 cm)"
+                    : "Enter height (39-87 in)"
+                }
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                keyboardType="numeric"
+                returnKeyType="done"
+                maxLength={3}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Weight ({formatWeightUnit()}) - Optional
+              </Text>
+              <TextInput
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: currentTheme.colors.surface,
+                    borderColor: currentTheme.colors.border,
+                    color: currentTheme.colors.text,
+                  },
+                ]}
+                value={addWeight}
+                onChangeText={setAddWeight}
+                placeholder="Enter weight"
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                keyboardType="numeric"
+                returnKeyType="done"
+                maxLength={4}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Breed
+              </Text>
+              <CustomDropdown
+                value={addBreed}
+                placeholder="Select breed"
+                options={breedOptions}
+                onSelect={setAddBreed}
+                isVisible={addBreedDropdownVisible}
+                setVisible={setAddBreedDropdownVisible}
+              />
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={[
+                styles.modalButton,
+                styles.cancelButton,
+                { backgroundColor: currentTheme.colors.textSecondary },
+              ]}
+              onPress={closeAddModal}
+            >
+              <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.modalButton,
+                styles.saveButton,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
+              onPress={saveHorseAdd}
+            >
+              <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
+                Add Horse
+              </Text>
+            </TouchableOpacity>
           </View>
+        </View>
       </Modal>
 
       {/* Success Modal */}
@@ -4517,467 +4661,411 @@ const MyHorsesScreen = () => {
             { backgroundColor: currentTheme.colors.surface },
           ]}
         >
-            {/* Header */}
+          {/* Header */}
+          <View
+            style={[
+              styles.modalHeader,
+              { backgroundColor: currentTheme.colors.primary },
+            ]}
+          >
             <View
-              style={[
-                styles.modalHeader,
-                { backgroundColor: currentTheme.colors.primary },
-              ]}
+              style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
             >
-              <View
-                style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
-              >
-                {recordsSection !== "main" && (
-                  <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={backToRecordsMain}
-                  >
-                    <Image
-                      style={styles.backIcon}
-                      source={require("../../assets/in_app_icons/back.png")}
-                    />
-                  </TouchableOpacity>
-                )}
-                <Text
-                  style={[
-                    styles.modalTitle,
-                    {
-                      color: "#FFFFFF",
-                      flex: 1,
-                      textAlign: recordsSection === "main" ? "center" : "left",
-                      marginLeft: recordsSection === "main" ? 0 : 10,
-                    },
-                  ]}
+              {recordsSection !== "main" && (
+                <TouchableOpacity
+                  style={styles.backButton}
+                  onPress={backToRecordsMain}
                 >
-                  {recordsSection === "main" && "📋 RECORDS"}
-                  {recordsSection === "vaccination" && "Vaccination Manager"}
-                  {recordsSection === "horseshoe" && "Horseshoe Manager"}
-                  {recordsSection === "pregnancy" && "Pregnancy Timeline"}
-                  {recordsSection === "document" && "Document Manager"}
-                  {recordsSection === "rider" && "Rider Manager"}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={closeRecordsModal}
+                  <Image
+                    style={styles.backIcon}
+                    source={require("../../assets/in_app_icons/back.png")}
+                  />
+                </TouchableOpacity>
+              )}
+              <Text
+                style={[
+                  styles.modalTitle,
+                  {
+                    color: "#FFFFFF",
+                    flex: 1,
+                    textAlign: recordsSection === "main" ? "center" : "left",
+                    marginLeft: recordsSection === "main" ? 0 : 10,
+                  },
+                ]}
               >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
+                {recordsSection === "main" && "📋 RECORDS"}
+                {recordsSection === "vaccination" && "Vaccination Manager"}
+                {recordsSection === "horseshoe" && "Horseshoe Manager"}
+                {recordsSection === "pregnancy" && "Pregnancy Timeline"}
+                {recordsSection === "document" && "Document Manager"}
+                {recordsSection === "rider" && "Rider Manager"}
+              </Text>
             </View>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={closeRecordsModal}
+            >
+              <Text style={styles.modalCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
 
-            <ScrollView style={styles.modalContent}>
-              {selectedHorseForRecords && (
-                <>
-                  {/* Main Records Menu */}
-                  {recordsSection === "main" && (
-                    <View>
-                      <Text
+          <ScrollView style={styles.modalContent}>
+            {selectedHorseForRecords && (
+              <>
+                {/* Main Records Menu */}
+                {recordsSection === "main" && (
+                  <View>
+                    <Text
+                      style={[
+                        styles.recordsHorseName,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      Managing records for: {selectedHorseForRecords.name}
+                    </Text>
+
+                    <View style={styles.recordsMenuContainer}>
+                      <TouchableOpacity
                         style={[
-                          styles.recordsHorseName,
-                          { color: currentTheme.colors.text },
+                          styles.recordsMenuItem,
+                          { backgroundColor: currentTheme.colors.primary },
                         ]}
+                        onPress={openVaccinationManager}
                       >
-                        Managing records for: {selectedHorseForRecords.name}
-                      </Text>
+                        <Text style={styles.recordsMenuIcon}>💉</Text>
+                        <View style={styles.recordsMenuContent}>
+                          <Text style={styles.recordsMenuTitle}>
+                            Vaccination Manager
+                          </Text>
+                          <Text style={styles.recordsMenuSubtitle}>
+                            Set reminders and track vaccination history
+                          </Text>
+                        </View>
+                        <Text style={styles.recordsMenuArrow}>→</Text>
+                      </TouchableOpacity>
 
-                      <View style={styles.recordsMenuContainer}>
-                        <TouchableOpacity
-                          style={[
-                            styles.recordsMenuItem,
-                            { backgroundColor: currentTheme.colors.primary },
-                          ]}
-                          onPress={openVaccinationManager}
-                        >
-                          <Text style={styles.recordsMenuIcon}>💉</Text>
-                          <View style={styles.recordsMenuContent}>
-                            <Text style={styles.recordsMenuTitle}>
-                              Vaccination Manager
-                            </Text>
-                            <Text style={styles.recordsMenuSubtitle}>
-                              Set reminders and track vaccination history
-                            </Text>
-                          </View>
-                          <Text style={styles.recordsMenuArrow}>→</Text>
-                        </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.recordsMenuItem,
+                          { backgroundColor: "#8B4513" },
+                        ]}
+                        onPress={openHorseshoeManager}
+                      >
+                        <Text style={styles.recordsMenuIcon}>🐴</Text>
+                        <View style={styles.recordsMenuContent}>
+                          <Text style={styles.recordsMenuTitle}>
+                            Horseshoe Manager
+                          </Text>
+                          <Text style={styles.recordsMenuSubtitle}>
+                            Track horseshoe changes and maintenance
+                          </Text>
+                        </View>
+                        <Text style={styles.recordsMenuArrow}>→</Text>
+                      </TouchableOpacity>
 
-                        <TouchableOpacity
-                          style={[
-                            styles.recordsMenuItem,
-                            { backgroundColor: "#8B4513" },
-                          ]}
-                          onPress={openHorseshoeManager}
-                        >
-                          <Text style={styles.recordsMenuIcon}>🐴</Text>
-                          <View style={styles.recordsMenuContent}>
-                            <Text style={styles.recordsMenuTitle}>
-                              Horseshoe Manager
-                            </Text>
-                            <Text style={styles.recordsMenuSubtitle}>
-                              Track horseshoe changes and maintenance
-                            </Text>
-                          </View>
-                          <Text style={styles.recordsMenuArrow}>→</Text>
-                        </TouchableOpacity>
-
-                        {selectedHorseForRecords?.gender === "Mare" && (
-                          <TouchableOpacity
-                            style={[
-                              styles.recordsMenuItem,
-                              { 
-                                backgroundColor: !isProMember ? currentTheme.colors.textSecondary : '#ff69b4',
-                                opacity: !isProMember ? 0.6 : 1
-                              },
-                            ]}
-                            onPress={openPregnancyManager}
-                            disabled={!isProMember}
-                          >
-                            <Text style={styles.recordsMenuIcon}>🤰</Text>
-                            <View style={styles.recordsMenuContent}>
-                              <Text style={styles.recordsMenuTitle}>
-                                Pregnancy Timeline {!isProMember && "(PRO)"}
-                              </Text>
-                              <Text style={styles.recordsMenuSubtitle}>
-                                Track breeding to foaling with milestones & reminders
-                              </Text>
-                            </View>
-                            <Text style={styles.recordsMenuArrow}>→</Text>
-                          </TouchableOpacity>
-                        )}
-
-                        <TouchableOpacity
-                          style={[
-                            styles.recordsMenuItem,
-                            { backgroundColor: currentTheme.colors.accent },
-                          ]}
-                          onPress={openDocumentManager}
-                        >
-                          <Text style={styles.recordsMenuIcon}>📄</Text>
-                          <View style={styles.recordsMenuContent}>
-                            <Text style={styles.recordsMenuTitle}>
-                              Document Manager
-                            </Text>
-                            <Text style={styles.recordsMenuSubtitle}>
-                              Store and organize important documents
-                            </Text>
-                          </View>
-                          <Text style={styles.recordsMenuArrow}>→</Text>
-                        </TouchableOpacity>
-
+                      {selectedHorseForRecords?.gender === "Mare" && (
                         <TouchableOpacity
                           style={[
                             styles.recordsMenuItem,
                             {
-                              backgroundColor:
-                                currentTheme.colors.textSecondary,
-                              opacity: 0.6,
+                              backgroundColor: !isProMember
+                                ? currentTheme.colors.textSecondary
+                                : "#ff69b4",
+                              opacity: !isProMember ? 0.6 : 1,
                             },
                           ]}
-                          onPress={openRiderManager}
-                          disabled={true}
+                          onPress={openPregnancyManager}
+                          disabled={!isProMember}
                         >
-                          <Text style={styles.recordsMenuIcon}>👥</Text>
+                          <Text style={styles.recordsMenuIcon}>🤰</Text>
                           <View style={styles.recordsMenuContent}>
                             <Text style={styles.recordsMenuTitle}>
-                              Rider Manager
+                              Pregnancy Timeline {!isProMember && "(PRO)"}
                             </Text>
                             <Text style={styles.recordsMenuSubtitle}>
-                              Coming Soon - Share horses with other riders
+                              Track breeding to foaling with milestones &
+                              reminders
                             </Text>
                           </View>
                           <Text style={styles.recordsMenuArrow}>→</Text>
                         </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
+                      )}
 
-                  {/* PRO Upgrade Card */}
-                  {!isProMember && (
-                    <TouchableOpacity
+                      <TouchableOpacity
+                        style={[
+                          styles.recordsMenuItem,
+                          { backgroundColor: currentTheme.colors.accent },
+                        ]}
+                        onPress={openDocumentManager}
+                      >
+                        <Text style={styles.recordsMenuIcon}>📄</Text>
+                        <View style={styles.recordsMenuContent}>
+                          <Text style={styles.recordsMenuTitle}>
+                            Document Manager
+                          </Text>
+                          <Text style={styles.recordsMenuSubtitle}>
+                            Store and organize important documents
+                          </Text>
+                        </View>
+                        <Text style={styles.recordsMenuArrow}>→</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.recordsMenuItem,
+                          {
+                            backgroundColor: currentTheme.colors.textSecondary,
+                            opacity: 0.6,
+                          },
+                        ]}
+                        onPress={openRiderManager}
+                        disabled={true}
+                      >
+                        <Text style={styles.recordsMenuIcon}>👥</Text>
+                        <View style={styles.recordsMenuContent}>
+                          <Text style={styles.recordsMenuTitle}>
+                            Rider Manager
+                          </Text>
+                          <Text style={styles.recordsMenuSubtitle}>
+                            Coming Soon - Share horses with other riders
+                          </Text>
+                        </View>
+                        <Text style={styles.recordsMenuArrow}>→</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* PRO Upgrade Card */}
+                {!isProMember && (
+                  <TouchableOpacity
+                    style={[
+                      styles.proUpgradeCard,
+                      { backgroundColor: currentTheme.colors.surface },
+                    ]}
+                    onPress={() => {
+                      setRecordsModalVisible(false);
+                      setTimeout(() => {
+                        router.push("/pro-features");
+                      }, 300);
+                    }}
+                  >
+                    <View style={styles.proUpgradeContent}>
+                      <Text style={styles.proUpgradeIcon}>✨</Text>
+                      <View style={styles.proUpgradeTextContainer}>
+                        <Text
+                          style={[
+                            styles.proUpgradeTitle,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          Upgrade to PRO
+                        </Text>
+                        <Text
+                          style={[
+                            styles.proUpgradeSubtitle,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          Unlock cloud sync, unlimited history, and more
+                          benefits
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.proUpgradeArrow,
+                          { color: currentTheme.colors.primary },
+                        ]}
+                      >
+                        →
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+
+                {/* Vaccination Manager Section */}
+                {recordsSection === "vaccination" && (
+                  <View>
+                    <Text
                       style={[
-                        styles.proUpgradeCard,
-                        { backgroundColor: currentTheme.colors.surface },
+                        styles.vaccinationHorseName,
+                        { color: currentTheme.colors.text },
                       ]}
-                      onPress={() => {
-                        setRecordsModalVisible(false);
-                        setTimeout(() => {
-                          router.push("/pro-features");
-                        }, 300);
-                      }}
                     >
-                      <View style={styles.proUpgradeContent}>
-                        <Text style={styles.proUpgradeIcon}>✨</Text>
-                        <View style={styles.proUpgradeTextContainer}>
+                      Vaccination Manager for: {selectedHorseForRecords.name}
+                    </Text>
+
+                    {/* Vaccination Type Toggle */}
+                    <View style={styles.vaccinationTypeToggle}>
+                      <TouchableOpacity
+                        style={[
+                          styles.vaccinationTypeButtonLeft,
+                          {
+                            backgroundColor:
+                              vaccinationType === "future"
+                                ? currentTheme.colors.primary
+                                : currentTheme.colors.surface,
+                            borderColor: currentTheme.colors.primary,
+                          },
+                        ]}
+                        onPress={() => setVaccinationType("future")}
+                      >
+                        <Text
+                          style={[
+                            styles.vaccinationTypeButtonText,
+                            {
+                              color:
+                                vaccinationType === "future"
+                                  ? "#FFFFFF"
+                                  : currentTheme.colors.primary,
+                            },
+                          ]}
+                        >
+                          Future Vaccination
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.vaccinationTypeButtonRight,
+                          {
+                            backgroundColor:
+                              vaccinationType === "past"
+                                ? currentTheme.colors.primary
+                                : currentTheme.colors.surface,
+                            borderColor: currentTheme.colors.primary,
+                          },
+                        ]}
+                        onPress={() => setVaccinationType("past")}
+                      >
+                        <Text
+                          style={[
+                            styles.vaccinationTypeButtonText,
+                            {
+                              color:
+                                vaccinationType === "past"
+                                  ? "#FFFFFF"
+                                  : currentTheme.colors.primary,
+                            },
+                          ]}
+                        >
+                          Past Vaccination
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Existing Vaccinations */}
+                    {horseVaccinations[selectedHorseForRecords.id] &&
+                      horseVaccinations[selectedHorseForRecords.id].length >
+                        0 && (
+                        <View style={styles.existingVaccinations}>
                           <Text
                             style={[
-                              styles.proUpgradeTitle,
+                              styles.existingVaccinationsTitle,
                               { color: currentTheme.colors.text },
                             ]}
                           >
-                            Upgrade to PRO
+                            Existing Records:
                           </Text>
-                          <Text
-                            style={[
-                              styles.proUpgradeSubtitle,
-                              { color: currentTheme.colors.textSecondary },
-                            ]}
-                          >
-                            Unlock cloud sync, unlimited history, and more benefits
-                          </Text>
-                        </View>
-                        <Text
-                          style={[
-                            styles.proUpgradeArrow,
-                            { color: currentTheme.colors.primary },
-                          ]}
-                        >
-                          →
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-
-                  {/* Vaccination Manager Section */}
-                  {recordsSection === "vaccination" && (
-                    <View>
-                      <Text
-                        style={[
-                          styles.vaccinationHorseName,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        Vaccination Manager for: {selectedHorseForRecords.name}
-                      </Text>
-
-                      {/* Vaccination Type Toggle */}
-                      <View style={styles.vaccinationTypeToggle}>
-                        <TouchableOpacity
-                          style={[
-                            styles.vaccinationTypeButtonLeft,
-                            {
-                              backgroundColor:
-                                vaccinationType === "future"
-                                  ? currentTheme.colors.primary
-                                  : currentTheme.colors.surface,
-                              borderColor: currentTheme.colors.primary,
-                            },
-                          ]}
-                          onPress={() => setVaccinationType("future")}
-                        >
-                          <Text
-                            style={[
-                              styles.vaccinationTypeButtonText,
-                              {
-                                color:
-                                  vaccinationType === "future"
-                                    ? "#FFFFFF"
-                                    : currentTheme.colors.primary,
-                              },
-                            ]}
-                          >
-                            Future Vaccination
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.vaccinationTypeButtonRight,
-                            {
-                              backgroundColor:
-                                vaccinationType === "past"
-                                  ? currentTheme.colors.primary
-                                  : currentTheme.colors.surface,
-                              borderColor: currentTheme.colors.primary,
-                            },
-                          ]}
-                          onPress={() => setVaccinationType("past")}
-                        >
-                          <Text
-                            style={[
-                              styles.vaccinationTypeButtonText,
-                              {
-                                color:
-                                  vaccinationType === "past"
-                                    ? "#FFFFFF"
-                                    : currentTheme.colors.primary,
-                              },
-                            ]}
-                          >
-                            Past Vaccination
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      {/* Existing Vaccinations */}
-                      {horseVaccinations[selectedHorseForRecords.id] &&
-                        horseVaccinations[selectedHorseForRecords.id].length >
-                          0 && (
-                          <View style={styles.existingVaccinations}>
-                            <Text
-                              style={[
-                                styles.existingVaccinationsTitle,
-                                { color: currentTheme.colors.text },
-                              ]}
-                            >
-                              Existing Records:
-                            </Text>
-                            {horseVaccinations[selectedHorseForRecords.id]
-                              .sort(
-                                (a, b) =>
-                                  new Date(b.date).getTime() -
-                                  new Date(a.date).getTime()
-                              )
-                              .map((vaccination) => {
-                                const isOverdue =
-                                  new Date(vaccination.date) < new Date() &&
-                                  vaccination.type === "future";
-                                const isPast = vaccination.type === "past";
-                                return (
-                                  <View
-                                    key={vaccination.id}
-                                    style={[
-                                      styles.vaccinationItem,
-                                      {
-                                        backgroundColor: isPast
-                                          ? currentTheme.colors.surface + "50"
-                                          : isOverdue
-                                          ? currentTheme.colors.error + "20"
-                                          : currentTheme.colors.success + "20",
-                                        borderColor: isPast
-                                          ? currentTheme.colors.textSecondary
-                                          : isOverdue
-                                          ? currentTheme.colors.error
-                                          : currentTheme.colors.success,
-                                      },
-                                    ]}
-                                  >
-                                    <View style={styles.vaccinationItemContent}>
-                                      <View
-                                        style={styles.vaccinationItemHeader}
-                                      >
-                                        <Text
-                                          style={[
-                                            styles.vaccinationItemName,
-                                            { color: currentTheme.colors.text },
-                                          ]}
-                                        >
-                                          {vaccination.name}
-                                        </Text>
-                                        {vaccination.repeat && (
-                                          <Text style={styles.repeatIndicator}>
-                                            🔄
-                                          </Text>
-                                        )}
-                                      </View>
-                                      {vaccination.vaccinationId && (
-                                        <Text
-                                          style={[
-                                            styles.vaccinationItemId,
-                                            {
-                                              color:
-                                                currentTheme.colors
-                                                  .textSecondary,
-                                            },
-                                          ]}
-                                        >
-                                          ID: {vaccination.vaccinationId}
-                                        </Text>
-                                      )}
+                          {horseVaccinations[selectedHorseForRecords.id]
+                            .sort(
+                              (a, b) =>
+                                new Date(b.date).getTime() -
+                                new Date(a.date).getTime()
+                            )
+                            .map((vaccination) => {
+                              const isOverdue =
+                                new Date(vaccination.date) < new Date() &&
+                                vaccination.type === "future";
+                              const isPast = vaccination.type === "past";
+                              return (
+                                <View
+                                  key={vaccination.id}
+                                  style={[
+                                    styles.vaccinationItem,
+                                    {
+                                      backgroundColor: isPast
+                                        ? currentTheme.colors.surface + "50"
+                                        : isOverdue
+                                        ? currentTheme.colors.error + "20"
+                                        : currentTheme.colors.success + "20",
+                                      borderColor: isPast
+                                        ? currentTheme.colors.textSecondary
+                                        : isOverdue
+                                        ? currentTheme.colors.error
+                                        : currentTheme.colors.success,
+                                    },
+                                  ]}
+                                >
+                                  <View style={styles.vaccinationItemContent}>
+                                    <View style={styles.vaccinationItemHeader}>
                                       <Text
                                         style={[
-                                          styles.vaccinationItemDate,
-                                          {
-                                            color: isPast
-                                              ? currentTheme.colors
-                                                  .textSecondary
-                                              : isOverdue
-                                              ? currentTheme.colors.error
-                                              : currentTheme.colors.success,
-                                          },
+                                          styles.vaccinationItemName,
+                                          { color: currentTheme.colors.text },
                                         ]}
                                       >
-                                        {isPast
-                                          ? "📝 Completed: "
-                                          : isOverdue
-                                          ? "⚠️ Overdue: "
-                                          : "📅 Due: "}
-                                        {new Date(
-                                          vaccination.date
-                                        ).toLocaleDateString()}
+                                        {vaccination.name}
                                       </Text>
-                                      {vaccination.notes && (
-                                        <Text
-                                          style={[
-                                            styles.vaccinationItemNotes,
-                                            {
-                                              color:
-                                                currentTheme.colors
-                                                  .textSecondary,
-                                            },
-                                          ]}
-                                        >
-                                          {vaccination.notes}
+                                      {vaccination.repeat && (
+                                        <Text style={styles.repeatIndicator}>
+                                          🔄
                                         </Text>
                                       )}
                                     </View>
-                                    <View style={styles.vaccinationActions}>
-                                      {isOverdue && (
-                                        <TouchableOpacity
-                                          style={
-                                            styles.completeVaccinationButton
-                                          }
-                                          onPress={() =>
-                                            markVaccinationAsCompleted(
-                                              selectedHorseForRecords.id,
-                                              vaccination.id
-                                            )
-                                          }
-                                        >
-                                          <Text
-                                            style={
-                                              styles.completeVaccinationButtonText
-                                            }
-                                          >
-                                            ✅
-                                          </Text>
-                                        </TouchableOpacity>
-                                      )}
-                                      <TouchableOpacity
-                                        style={styles.editVaccinationButton}
-                                        onPress={() => {
-                                          setIsEditMode(true);
-                                          setEditingVaccination(vaccination);
-                                          setVaccinationName(vaccination.name);
-                                          setVaccinationId(
-                                            vaccination.vaccinationId || ""
-                                          );
-                                          setVaccinationDate(
-                                            new Date(vaccination.date)
-                                          );
-                                          setVaccinationType(vaccination.type);
-                                          setVaccinationRepeat(
-                                            vaccination.repeat
-                                          );
-                                          setVaccinationRepeatInterval(
-                                            vaccination.repeatInterval ||
-                                              "yearly"
-                                          );
-                                          setVaccinationNotes(
-                                            vaccination.notes || ""
-                                          );
-                                          setApplyToFuture(false);
-                                        }}
+                                    {vaccination.vaccinationId && (
+                                      <Text
+                                        style={[
+                                          styles.vaccinationItemId,
+                                          {
+                                            color:
+                                              currentTheme.colors.textSecondary,
+                                          },
+                                        ]}
                                       >
-                                        <Text
-                                          style={
-                                            styles.editVaccinationButtonText
-                                          }
-                                        >
-                                          ✏️
-                                        </Text>
-                                      </TouchableOpacity>
+                                        ID: {vaccination.vaccinationId}
+                                      </Text>
+                                    )}
+                                    <Text
+                                      style={[
+                                        styles.vaccinationItemDate,
+                                        {
+                                          color: isPast
+                                            ? currentTheme.colors.textSecondary
+                                            : isOverdue
+                                            ? currentTheme.colors.error
+                                            : currentTheme.colors.success,
+                                        },
+                                      ]}
+                                    >
+                                      {isPast
+                                        ? "📝 Completed: "
+                                        : isOverdue
+                                        ? "⚠️ Overdue: "
+                                        : "📅 Due: "}
+                                      {new Date(
+                                        vaccination.date
+                                      ).toLocaleDateString()}
+                                    </Text>
+                                    {vaccination.notes && (
+                                      <Text
+                                        style={[
+                                          styles.vaccinationItemNotes,
+                                          {
+                                            color:
+                                              currentTheme.colors.textSecondary,
+                                          },
+                                        ]}
+                                      >
+                                        {vaccination.notes}
+                                      </Text>
+                                    )}
+                                  </View>
+                                  <View style={styles.vaccinationActions}>
+                                    {isOverdue && (
                                       <TouchableOpacity
-                                        style={styles.deleteVaccinationButton}
+                                        style={styles.completeVaccinationButton}
                                         onPress={() =>
-                                          deleteVaccinationReminder(
+                                          markVaccinationAsCompleted(
                                             selectedHorseForRecords.id,
                                             vaccination.id
                                           )
@@ -4985,613 +5073,722 @@ const MyHorsesScreen = () => {
                                       >
                                         <Text
                                           style={
-                                            styles.deleteVaccinationButtonText
+                                            styles.completeVaccinationButtonText
                                           }
                                         >
-                                          🗑️
+                                          ✅
                                         </Text>
                                       </TouchableOpacity>
-                                    </View>
-                                  </View>
-                                );
-                              })}
-                          </View>
-                        )}
-
-                      {/* Add New Vaccination Form */}
-                      <View style={styles.addVaccinationForm}>
-                        <Text
-                          style={[
-                            styles.addVaccinationTitle,
-                            { color: currentTheme.colors.text },
-                          ]}
-                        >
-                          {isEditMode ? "Edit" : "Add New"}{" "}
-                          {vaccinationType === "past" ? "Record" : "Reminder"}:
-                        </Text>
-
-                        <View style={styles.inputGroup}>
-                          <Text
-                            style={[
-                              styles.inputLabel,
-                              { color: currentTheme.colors.text },
-                            ]}
-                          >
-                            Vaccination Name *
-                          </Text>
-                          <TextInput
-                            style={[
-                              styles.textInput,
-                              {
-                                backgroundColor: currentTheme.colors.surface,
-                                borderColor: currentTheme.colors.border,
-                                color: currentTheme.colors.text,
-                              },
-                            ]}
-                            value={vaccinationName}
-                            onChangeText={setVaccinationName}
-                            placeholder="e.g., Annual Shots, Flu, etc."
-                            placeholderTextColor={
-                              currentTheme.colors.textSecondary
-                            }
-                            maxLength={50}
-                          />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                          <Text
-                            style={[
-                              styles.inputLabel,
-                              { color: currentTheme.colors.text },
-                            ]}
-                          >
-                            Vaccination ID (Optional)
-                          </Text>
-                          <TextInput
-                            style={[
-                              styles.textInput,
-                              {
-                                backgroundColor: currentTheme.colors.surface,
-                                borderColor: currentTheme.colors.border,
-                                color: currentTheme.colors.text,
-                              },
-                            ]}
-                            value={vaccinationId}
-                            onChangeText={setVaccinationId}
-                            placeholder="Batch number, serial, etc."
-                            placeholderTextColor={
-                              currentTheme.colors.textSecondary
-                            }
-                            maxLength={30}
-                          />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                          <Text
-                            style={[
-                              styles.inputLabel,
-                              { color: currentTheme.colors.text },
-                            ]}
-                          >
-                            {vaccinationType === "past"
-                              ? "Completed Date"
-                              : "Due Date"}{" "}
-                            *
-                          </Text>
-                          <VaccinationDatePicker
-                            value={vaccinationDate}
-                            vaccinationType={vaccinationType}
-                            onSelect={setVaccinationDate}
-                            isVisible={showVaccinationDatePicker}
-                            setVisible={setShowVaccinationDatePicker}
-                          />
-                        </View>
-
-                        {vaccinationType === "future" && (
-                          <View style={styles.inputGroup}>
-                            <View style={styles.repeatToggleContainer}>
-                              <Text
-                                style={[
-                                  styles.inputLabel,
-                                  { color: currentTheme.colors.text },
-                                ]}
-                              >
-                                Set Recurring Reminder
-                              </Text>
-                              <TouchableOpacity
-                                style={[
-                                  styles.repeatToggle,
-                                  {
-                                    backgroundColor: vaccinationRepeat
-                                      ? currentTheme.colors.primary
-                                      : currentTheme.colors.textSecondary,
-                                  },
-                                ]}
-                                onPress={() =>
-                                  setVaccinationRepeat(!vaccinationRepeat)
-                                }
-                              >
-                                <View
-                                  style={[
-                                    styles.repeatToggleSlider,
-                                    {
-                                      transform: [
-                                        {
-                                          translateX: vaccinationRepeat
-                                            ? 18
-                                            : 2,
-                                        },
-                                      ],
-                                    },
-                                  ]}
-                                />
-                              </TouchableOpacity>
-                            </View>
-
-                            {vaccinationRepeat && (
-                              <View style={styles.repeatIntervalContainer}>
-                                <Text
-                                  style={[
-                                    styles.inputLabel,
-                                    {
-                                      color: currentTheme.colors.text,
-                                      fontSize: 14,
-                                    },
-                                  ]}
-                                >
-                                  Repeat Every:
-                                </Text>
-                                <View style={styles.repeatIntervalButtons}>
-                                  {["monthly", "quarterly", "yearly"].map(
-                                    (interval) => (
-                                      <TouchableOpacity
-                                        key={interval}
-                                        style={[
-                                          styles.repeatIntervalButton,
-                                          {
-                                            backgroundColor:
-                                              vaccinationRepeatInterval ===
-                                              interval
-                                                ? currentTheme.colors.primary
-                                                : currentTheme.colors.surface,
-                                            borderColor:
-                                              currentTheme.colors.primary,
-                                          },
-                                        ]}
-                                        onPress={() =>
-                                          setVaccinationRepeatInterval(
-                                            interval as any
-                                          )
+                                    )}
+                                    <TouchableOpacity
+                                      style={styles.editVaccinationButton}
+                                      onPress={() => {
+                                        setIsEditMode(true);
+                                        setEditingVaccination(vaccination);
+                                        setVaccinationName(vaccination.name);
+                                        setVaccinationId(
+                                          vaccination.vaccinationId || ""
+                                        );
+                                        setVaccinationDate(
+                                          new Date(vaccination.date)
+                                        );
+                                        setVaccinationType(vaccination.type);
+                                        setVaccinationRepeat(
+                                          vaccination.repeat
+                                        );
+                                        setVaccinationRepeatInterval(
+                                          vaccination.repeatInterval || "yearly"
+                                        );
+                                        setVaccinationNotes(
+                                          vaccination.notes || ""
+                                        );
+                                        setApplyToFuture(false);
+                                      }}
+                                    >
+                                      <Text
+                                        style={styles.editVaccinationButtonText}
+                                      >
+                                        ✏️
+                                      </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                      style={styles.deleteVaccinationButton}
+                                      onPress={() =>
+                                        deleteVaccinationReminder(
+                                          selectedHorseForRecords.id,
+                                          vaccination.id
+                                        )
+                                      }
+                                    >
+                                      <Text
+                                        style={
+                                          styles.deleteVaccinationButtonText
                                         }
                                       >
-                                        <Text
-                                          style={[
-                                            styles.repeatIntervalButtonText,
-                                            {
-                                              color:
-                                                vaccinationRepeatInterval ===
-                                                interval
-                                                  ? "#FFFFFF"
-                                                  : currentTheme.colors.primary,
-                                            },
-                                          ]}
-                                        >
-                                          {interval.charAt(0).toUpperCase() +
-                                            interval.slice(1)}
-                                        </Text>
-                                      </TouchableOpacity>
-                                    )
-                                  )}
+                                        🗑️
+                                      </Text>
+                                    </TouchableOpacity>
+                                  </View>
                                 </View>
-                              </View>
-                            )}
-                          </View>
-                        )}
-
-                        <View style={styles.inputGroup}>
-                          <Text
-                            style={[
-                              styles.inputLabel,
-                              { color: currentTheme.colors.text },
-                            ]}
-                          >
-                            Notes (Optional)
-                          </Text>
-                          <TextInput
-                            style={[
-                              styles.textInput,
-                              styles.textInputMultiline,
-                              {
-                                backgroundColor: currentTheme.colors.surface,
-                                borderColor: currentTheme.colors.border,
-                                color: currentTheme.colors.text,
-                              },
-                            ]}
-                            value={vaccinationNotes}
-                            onChangeText={setVaccinationNotes}
-                            placeholder="Additional notes about this vaccination..."
-                            placeholderTextColor={
-                              currentTheme.colors.textSecondary
-                            }
-                            multiline={true}
-                            numberOfLines={3}
-                            maxLength={200}
-                          />
+                              );
+                            })}
                         </View>
+                      )}
 
-                        {/* Apply to Future Occurrences Checkbox */}
-                        {isEditMode &&
-                          editingVaccination &&
-                          editingVaccination.repeat && (
-                            <View style={styles.inputGroup}>
-                              <TouchableOpacity
-                                style={styles.applyToFutureContainer}
-                                onPress={() => setApplyToFuture(!applyToFuture)}
-                              >
-                                <View
-                                  style={[
-                                    styles.checkbox,
-                                    {
-                                      borderColor: currentTheme.colors.primary,
-                                      backgroundColor: applyToFuture
-                                        ? currentTheme.colors.primary
-                                        : "transparent",
-                                    },
-                                  ]}
-                                >
-                                  {applyToFuture && (
-                                    <Text style={styles.checkboxCheck}>✓</Text>
-                                  )}
-                                </View>
-                                <Text
-                                  style={[
-                                    styles.applyToFutureText,
-                                    { color: currentTheme.colors.text },
-                                  ]}
-                                >
-                                  Apply changes to all future occurrences
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
-                          )}
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Horseshoe Manager Section */}
-                  {recordsSection === "horseshoe" && (
-                    <View>
+                    {/* Add New Vaccination Form */}
+                    <View style={styles.addVaccinationForm}>
                       <Text
                         style={[
-                          styles.vaccinationHorseName,
+                          styles.addVaccinationTitle,
                           { color: currentTheme.colors.text },
                         ]}
                       >
-                        Horseshoe Manager for: {selectedHorseForRecords.name}
+                        {isEditMode ? "Edit" : "Add New"}{" "}
+                        {vaccinationType === "past" ? "Record" : "Reminder"}:
                       </Text>
 
-                      {/* Existing Horseshoe Tracking */}
-                      {horseHorseshoes[selectedHorseForRecords.id] ? (
-                        <View style={styles.horseshoeTrackingContainer}>
-                          <View style={styles.horseshoeTrackingCard}>
+                      <View style={styles.inputGroup}>
+                        <Text
+                          style={[
+                            styles.inputLabel,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          Vaccination Name *
+                        </Text>
+                        <TextInput
+                          style={[
+                            styles.textInput,
+                            {
+                              backgroundColor: currentTheme.colors.surface,
+                              borderColor: currentTheme.colors.border,
+                              color: currentTheme.colors.text,
+                            },
+                          ]}
+                          value={vaccinationName}
+                          onChangeText={setVaccinationName}
+                          placeholder="e.g., Annual Shots, Flu, etc."
+                          placeholderTextColor={
+                            currentTheme.colors.textSecondary
+                          }
+                          maxLength={50}
+                        />
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <Text
+                          style={[
+                            styles.inputLabel,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          Vaccination ID (Optional)
+                        </Text>
+                        <TextInput
+                          style={[
+                            styles.textInput,
+                            {
+                              backgroundColor: currentTheme.colors.surface,
+                              borderColor: currentTheme.colors.border,
+                              color: currentTheme.colors.text,
+                            },
+                          ]}
+                          value={vaccinationId}
+                          onChangeText={setVaccinationId}
+                          placeholder="Batch number, serial, etc."
+                          placeholderTextColor={
+                            currentTheme.colors.textSecondary
+                          }
+                          maxLength={30}
+                        />
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <Text
+                          style={[
+                            styles.inputLabel,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          {vaccinationType === "past"
+                            ? "Completed Date"
+                            : "Due Date"}{" "}
+                          *
+                        </Text>
+                        <VaccinationDatePicker
+                          value={vaccinationDate}
+                          vaccinationType={vaccinationType}
+                          onSelect={setVaccinationDate}
+                          isVisible={showVaccinationDatePicker}
+                          setVisible={setShowVaccinationDatePicker}
+                        />
+                      </View>
+
+                      {vaccinationType === "future" && (
+                        <View style={styles.inputGroup}>
+                          <View style={styles.repeatToggleContainer}>
                             <Text
                               style={[
-                                styles.horseshoeTrackingTitle,
+                                styles.inputLabel,
                                 { color: currentTheme.colors.text },
                               ]}
                             >
-                              Active Tracking
+                              Set Recurring Reminder
                             </Text>
+                            <TouchableOpacity
+                              style={[
+                                styles.repeatToggle,
+                                {
+                                  backgroundColor: vaccinationRepeat
+                                    ? currentTheme.colors.primary
+                                    : currentTheme.colors.textSecondary,
+                                },
+                              ]}
+                              onPress={() =>
+                                setVaccinationRepeat(!vaccinationRepeat)
+                              }
+                            >
+                              <View
+                                style={[
+                                  styles.repeatToggleSlider,
+                                  {
+                                    transform: [
+                                      {
+                                        translateX: vaccinationRepeat ? 18 : 2,
+                                      },
+                                    ],
+                                  },
+                                ]}
+                              />
+                            </TouchableOpacity>
+                          </View>
 
-                            {/* Circular Progress Bar */}
-                            <View style={styles.horseshoeProgressContainer}>
-                              <View style={styles.horseshoeProgressCircle}>
-                                <Text
-                                  style={[
-                                    styles.horseshoeProgressText,
-                                    { color: currentTheme.colors.text },
-                                  ]}
-                                >
-                                  {calculateHorseshoeDaysUsed(selectedHorseForRecords.id).daysUsed}/
-                                  {calculateHorseshoeDaysUsed(selectedHorseForRecords.id).totalDays}
-                                </Text>
-                                <Text
-                                  style={[
-                                    styles.horseshoeProgressLabel,
-                                    { color: currentTheme.colors.textSecondary },
-                                  ]}
-                                >
-                                  days of use
-                                </Text>
-                              </View>
-                              
-                              {/* Simple progress indicator */}
-                              <View style={styles.horseshoeProgressBarContainer}>
-                                <View
-                                  style={[
-                                    styles.horseshoeProgressBar,
-                                    {
-                                      width: `${calculateHorseshoeDaysUsed(selectedHorseForRecords.id).percentage}%`,
-                                      backgroundColor:
-                                        calculateHorseshoeDaysUsed(selectedHorseForRecords.id).percentage >= 90
-                                          ? currentTheme.colors.error
-                                          : calculateHorseshoeDaysUsed(selectedHorseForRecords.id).percentage >= 70
-                                          ? "#FFA500"
-                                          : currentTheme.colors.success,
-                                    },
-                                  ]}
-                                />
+                          {vaccinationRepeat && (
+                            <View style={styles.repeatIntervalContainer}>
+                              <Text
+                                style={[
+                                  styles.inputLabel,
+                                  {
+                                    color: currentTheme.colors.text,
+                                    fontSize: 14,
+                                  },
+                                ]}
+                              >
+                                Repeat Every:
+                              </Text>
+                              <View style={styles.repeatIntervalButtons}>
+                                {["monthly", "quarterly", "yearly"].map(
+                                  (interval) => (
+                                    <TouchableOpacity
+                                      key={interval}
+                                      style={[
+                                        styles.repeatIntervalButton,
+                                        {
+                                          backgroundColor:
+                                            vaccinationRepeatInterval ===
+                                            interval
+                                              ? currentTheme.colors.primary
+                                              : currentTheme.colors.surface,
+                                          borderColor:
+                                            currentTheme.colors.primary,
+                                        },
+                                      ]}
+                                      onPress={() =>
+                                        setVaccinationRepeatInterval(
+                                          interval as any
+                                        )
+                                      }
+                                    >
+                                      <Text
+                                        style={[
+                                          styles.repeatIntervalButtonText,
+                                          {
+                                            color:
+                                              vaccinationRepeatInterval ===
+                                              interval
+                                                ? "#FFFFFF"
+                                                : currentTheme.colors.primary,
+                                          },
+                                        ]}
+                                      >
+                                        {interval.charAt(0).toUpperCase() +
+                                          interval.slice(1)}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  )
+                                )}
                               </View>
                             </View>
+                          )}
+                        </View>
+                      )}
 
-                            <View style={styles.horseshoeTrackingDetails}>
-                              <View style={styles.horseshoeDetailRow}>
-                                <Text
-                                  style={[
-                                    styles.horseshoeDetailLabel,
-                                    { color: currentTheme.colors.textSecondary },
-                                  ]}
-                                >
-                                  Last Change:
-                                </Text>
-                                <Text
-                                  style={[
-                                    styles.horseshoeDetailValue,
-                                    { color: currentTheme.colors.text },
-                                  ]}
-                                >
-                                  {horseHorseshoes[selectedHorseForRecords.id] && new Date(
-                                    horseHorseshoes[selectedHorseForRecords.id]!.lastChangeDate
+                      <View style={styles.inputGroup}>
+                        <Text
+                          style={[
+                            styles.inputLabel,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          Notes (Optional)
+                        </Text>
+                        <TextInput
+                          style={[
+                            styles.textInput,
+                            styles.textInputMultiline,
+                            {
+                              backgroundColor: currentTheme.colors.surface,
+                              borderColor: currentTheme.colors.border,
+                              color: currentTheme.colors.text,
+                            },
+                          ]}
+                          value={vaccinationNotes}
+                          onChangeText={setVaccinationNotes}
+                          placeholder="Additional notes about this vaccination..."
+                          placeholderTextColor={
+                            currentTheme.colors.textSecondary
+                          }
+                          multiline={true}
+                          numberOfLines={3}
+                          maxLength={200}
+                        />
+                      </View>
+
+                      {/* Apply to Future Occurrences Checkbox */}
+                      {isEditMode &&
+                        editingVaccination &&
+                        editingVaccination.repeat && (
+                          <View style={styles.inputGroup}>
+                            <TouchableOpacity
+                              style={styles.applyToFutureContainer}
+                              onPress={() => setApplyToFuture(!applyToFuture)}
+                            >
+                              <View
+                                style={[
+                                  styles.checkbox,
+                                  {
+                                    borderColor: currentTheme.colors.primary,
+                                    backgroundColor: applyToFuture
+                                      ? currentTheme.colors.primary
+                                      : "transparent",
+                                  },
+                                ]}
+                              >
+                                {applyToFuture && (
+                                  <Text style={styles.checkboxCheck}>✓</Text>
+                                )}
+                              </View>
+                              <Text
+                                style={[
+                                  styles.applyToFutureText,
+                                  { color: currentTheme.colors.text },
+                                ]}
+                              >
+                                Apply changes to all future occurrences
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                    </View>
+                  </View>
+                )}
+
+                {/* Horseshoe Manager Section */}
+                {recordsSection === "horseshoe" && (
+                  <View>
+                    <Text
+                      style={[
+                        styles.vaccinationHorseName,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      Horseshoe Manager for: {selectedHorseForRecords.name}
+                    </Text>
+
+                    {/* Existing Horseshoe Tracking */}
+                    {horseHorseshoes[selectedHorseForRecords.id] ? (
+                      <View style={styles.horseshoeTrackingContainer}>
+                        <View style={styles.horseshoeTrackingCard}>
+                          <Text
+                            style={[
+                              styles.horseshoeTrackingTitle,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            Active Tracking
+                          </Text>
+
+                          {/* Circular Progress Bar */}
+                          <View style={styles.horseshoeProgressContainer}>
+                            <View style={styles.horseshoeProgressCircle}>
+                              <Text
+                                style={[
+                                  styles.horseshoeProgressText,
+                                  { color: currentTheme.colors.text },
+                                ]}
+                              >
+                                {
+                                  calculateHorseshoeDaysUsed(
+                                    selectedHorseForRecords.id
+                                  ).daysUsed
+                                }
+                                /
+                                {
+                                  calculateHorseshoeDaysUsed(
+                                    selectedHorseForRecords.id
+                                  ).totalDays
+                                }
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.horseshoeProgressLabel,
+                                  { color: currentTheme.colors.textSecondary },
+                                ]}
+                              >
+                                days of use
+                              </Text>
+                            </View>
+
+                            {/* Simple progress indicator */}
+                            <View style={styles.horseshoeProgressBarContainer}>
+                              <View
+                                style={[
+                                  styles.horseshoeProgressBar,
+                                  {
+                                    width: `${
+                                      calculateHorseshoeDaysUsed(
+                                        selectedHorseForRecords.id
+                                      ).percentage
+                                    }%`,
+                                    backgroundColor:
+                                      calculateHorseshoeDaysUsed(
+                                        selectedHorseForRecords.id
+                                      ).percentage >= 90
+                                        ? currentTheme.colors.error
+                                        : calculateHorseshoeDaysUsed(
+                                            selectedHorseForRecords.id
+                                          ).percentage >= 70
+                                        ? "#FFA500"
+                                        : currentTheme.colors.success,
+                                  },
+                                ]}
+                              />
+                            </View>
+                          </View>
+
+                          <View style={styles.horseshoeTrackingDetails}>
+                            <View style={styles.horseshoeDetailRow}>
+                              <Text
+                                style={[
+                                  styles.horseshoeDetailLabel,
+                                  { color: currentTheme.colors.textSecondary },
+                                ]}
+                              >
+                                Last Change:
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.horseshoeDetailValue,
+                                  { color: currentTheme.colors.text },
+                                ]}
+                              >
+                                {horseHorseshoes[selectedHorseForRecords.id] &&
+                                  new Date(
+                                    horseHorseshoes[
+                                      selectedHorseForRecords.id
+                                    ]!.lastChangeDate
                                   ).toLocaleDateString()}
-                                </Text>
-                              </View>
-                              <View style={styles.horseshoeDetailRow}>
-                                <Text
-                                  style={[
-                                    styles.horseshoeDetailLabel,
-                                    { color: currentTheme.colors.textSecondary },
-                                  ]}
-                                >
-                                  Next Change:
-                                </Text>
+                              </Text>
+                            </View>
+                            <View style={styles.horseshoeDetailRow}>
+                              <Text
+                                style={[
+                                  styles.horseshoeDetailLabel,
+                                  { color: currentTheme.colors.textSecondary },
+                                ]}
+                              >
+                                Next Change:
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.horseshoeDetailValue,
+                                  { color: currentTheme.colors.text },
+                                ]}
+                              >
+                                {(() => {
+                                  const tracking =
+                                    horseHorseshoes[selectedHorseForRecords.id];
+                                  if (!tracking) return "";
+                                  const lastChange = new Date(
+                                    tracking.lastChangeDate
+                                  );
+                                  const nextChange = new Date(lastChange);
+                                  nextChange.setDate(
+                                    lastChange.getDate() + tracking.intervalDays
+                                  );
+                                  return nextChange.toLocaleDateString();
+                                })()}
+                              </Text>
+                            </View>
+                            <View style={styles.horseshoeDetailRow}>
+                              <Text
+                                style={[
+                                  styles.horseshoeDetailLabel,
+                                  { color: currentTheme.colors.textSecondary },
+                                ]}
+                              >
+                                Interval:
+                              </Text>
+                              <TouchableOpacity
+                                onPress={() =>
+                                  setIsEditingHorseshoeInterval(
+                                    !isEditingHorseshoeInterval
+                                  )
+                                }
+                              >
                                 <Text
                                   style={[
                                     styles.horseshoeDetailValue,
-                                    { color: currentTheme.colors.text },
+                                    {
+                                      color: currentTheme.colors.primary,
+                                      textDecorationLine: "underline",
+                                    },
                                   ]}
                                 >
-                                  {(() => {
-                                    const tracking = horseHorseshoes[selectedHorseForRecords.id];
-                                    if (!tracking) return '';
-                                    const lastChange = new Date(tracking.lastChangeDate);
-                                    const nextChange = new Date(lastChange);
-                                    nextChange.setDate(
-                                      lastChange.getDate() + tracking.intervalDays
-                                    );
-                                    return nextChange.toLocaleDateString();
-                                  })()}
+                                  Every{" "}
+                                  {
+                                    horseHorseshoes[selectedHorseForRecords.id]
+                                      ?.intervalDays
+                                  }{" "}
+                                  days ✏️
                                 </Text>
-                              </View>
-                              <View style={styles.horseshoeDetailRow}>
-                                <Text
-                                  style={[
-                                    styles.horseshoeDetailLabel,
-                                    { color: currentTheme.colors.textSecondary },
-                                  ]}
-                                >
-                                  Interval:
-                                </Text>
-                                <TouchableOpacity
-                                  onPress={() => setIsEditingHorseshoeInterval(!isEditingHorseshoeInterval)}
-                                >
-                                  <Text
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+
+                          {/* Edit Interval Section */}
+                          {isEditingHorseshoeInterval && (
+                            <View style={styles.horseshoeEditIntervalContainer}>
+                              <Text
+                                style={[
+                                  styles.horseshoeEditIntervalTitle,
+                                  { color: currentTheme.colors.text },
+                                ]}
+                              >
+                                Change Interval
+                              </Text>
+                              <View style={styles.horseshoeIntervalContainer}>
+                                {[30, 35, 40, 45, 50, 60].map((days) => (
+                                  <TouchableOpacity
+                                    key={days}
                                     style={[
-                                      styles.horseshoeDetailValue,
-                                      { 
-                                        color: currentTheme.colors.primary,
-                                        textDecorationLine: 'underline',
+                                      styles.horseshoeIntervalButton,
+                                      {
+                                        backgroundColor:
+                                          horseHorseshoes[
+                                            selectedHorseForRecords.id
+                                          ]?.intervalDays === days
+                                            ? currentTheme.colors.primary
+                                            : currentTheme.colors.surface,
+                                        borderColor:
+                                          horseHorseshoes[
+                                            selectedHorseForRecords.id
+                                          ]?.intervalDays === days
+                                            ? currentTheme.colors.primary
+                                            : currentTheme.colors.border,
                                       },
                                     ]}
+                                    onPress={() => {
+                                      if (selectedHorseForRecords) {
+                                        updateHorseshoeInterval(
+                                          selectedHorseForRecords.id,
+                                          days
+                                        );
+                                        setIsEditingHorseshoeInterval(false);
+                                      }
+                                    }}
                                   >
-                                    Every {horseHorseshoes[selectedHorseForRecords.id]?.intervalDays} days ✏️
+                                    <Text
+                                      style={[
+                                        styles.horseshoeIntervalButtonText,
+                                        {
+                                          color:
+                                            horseHorseshoes[
+                                              selectedHorseForRecords.id
+                                            ]?.intervalDays === days
+                                              ? "#FFFFFF"
+                                              : currentTheme.colors.text,
+                                        },
+                                      ]}
+                                    >
+                                      {days} days
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            </View>
+                          )}
+
+                          {/* Delete Button or Confirmation */}
+                          {!showHorseshoeDeleteConfirm ? (
+                            <TouchableOpacity
+                              style={[
+                                styles.deleteHorseshoeButton,
+                                { backgroundColor: currentTheme.colors.error },
+                              ]}
+                              onPress={() =>
+                                setShowHorseshoeDeleteConfirm(true)
+                              }
+                            >
+                              <Text style={styles.deleteHorseshoeButtonText}>
+                                🗑️ Delete Tracking
+                              </Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <View
+                              style={styles.horseshoeDeleteConfirmContainer}
+                            >
+                              <Text
+                                style={[
+                                  styles.horseshoeDeleteConfirmText,
+                                  { color: currentTheme.colors.text },
+                                ]}
+                              >
+                                Delete horseshoe tracking?
+                              </Text>
+                              <View
+                                style={styles.horseshoeDeleteConfirmButtons}
+                              >
+                                <TouchableOpacity
+                                  style={[
+                                    styles.horseshoeConfirmButton,
+                                    {
+                                      backgroundColor:
+                                        currentTheme.colors.textSecondary,
+                                    },
+                                  ]}
+                                  onPress={() =>
+                                    setShowHorseshoeDeleteConfirm(false)
+                                  }
+                                >
+                                  <Text
+                                    style={styles.horseshoeConfirmButtonText}
+                                  >
+                                    Cancel
+                                  </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.horseshoeConfirmButton,
+                                    {
+                                      backgroundColor:
+                                        currentTheme.colors.error,
+                                    },
+                                  ]}
+                                  onPress={() => {
+                                    if (selectedHorseForRecords) {
+                                      deleteHorseshoeTracking(
+                                        selectedHorseForRecords.id
+                                      );
+                                      setShowHorseshoeDeleteConfirm(false);
+                                    }
+                                  }}
+                                >
+                                  <Text
+                                    style={styles.horseshoeConfirmButtonText}
+                                  >
+                                    Delete
                                   </Text>
                                 </TouchableOpacity>
                               </View>
                             </View>
-
-                            {/* Edit Interval Section */}
-                            {isEditingHorseshoeInterval && (
-                              <View style={styles.horseshoeEditIntervalContainer}>
-                                <Text
-                                  style={[
-                                    styles.horseshoeEditIntervalTitle,
-                                    { color: currentTheme.colors.text },
-                                  ]}
-                                >
-                                  Change Interval
-                                </Text>
-                                <View style={styles.horseshoeIntervalContainer}>
-                                  {[30, 35, 40, 45, 50, 60].map((days) => (
-                                    <TouchableOpacity
-                                      key={days}
-                                      style={[
-                                        styles.horseshoeIntervalButton,
-                                        {
-                                          backgroundColor:
-                                            horseHorseshoes[selectedHorseForRecords.id]?.intervalDays === days
-                                              ? currentTheme.colors.primary
-                                              : currentTheme.colors.surface,
-                                          borderColor:
-                                            horseHorseshoes[selectedHorseForRecords.id]?.intervalDays === days
-                                              ? currentTheme.colors.primary
-                                              : currentTheme.colors.border,
-                                        },
-                                      ]}
-                                      onPress={() => {
-                                        if (selectedHorseForRecords) {
-                                          updateHorseshoeInterval(selectedHorseForRecords.id, days);
-                                          setIsEditingHorseshoeInterval(false);
-                                        }
-                                      }}
-                                    >
-                                      <Text
-                                        style={[
-                                          styles.horseshoeIntervalButtonText,
-                                          {
-                                            color:
-                                              horseHorseshoes[selectedHorseForRecords.id]?.intervalDays === days
-                                                ? "#FFFFFF"
-                                                : currentTheme.colors.text,
-                                          },
-                                        ]}
-                                      >
-                                        {days} days
-                                      </Text>
-                                    </TouchableOpacity>
-                                  ))}
-                                </View>
-                              </View>
-                            )}
-
-                            {/* Delete Button or Confirmation */}
-                            {!showHorseshoeDeleteConfirm ? (
-                              <TouchableOpacity
-                                style={[
-                                  styles.deleteHorseshoeButton,
-                                  { backgroundColor: currentTheme.colors.error },
-                                ]}
-                                onPress={() => setShowHorseshoeDeleteConfirm(true)}
-                              >
-                                <Text style={styles.deleteHorseshoeButtonText}>
-                                  🗑️ Delete Tracking
-                                </Text>
-                              </TouchableOpacity>
-                            ) : (
-                              <View style={styles.horseshoeDeleteConfirmContainer}>
-                                <Text
-                                  style={[
-                                    styles.horseshoeDeleteConfirmText,
-                                    { color: currentTheme.colors.text },
-                                  ]}
-                                >
-                                  Delete horseshoe tracking?
-                                </Text>
-                                <View style={styles.horseshoeDeleteConfirmButtons}>
-                                  <TouchableOpacity
-                                    style={[
-                                      styles.horseshoeConfirmButton,
-                                      { backgroundColor: currentTheme.colors.textSecondary },
-                                    ]}
-                                    onPress={() => setShowHorseshoeDeleteConfirm(false)}
-                                  >
-                                    <Text style={styles.horseshoeConfirmButtonText}>
-                                      Cancel
-                                    </Text>
-                                  </TouchableOpacity>
-                                  <TouchableOpacity
-                                    style={[
-                                      styles.horseshoeConfirmButton,
-                                      { backgroundColor: currentTheme.colors.error },
-                                    ]}
-                                    onPress={() => {
-                                      if (selectedHorseForRecords) {
-                                        deleteHorseshoeTracking(selectedHorseForRecords.id);
-                                        setShowHorseshoeDeleteConfirm(false);
-                                      }
-                                    }}
-                                  >
-                                    <Text style={styles.horseshoeConfirmButtonText}>
-                                      Delete
-                                    </Text>
-                                  </TouchableOpacity>
-                                </View>
-                              </View>
-                            )}
-                          </View>
+                          )}
                         </View>
-                      ) : (
-                        /* Start New Horseshoe Tracking */
-                        <View style={styles.startHorseshoeContainer}>
-                          <Text
-                            style={[
-                              styles.startHorseshoeTitle,
-                              { color: currentTheme.colors.text },
-                            ]}
-                          >
-                            Start Horseshoe Tracking
-                          </Text>
-                          <Text
-                            style={[
-                              styles.startHorseshoeSubtitle,
-                              { color: currentTheme.colors.textSecondary },
-                            ]}
-                          >
-                            Track when your horse needs new horseshoes
-                          </Text>
+                      </View>
+                    ) : (
+                      /* Start New Horseshoe Tracking */
+                      <View style={styles.startHorseshoeContainer}>
+                        <Text
+                          style={[
+                            styles.startHorseshoeTitle,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          Start Horseshoe Tracking
+                        </Text>
+                        <Text
+                          style={[
+                            styles.startHorseshoeSubtitle,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          Track when your horse needs new horseshoes
+                        </Text>
 
-                          {/* Interval Selector */}
-                          <Text
-                            style={[
-                              styles.horseshoeFormLabel,
-                              { color: currentTheme.colors.text },
-                            ]}
-                          >
-                            Change Interval *
-                          </Text>
-                          <View style={styles.horseshoeIntervalContainer}>
-                            {[30, 35, 40, 45, 50, 60].map((days) => (
-                              <TouchableOpacity
-                                key={days}
+                        {/* Interval Selector */}
+                        <Text
+                          style={[
+                            styles.horseshoeFormLabel,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          Change Interval *
+                        </Text>
+                        <View style={styles.horseshoeIntervalContainer}>
+                          {[30, 35, 40, 45, 50, 60].map((days) => (
+                            <TouchableOpacity
+                              key={days}
+                              style={[
+                                styles.horseshoeIntervalButton,
+                                {
+                                  backgroundColor:
+                                    horseshoeIntervalDays === days
+                                      ? currentTheme.colors.primary
+                                      : currentTheme.colors.surface,
+                                  borderColor:
+                                    horseshoeIntervalDays === days
+                                      ? currentTheme.colors.primary
+                                      : currentTheme.colors.border,
+                                },
+                              ]}
+                              onPress={() => setHorseshoeIntervalDays(days)}
+                            >
+                              <Text
                                 style={[
-                                  styles.horseshoeIntervalButton,
+                                  styles.horseshoeIntervalButtonText,
                                   {
-                                    backgroundColor:
+                                    color:
                                       horseshoeIntervalDays === days
-                                        ? currentTheme.colors.primary
-                                        : currentTheme.colors.surface,
-                                    borderColor:
-                                      horseshoeIntervalDays === days
-                                        ? currentTheme.colors.primary
-                                        : currentTheme.colors.border,
+                                        ? "#FFFFFF"
+                                        : currentTheme.colors.text,
                                   },
                                 ]}
-                                onPress={() => setHorseshoeIntervalDays(days)}
                               >
-                                <Text
-                                  style={[
-                                    styles.horseshoeIntervalButtonText,
-                                    {
-                                      color:
-                                        horseshoeIntervalDays === days
-                                          ? "#FFFFFF"
-                                          : currentTheme.colors.text,
-                                    },
-                                  ]}
-                                >
-                                  {days} days
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-
-                          <TouchableOpacity
-                            style={[
-                              styles.startHorseshoeButton,
-                              { backgroundColor: currentTheme.colors.primary },
-                            ]}
-                            onPress={startHorseshoeTracking}
-                          >
-                            <Text style={styles.startHorseshoeButtonText}>
-                              Start Tracking
-                            </Text>
-                          </TouchableOpacity>
+                                {days} days
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
                         </View>
-                      )}
-                    </View>
-                  )}
 
-                  {/* Pregnancy Manager Section */}
-                  {recordsSection === "pregnancy" && selectedHorseForRecords?.gender === "Mare" && (
+                        <TouchableOpacity
+                          style={[
+                            styles.startHorseshoeButton,
+                            { backgroundColor: currentTheme.colors.primary },
+                          ]}
+                          onPress={startHorseshoeTracking}
+                        >
+                          <Text style={styles.startHorseshoeButtonText}>
+                            Start Tracking
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Pregnancy Manager Section */}
+                {recordsSection === "pregnancy" &&
+                  selectedHorseForRecords?.gender === "Mare" && (
                     <View>
                       <View style={styles.pregnancyHeader}>
                         {!selectedPregnancy ? (
@@ -5599,38 +5796,70 @@ const MyHorsesScreen = () => {
                           !pregnancyModalVisible ? (
                             <View style={styles.noPregnancyContainer}>
                               <Text style={styles.noPregnancyIcon}>🐴</Text>
-                              <Text style={[styles.noPregnancyTitle, { color: currentTheme.colors.text }]}>
+                              <Text
+                                style={[
+                                  styles.noPregnancyTitle,
+                                  { color: currentTheme.colors.text },
+                                ]}
+                              >
                                 No Active Pregnancy
                               </Text>
-                              <Text style={[styles.noPregnancySubtitle, { color: currentTheme.colors.textSecondary }]}>
-                                Start tracking a pregnancy for {selectedHorseForRecords.name}
+                              <Text
+                                style={[
+                                  styles.noPregnancySubtitle,
+                                  { color: currentTheme.colors.textSecondary },
+                                ]}
+                              >
+                                Start tracking a pregnancy for{" "}
+                                {selectedHorseForRecords.name}
                               </Text>
                               <TouchableOpacity
                                 style={[
                                   styles.startPregnancyButton,
-                                  { backgroundColor: currentTheme.colors.primary },
+                                  {
+                                    backgroundColor:
+                                      currentTheme.colors.primary,
+                                  },
                                 ]}
                                 onPress={() => {
                                   // Show inline pregnancy form
                                   setPregnancyModalVisible(true);
                                 }}
                               >
-                                <Text style={styles.startPregnancyButtonText}>Start Pregnancy</Text>
+                                <Text style={styles.startPregnancyButtonText}>
+                                  Start Pregnancy
+                                </Text>
                               </TouchableOpacity>
                             </View>
                           ) : (
                             // Inline Start Pregnancy Form
                             <View style={styles.pregnancyFormContainer}>
-                              <Text style={[styles.pregnancyFormTitle, { color: currentTheme.colors.text }]}>
+                              <Text
+                                style={[
+                                  styles.pregnancyFormTitle,
+                                  { color: currentTheme.colors.text },
+                                ]}
+                              >
                                 Start New Pregnancy
                               </Text>
-                              <Text style={[styles.startPregnancySubtitle, { color: currentTheme.colors.textSecondary }]}>
-                                Enter the cover date and optional details to start tracking
+                              <Text
+                                style={[
+                                  styles.startPregnancySubtitle,
+                                  { color: currentTheme.colors.textSecondary },
+                                ]}
+                              >
+                                Enter the cover date and optional details to
+                                start tracking
                               </Text>
 
                               {/* Cover Date - Required */}
                               <View style={styles.inputGroup}>
-                                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                <Text
+                                  style={[
+                                    styles.inputLabel,
+                                    { color: currentTheme.colors.text },
+                                  ]}
+                                >
                                   Cover Date *
                                 </Text>
                                 <DatePicker
@@ -5644,55 +5873,107 @@ const MyHorsesScreen = () => {
 
                               {/* Breeding Method - Optional */}
                               <View style={styles.inputGroup}>
-                                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                <Text
+                                  style={[
+                                    styles.inputLabel,
+                                    { color: currentTheme.colors.text },
+                                  ]}
+                                >
                                   Breeding Method
                                 </Text>
                                 <View style={styles.methodToggle}>
                                   <TouchableOpacity
                                     style={[
                                       styles.methodButtonLeft,
-                                      pregnancyMethod === "natural" && styles.methodButtonActive,
-                                      pregnancyMethod === "natural" ? {backgroundColor: currentTheme.colors.secondary} : { backgroundColor: currentTheme.colors.surface },
-                                      { borderColor: currentTheme.colors.primary}
+                                      pregnancyMethod === "natural" &&
+                                        styles.methodButtonActive,
+                                      pregnancyMethod === "natural"
+                                        ? {
+                                            backgroundColor:
+                                              currentTheme.colors.secondary,
+                                          }
+                                        : {
+                                            backgroundColor:
+                                              currentTheme.colors.surface,
+                                          },
+                                      {
+                                        borderColor:
+                                          currentTheme.colors.primary,
+                                      },
                                     ]}
-                                    onPress={() => setPregnancyMethod("natural")}
+                                    onPress={() =>
+                                      setPregnancyMethod("natural")
+                                    }
                                   >
-                                    <Text style={[
-                                      styles.methodButtonText,
-                                      pregnancyMethod === "natural" && styles.methodButtonTextActive
-                                    ]}>
+                                    <Text
+                                      style={[
+                                        styles.methodButtonText,
+                                        pregnancyMethod === "natural" &&
+                                          styles.methodButtonTextActive,
+                                      ]}
+                                    >
                                       Natural
                                     </Text>
                                   </TouchableOpacity>
                                   <TouchableOpacity
                                     style={[
                                       styles.methodButton,
-                                      pregnancyMethod === "AI" && styles.methodButtonActive,
-                                      pregnancyMethod === "AI" ? {backgroundColor: currentTheme.colors.secondary} : { backgroundColor: currentTheme.colors.surface },
-                                      { borderColor: currentTheme.colors.primary}
+                                      pregnancyMethod === "AI" &&
+                                        styles.methodButtonActive,
+                                      pregnancyMethod === "AI"
+                                        ? {
+                                            backgroundColor:
+                                              currentTheme.colors.secondary,
+                                          }
+                                        : {
+                                            backgroundColor:
+                                              currentTheme.colors.surface,
+                                          },
+                                      {
+                                        borderColor:
+                                          currentTheme.colors.primary,
+                                      },
                                     ]}
                                     onPress={() => setPregnancyMethod("AI")}
                                   >
-                                    <Text style={[
-                                      styles.methodButtonText,
-                                      pregnancyMethod === "AI" && styles.methodButtonTextActive
-                                    ]}>
+                                    <Text
+                                      style={[
+                                        styles.methodButtonText,
+                                        pregnancyMethod === "AI" &&
+                                          styles.methodButtonTextActive,
+                                      ]}
+                                    >
                                       AI
                                     </Text>
                                   </TouchableOpacity>
                                   <TouchableOpacity
                                     style={[
                                       styles.methodButtonRight,
-                                      pregnancyMethod === "ICSI" && styles.methodButtonActive,
-                                      pregnancyMethod === "ICSI" ? {backgroundColor: currentTheme.colors.secondary} : { backgroundColor: currentTheme.colors.surface },
-                                      { borderColor: currentTheme.colors.primary }
+                                      pregnancyMethod === "ICSI" &&
+                                        styles.methodButtonActive,
+                                      pregnancyMethod === "ICSI"
+                                        ? {
+                                            backgroundColor:
+                                              currentTheme.colors.secondary,
+                                          }
+                                        : {
+                                            backgroundColor:
+                                              currentTheme.colors.surface,
+                                          },
+                                      {
+                                        borderColor:
+                                          currentTheme.colors.primary,
+                                      },
                                     ]}
                                     onPress={() => setPregnancyMethod("ICSI")}
                                   >
-                                    <Text style={[
-                                      styles.methodButtonText,
-                                      pregnancyMethod === "ICSI" && styles.methodButtonTextActive
-                                    ]}>
+                                    <Text
+                                      style={[
+                                        styles.methodButtonText,
+                                        pregnancyMethod === "ICSI" &&
+                                          styles.methodButtonTextActive,
+                                      ]}
+                                    >
                                       ICSI
                                     </Text>
                                   </TouchableOpacity>
@@ -5701,51 +5982,83 @@ const MyHorsesScreen = () => {
 
                               {/* Veterinarian Info - Optional */}
                               <View style={styles.inputGroup}>
-                                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                <Text
+                                  style={[
+                                    styles.inputLabel,
+                                    { color: currentTheme.colors.text },
+                                  ]}
+                                >
                                   Veterinarian Name (Optional)
                                 </Text>
                                 <TextInput
                                   style={[
                                     styles.input,
                                     {
-                                      backgroundColor: currentTheme.colors.surface,
+                                      backgroundColor:
+                                        currentTheme.colors.surface,
                                       color: currentTheme.colors.primaryDark,
-                                      borderColor: currentTheme.colors.primaryDark,
+                                      borderColor:
+                                        currentTheme.colors.primaryDark,
                                     },
                                   ]}
                                   value={pregnancyVetName}
                                   onChangeText={setPregnancyVetName}
                                   placeholder="Enter vet name"
-                                  placeholderTextColor={currentTheme.colors.textSecondary}
+                                  placeholderTextColor={
+                                    currentTheme.colors.textSecondary
+                                  }
                                 />
                               </View>
 
                               <View style={styles.inputGroup}>
-                                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
+                                <Text
+                                  style={[
+                                    styles.inputLabel,
+                                    { color: currentTheme.colors.text },
+                                  ]}
+                                >
                                   Veterinarian Phone (Optional)
                                 </Text>
                                 <TextInput
                                   style={[
                                     styles.input,
                                     {
-                                      backgroundColor: currentTheme.colors.surface,
+                                      backgroundColor:
+                                        currentTheme.colors.surface,
                                       color: currentTheme.colors.primaryDark,
-                                      borderColor: currentTheme.colors.primaryDark,
+                                      borderColor:
+                                        currentTheme.colors.primaryDark,
                                     },
                                   ]}
                                   value={pregnancyVetPhone}
                                   onChangeText={setPregnancyVetPhone}
                                   placeholder="Enter vet phone"
-                                  placeholderTextColor={currentTheme.colors.textSecondary}
+                                  placeholderTextColor={
+                                    currentTheme.colors.textSecondary
+                                  }
                                   keyboardType="phone-pad"
                                 />
                               </View>
 
                               {/* Info Banner */}
-                              <View style={[styles.pregnancyInfoBanner, { backgroundColor: currentTheme.colors.accent }]}>
+                              <View
+                                style={[
+                                  styles.pregnancyInfoBanner,
+                                  {
+                                    backgroundColor: currentTheme.colors.accent,
+                                  },
+                                ]}
+                              >
                                 <Text style={styles.pregnancyInfoIcon}>ℹ️</Text>
-                                <Text style={[styles.pregnancyInfoText, { color: currentTheme.colors.text }]}>
-                                  A 340-day timeline will be automatically created with ultrasound checks, vaccine reminders, and deworming schedule.
+                                <Text
+                                  style={[
+                                    styles.pregnancyInfoText,
+                                    { color: currentTheme.colors.text },
+                                  ]}
+                                >
+                                  A 340-day timeline will be automatically
+                                  created with ultrasound checks, vaccine
+                                  reminders, and deworming schedule.
                                 </Text>
                               </View>
 
@@ -5755,7 +6068,10 @@ const MyHorsesScreen = () => {
                                   style={[
                                     styles.pregnancyFormButton,
                                     styles.pregnancyCancelButton,
-                                    { backgroundColor: currentTheme.colors.textSecondary },
+                                    {
+                                      backgroundColor:
+                                        currentTheme.colors.textSecondary,
+                                    },
                                   ]}
                                   onPress={() => {
                                     setPregnancyModalVisible(false);
@@ -5766,21 +6082,26 @@ const MyHorsesScreen = () => {
                                     setPregnancyVetPhone("");
                                   }}
                                 >
-                                  <Text style={styles.pregnancyFormButtonText}>Cancel</Text>
+                                  <Text style={styles.pregnancyFormButtonText}>
+                                    Cancel
+                                  </Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                   style={[
                                     styles.pregnancyFormButton,
                                     styles.pregnancySaveButton,
-                                    { 
-                                      backgroundColor: currentTheme.colors.primary,
-                                      opacity: pregnancyCoverDate ? 1 : 0.5
+                                    {
+                                      backgroundColor:
+                                        currentTheme.colors.primary,
+                                      opacity: pregnancyCoverDate ? 1 : 0.5,
                                     },
                                   ]}
                                   onPress={handleStartPregnancy}
                                   disabled={!pregnancyCoverDate}
                                 >
-                                  <Text style={styles.pregnancyFormButtonText}>Start Pregnancy</Text>
+                                  <Text style={styles.pregnancyFormButtonText}>
+                                    Start Pregnancy
+                                  </Text>
                                 </TouchableOpacity>
                               </View>
                             </View>
@@ -5795,702 +6116,1237 @@ const MyHorsesScreen = () => {
                                 { color: currentTheme.colors.text },
                               ]}
                             >
-                              Pregnancy Timeline for: {selectedHorseForRecords.name}
+                              Pregnancy Timeline for:{" "}
+                              {selectedHorseForRecords.name}
                             </Text>
-                            
+
                             <View style={styles.disclaimerBanner}>
                               <Text style={styles.disclaimerIcon}>⚠️</Text>
                               <Text style={styles.disclaimerText}>
-                                Educational only — contact your veterinarian for diagnosis or emergencies
+                                Educational only — contact your veterinarian for
+                                diagnosis or emergencies
                               </Text>
                             </View>
-                            
+
                             <>
                               {/* Status Badge and Day Counter */}
                               <View style={styles.pregnancyStatusContainer}>
-                                <View style={[styles.statusBadge, { backgroundColor: currentTheme.colors.accent }]}>
-                                  <Text style={[styles.statusBadgeText, { color: currentTheme.colors.text }]}>
-                                    {selectedPregnancy.status === "active" ? "🤰 Active" : 
-                                     selectedPregnancy.status === "foaled" ? "🐴 Foaled" : "❌ Lost"}
+                                <View
+                                  style={[
+                                    styles.statusBadge,
+                                    {
+                                      backgroundColor:
+                                        currentTheme.colors.accent,
+                                    },
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.statusBadgeText,
+                                      { color: currentTheme.colors.text },
+                                    ]}
+                                  >
+                                    {selectedPregnancy.status === "active"
+                                      ? "🤰 Active"
+                                      : selectedPregnancy.status === "foaled"
+                                      ? "🐴 Foaled"
+                                      : "❌ Lost"}
                                   </Text>
                                 </View>
-                                
+
                                 {selectedPregnancy.status === "active" && (
                                   <View style={styles.dayCounter}>
-                                    <Text style={[styles.dayCounterNumber, { color: currentTheme.colors.text }]}>
+                                    <Text
+                                      style={[
+                                        styles.dayCounterNumber,
+                                        { color: currentTheme.colors.text },
+                                      ]}
+                                    >
                                       Day {getDaysPregnant(selectedPregnancy)}
                                     </Text>
-                                    <Text style={styles.dayCounterLabel}>of ~340</Text>
+                                    <Text style={styles.dayCounterLabel}>
+                                      of ~340
+                                    </Text>
                                   </View>
                                 )}
                               </View>
 
-                            {/* Progress Bar */}
-                            {selectedPregnancy.status === "active" && (
-                              <View style={styles.modalProgressContainer}>
-                                <View style={[styles.progressBarContainer, { backgroundColor: currentTheme.colors.secondary }]}>
-                                  <View 
+                              {/* Progress Bar */}
+                              {selectedPregnancy.status === "active" && (
+                                <View style={styles.modalProgressContainer}>
+                                  <View
                                     style={[
-                                      styles.progressBarFill,
-                                      { 
-                                        width: `${Math.min((getDaysPregnant(selectedPregnancy) / 340) * 100, 100)}%`,
-                                        backgroundColor: currentTheme.colors.primary
-                                      }
+                                      styles.progressBarContainer,
+                                      {
+                                        backgroundColor:
+                                          currentTheme.colors.secondary,
+                                      },
                                     ]}
-                                  />
-                                  {/* Stage Dividers */}
-                                  <View style={[styles.modalStageDivider, { left: '33.33%', backgroundColor: currentTheme.colors.surface }]} />
-                                  <View style={[styles.modalStageDivider, { left: '66.66%', backgroundColor: currentTheme.colors.surface }]} />
-                                </View>
-                                
-                                {/* Stage Labels */}
-                                <View style={styles.modalStageLabels}>
-                                  <Text style={[styles.modalStageLabel, { color: currentTheme.colors.textSecondary }]}>
-                                    Early (0-113d)
-                                  </Text>
-                                  <Text style={[styles.modalStageLabel, { color: currentTheme.colors.textSecondary }]}>
-                                    Mid (114-226d)
-                                  </Text>
-                                  <Text style={[styles.modalStageLabel, { color: currentTheme.colors.textSecondary }]}>
-                                    Late (227-340d)
-                                  </Text>
-                                </View>
-                              </View>
-                            )}
+                                  >
+                                    <View
+                                      style={[
+                                        styles.progressBarFill,
+                                        {
+                                          width: `${Math.min(
+                                            (getDaysPregnant(
+                                              selectedPregnancy
+                                            ) /
+                                              340) *
+                                              100,
+                                            100
+                                          )}%`,
+                                          backgroundColor:
+                                            currentTheme.colors.primary,
+                                        },
+                                      ]}
+                                    />
+                                    {/* Stage Dividers */}
+                                    <View
+                                      style={[
+                                        styles.modalStageDivider,
+                                        {
+                                          left: "33.33%",
+                                          backgroundColor:
+                                            currentTheme.colors.surface,
+                                        },
+                                      ]}
+                                    />
+                                    <View
+                                      style={[
+                                        styles.modalStageDivider,
+                                        {
+                                          left: "66.66%",
+                                          backgroundColor:
+                                            currentTheme.colors.surface,
+                                        },
+                                      ]}
+                                    />
+                                  </View>
 
-                            {/* Next Action Card */}
-                            {selectedPregnancy.status === "active" && getNextAction(selectedPregnancy) && (() => {
-                              const nextAction = getNextAction(selectedPregnancy)!;
-                              const isFutureAction = nextAction.daysUntil > 0;
-                              return (
-                                <View style={[styles.nextActionCard, { backgroundColor: currentTheme.colors.accent }]}>
-                                  <View style={styles.nextActionContent}>
-                                    <View style={styles.nextActionTextContainer}>
-                                      <Text style={[styles.nextActionTitle, { color: currentTheme.colors.textSecondary }]}>Next Action</Text>
-                                      <Text style={[styles.nextActionText, { color: currentTheme.colors.text }]}>
-                                        {nextAction.text}
-                                      </Text>
-                                      <Text style={[styles.nextActionDays, { color: currentTheme.colors.textSecondary }]}>
-                                        {nextAction.daysUntil > 0 
-                                          ? `in ${nextAction.daysUntil} days`
-                                          : nextAction.daysUntil === 0
-                                          ? "Today!"
-                                          : `${Math.abs(nextAction.daysUntil)} days overdue`
-                                        }
-                                      </Text>
+                                  {/* Stage Labels */}
+                                  <View style={styles.modalStageLabels}>
+                                    <Text
+                                      style={[
+                                        styles.modalStageLabel,
+                                        {
+                                          color:
+                                            currentTheme.colors.textSecondary,
+                                        },
+                                      ]}
+                                    >
+                                      Early (0-113d)
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.modalStageLabel,
+                                        {
+                                          color:
+                                            currentTheme.colors.textSecondary,
+                                        },
+                                      ]}
+                                    >
+                                      Mid (114-226d)
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.modalStageLabel,
+                                        {
+                                          color:
+                                            currentTheme.colors.textSecondary,
+                                        },
+                                      ]}
+                                    >
+                                      Late (227-340d)
+                                    </Text>
+                                  </View>
+                                </View>
+                              )}
+
+                              {/* Next Action Card */}
+                              {selectedPregnancy.status === "active" &&
+                                getNextAction(selectedPregnancy) &&
+                                (() => {
+                                  const nextAction =
+                                    getNextAction(selectedPregnancy)!;
+                                  const isFutureAction =
+                                    nextAction.daysUntil > 0;
+                                  return (
+                                    <View
+                                      style={[
+                                        styles.nextActionCard,
+                                        {
+                                          backgroundColor:
+                                            currentTheme.colors.accent,
+                                        },
+                                      ]}
+                                    >
+                                      <View style={styles.nextActionContent}>
+                                        <View
+                                          style={styles.nextActionTextContainer}
+                                        >
+                                          <Text
+                                            style={[
+                                              styles.nextActionTitle,
+                                              {
+                                                color:
+                                                  currentTheme.colors
+                                                    .textSecondary,
+                                              },
+                                            ]}
+                                          >
+                                            Next Action
+                                          </Text>
+                                          <Text
+                                            style={[
+                                              styles.nextActionText,
+                                              {
+                                                color: currentTheme.colors.text,
+                                              },
+                                            ]}
+                                          >
+                                            {nextAction.text}
+                                          </Text>
+                                          <Text
+                                            style={[
+                                              styles.nextActionDays,
+                                              {
+                                                color:
+                                                  currentTheme.colors
+                                                    .textSecondary,
+                                              },
+                                            ]}
+                                          >
+                                            {nextAction.daysUntil > 0
+                                              ? `in ${nextAction.daysUntil} days`
+                                              : nextAction.daysUntil === 0
+                                              ? "Today!"
+                                              : `${Math.abs(
+                                                  nextAction.daysUntil
+                                                )} days overdue`}
+                                          </Text>
+                                        </View>
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.nextActionCheckButton,
+                                            {
+                                              backgroundColor: isFutureAction
+                                                ? currentTheme.colors.border
+                                                : currentTheme.colors.primary,
+                                              opacity: isFutureAction ? 0.5 : 1,
+                                            },
+                                          ]}
+                                          onPress={handleCompleteNextAction}
+                                          disabled={isFutureAction}
+                                        >
+                                          <Text
+                                            style={styles.nextActionCheckIcon}
+                                          >
+                                            ✓
+                                          </Text>
+                                        </TouchableOpacity>
+                                      </View>
                                     </View>
+                                  );
+                                })()}
+
+                              {/* View Toggle */}
+                              <View style={styles.viewToggle}>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.viewToggleButtonLeft,
+                                    pregnancyView === "timeline" &&
+                                      styles.viewToggleButtonActive,
+                                    {
+                                      borderColor: currentTheme.colors.primary,
+                                      backgroundColor:
+                                        pregnancyView === "timeline"
+                                          ? currentTheme.colors.primary
+                                          : currentTheme.colors.surface,
+                                    },
+                                  ]}
+                                  onPress={() => {
+                                    setPregnancyView("timeline");
+                                    setShowInlinePregnancyPhotoPicker(false);
+                                  }}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.viewToggleText,
+                                      pregnancyView === "timeline" &&
+                                        styles.viewToggleTextActive,
+                                      {
+                                        color:
+                                          pregnancyView === "timeline"
+                                            ? "#FFFFFF"
+                                            : currentTheme.colors.text,
+                                      },
+                                    ]}
+                                  >
+                                    Timeline
+                                  </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.viewToggleButton,
+                                    pregnancyView === "fruit" &&
+                                      styles.viewToggleButtonActive,
+                                    {
+                                      borderColor: currentTheme.colors.primary,
+                                      backgroundColor:
+                                        pregnancyView === "fruit"
+                                          ? currentTheme.colors.primary
+                                          : currentTheme.colors.surface,
+                                    },
+                                  ]}
+                                  onPress={() => {
+                                    setPregnancyView("fruit");
+                                    setShowInlinePregnancyPhotoPicker(false);
+                                  }}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.viewToggleText,
+                                      pregnancyView === "fruit" &&
+                                        styles.viewToggleTextActive,
+                                      {
+                                        color:
+                                          pregnancyView === "fruit"
+                                            ? "#FFFFFF"
+                                            : currentTheme.colors.text,
+                                      },
+                                    ]}
+                                  >
+                                    Month View
+                                  </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.viewToggleButtonRight,
+                                    pregnancyView === "photos" &&
+                                      styles.viewToggleButtonActive,
+                                    {
+                                      borderColor: currentTheme.colors.primary,
+                                      backgroundColor:
+                                        pregnancyView === "photos"
+                                          ? currentTheme.colors.primary
+                                          : currentTheme.colors.surface,
+                                    },
+                                  ]}
+                                  onPress={() => {
+                                    setPregnancyView("photos");
+                                    setShowInlinePregnancyPhotoPicker(false);
+                                  }}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.viewToggleText,
+                                      pregnancyView === "photos" &&
+                                        styles.viewToggleTextActive,
+                                      {
+                                        color:
+                                          pregnancyView === "photos"
+                                            ? "#FFFFFF"
+                                            : currentTheme.colors.text,
+                                      },
+                                    ]}
+                                  >
+                                    Photos
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+
+                              {/* Timeline View */}
+                              {pregnancyView === "timeline" && (
+                                <View style={styles.timelineContainer}>
+                                  <Text
+                                    style={[
+                                      styles.sectionTitle,
+                                      { color: currentTheme.colors.text },
+                                    ]}
+                                  >
+                                    Event Timeline
+                                  </Text>
+
+                                  {/* Add Event Button */}
+                                  {!showInlineAddEvent ? (
                                     <TouchableOpacity
                                       style={[
-                                        styles.nextActionCheckButton,
-                                        { 
-                                          backgroundColor: isFutureAction ? currentTheme.colors.border : currentTheme.colors.primary,
-                                          opacity: isFutureAction ? 0.5 : 1
-                                        }
+                                        styles.addEventButton,
+                                        {
+                                          backgroundColor:
+                                            currentTheme.colors.primary,
+                                        },
                                       ]}
-                                      onPress={handleCompleteNextAction}
-                                      disabled={isFutureAction}
+                                      onPress={() =>
+                                        setShowInlineAddEvent(true)
+                                      }
                                     >
-                                      <Text style={styles.nextActionCheckIcon}>✓</Text>
+                                      <Text style={styles.addEventButtonText}>
+                                        + Add Event
+                                      </Text>
                                     </TouchableOpacity>
-                                  </View>
-                                </View>
-                              );
-                            })()}
-
-                            {/* View Toggle */}
-                            <View style={styles.viewToggle}>
-                              <TouchableOpacity
-                                style={[
-                                  styles.viewToggleButtonLeft,
-                                  pregnancyView === "timeline" && styles.viewToggleButtonActive,
-                                  { 
-                                    borderColor: currentTheme.colors.primary,
-                                    backgroundColor: pregnancyView === "timeline" ? currentTheme.colors.primary : currentTheme.colors.surface
-                                  }
-                                ]}
-                                onPress={() => {
-                                  setPregnancyView("timeline");
-                                  setShowInlinePregnancyPhotoPicker(false);
-                                }}
-                              >
-                                <Text style={[
-                                  styles.viewToggleText,
-                                  pregnancyView === "timeline" && styles.viewToggleTextActive,
-                                  { color: pregnancyView === "timeline" ? '#FFFFFF' : currentTheme.colors.text }
-                                ]}>
-                                  Timeline
-                                </Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                style={[
-                                  styles.viewToggleButton,
-                                  pregnancyView === "fruit" && styles.viewToggleButtonActive,
-                                  { 
-                                    borderColor: currentTheme.colors.primary,
-                                    backgroundColor: pregnancyView === "fruit" ? currentTheme.colors.primary : currentTheme.colors.surface
-                                  }
-                                ]}
-                                onPress={() => {
-                                  setPregnancyView("fruit");
-                                  setShowInlinePregnancyPhotoPicker(false);
-                                }}
-                              >
-                                <Text style={[
-                                  styles.viewToggleText,
-                                  pregnancyView === "fruit" && styles.viewToggleTextActive,
-                                  { color: pregnancyView === "fruit" ? '#FFFFFF' : currentTheme.colors.text }
-                                ]}>
-                                  Month View
-                                </Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                style={[
-                                  styles.viewToggleButtonRight,
-                                  pregnancyView === "photos" && styles.viewToggleButtonActive,
-                                  { 
-                                    borderColor: currentTheme.colors.primary,
-                                    backgroundColor: pregnancyView === "photos" ? currentTheme.colors.primary : currentTheme.colors.surface
-                                  }
-                                ]}
-                                onPress={() => {
-                                  setPregnancyView("photos");
-                                  setShowInlinePregnancyPhotoPicker(false);
-                                }}
-                              >
-                                <Text style={[
-                                  styles.viewToggleText,
-                                  pregnancyView === "photos" && styles.viewToggleTextActive,
-                                  { color: pregnancyView === "photos" ? '#FFFFFF' : currentTheme.colors.text }
-                                ]}>
-                                  Photos
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
-
-                            {/* Timeline View */}
-                            {pregnancyView === "timeline" && (
-                              <View style={styles.timelineContainer}>
-                                <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
-                                  Event Timeline
-                                </Text>
-                                
-                                {/* Add Event Button */}
-                                {!showInlineAddEvent ? (
-                                  <TouchableOpacity
-                                    style={[
-                                      styles.addEventButton,
-                                      { backgroundColor: currentTheme.colors.primary }
-                                    ]}
-                                    onPress={() => setShowInlineAddEvent(true)}
-                                  >
-                                    <Text style={styles.addEventButtonText}>+ Add Event</Text>
-                                  </TouchableOpacity>
-                                ) : (
-                                  <View style={[styles.inlineEventForm, { backgroundColor: currentTheme.colors.surface }]}>
-                                    {/* Pregnancy Status Change Section */}
-                                    <View style={styles.inputGroup}>
-                                      <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                                        Change Pregnancy Status
-                                      </Text>
-                                      <View style={styles.statusOptionsContainer}>
-                                        <TouchableOpacity
+                                  ) : (
+                                    <View
+                                      style={[
+                                        styles.inlineEventForm,
+                                        {
+                                          backgroundColor:
+                                            currentTheme.colors.surface,
+                                        },
+                                      ]}
+                                    >
+                                      {/* Pregnancy Status Change Section */}
+                                      <View style={styles.inputGroup}>
+                                        <Text
                                           style={[
-                                            styles.statusOption,
-                                            {
-                                              backgroundColor: selectedPregnancy.status === 'active' 
-                                                ? currentTheme.colors.primary 
-                                                : currentTheme.colors.surface,
-                                              borderColor: currentTheme.colors.border,
-                                            }
+                                            styles.inputLabel,
+                                            { color: currentTheme.colors.text },
                                           ]}
-                                          onPress={() => {
-                                            if (selectedPregnancy) {
-                                              const updated = {
-                                                ...selectedPregnancy,
-                                                status: 'active' as PregnancyStatus
-                                              };
-                                              setSelectedPregnancy(updated);
-                                              const newPregnancies = { ...pregnancies, [selectedPregnancy.horseId]: updated };
-                                              setPregnancies(newPregnancies);
-                                              savePregnancies(newPregnancies);
-                                              
-                                              // Update notifications (reactivate all notifications)
-                                              const horseName = horses.find(h => h.id === updated.horseId)?.name;
-                                              PregnancyNotificationService.updatePregnancyNotifications({
-                                                ...updated,
-                                                horseName
-                                              }).catch(error => {
-                                                console.error('Failed to update pregnancy notifications:', error);
-                                              });
-                                            }
-                                          }}
                                         >
-                                          <Text style={[
-                                            styles.statusOptionText,
-                                            { 
-                                              color: selectedPregnancy.status === 'active' 
-                                                ? '#FFFFFF' 
-                                                : currentTheme.colors.text 
-                                            }
-                                          ]}>
-                                            🤰 Active
-                                          </Text>
-                                        </TouchableOpacity>
-                                        
-                                        <TouchableOpacity
-                                          style={[
-                                            styles.statusOption,
-                                            {
-                                              backgroundColor: selectedPregnancy.status === 'foaled' 
-                                                ? currentTheme.colors.primary 
-                                                : currentTheme.colors.surface,
-                                              borderColor: currentTheme.colors.border,
-                                              opacity: getDaysPregnant(selectedPregnancy) >= 320 && getDaysPregnant(selectedPregnancy) <= 360 ? 1 : 0.5
-                                            }
-                                          ]}
-                                          disabled={getDaysPregnant(selectedPregnancy) < 320 || getDaysPregnant(selectedPregnancy) > 360}
-                                          onPress={() => {
-                                            if (selectedPregnancy) {
-                                              const updated = {
-                                                ...selectedPregnancy,
-                                                status: 'foaled' as PregnancyStatus
-                                              };
-                                              setSelectedPregnancy(updated);
-                                              const newPregnancies = { ...pregnancies, [selectedPregnancy.horseId]: updated };
-                                              setPregnancies(newPregnancies);
-                                              savePregnancies(newPregnancies);
-                                              
-                                              // Cancel notifications (pregnancy completed)
-                                              PregnancyNotificationService.cancelPregnancyNotifications(updated.id).catch(error => {
-                                                console.error('Failed to cancel pregnancy notifications:', error);
-                                              });
-                                            }
-                                          }}
-                                        >
-                                          <Text style={[
-                                            styles.statusOptionText,
-                                            { 
-                                              color: selectedPregnancy.status === 'foaled' 
-                                                ? '#FFFFFF' 
-                                                : currentTheme.colors.text 
-                                            }
-                                          ]}>
-                                            🐴 Foaled
-                                          </Text>
-                                        </TouchableOpacity>
-                                        
-                                        <TouchableOpacity
-                                          style={[
-                                            styles.statusOption,
-                                            {
-                                              backgroundColor: selectedPregnancy.status === 'lost' 
-                                                ? currentTheme.colors.primary 
-                                                : currentTheme.colors.surface,
-                                              borderColor: currentTheme.colors.border,
-                                            }
-                                          ]}
-                                          onPress={() => {
-                                            if (selectedPregnancy) {
-                                              const updated = {
-                                                ...selectedPregnancy,
-                                                status: 'lost' as PregnancyStatus
-                                              };
-                                              setSelectedPregnancy(updated);
-                                              const newPregnancies = { ...pregnancies, [selectedPregnancy.horseId]: updated };
-                                              setPregnancies(newPregnancies);
-                                              savePregnancies(newPregnancies);
-                                              
-                                              // Cancel notifications (pregnancy ended)
-                                              PregnancyNotificationService.cancelPregnancyNotifications(updated.id).catch(error => {
-                                                console.error('Failed to cancel pregnancy notifications:', error);
-                                              });
-                                            }
-                                          }}
-                                        >
-                                          <Text style={[
-                                            styles.statusOptionText,
-                                            { 
-                                              color: selectedPregnancy.status === 'lost' 
-                                                ? '#FFFFFF' 
-                                                : currentTheme.colors.text 
-                                            }
-                                          ]}>
-                                            ❌ Lost
-                                          </Text>
-                                        </TouchableOpacity>
-                                      </View>
-                                      {getDaysPregnant(selectedPregnancy) < 320 && (
-                                        <Text style={[styles.statusHelpText, { color: currentTheme.colors.textSecondary }]}>
-                                          ℹ️ Foaled option available from day 320-360
+                                          Change Pregnancy Status
                                         </Text>
-                                      )}
-                                      {getDaysPregnant(selectedPregnancy) > 360 && (
-                                        <Text style={[styles.statusHelpText, { color: currentTheme.colors.textSecondary }]}>
-                                          ℹ️ Foaled option available until day 360
-                                        </Text>
-                                      )}
-                                    </View>
-                                    
-                                    {/* Divider */}
-                                    <View style={[styles.divider, { backgroundColor: currentTheme.colors.border }]} />
-                                    
-                                    {/* Event Type Selection */}
-                                    <View style={styles.inputGroup}>
-                                      <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                                        Event Type
-                                      </Text>
-                                      <View style={styles.eventTypeGrid}>
-                                        <TouchableOpacity
-                                          style={[
-                                            styles.eventTypeButton,
-                                            eventType === "ultrasound" && {backgroundColor: currentTheme.colors.accent},
-                                            { borderColor: currentTheme.colors.primary }
-                                          ]}
-                                          onPress={() => setEventType("ultrasound")}
+                                        <View
+                                          style={styles.statusOptionsContainer}
                                         >
-                                          <Text style={styles.eventTypeIcon}>🔍</Text>
-                                          <Text style={[
-                                            styles.eventTypeText,
-                                            eventType === "ultrasound" && styles.eventTypeTextActive
-                                          ]}>
-                                            Ultrasound
-                                          </Text>
-                                        </TouchableOpacity>
+                                          <TouchableOpacity
+                                            style={[
+                                              styles.statusOption,
+                                              {
+                                                backgroundColor:
+                                                  selectedPregnancy.status ===
+                                                  "active"
+                                                    ? currentTheme.colors
+                                                        .primary
+                                                    : currentTheme.colors
+                                                        .surface,
+                                                borderColor:
+                                                  currentTheme.colors.border,
+                                              },
+                                            ]}
+                                            onPress={() => {
+                                              if (selectedPregnancy) {
+                                                const updated = {
+                                                  ...selectedPregnancy,
+                                                  status:
+                                                    "active" as PregnancyStatus,
+                                                };
+                                                setSelectedPregnancy(updated);
+                                                const newPregnancies = {
+                                                  ...pregnancies,
+                                                  [selectedPregnancy.horseId]:
+                                                    updated,
+                                                };
+                                                setPregnancies(newPregnancies);
+                                                savePregnancies(newPregnancies);
 
-                                        <TouchableOpacity
-                                          style={[
-                                            styles.eventTypeButton,
-                                            eventType === "vaccine" && {backgroundColor: currentTheme.colors.accent},
-                                            { borderColor: currentTheme.colors.primary }
-                                          ]}
-                                          onPress={() => setEventType("vaccine")}
-                                        >
-                                          <Text style={styles.eventTypeIcon}>💉</Text>
-                                          <Text style={[
-                                            styles.eventTypeText,
-                                            eventType === "vaccine" && styles.eventTypeTextActive
-                                          ]}>
-                                            Vaccine
-                                          </Text>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                          style={[
-                                            styles.eventTypeButton,
-                                            eventType === "deworming" && {backgroundColor: currentTheme.colors.accent},
-                                            { borderColor: currentTheme.colors.primary }
-                                          ]}
-                                          onPress={() => setEventType("deworming")}
-                                        >
-                                          <Text style={styles.eventTypeIcon}>💊</Text>
-                                          <Text style={[
-                                            styles.eventTypeText,
-                                            eventType === "deworming" && styles.eventTypeTextActive
-                                          ]}>
-                                            Deworming
-                                          </Text>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                          style={[
-                                            styles.eventTypeButton,
-                                            eventType === "note" && {backgroundColor: currentTheme.colors.accent},
-                                            { borderColor: currentTheme.colors.primary }
-                                          ]}
-                                          onPress={() => setEventType("note")}
-                                        >
-                                          <Text style={styles.eventTypeIcon}>📝</Text>
-                                          <Text style={[
-                                            styles.eventTypeText,
-                                            eventType === "note" && styles.eventTypeTextActive
-                                          ]}>
-                                            Note
-                                          </Text>
-                                        </TouchableOpacity>
-                                      </View>
-                                    </View>
-
-                                    {/* Event Date */}
-                                    <View style={styles.inputGroup}>
-                                      <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                                        Event Date *
-                                      </Text>
-                                      <DatePicker
-                                        value={eventDate}
-                                        placeholder="Select event date"
-                                        onSelect={setEventDate}
-                                        isVisible={showEventDatePicker}
-                                        setVisible={setShowEventDatePicker}
-                                      />
-                                    </View>
-
-                                    {/* Notes */}
-                                    <View style={styles.inputGroup}>
-                                      <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                                        Notes (Optional)
-                                      </Text>
-                                      <TextInput
-                                        style={[
-                                          styles.textInput,
-                                          {
-                                            backgroundColor: currentTheme.colors.accent,
-                                            color: currentTheme.colors.text,
-                                            borderColor: currentTheme.colors.primary,
-                                            minHeight: 100,
-                                            textAlignVertical: "top",
-                                          },
-                                        ]}
-                                        value={eventNotes}
-                                        onChangeText={setEventNotes}
-                                        placeholder="Enter any notes or observations..."
-                                        placeholderTextColor={currentTheme.colors.textSecondary}
-                                        multiline
-                                      />
-                                    </View>
-
-                                    {/* Action Buttons */}
-                                    <View style={styles.inlineEventActions}>
-                                      <TouchableOpacity
-                                        style={[
-                                          styles.inlineEventCancelButton,
-                                          { backgroundColor: currentTheme.colors.textSecondary },
-                                        ]}
-                                        onPress={() => {
-                                          setShowInlineAddEvent(false);
-                                          setEventDate(null);
-                                          setEventNotes("");
-                                          setEventType("ultrasound");
-                                        }}
-                                      >
-                                        <Text style={styles.inlineEventCancelButtonText}>
-                                          Cancel
-                                        </Text>
-                                      </TouchableOpacity>
-                                      <TouchableOpacity
-                                        style={[
-                                          styles.inlineEventSaveButton,
-                                          { 
-                                            backgroundColor: currentTheme.colors.primary,
-                                            opacity: eventDate ? 1 : 0.5
-                                          },
-                                        ]}
-                                        onPress={handleAddEvent}
-                                        disabled={!eventDate}
-                                      >
-                                        <Text style={styles.inlineEventSaveButtonText}>
-                                          Add Event
-                                        </Text>
-                                      </TouchableOpacity>
-                                    </View>
-                                  </View>
-                                )}
-
-                                {/* Events List (reverse chronological) */}
-                                <View style={styles.eventsList}>
-                                  {(() => {
-                                    // Gather all completed events
-                                    const completedEvents: Array<{
-                                      type: 'ultrasound' | 'vaccine' | 'deworming';
-                                      date: string;
-                                      text: string;
-                                      notes?: string;
-                                      icon: string;
-                                    }> = [];
-
-                                    // Add completed ultrasounds
-                                    selectedPregnancy.checks
-                                      .filter(c => c.done && c.date)
-                                      .forEach(c => {
-                                        completedEvents.push({
-                                          type: 'ultrasound',
-                                          date: c.date!,
-                                          text: `Ultrasound: ${c.type}`,
-                                          notes: c.notes,
-                                          icon: '🔍'
-                                        });
-                                      });
-
-                                    // Add completed vaccines
-                                    selectedPregnancy.vaccines
-                                      .filter(v => v.done)
-                                      .forEach(v => {
-                                        completedEvents.push({
-                                          type: 'vaccine',
-                                          date: v.date || v.due, // Use actual completion date if available, fallback to due date
-                                          text: `Vaccine: ${v.type}`,
-                                          notes: v.notes,
-                                          icon: '💉'
-                                        });
-                                      });
-
-                                    // Add completed deworming
-                                    selectedPregnancy.deworming
-                                      .filter(d => d.done)
-                                      .forEach(d => {
-                                        completedEvents.push({
-                                          type: 'deworming',
-                                          date: d.date || d.due, // Use actual completion date if available, fallback to due date
-                                          text: 'Deworm (pre-foaling)',
-                                          notes: d.notes,
-                                          icon: '💊'
-                                        });
-                                      });
-
-                                    // Sort by date (most recent first)
-                                    completedEvents.sort((a, b) => 
-                                      new Date(b.date).getTime() - new Date(a.date).getTime()
-                                    );
-
-                                    if (completedEvents.length === 0) {
-                                      return (
-                                        <Text style={[styles.placeholderText, { color: currentTheme.colors.textSecondary }]}>
-                                          Events will appear here as they are added
-                                        </Text>
-                                      );
-                                    }
-
-                                    return completedEvents.map((event, index) => (
-                                      <View
-                                        key={`event-${event.type}-${event.date}-${index}`}
-                                        style={[
-                                          styles.eventCard,
-                                          { backgroundColor: currentTheme.colors.surface }
-                                        ]}
-                                      >
-                                        <View style={styles.eventCardHeader}>
-                                          <Text style={styles.eventIcon}>{event.icon}</Text>
-                                          <View style={styles.eventCardInfo}>
-                                            <Text style={[styles.eventCardTitle, { color: currentTheme.colors.text }]}>
-                                              {event.text}
+                                                // Update notifications (reactivate all notifications)
+                                                const horseName = horses.find(
+                                                  (h) =>
+                                                    h.id === updated.horseId
+                                                )?.name;
+                                                PregnancyNotificationService.updatePregnancyNotifications(
+                                                  {
+                                                    ...updated,
+                                                    horseName,
+                                                  }
+                                                ).catch((error) => {
+                                                  console.error(
+                                                    "Failed to update pregnancy notifications:",
+                                                    error
+                                                  );
+                                                });
+                                              }
+                                            }}
+                                          >
+                                            <Text
+                                              style={[
+                                                styles.statusOptionText,
+                                                {
+                                                  color:
+                                                    selectedPregnancy.status ===
+                                                    "active"
+                                                      ? "#FFFFFF"
+                                                      : currentTheme.colors
+                                                          .text,
+                                                },
+                                              ]}
+                                            >
+                                              🤰 Active
                                             </Text>
-                                            <Text style={[styles.eventCardDate, { color: currentTheme.colors.textSecondary }]}>
-                                              {new Date(event.date).toLocaleDateString('en-US', {
-                                                month: 'short',
-                                                day: 'numeric',
-                                                year: 'numeric'
-                                              })}
+                                          </TouchableOpacity>
+
+                                          <TouchableOpacity
+                                            style={[
+                                              styles.statusOption,
+                                              {
+                                                backgroundColor:
+                                                  selectedPregnancy.status ===
+                                                  "foaled"
+                                                    ? currentTheme.colors
+                                                        .primary
+                                                    : currentTheme.colors
+                                                        .surface,
+                                                borderColor:
+                                                  currentTheme.colors.border,
+                                                opacity:
+                                                  getDaysPregnant(
+                                                    selectedPregnancy
+                                                  ) >= 320 &&
+                                                  getDaysPregnant(
+                                                    selectedPregnancy
+                                                  ) <= 360
+                                                    ? 1
+                                                    : 0.5,
+                                              },
+                                            ]}
+                                            disabled={
+                                              getDaysPregnant(
+                                                selectedPregnancy
+                                              ) < 320 ||
+                                              getDaysPregnant(
+                                                selectedPregnancy
+                                              ) > 360
+                                            }
+                                            onPress={() => {
+                                              if (selectedPregnancy) {
+                                                const updated = {
+                                                  ...selectedPregnancy,
+                                                  status:
+                                                    "foaled" as PregnancyStatus,
+                                                };
+                                                setSelectedPregnancy(updated);
+                                                const newPregnancies = {
+                                                  ...pregnancies,
+                                                  [selectedPregnancy.horseId]:
+                                                    updated,
+                                                };
+                                                setPregnancies(newPregnancies);
+                                                savePregnancies(newPregnancies);
+
+                                                // Cancel notifications (pregnancy completed)
+                                                PregnancyNotificationService.cancelPregnancyNotifications(
+                                                  updated.id
+                                                ).catch((error) => {
+                                                  console.error(
+                                                    "Failed to cancel pregnancy notifications:",
+                                                    error
+                                                  );
+                                                });
+                                              }
+                                            }}
+                                          >
+                                            <Text
+                                              style={[
+                                                styles.statusOptionText,
+                                                {
+                                                  color:
+                                                    selectedPregnancy.status ===
+                                                    "foaled"
+                                                      ? "#FFFFFF"
+                                                      : currentTheme.colors
+                                                          .text,
+                                                },
+                                              ]}
+                                            >
+                                              🐴 Foaled
                                             </Text>
-                                          </View>
+                                          </TouchableOpacity>
+
+                                          <TouchableOpacity
+                                            style={[
+                                              styles.statusOption,
+                                              {
+                                                backgroundColor:
+                                                  selectedPregnancy.status ===
+                                                  "lost"
+                                                    ? currentTheme.colors
+                                                        .primary
+                                                    : currentTheme.colors
+                                                        .surface,
+                                                borderColor:
+                                                  currentTheme.colors.border,
+                                              },
+                                            ]}
+                                            onPress={() => {
+                                              if (selectedPregnancy) {
+                                                const updated = {
+                                                  ...selectedPregnancy,
+                                                  status:
+                                                    "lost" as PregnancyStatus,
+                                                };
+                                                setSelectedPregnancy(updated);
+                                                const newPregnancies = {
+                                                  ...pregnancies,
+                                                  [selectedPregnancy.horseId]:
+                                                    updated,
+                                                };
+                                                setPregnancies(newPregnancies);
+                                                savePregnancies(newPregnancies);
+
+                                                // Cancel notifications (pregnancy ended)
+                                                PregnancyNotificationService.cancelPregnancyNotifications(
+                                                  updated.id
+                                                ).catch((error) => {
+                                                  console.error(
+                                                    "Failed to cancel pregnancy notifications:",
+                                                    error
+                                                  );
+                                                });
+                                              }
+                                            }}
+                                          >
+                                            <Text
+                                              style={[
+                                                styles.statusOptionText,
+                                                {
+                                                  color:
+                                                    selectedPregnancy.status ===
+                                                    "lost"
+                                                      ? "#FFFFFF"
+                                                      : currentTheme.colors
+                                                          .text,
+                                                },
+                                              ]}
+                                            >
+                                              ❌ Lost
+                                            </Text>
+                                          </TouchableOpacity>
                                         </View>
-                                        {event.notes && (
-                                          <Text style={[styles.eventCardNotes, { color: currentTheme.colors.textSecondary }]}>
-                                            {event.notes}
+                                        {getDaysPregnant(selectedPregnancy) <
+                                          320 && (
+                                          <Text
+                                            style={[
+                                              styles.statusHelpText,
+                                              {
+                                                color:
+                                                  currentTheme.colors
+                                                    .textSecondary,
+                                              },
+                                            ]}
+                                          >
+                                            ℹ️ Foaled option available from day
+                                            320-360
+                                          </Text>
+                                        )}
+                                        {getDaysPregnant(selectedPregnancy) >
+                                          360 && (
+                                          <Text
+                                            style={[
+                                              styles.statusHelpText,
+                                              {
+                                                color:
+                                                  currentTheme.colors
+                                                    .textSecondary,
+                                              },
+                                            ]}
+                                          >
+                                            ℹ️ Foaled option available until day
+                                            360
                                           </Text>
                                         )}
                                       </View>
-                                    ));
-                                  })()}
-                                </View>
-                              </View>
-                            )}
 
-                            {/* Month/Fruit View */}
-                            {pregnancyView === "fruit" && (
-                              <View style={styles.fruitViewContainer}>
-                                {selectedPregnancy.status === "active" && (
-                                  <>
-                                    {(() => {
-                                      const days = getDaysPregnant(selectedPregnancy);
-                                      const month = getPregnancyMonth(days);
-                                      const info = getMonthInfo(month);
-                                      return (
-                                        <>
-                                          <View style={styles.fruitDisplay}>
-                                            <Text style={styles.fruitEmoji}>{info.fruit}</Text>
-                                            <Text style={[styles.fruitSize, { color: currentTheme.colors.text }]}>
-                                              {info.size}
+                                      {/* Divider */}
+                                      <View
+                                        style={[
+                                          styles.divider,
+                                          {
+                                            backgroundColor:
+                                              currentTheme.colors.border,
+                                          },
+                                        ]}
+                                      />
+
+                                      {/* Event Type Selection */}
+                                      <View style={styles.inputGroup}>
+                                        <Text
+                                          style={[
+                                            styles.inputLabel,
+                                            { color: currentTheme.colors.text },
+                                          ]}
+                                        >
+                                          Event Type
+                                        </Text>
+                                        <View style={styles.eventTypeGrid}>
+                                          <TouchableOpacity
+                                            style={[
+                                              styles.eventTypeButton,
+                                              eventType === "ultrasound" && {
+                                                backgroundColor:
+                                                  currentTheme.colors.accent,
+                                              },
+                                              {
+                                                borderColor:
+                                                  currentTheme.colors.primary,
+                                              },
+                                            ]}
+                                            onPress={() =>
+                                              setEventType("ultrasound")
+                                            }
+                                          >
+                                            <Text style={styles.eventTypeIcon}>
+                                              🔍
                                             </Text>
-                                            <Text style={[styles.fruitMonth, { color: currentTheme.colors.textSecondary }]}>
-                                              Month {month} of 11
+                                            <Text
+                                              style={[
+                                                styles.eventTypeText,
+                                                eventType === "ultrasound" &&
+                                                  styles.eventTypeTextActive,
+                                              ]}
+                                            >
+                                              Ultrasound
                                             </Text>
-                                          </View>
-                                          
-                                          <View style={[styles.infoCard, { backgroundColor: currentTheme.colors.accent }]}>
-                                            <Text style={styles.infoCardTitle}>What's happening:</Text>
-                                            <Text style={styles.infoCardText}>{info.description}</Text>
-                                          </View>
-                                        </>
-                                      );
-                                    })()}
-                                  </>
-                                )}
-                              </View>
-                            )}
+                                          </TouchableOpacity>
 
-                            {/* Photos View */}
-                            {pregnancyView === "photos" && (
-                              <View style={styles.photosContainer}>
-                                <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
-                                  Progress Photos
-                                </Text>
-                                
-                                {!showInlinePregnancyPhotoPicker ? (
-                                  <TouchableOpacity
-                                    style={[
-                                      styles.capturePhotoButton,
-                                      { backgroundColor: currentTheme.colors.primary }
-                                    ]}
-                                    onPress={() => setShowInlinePregnancyPhotoPicker(true)}
-                                  >
-                                    <Text style={styles.capturePhotoButtonText}>📷 Capture Photo</Text>
-                                  </TouchableOpacity>
-                                ) : (
-                                  <View style={styles.inlineImagePickerButtons}>
-                                    <TouchableOpacity
-                                      style={[
-                                        styles.inlineImagePickerButton,
-                                        { backgroundColor: currentTheme.colors.primary },
-                                      ]}
-                                      onPress={() => {
-                                        setShowInlinePregnancyPhotoPicker(false);
-                                        handleCapturePhoto();
-                                      }}
-                                    >
-                                      <Text style={styles.inlineImagePickerEmoji}>📷</Text>
-                                      <Text style={styles.inlineImagePickerButtonText}>
-                                        Take Photo
-                                      </Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      style={[
-                                        styles.inlineImagePickerButton,
-                                        { backgroundColor: currentTheme.colors.secondary },
-                                      ]}
-                                      onPress={() => {
-                                        setShowInlinePregnancyPhotoPicker(false);
-                                        handlePickPhotoFromLibrary();
-                                      }}
-                                    >
-                                      <Text style={styles.inlineImagePickerEmoji}>🖼️</Text>
-                                      <Text style={styles.inlineImagePickerButtonText}>
-                                        Choose from Library
-                                      </Text>
-                                    </TouchableOpacity>
-                                  </View>
-                                )}
+                                          <TouchableOpacity
+                                            style={[
+                                              styles.eventTypeButton,
+                                              eventType === "vaccine" && {
+                                                backgroundColor:
+                                                  currentTheme.colors.accent,
+                                              },
+                                              {
+                                                borderColor:
+                                                  currentTheme.colors.primary,
+                                              },
+                                            ]}
+                                            onPress={() =>
+                                              setEventType("vaccine")
+                                            }
+                                          >
+                                            <Text style={styles.eventTypeIcon}>
+                                              💉
+                                            </Text>
+                                            <Text
+                                              style={[
+                                                styles.eventTypeText,
+                                                eventType === "vaccine" &&
+                                                  styles.eventTypeTextActive,
+                                              ]}
+                                            >
+                                              Vaccine
+                                            </Text>
+                                          </TouchableOpacity>
 
-                                {selectedPregnancy.photos && selectedPregnancy.photos.length > 0 ? (
-                                  <View style={styles.photoGrid}>
-                                    {selectedPregnancy.photos.map((photo, index) => (
-                                      <View key={index} style={styles.photoItem}>
-                                        <Image 
-                                          source={{ uri: photo.url }}
-                                          style={styles.photoImage}
-                                          resizeMode="cover"
-                                        />
-                                        <View style={styles.photoOverlay}>
-                                          <Text style={styles.photoDay}>Day {photo.dayPregnant}</Text>
+                                          <TouchableOpacity
+                                            style={[
+                                              styles.eventTypeButton,
+                                              eventType === "deworming" && {
+                                                backgroundColor:
+                                                  currentTheme.colors.accent,
+                                              },
+                                              {
+                                                borderColor:
+                                                  currentTheme.colors.primary,
+                                              },
+                                            ]}
+                                            onPress={() =>
+                                              setEventType("deworming")
+                                            }
+                                          >
+                                            <Text style={styles.eventTypeIcon}>
+                                              💊
+                                            </Text>
+                                            <Text
+                                              style={[
+                                                styles.eventTypeText,
+                                                eventType === "deworming" &&
+                                                  styles.eventTypeTextActive,
+                                              ]}
+                                            >
+                                              Deworming
+                                            </Text>
+                                          </TouchableOpacity>
+
+                                          <TouchableOpacity
+                                            style={[
+                                              styles.eventTypeButton,
+                                              eventType === "note" && {
+                                                backgroundColor:
+                                                  currentTheme.colors.accent,
+                                              },
+                                              {
+                                                borderColor:
+                                                  currentTheme.colors.primary,
+                                              },
+                                            ]}
+                                            onPress={() => setEventType("note")}
+                                          >
+                                            <Text style={styles.eventTypeIcon}>
+                                              📝
+                                            </Text>
+                                            <Text
+                                              style={[
+                                                styles.eventTypeText,
+                                                eventType === "note" &&
+                                                  styles.eventTypeTextActive,
+                                              ]}
+                                            >
+                                              Note
+                                            </Text>
+                                          </TouchableOpacity>
                                         </View>
                                       </View>
-                                    ))}
+
+                                      {/* Event Date */}
+                                      <View style={styles.inputGroup}>
+                                        <Text
+                                          style={[
+                                            styles.inputLabel,
+                                            { color: currentTheme.colors.text },
+                                          ]}
+                                        >
+                                          Event Date *
+                                        </Text>
+                                        <DatePicker
+                                          value={eventDate}
+                                          placeholder="Select event date"
+                                          onSelect={setEventDate}
+                                          isVisible={showEventDatePicker}
+                                          setVisible={setShowEventDatePicker}
+                                        />
+                                      </View>
+
+                                      {/* Notes */}
+                                      <View style={styles.inputGroup}>
+                                        <Text
+                                          style={[
+                                            styles.inputLabel,
+                                            { color: currentTheme.colors.text },
+                                          ]}
+                                        >
+                                          Notes (Optional)
+                                        </Text>
+                                        <TextInput
+                                          style={[
+                                            styles.textInput,
+                                            {
+                                              backgroundColor:
+                                                currentTheme.colors.accent,
+                                              color: currentTheme.colors.text,
+                                              borderColor:
+                                                currentTheme.colors.primary,
+                                              minHeight: 100,
+                                              textAlignVertical: "top",
+                                            },
+                                          ]}
+                                          value={eventNotes}
+                                          onChangeText={setEventNotes}
+                                          placeholder="Enter any notes or observations..."
+                                          placeholderTextColor={
+                                            currentTheme.colors.textSecondary
+                                          }
+                                          multiline
+                                        />
+                                      </View>
+
+                                      {/* Action Buttons */}
+                                      <View style={styles.inlineEventActions}>
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.inlineEventCancelButton,
+                                            {
+                                              backgroundColor:
+                                                currentTheme.colors
+                                                  .textSecondary,
+                                            },
+                                          ]}
+                                          onPress={() => {
+                                            setShowInlineAddEvent(false);
+                                            setEventDate(null);
+                                            setEventNotes("");
+                                            setEventType("ultrasound");
+                                          }}
+                                        >
+                                          <Text
+                                            style={
+                                              styles.inlineEventCancelButtonText
+                                            }
+                                          >
+                                            Cancel
+                                          </Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.inlineEventSaveButton,
+                                            {
+                                              backgroundColor:
+                                                currentTheme.colors.primary,
+                                              opacity: eventDate ? 1 : 0.5,
+                                            },
+                                          ]}
+                                          onPress={handleAddEvent}
+                                          disabled={!eventDate}
+                                        >
+                                          <Text
+                                            style={
+                                              styles.inlineEventSaveButtonText
+                                            }
+                                          >
+                                            Add Event
+                                          </Text>
+                                        </TouchableOpacity>
+                                      </View>
+                                    </View>
+                                  )}
+
+                                  {/* Events List (reverse chronological) */}
+                                  <View style={styles.eventsList}>
+                                    {(() => {
+                                      // Gather all completed events
+                                      const completedEvents: Array<{
+                                        type:
+                                          | "ultrasound"
+                                          | "vaccine"
+                                          | "deworming";
+                                        date: string;
+                                        text: string;
+                                        notes?: string;
+                                        icon: string;
+                                      }> = [];
+
+                                      // Add completed ultrasounds
+                                      selectedPregnancy.checks
+                                        .filter((c) => c.done && c.date)
+                                        .forEach((c) => {
+                                          completedEvents.push({
+                                            type: "ultrasound",
+                                            date: c.date!,
+                                            text: `Ultrasound: ${c.type}`,
+                                            notes: c.notes,
+                                            icon: "🔍",
+                                          });
+                                        });
+
+                                      // Add completed vaccines
+                                      selectedPregnancy.vaccines
+                                        .filter((v) => v.done)
+                                        .forEach((v) => {
+                                          completedEvents.push({
+                                            type: "vaccine",
+                                            date: v.date || v.due, // Use actual completion date if available, fallback to due date
+                                            text: `Vaccine: ${v.type}`,
+                                            notes: v.notes,
+                                            icon: "💉",
+                                          });
+                                        });
+
+                                      // Add completed deworming
+                                      selectedPregnancy.deworming
+                                        .filter((d) => d.done)
+                                        .forEach((d) => {
+                                          completedEvents.push({
+                                            type: "deworming",
+                                            date: d.date || d.due, // Use actual completion date if available, fallback to due date
+                                            text: "Deworm (pre-foaling)",
+                                            notes: d.notes,
+                                            icon: "💊",
+                                          });
+                                        });
+
+                                      // Sort by date (most recent first)
+                                      completedEvents.sort(
+                                        (a, b) =>
+                                          new Date(b.date).getTime() -
+                                          new Date(a.date).getTime()
+                                      );
+
+                                      if (completedEvents.length === 0) {
+                                        return (
+                                          <Text
+                                            style={[
+                                              styles.placeholderText,
+                                              {
+                                                color:
+                                                  currentTheme.colors
+                                                    .textSecondary,
+                                              },
+                                            ]}
+                                          >
+                                            Events will appear here as they are
+                                            added
+                                          </Text>
+                                        );
+                                      }
+
+                                      return completedEvents.map(
+                                        (event, index) => (
+                                          <View
+                                            key={`event-${event.type}-${event.date}-${index}`}
+                                            style={[
+                                              styles.eventCard,
+                                              {
+                                                backgroundColor:
+                                                  currentTheme.colors.surface,
+                                              },
+                                            ]}
+                                          >
+                                            <View
+                                              style={styles.eventCardHeader}
+                                            >
+                                              <Text style={styles.eventIcon}>
+                                                {event.icon}
+                                              </Text>
+                                              <View
+                                                style={styles.eventCardInfo}
+                                              >
+                                                <Text
+                                                  style={[
+                                                    styles.eventCardTitle,
+                                                    {
+                                                      color:
+                                                        currentTheme.colors
+                                                          .text,
+                                                    },
+                                                  ]}
+                                                >
+                                                  {event.text}
+                                                </Text>
+                                                <Text
+                                                  style={[
+                                                    styles.eventCardDate,
+                                                    {
+                                                      color:
+                                                        currentTheme.colors
+                                                          .textSecondary,
+                                                    },
+                                                  ]}
+                                                >
+                                                  {new Date(
+                                                    event.date
+                                                  ).toLocaleDateString(
+                                                    "en-US",
+                                                    {
+                                                      month: "short",
+                                                      day: "numeric",
+                                                      year: "numeric",
+                                                    }
+                                                  )}
+                                                </Text>
+                                              </View>
+                                            </View>
+                                            {event.notes && (
+                                              <Text
+                                                style={[
+                                                  styles.eventCardNotes,
+                                                  {
+                                                    color:
+                                                      currentTheme.colors
+                                                        .textSecondary,
+                                                  },
+                                                ]}
+                                              >
+                                                {event.notes}
+                                              </Text>
+                                            )}
+                                          </View>
+                                        )
+                                      );
+                                    })()}
                                   </View>
-                                ) : (
-                                  <Text style={[styles.placeholderText, { color: currentTheme.colors.textSecondary }]}>
-                                    No photos yet. Capture progress photos to track your mare's development.
+                                </View>
+                              )}
+
+                              {/* Month/Fruit View */}
+                              {pregnancyView === "fruit" && (
+                                <View style={styles.fruitViewContainer}>
+                                  {selectedPregnancy.status === "active" && (
+                                    <>
+                                      {(() => {
+                                        const days =
+                                          getDaysPregnant(selectedPregnancy);
+                                        const month = getPregnancyMonth(days);
+                                        const info = getMonthInfo(month);
+                                        return (
+                                          <>
+                                            <View style={styles.fruitDisplay}>
+                                              <Text style={styles.fruitEmoji}>
+                                                {info.fruit}
+                                              </Text>
+                                              <Text
+                                                style={[
+                                                  styles.fruitSize,
+                                                  {
+                                                    color:
+                                                      currentTheme.colors.text,
+                                                  },
+                                                ]}
+                                              >
+                                                {info.size}
+                                              </Text>
+                                              <Text
+                                                style={[
+                                                  styles.fruitMonth,
+                                                  {
+                                                    color:
+                                                      currentTheme.colors
+                                                        .textSecondary,
+                                                  },
+                                                ]}
+                                              >
+                                                Month {month} of 11
+                                              </Text>
+                                            </View>
+
+                                            <View
+                                              style={[
+                                                styles.infoCard,
+                                                {
+                                                  backgroundColor:
+                                                    currentTheme.colors.accent,
+                                                },
+                                              ]}
+                                            >
+                                              <Text
+                                                style={styles.infoCardTitle}
+                                              >
+                                                What's happening:
+                                              </Text>
+                                              <Text style={styles.infoCardText}>
+                                                {info.description}
+                                              </Text>
+                                            </View>
+                                          </>
+                                        );
+                                      })()}
+                                    </>
+                                  )}
+                                </View>
+                              )}
+
+                              {/* Photos View */}
+                              {pregnancyView === "photos" && (
+                                <View style={styles.photosContainer}>
+                                  <Text
+                                    style={[
+                                      styles.sectionTitle,
+                                      { color: currentTheme.colors.text },
+                                    ]}
+                                  >
+                                    Progress Photos
                                   </Text>
-                                )}
-                              </View>
-                            )}
+
+                                  {!showInlinePregnancyPhotoPicker ? (
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.capturePhotoButton,
+                                        {
+                                          backgroundColor:
+                                            currentTheme.colors.primary,
+                                        },
+                                      ]}
+                                      onPress={() =>
+                                        setShowInlinePregnancyPhotoPicker(true)
+                                      }
+                                    >
+                                      <Text
+                                        style={styles.capturePhotoButtonText}
+                                      >
+                                        📷 Capture Photo
+                                      </Text>
+                                    </TouchableOpacity>
+                                  ) : (
+                                    <View
+                                      style={styles.inlineImagePickerButtons}
+                                    >
+                                      <TouchableOpacity
+                                        style={[
+                                          styles.inlineImagePickerButton,
+                                          {
+                                            backgroundColor:
+                                              currentTheme.colors.primary,
+                                          },
+                                        ]}
+                                        onPress={() => {
+                                          setShowInlinePregnancyPhotoPicker(
+                                            false
+                                          );
+                                          handleCapturePhoto();
+                                        }}
+                                      >
+                                        <Text
+                                          style={styles.inlineImagePickerEmoji}
+                                        >
+                                          📷
+                                        </Text>
+                                        <Text
+                                          style={
+                                            styles.inlineImagePickerButtonText
+                                          }
+                                        >
+                                          Take Photo
+                                        </Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity
+                                        style={[
+                                          styles.inlineImagePickerButton,
+                                          {
+                                            backgroundColor:
+                                              currentTheme.colors.secondary,
+                                          },
+                                        ]}
+                                        onPress={() => {
+                                          setShowInlinePregnancyPhotoPicker(
+                                            false
+                                          );
+                                          handlePickPhotoFromLibrary();
+                                        }}
+                                      >
+                                        <Text
+                                          style={styles.inlineImagePickerEmoji}
+                                        >
+                                          🖼️
+                                        </Text>
+                                        <Text
+                                          style={
+                                            styles.inlineImagePickerButtonText
+                                          }
+                                        >
+                                          Choose from Library
+                                        </Text>
+                                      </TouchableOpacity>
+                                    </View>
+                                  )}
+
+                                  {selectedPregnancy.photos &&
+                                  selectedPregnancy.photos.length > 0 ? (
+                                    <View style={styles.photoGrid}>
+                                      {selectedPregnancy.photos.map(
+                                        (photo, index) => (
+                                          <View
+                                            key={index}
+                                            style={styles.photoItem}
+                                          >
+                                            <Image
+                                              source={{ uri: photo.url }}
+                                              style={styles.photoImage}
+                                              resizeMode="cover"
+                                            />
+                                            <View style={styles.photoOverlay}>
+                                              <Text style={styles.photoDay}>
+                                                Day {photo.dayPregnant}
+                                              </Text>
+                                            </View>
+                                          </View>
+                                        )
+                                      )}
+                                    </View>
+                                  ) : (
+                                    <Text
+                                      style={[
+                                        styles.placeholderText,
+                                        {
+                                          color:
+                                            currentTheme.colors.textSecondary,
+                                        },
+                                      ]}
+                                    >
+                                      No photos yet. Capture progress photos to
+                                      track your mare's development.
+                                    </Text>
+                                  )}
+                                </View>
+                              )}
                             </>
                           </View>
                         )}
@@ -6498,469 +7354,306 @@ const MyHorsesScreen = () => {
                     </View>
                   )}
 
-                  {/* Document Manager Section */}
-                  {recordsSection === "document" && (
-                    <View>
-                      <Text
-                        style={[
-                          styles.documentHorseName,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        Document Manager for: {selectedHorseForRecords.name}
-                      </Text>
+                {/* Document Manager Section */}
+                {recordsSection === "document" && (
+                  <View>
+                    <Text
+                      style={[
+                        styles.documentHorseName,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      Document Manager for: {selectedHorseForRecords.name}
+                    </Text>
 
-                      {/* Pro Sync Toggle */}
-                      <View style={styles.documentSyncContainer}>
-                        <View style={styles.documentSyncHeader}>
-                          <View style={styles.documentSyncInfo}>
-                            <Text
-                              style={[
-                                styles.documentSyncTitle,
-                                { color: currentTheme.colors.text },
-                              ]}
-                            >
-                              Cloud Sync {!isProMember && "(PRO Only)"}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.documentSyncSubtitle,
-                                { color: currentTheme.colors.textSecondary },
-                              ]}
-                            >
-                              {isProMember
-                                ? "Sync documents to cloud for backup and sharing"
-                                : "Upgrade to PRO to sync documents to cloud"}
-                            </Text>
-                          </View>
-                          <TouchableOpacity
-                            style={[
-                              styles.documentSyncToggle,
-                              {
-                                backgroundColor:
-                                  documentSyncEnabled && isProMember
-                                    ? currentTheme.colors.primary
-                                    : currentTheme.colors.textSecondary,
-                                opacity: isProMember ? 1 : 0.3,
-                              },
-                            ]}
-                            onPress={toggleDocumentSync}
-                            disabled={!isProMember}
-                            activeOpacity={isProMember ? 0.7 : 1}
-                          >
-                            <View
-                              style={[
-                                styles.documentSyncSlider,
-                                {
-                                  transform: [
-                                    {
-                                      translateX:
-                                        documentSyncEnabled && isProMember
-                                          ? 18
-                                          : 2,
-                                    },
-                                  ],
-                                },
-                              ]}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-
-                      {/* Add Document Button */}
-                      <TouchableOpacity
-                        style={[
-                          styles.addDocumentButton,
-                          { backgroundColor: currentTheme.colors.primary },
-                        ]}
-                        onPress={addDocument}
-                      >
-                        <Text style={styles.addDocumentIcon}>📎</Text>
-                        <Text style={styles.addDocumentText}>Add Document</Text>
-                      </TouchableOpacity>
-
-                      {/* Documents List */}
-                      {getHorseDocuments(selectedHorseForRecords.id).length >
-                        0 && (
-                        <View style={styles.documentsContainer}>
+                    {/* Pro Sync Toggle */}
+                    <View style={styles.documentSyncContainer}>
+                      <View style={styles.documentSyncHeader}>
+                        <View style={styles.documentSyncInfo}>
                           <Text
                             style={[
-                              styles.documentsTitle,
+                              styles.documentSyncTitle,
                               { color: currentTheme.colors.text },
                             ]}
                           >
-                            Stored Documents:
+                            Cloud Sync {!isProMember && "(PRO Only)"}
                           </Text>
-                          {getHorseDocuments(selectedHorseForRecords.id).map(
-                            (document) => (
-                              <View
-                                key={document.id}
-                                style={[
-                                  styles.documentItem,
+                          <Text
+                            style={[
+                              styles.documentSyncSubtitle,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            {isProMember
+                              ? "Sync documents to cloud for backup and sharing"
+                              : "Upgrade to PRO to sync documents to cloud"}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={[
+                            styles.documentSyncToggle,
+                            {
+                              backgroundColor:
+                                documentSyncEnabled && isProMember
+                                  ? currentTheme.colors.primary
+                                  : currentTheme.colors.textSecondary,
+                              opacity: isProMember ? 1 : 0.3,
+                            },
+                          ]}
+                          onPress={toggleDocumentSync}
+                          disabled={!isProMember}
+                          activeOpacity={isProMember ? 0.7 : 1}
+                        >
+                          <View
+                            style={[
+                              styles.documentSyncSlider,
+                              {
+                                transform: [
                                   {
-                                    backgroundColor:
-                                      currentTheme.colors.surface,
-                                    borderColor: currentTheme.colors.border,
+                                    translateX:
+                                      documentSyncEnabled && isProMember
+                                        ? 18
+                                        : 2,
                                   },
-                                ]}
+                                ],
+                              },
+                            ]}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Add Document Button */}
+                    <TouchableOpacity
+                      style={[
+                        styles.addDocumentButton,
+                        { backgroundColor: currentTheme.colors.primary },
+                      ]}
+                      onPress={addDocument}
+                    >
+                      <Text style={styles.addDocumentIcon}>📎</Text>
+                      <Text style={styles.addDocumentText}>Add Document</Text>
+                    </TouchableOpacity>
+
+                    {/* Documents List */}
+                    {getHorseDocuments(selectedHorseForRecords.id).length >
+                      0 && (
+                      <View style={styles.documentsContainer}>
+                        <Text
+                          style={[
+                            styles.documentsTitle,
+                            { color: currentTheme.colors.text },
+                          ]}
+                        >
+                          Stored Documents:
+                        </Text>
+                        {getHorseDocuments(selectedHorseForRecords.id).map(
+                          (document) => (
+                            <View
+                              key={document.id}
+                              style={[
+                                styles.documentItem,
+                                {
+                                  backgroundColor: currentTheme.colors.surface,
+                                  borderColor: currentTheme.colors.border,
+                                },
+                              ]}
+                            >
+                              <TouchableOpacity
+                                style={styles.documentItemContent}
+                                onPress={() => openDocument(document)}
+                                disabled={editingDocumentId === document.id}
                               >
-                                <TouchableOpacity
-                                  style={styles.documentItemContent}
-                                  onPress={() => openDocument(document)}
-                                  disabled={editingDocumentId === document.id}
-                                >
-                                  <Text style={styles.documentIcon}>📄</Text>
-                                  <View style={styles.documentInfo}>
-                                    {editingDocumentId === document.id ? (
-                                      <TextInput
-                                        style={[
-                                          styles.documentNameInput,
-                                          {
-                                            backgroundColor: currentTheme.colors.background,
-                                            borderColor: currentTheme.colors.primary,
-                                            color: currentTheme.colors.text,
-                                          },
-                                        ]}
-                                        value={editingDocumentName}
-                                        onChangeText={setEditingDocumentName}
-                                        placeholder="Enter document name"
-                                        placeholderTextColor={currentTheme.colors.textSecondary}
-                                        maxLength={50}
-                                        autoFocus={true}
-                                        returnKeyType="done"
-                                        onSubmitEditing={() => saveDocumentRename(selectedHorseForRecords.id, document.id)}
-                                      />
-                                    ) : (
-                                      <Text
-                                        style={[
-                                          styles.documentName,
-                                          { color: currentTheme.colors.text },
-                                        ]}
-                                      >
-                                        {document.name}
-                                      </Text>
-                                    )}
-                                    <Text
+                                <Text style={styles.documentIcon}>📄</Text>
+                                <View style={styles.documentInfo}>
+                                  {editingDocumentId === document.id ? (
+                                    <TextInput
                                       style={[
-                                        styles.documentDate,
+                                        styles.documentNameInput,
                                         {
-                                          color:
-                                            currentTheme.colors.textSecondary,
+                                          backgroundColor:
+                                            currentTheme.colors.background,
+                                          borderColor:
+                                            currentTheme.colors.primary,
+                                          color: currentTheme.colors.text,
                                         },
                                       ]}
-                                    >
-                                      Added:{" "}
-                                      {new Date(
-                                        document.createdAt
-                                      ).toLocaleDateString()}
-                                    </Text>
-                                  </View>
-                                </TouchableOpacity>
-                                {editingDocumentId === document.id ? (
-                                  <>
-                                    <TouchableOpacity
-                                      style={[
-                                        styles.saveDocumentButton,
-                                        { backgroundColor: currentTheme.colors.primary }
-                                      ]}
-                                      onPress={() => saveDocumentRename(selectedHorseForRecords.id, document.id)}
-                                    >
-                                      <Text style={styles.saveDocumentButtonText}>
-                                        ✓
-                                      </Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      style={styles.cancelEditButton}
-                                      onPress={cancelEditingDocumentName}
-                                    >
-                                      <Text style={styles.cancelEditButtonText}>
-                                        ✕
-                                      </Text>
-                                    </TouchableOpacity>
-                                  </>
-                                ) : (
-                                  <>
-                                    <TouchableOpacity
-                                      style={styles.renameDocumentButton}
-                                      onPress={() => startEditingDocumentName(document)}
-                                    >
-                                      <Text style={styles.renameDocumentButtonText}>
-                                        ✏️
-                                      </Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      style={styles.deleteDocumentButton}
-                                      onPress={() =>
-                                        deleteDocument(
+                                      value={editingDocumentName}
+                                      onChangeText={setEditingDocumentName}
+                                      placeholder="Enter document name"
+                                      placeholderTextColor={
+                                        currentTheme.colors.textSecondary
+                                      }
+                                      maxLength={50}
+                                      autoFocus={true}
+                                      returnKeyType="done"
+                                      onSubmitEditing={() =>
+                                        saveDocumentRename(
                                           selectedHorseForRecords.id,
                                           document.id
                                         )
                                       }
+                                    />
+                                  ) : (
+                                    <Text
+                                      style={[
+                                        styles.documentName,
+                                        { color: currentTheme.colors.text },
+                                      ]}
                                     >
-                                      <Text style={styles.deleteDocumentButtonText}>
-                                        🗑️
-                                      </Text>
-                                    </TouchableOpacity>
-                                  </>
-                                )}
-                              </View>
-                            )
-                          )}
-                        </View>
-                      )}
+                                      {document.name}
+                                    </Text>
+                                  )}
+                                  <Text
+                                    style={[
+                                      styles.documentDate,
+                                      {
+                                        color:
+                                          currentTheme.colors.textSecondary,
+                                      },
+                                    ]}
+                                  >
+                                    Added:{" "}
+                                    {new Date(
+                                      document.createdAt
+                                    ).toLocaleDateString()}
+                                  </Text>
+                                </View>
+                              </TouchableOpacity>
+                              {editingDocumentId === document.id ? (
+                                <>
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.saveDocumentButton,
+                                      {
+                                        backgroundColor:
+                                          currentTheme.colors.primary,
+                                      },
+                                    ]}
+                                    onPress={() =>
+                                      saveDocumentRename(
+                                        selectedHorseForRecords.id,
+                                        document.id
+                                      )
+                                    }
+                                  >
+                                    <Text style={styles.saveDocumentButtonText}>
+                                      ✓
+                                    </Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    style={styles.cancelEditButton}
+                                    onPress={cancelEditingDocumentName}
+                                  >
+                                    <Text style={styles.cancelEditButtonText}>
+                                      ✕
+                                    </Text>
+                                  </TouchableOpacity>
+                                </>
+                              ) : (
+                                <>
+                                  <TouchableOpacity
+                                    style={styles.renameDocumentButton}
+                                    onPress={() =>
+                                      startEditingDocumentName(document)
+                                    }
+                                  >
+                                    <Text
+                                      style={styles.renameDocumentButtonText}
+                                    >
+                                      ✏️
+                                    </Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    style={styles.deleteDocumentButton}
+                                    onPress={() =>
+                                      deleteDocument(
+                                        selectedHorseForRecords.id,
+                                        document.id
+                                      )
+                                    }
+                                  >
+                                    <Text
+                                      style={styles.deleteDocumentButtonText}
+                                    >
+                                      🗑️
+                                    </Text>
+                                  </TouchableOpacity>
+                                </>
+                              )}
+                            </View>
+                          )
+                        )}
+                      </View>
+                    )}
 
-                      {getHorseDocuments(selectedHorseForRecords.id).length ===
-                        0 && (
-                        <View style={styles.emptyDocumentsState}>
-                          <Text style={styles.emptyDocumentsIcon}>📄</Text>
-                          <Text
-                            style={[
-                              styles.emptyDocumentsText,
-                              { color: currentTheme.colors.textSecondary },
-                            ]}
-                          >
-                            No documents added yet.
-                          </Text>
-                          <Text
-                            style={[
-                              styles.emptyDocumentsSubtext,
-                              { color: currentTheme.colors.textSecondary },
-                            ]}
-                          >
-                            Store vaccination certificates, health records, and
-                            other important documents here.
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
-
-                  {/* Rider Manager Section */}
-                  {recordsSection === "rider" && (
-                    <View style={styles.riderManagerContainer}>
-                      <Text
-                        style={[
-                          styles.riderManagerTitle,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        Rider Manager for: {selectedHorseForRecords.name}
-                      </Text>
-
-                      <View style={styles.comingSoonContainer}>
-                        <Text style={styles.comingSoonIcon}>🚧</Text>
+                    {getHorseDocuments(selectedHorseForRecords.id).length ===
+                      0 && (
+                      <View style={styles.emptyDocumentsState}>
+                        <Text style={styles.emptyDocumentsIcon}>📄</Text>
                         <Text
                           style={[
-                            styles.comingSoonTitle,
-                            { color: currentTheme.colors.text },
-                          ]}
-                        >
-                          Coming Soon
-                        </Text>
-                        <Text
-                          style={[
-                            styles.comingSoonDescription,
+                            styles.emptyDocumentsText,
                             { color: currentTheme.colors.textSecondary },
                           ]}
                         >
-                          Share your horses with other riders and allow them to
-                          track sessions and view data. This feature will be
-                          available for PRO members.
+                          No documents added yet.
+                        </Text>
+                        <Text
+                          style={[
+                            styles.emptyDocumentsSubtext,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          Store vaccination certificates, health records, and
+                          other important documents here.
                         </Text>
                       </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Rider Manager Section */}
+                {recordsSection === "rider" && (
+                  <View style={styles.riderManagerContainer}>
+                    <Text
+                      style={[
+                        styles.riderManagerTitle,
+                        { color: currentTheme.colors.text },
+                      ]}
+                    >
+                      Rider Manager for: {selectedHorseForRecords.name}
+                    </Text>
+
+                    <View style={styles.comingSoonContainer}>
+                      <Text style={styles.comingSoonIcon}>🚧</Text>
+                      <Text
+                        style={[
+                          styles.comingSoonTitle,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        Coming Soon
+                      </Text>
+                      <Text
+                        style={[
+                          styles.comingSoonDescription,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Share your horses with other riders and allow them to
+                        track sessions and view data. This feature will be
+                        available for PRO members.
+                      </Text>
                     </View>
-                  )}
-                </>
-              )}
-            </ScrollView>
-
-            {/* Footer Actions */}
-            {recordsSection === "vaccination" && (
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[
-                    styles.modalButton,
-                    styles.cancelButton,
-                    { backgroundColor: currentTheme.colors.textSecondary },
-                  ]}
-                  onPress={() => {
-                    setVaccinationName("");
-                    setVaccinationId("");
-                    setVaccinationDate(null);
-                    setVaccinationNotes("");
-                    setVaccinationType("future");
-                    setVaccinationRepeat(false);
-                    setShowVaccinationDatePicker(false);
-                  }}
-                >
-                  <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
-                    Clear Form
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.modalButton,
-                    styles.saveButton,
-                    { backgroundColor: currentTheme.colors.primary },
-                  ]}
-                  onPress={saveVaccinationReminder}
-                >
-                  <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
-                    Save {vaccinationType === "past" ? "Record" : "Reminder"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                  </View>
+                )}
+              </>
             )}
-          </View>
-        </Modal>
+          </ScrollView>
 
-        {/* Add Event Modal */}
-        <Modal
-          visible={addEventModalVisible}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setAddEventModalVisible(false)}
-        >
-          <View style={{ flex: 1, backgroundColor: currentTheme.colors.background }}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[
-                    styles.modalTitle,
-                    {
-                      color: currentTheme.colors.text,
-                      textAlign: "center",
-                    },
-                  ]}
-                >
-                  Add Event
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setAddEventModalVisible(false)}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalContent}>
-              {/* Event Type Selection */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                  Event Type
-                </Text>
-                <View style={styles.eventTypeGrid}>
-                  <TouchableOpacity
-                    style={[
-                      styles.eventTypeButton,
-                      eventType === "ultrasound" && styles.eventTypeButtonActive,
-                      { borderColor: currentTheme.colors.primary }
-                    ]}
-                    onPress={() => setEventType("ultrasound")}
-                  >
-                    <Text style={styles.eventTypeIcon}>🔍</Text>
-                    <Text style={[
-                      styles.eventTypeText,
-                      eventType === "ultrasound" && styles.eventTypeTextActive
-                    ]}>
-                      Ultrasound
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.eventTypeButton,
-                      eventType === "vaccine" && styles.eventTypeButtonActive,
-                      { borderColor: currentTheme.colors.primary }
-                    ]}
-                    onPress={() => setEventType("vaccine")}
-                  >
-                    <Text style={styles.eventTypeIcon}>💉</Text>
-                    <Text style={[
-                      styles.eventTypeText,
-                      eventType === "vaccine" && styles.eventTypeTextActive
-                    ]}>
-                      Vaccine
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.eventTypeButton,
-                      eventType === "deworming" && styles.eventTypeButtonActive,
-                      { borderColor: currentTheme.colors.primary }
-                    ]}
-                    onPress={() => setEventType("deworming")}
-                  >
-                    <Text style={styles.eventTypeIcon}>💊</Text>
-                    <Text style={[
-                      styles.eventTypeText,
-                      eventType === "deworming" && styles.eventTypeTextActive
-                    ]}>
-                      Deworming
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.eventTypeButton,
-                      eventType === "note" && styles.eventTypeButtonActive,
-                      { borderColor: currentTheme.colors.primary }
-                    ]}
-                    onPress={() => setEventType("note")}
-                  >
-                    <Text style={styles.eventTypeIcon}>📝</Text>
-                    <Text style={[
-                      styles.eventTypeText,
-                      eventType === "note" && styles.eventTypeTextActive
-                    ]}>
-                      Note
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Event Date */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                  Event Date *
-                </Text>
-                <DatePicker
-                  value={eventDate}
-                  placeholder="Select event date"
-                  onSelect={setEventDate}
-                  isVisible={showEventDatePicker}
-                  setVisible={setShowEventDatePicker}
-                />
-              </View>
-
-              {/* Notes */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: currentTheme.colors.text }]}>
-                  Notes (Optional)
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    {
-                      backgroundColor: currentTheme.colors.accent,
-                      color: currentTheme.colors.text,
-                      borderColor: currentTheme.colors.primary,
-                      minHeight: 100,
-                      textAlignVertical: "top",
-                    },
-                  ]}
-                  value={eventNotes}
-                  onChangeText={setEventNotes}
-                  placeholder="Enter any notes or observations..."
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                  multiline
-                />
-              </View>
-            </ScrollView>
-
-            {/* Footer Actions */}
+          {/* Footer Actions */}
+          {recordsSection === "vaccination" && (
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[
@@ -6969,122 +7662,351 @@ const MyHorsesScreen = () => {
                   { backgroundColor: currentTheme.colors.textSecondary },
                 ]}
                 onPress={() => {
-                  setAddEventModalVisible(false);
-                  setEventDate(null);
-                  setEventNotes("");
-                  setEventType("ultrasound");
+                  setVaccinationName("");
+                  setVaccinationId("");
+                  setVaccinationDate(null);
+                  setVaccinationNotes("");
+                  setVaccinationType("future");
+                  setVaccinationRepeat(false);
+                  setShowVaccinationDatePicker(false);
                 }}
               >
                 <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
-                  Cancel
+                  Clear Form
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.modalButton,
                   styles.saveButton,
-                  { 
-                    backgroundColor: currentTheme.colors.primary,
-                    opacity: eventDate ? 1 : 0.5
-                  },
+                  { backgroundColor: currentTheme.colors.primary },
                 ]}
-                onPress={handleAddEvent}
-                disabled={!eventDate}
+                onPress={saveVaccinationReminder}
               >
                 <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
-                  Add Event
+                  Save {vaccinationType === "past" ? "Record" : "Reminder"}
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </Modal>
+          )}
+        </View>
+      </Modal>
 
-        {/* Photo Capture Modal */}
-        <Modal
-          visible={photoCaptureModalVisible}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setPhotoCaptureModalVisible(false)}
+      {/* Add Event Modal */}
+      <Modal
+        visible={addEventModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setAddEventModalVisible(false)}
+      >
+        <View
+          style={{ flex: 1, backgroundColor: currentTheme.colors.background }}
         >
-          <View style={{ flex: 1, backgroundColor: currentTheme.colors.background }}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
+          <View style={styles.modalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  styles.modalTitle,
+                  {
+                    color: currentTheme.colors.text,
+                    textAlign: "center",
+                  },
+                ]}
+              >
+                Add Event
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setAddEventModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {/* Event Type Selection */}
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Event Type
+              </Text>
+              <View style={styles.eventTypeGrid}>
+                <TouchableOpacity
+                  style={[
+                    styles.eventTypeButton,
+                    eventType === "ultrasound" && styles.eventTypeButtonActive,
+                    { borderColor: currentTheme.colors.primary },
+                  ]}
+                  onPress={() => setEventType("ultrasound")}
+                >
+                  <Text style={styles.eventTypeIcon}>🔍</Text>
+                  <Text
+                    style={[
+                      styles.eventTypeText,
+                      eventType === "ultrasound" && styles.eventTypeTextActive,
+                    ]}
+                  >
+                    Ultrasound
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.eventTypeButton,
+                    eventType === "vaccine" && styles.eventTypeButtonActive,
+                    { borderColor: currentTheme.colors.primary },
+                  ]}
+                  onPress={() => setEventType("vaccine")}
+                >
+                  <Text style={styles.eventTypeIcon}>💉</Text>
+                  <Text
+                    style={[
+                      styles.eventTypeText,
+                      eventType === "vaccine" && styles.eventTypeTextActive,
+                    ]}
+                  >
+                    Vaccine
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.eventTypeButton,
+                    eventType === "deworming" && styles.eventTypeButtonActive,
+                    { borderColor: currentTheme.colors.primary },
+                  ]}
+                  onPress={() => setEventType("deworming")}
+                >
+                  <Text style={styles.eventTypeIcon}>💊</Text>
+                  <Text
+                    style={[
+                      styles.eventTypeText,
+                      eventType === "deworming" && styles.eventTypeTextActive,
+                    ]}
+                  >
+                    Deworming
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.eventTypeButton,
+                    eventType === "note" && styles.eventTypeButtonActive,
+                    { borderColor: currentTheme.colors.primary },
+                  ]}
+                  onPress={() => setEventType("note")}
+                >
+                  <Text style={styles.eventTypeIcon}>📝</Text>
+                  <Text
+                    style={[
+                      styles.eventTypeText,
+                      eventType === "note" && styles.eventTypeTextActive,
+                    ]}
+                  >
+                    Note
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Event Date */}
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Event Date *
+              </Text>
+              <DatePicker
+                value={eventDate}
+                placeholder="Select event date"
+                onSelect={setEventDate}
+                isVisible={showEventDatePicker}
+                setVisible={setShowEventDatePicker}
+              />
+            </View>
+
+            {/* Notes */}
+            <View style={styles.inputGroup}>
+              <Text
+                style={[styles.inputLabel, { color: currentTheme.colors.text }]}
+              >
+                Notes (Optional)
+              </Text>
+              <TextInput
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: currentTheme.colors.accent,
+                    color: currentTheme.colors.text,
+                    borderColor: currentTheme.colors.primary,
+                    minHeight: 100,
+                    textAlignVertical: "top",
+                  },
+                ]}
+                value={eventNotes}
+                onChangeText={setEventNotes}
+                placeholder="Enter any notes or observations..."
+                placeholderTextColor={currentTheme.colors.textSecondary}
+                multiline
+              />
+            </View>
+          </ScrollView>
+
+          {/* Footer Actions */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={[
+                styles.modalButton,
+                styles.cancelButton,
+                { backgroundColor: currentTheme.colors.textSecondary },
+              ]}
+              onPress={() => {
+                setAddEventModalVisible(false);
+                setEventDate(null);
+                setEventNotes("");
+                setEventType("ultrasound");
+              }}
+            >
+              <Text style={[styles.cancelButtonText, { color: "#FFFFFF" }]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.modalButton,
+                styles.saveButton,
+                {
+                  backgroundColor: currentTheme.colors.primary,
+                  opacity: eventDate ? 1 : 0.5,
+                },
+              ]}
+              onPress={handleAddEvent}
+              disabled={!eventDate}
+            >
+              <Text style={[styles.saveButtonText, { color: "#FFFFFF" }]}>
+                Add Event
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Photo Capture Modal */}
+      <Modal
+        visible={photoCaptureModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setPhotoCaptureModalVisible(false)}
+      >
+        <View
+          style={{ flex: 1, backgroundColor: currentTheme.colors.background }}
+        >
+          <View style={styles.modalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  styles.modalTitle,
+                  {
+                    color: currentTheme.colors.text,
+                    textAlign: "center",
+                  },
+                ]}
+              >
+                Capture Progress Photo
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setPhotoCaptureModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.photoCaptureContent}>
+            <Text
+              style={[
+                styles.photoCaptureTitle,
+                { color: currentTheme.colors.text },
+              ]}
+            >
+              Choose Photo Source
+            </Text>
+            <Text
+              style={[
+                styles.photoCaptureSubtitle,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              Capture a new photo or select from your library
+            </Text>
+
+            <View style={styles.photoSourceButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.photoSourceButton,
+                  { backgroundColor: currentTheme.colors.primary },
+                ]}
+                onPress={() => {
+                  setPhotoCaptureModalVisible(false);
+                  handleCapturePhoto();
+                }}
+              >
+                <Text style={styles.photoSourceIcon}>📷</Text>
+                <Text style={styles.photoSourceText}>Take Photo</Text>
+                <Text style={styles.photoSourceSubtext}>Use camera</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.photoSourceButton,
+                  {
+                    backgroundColor: currentTheme.colors.accent,
+                    borderWidth: 2,
+                    borderColor: currentTheme.colors.primary,
+                  },
+                ]}
+                onPress={() => {
+                  setPhotoCaptureModalVisible(false);
+                  handlePickPhotoFromLibrary();
+                }}
+              >
+                <Text style={styles.photoSourceIcon}>🖼️</Text>
                 <Text
                   style={[
-                    styles.modalTitle,
-                    {
-                      color: currentTheme.colors.text,
-                      textAlign: "center",
-                    },
+                    styles.photoSourceText,
+                    { color: currentTheme.colors.text },
                   ]}
                 >
-                  Capture Progress Photo
+                  Choose from Library
                 </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setPhotoCaptureModalVisible(false)}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
+                <Text
+                  style={[
+                    styles.photoSourceSubtext,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Select existing photo
+                </Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.photoCaptureContent}>
-              <Text style={[styles.photoCaptureTitle, { color: currentTheme.colors.text }]}>
-                Choose Photo Source
-              </Text>
-              <Text style={[styles.photoCaptureSubtitle, { color: currentTheme.colors.textSecondary }]}>
-                Capture a new photo or select from your library
-              </Text>
-
-              <View style={styles.photoSourceButtons}>
-                <TouchableOpacity
-                  style={[
-                    styles.photoSourceButton,
-                    { backgroundColor: currentTheme.colors.primary }
-                  ]}
-                  onPress={() => {
-                    setPhotoCaptureModalVisible(false);
-                    handleCapturePhoto();
-                  }}
-                >
-                  <Text style={styles.photoSourceIcon}>📷</Text>
-                  <Text style={styles.photoSourceText}>Take Photo</Text>
-                  <Text style={styles.photoSourceSubtext}>Use camera</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.photoSourceButton,
-                    { backgroundColor: currentTheme.colors.accent, borderWidth: 2, borderColor: currentTheme.colors.primary }
-                  ]}
-                  onPress={() => {
-                    setPhotoCaptureModalVisible(false);
-                    handlePickPhotoFromLibrary();
-                  }}
-                >
-                  <Text style={styles.photoSourceIcon}>🖼️</Text>
-                  <Text style={[styles.photoSourceText, { color: currentTheme.colors.text }]}>
-                    Choose from Library
-                  </Text>
-                  <Text style={[styles.photoSourceSubtext, { color: currentTheme.colors.textSecondary }]}>
-                    Select existing photo
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.photoTipBanner}>
-                <Text style={styles.photoTipIcon}>💡</Text>
-                <View style={styles.photoTipContent}>
-                  <Text style={styles.photoTipTitle}>Photography Tip</Text>
-                  <Text style={styles.photoTipText}>
-                    For best results, photograph your mare from the left side (left-lateral view) in good lighting. This allows consistent comparison throughout the pregnancy.
-                  </Text>
-                </View>
+            <View style={styles.photoTipBanner}>
+              <Text style={styles.photoTipIcon}>💡</Text>
+              <View style={styles.photoTipContent}>
+                <Text style={styles.photoTipTitle}>Photography Tip</Text>
+                <Text style={styles.photoTipText}>
+                  For best results, photograph your mare from the left side
+                  (left-lateral view) in good lighting. This allows consistent
+                  comparison throughout the pregnancy.
+                </Text>
               </View>
             </View>
           </View>
-        </Modal>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -8741,9 +9663,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
   },
   settingsButtonIcon: {
     fontSize: 20,
@@ -8753,9 +9675,9 @@ const styles = StyleSheet.create({
   },
   settingsTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 15,
-    fontFamily: 'Inder',
+    fontFamily: "Inder",
   },
   statusOptionsContainer: {
     gap: 12,
@@ -8764,18 +9686,18 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
-    alignItems: 'center',
+    alignItems: "center",
   },
   statusOptionText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
   },
   statusHelpText: {
     fontSize: 13,
     marginTop: 8,
-    fontFamily: 'Inder',
-    textAlign: 'center',
+    fontFamily: "Inder",
+    textAlign: "center",
   },
   divider: {
     height: 1,
@@ -8789,54 +9711,54 @@ const styles = StyleSheet.create({
   exportButton: {
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   exportButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
   },
   pregnancyDeleteButton: {
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   pregnancyDeleteButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
   },
   saveFoalButton: {
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   saveFoalButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
   },
   foalHelpText: {
     fontSize: 13,
-    textAlign: 'center',
-    fontFamily: 'Inder',
-    fontStyle: 'italic',
+    textAlign: "center",
+    fontFamily: "Inder",
+    fontStyle: "italic",
     marginTop: 8,
   },
   saveSettingsButton: {
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 30,
   },
   saveSettingsButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    fontFamily: "Inder",
   },
   dayCounter: {
     alignItems: "flex-end",
@@ -9016,7 +9938,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   inlineEventActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginTop: 10,
   },
@@ -9024,25 +9946,25 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   inlineEventCancelButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
   },
   inlineEventSaveButton: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   inlineEventSaveButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    fontFamily: 'Inder',
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontFamily: "Inder",
   },
   eventsList: {
     marginTop: 10,
@@ -9183,7 +10105,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "bold",
   },
-  
+
   // Add Event Modal Styles
   eventTypeGrid: {
     flexDirection: "row",
