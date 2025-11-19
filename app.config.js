@@ -105,6 +105,9 @@ module.exports = {
           defaultChannel: "default",
         },
       ],
+      [
+        "expo-apple-authentication"
+      ],
     ],
     experiments: {
       typedRoutes: true,
