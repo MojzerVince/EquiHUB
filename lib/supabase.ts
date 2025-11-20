@@ -46,6 +46,15 @@ export const getSupabase = () => {
   return supabaseClient;
 };
 
+// Force reinitialize the Supabase client (useful after OAuth login)
+export const reinitializeSupabase = async () => {
+  console.log('🔄 Reinitializing Supabase client...');
+  supabaseClient = null;
+  await initializeSupabase();
+  console.log('✅ Supabase client reinitialized');
+  return supabaseClient;
+};
+
 // Get secure configuration for direct API calls
 export const getSupabaseConfig = () => {
   try {

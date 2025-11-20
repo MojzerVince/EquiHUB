@@ -52,12 +52,17 @@ export class OAuthService {
       }
       
       // Use a custom URL scheme for the redirect - this will work on both dev and production
-      const appRedirect = makeRedirectUri({
-        scheme: 'equihub',
-        path: 'auth/callback'
-      });
+      // In development, use makeRedirectUri for proper Expo dev server handling
+      // In production, use custom scheme for proper deep linking
+      const appRedirect = __DEV__ 
+        ? makeRedirectUri({
+            scheme: 'equihub',
+            path: 'auth/callback'
+          })
+        : 'equihub://auth/callback';
       
       console.log('📍 App redirect URI:', appRedirect);
+      console.log('📍 Environment:', __DEV__ ? 'Development' : 'Production');
       
       // Initiate OAuth with Supabase
       // The redirectTo should point back to our app, not to Supabase callback
@@ -190,6 +195,34 @@ export class OAuthService {
         sessionData = sessionResult.data;
         sessionError = sessionResult.error;
         console.log('✅ Session setup completed successfully');
+        
+        // CRITICAL: Wait for the session to be fully propagated to the Supabase client
+        // This ensures database queries will work immediately
+        if (sessionData?.session) {
+          console.log('🔄 Waiting for session to propagate to Supabase client...');
+          
+          // Verify the session is accessible via getSession
+          let retries = 0;
+          const maxRetries = 5;
+          let sessionVerified = false;
+          
+          while (retries < maxRetries && !sessionVerified) {
+            await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
+            
+            const { data: { session: verifiedSession } } = await supabase.auth.getSession();
+            if (verifiedSession?.user?.id === sessionData.session.user.id) {
+              sessionVerified = true;
+              console.log('✅ Session verified and propagated to Supabase client');
+            } else {
+              retries++;
+              console.log(`⏳ Session not yet available, retry ${retries}/${maxRetries}...`);
+            }
+          }
+          
+          if (!sessionVerified) {
+            console.warn('⚠️ Session not fully propagated after retries, but continuing anyway');
+          }
+        }
       } catch (sessionSetupError: any) {
         console.error('❌ Session setup error:', sessionSetupError);
         sessionError = sessionSetupError;

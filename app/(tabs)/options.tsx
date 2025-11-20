@@ -31,7 +31,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import appConfig from "../../app.config.js";
@@ -39,7 +39,8 @@ import appConfig from "../../app.config.js";
 const OptionsScreen = () => {
   const router = useRouter();
   const { signOut, user } = useAuth();
-  const { currentTheme, setTheme, availableThemes, selectedThemeName } = useTheme();
+  const { currentTheme, setTheme, availableThemes, selectedThemeName } =
+    useTheme();
   const { metricSystem, setMetricSystem } = useMetric();
   const { showLogout, showConfirm, showError } = useDialog();
 
@@ -133,7 +134,7 @@ const OptionsScreen = () => {
 
       if (result.success) {
         await loadEmergencyContacts();
-        setEmergencyModalView('list');
+        setEmergencyModalView("list");
         setSearchQuery("");
         Alert.alert(
           "✅ Success!",
@@ -316,7 +317,9 @@ const OptionsScreen = () => {
     []
   );
   const [showEmergencyContacts, setShowEmergencyContacts] = useState(false);
-  const [emergencyModalView, setEmergencyModalView] = useState<'list' | 'add'>('list');
+  const [emergencyModalView, setEmergencyModalView] = useState<"list" | "add">(
+    "list"
+  );
   const [loadingEmergencyContacts, setLoadingEmergencyContacts] =
     useState(false);
   const [userFriends, setUserFriends] = useState<any[]>([]);
@@ -430,12 +433,16 @@ const OptionsScreen = () => {
     if (key === "pregnancyReminders") {
       if (!newSettings.pregnancyReminders) {
         // Cancel all pregnancy notifications when disabled
-        console.log('🔕 Pregnancy notifications disabled - cancelling all notifications');
+        console.log(
+          "🔕 Pregnancy notifications disabled - cancelling all notifications"
+        );
         // Note: Individual pregnancy notifications will be cancelled automatically
         // by the PregnancyNotificationService when it checks the setting
       } else {
         // Notifications will be rescheduled automatically when enabled
-        console.log('🔔 Pregnancy notifications enabled - notifications will be scheduled');
+        console.log(
+          "🔔 Pregnancy notifications enabled - notifications will be scheduled"
+        );
       }
     }
   };
@@ -548,7 +555,8 @@ const OptionsScreen = () => {
         console.log("Starting logout process for user:", user?.email);
         await signOut();
         console.log("User logged out successfully");
-        // ProtectedRoute will handle navigation automatically
+        // Explicitly navigate to welcome screen
+        router.replace("/");
       } catch (error) {
         console.error("Logout error:", error);
         showError("Failed to sign out. Please try again.");
@@ -795,7 +803,7 @@ const OptionsScreen = () => {
   // DEBUG ONLY: Simulate fall detection for testing
   const handleSimulateFallDetection = async () => {
     if (!__DEV__) return;
-    
+
     if (!user?.id) {
       Alert.alert("Error", "User not logged in");
       return;
@@ -869,7 +877,7 @@ ${
   // Retry push token registration
   const handleRetryPushToken = async () => {
     if (!__DEV__) return;
-    
+
     if (!user?.id) {
       Alert.alert("Error", "User not logged in");
       return;
@@ -936,7 +944,7 @@ ${
   // DEBUG ONLY: Test emergency notification screen
   const handleTestEmergencyScreen = () => {
     if (!__DEV__) return;
-    
+
     if (!user?.id) {
       Alert.alert("Error", "User not logged in");
       return;
@@ -1297,7 +1305,10 @@ ${
           {__DEV__ && (
             <View style={styles.section}>
               <Text
-                style={[styles.sectionTitle, { color: currentTheme.colors.text }]}
+                style={[
+                  styles.sectionTitle,
+                  { color: currentTheme.colors.text },
+                ]}
               >
                 🧪 Debug Tools (Token Testing)
               </Text>
@@ -1421,7 +1432,9 @@ ${
                 title="Theme"
                 subtitle="Choose your preferred color theme"
                 type="dropdown"
-                dropdownValue={selectedThemeName === "Dark" ? "🌙 Dark" : selectedThemeName}
+                dropdownValue={
+                  selectedThemeName === "Dark" ? "🌙 Dark" : selectedThemeName
+                }
                 dropdownOptions={availableThemes}
                 onDropdownSelect={(theme) => setTheme(theme as ThemeName)}
                 dropdownVisible={themeDropdownVisible}
@@ -1516,11 +1529,9 @@ ${
                 onPress={() => {
                   if (user?.id) {
                     Clipboard.setString(user.id);
-                    Alert.alert(
-                      "Copied!",
-                      "User ID copied to clipboard",
-                      [{ text: "OK" }]
-                    );
+                    Alert.alert("Copied!", "User ID copied to clipboard", [
+                      { text: "OK" },
+                    ]);
                   }
                 }}
                 activeOpacity={0.7}
@@ -1832,7 +1843,8 @@ ${
                       { color: currentTheme.colors.textSecondary },
                     ]}
                   >
-                    Get notifications for pregnancy milestones, next actions, photo reminders, and late-pregnancy care
+                    Get notifications for pregnancy milestones, next actions,
+                    photo reminders, and late-pregnancy care
                   </Text>
                 </View>
                 <Switch
@@ -1873,8 +1885,8 @@ ${
         animationType="slide"
         onRequestClose={() => {
           setShowEmergencyContacts(false);
-          setEmergencyModalView('list');
-          setSearchQuery('');
+          setEmergencyModalView("list");
+          setSearchQuery("");
         }}
       >
         <View style={styles.modalOverlay}>
@@ -1891,15 +1903,18 @@ ${
               ]}
             >
               <TouchableOpacity
-                style={[styles.emergencyContactsCloseButton, { marginRight: 'auto' }]}
+                style={[
+                  styles.emergencyContactsCloseButton,
+                  { marginRight: "auto" },
+                ]}
                 onPress={() => {
-                  if (emergencyModalView === 'add') {
-                    setEmergencyModalView('list');
-                    setSearchQuery('');
+                  if (emergencyModalView === "add") {
+                    setEmergencyModalView("list");
+                    setSearchQuery("");
                   } else {
                     setShowEmergencyContacts(false);
-                    setEmergencyModalView('list');
-                    setSearchQuery('');
+                    setEmergencyModalView("list");
+                    setSearchQuery("");
                   }
                 }}
               >
@@ -1909,21 +1924,28 @@ ${
                     { color: currentTheme.colors.textSecondary },
                   ]}
                 >
-                  {emergencyModalView === 'add' ? '←' : '✕'}
+                  {emergencyModalView === "add" ? "←" : "✕"}
                 </Text>
               </TouchableOpacity>
               <Text
                 style={[
                   styles.emergencyContactsTitle,
-                  { color: currentTheme.colors.text, flex: 1, textAlign: 'center', marginRight: 40 },
+                  {
+                    color: currentTheme.colors.text,
+                    flex: 1,
+                    textAlign: "center",
+                    marginRight: 40,
+                  },
                 ]}
               >
-                {emergencyModalView === 'list' ? 'Emergency Contacts' : 'Add Emergency Friend'}
+                {emergencyModalView === "list"
+                  ? "Emergency Contacts"
+                  : "Add Emergency Friend"}
               </Text>
             </View>
 
             <ScrollView style={styles.emergencyContactsContent}>
-              {emergencyModalView === 'list' ? (
+              {emergencyModalView === "list" ? (
                 <>
                   {/* Add Friend Button - Only show if under limit */}
                   {emergencyFriends.length < 3 ? (
@@ -1933,7 +1955,7 @@ ${
                         { backgroundColor: currentTheme.colors.primary },
                       ]}
                       onPress={() => {
-                        setEmergencyModalView('add');
+                        setEmergencyModalView("add");
                         loadUserFriends();
                       }}
                     >
@@ -1948,7 +1970,9 @@ ${
                         { backgroundColor: currentTheme.colors.textSecondary },
                       ]}
                     >
-                      <Text style={[styles.addContactButtonText, { opacity: 0.8 }]}>
+                      <Text
+                        style={[styles.addContactButtonText, { opacity: 0.8 }]}
+                      >
                         ✓ Emergency Friend Limit Reached (3/3)
                       </Text>
                     </View>
@@ -1956,198 +1980,200 @@ ${
 
                   {/* Emergency Friends List */}
                   {loadingEmergencyContacts ? (
-                <View style={styles.emergencyContactsLoading}>
-                  <ActivityIndicator
-                    color={currentTheme.colors.primary}
-                    size="small"
-                  />
-                  <Text
-                    style={[
-                      styles.emergencyContactsLoadingText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    Loading emergency contacts...
-                  </Text>
-                </View>
-              ) : emergencyFriends.length > 0 ? (
-                emergencyFriends.map((friend) => (
-                  <View
-                    key={friend.id}
-                    style={[
-                      styles.emergencyContactItem,
-                      { backgroundColor: currentTheme.colors.surface },
-                    ]}
-                  >
-                    <View style={styles.emergencyContactInfo}>
+                    <View style={styles.emergencyContactsLoading}>
+                      <ActivityIndicator
+                        color={currentTheme.colors.primary}
+                        size="small"
+                      />
                       <Text
                         style={[
-                          styles.emergencyContactName,
-                          { color: currentTheme.colors.text },
-                        ]}
-                      >
-                        {friend.name}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.emergencyContactPhone,
+                          styles.emergencyContactsLoadingText,
                           { color: currentTheme.colors.textSecondary },
                         ]}
                       >
-                        Emergency Friend
+                        Loading emergency contacts...
                       </Text>
                     </View>
-                    <View style={styles.emergencyContactControls}>
-                      <Switch
-                        value={friend.isEnabled}
-                        onValueChange={(value) =>
-                          handleToggleEmergencyFriend(friend.id, value)
-                        }
-                        trackColor={{
-                          false: currentTheme.colors.accent,
-                          true: currentTheme.colors.primary,
-                        }}
-                        thumbColor={friend.isEnabled ? "#fff" : "#f4f3f4"}
-                      />
-                      <TouchableOpacity
+                  ) : emergencyFriends.length > 0 ? (
+                    emergencyFriends.map((friend) => (
+                      <View
+                        key={friend.id}
                         style={[
-                          styles.removeContactButton,
-                          { backgroundColor: currentTheme.colors.error },
+                          styles.emergencyContactItem,
+                          { backgroundColor: currentTheme.colors.surface },
                         ]}
-                        onPress={() => handleRemoveEmergencyFriend(friend.id)}
                       >
-                        <Text style={styles.removeContactButtonText}>
-                          Remove
-                        </Text>
-                      </TouchableOpacity>
+                        <View style={styles.emergencyContactInfo}>
+                          <Text
+                            style={[
+                              styles.emergencyContactName,
+                              { color: currentTheme.colors.text },
+                            ]}
+                          >
+                            {friend.name}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.emergencyContactPhone,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            Emergency Friend
+                          </Text>
+                        </View>
+                        <View style={styles.emergencyContactControls}>
+                          <Switch
+                            value={friend.isEnabled}
+                            onValueChange={(value) =>
+                              handleToggleEmergencyFriend(friend.id, value)
+                            }
+                            trackColor={{
+                              false: currentTheme.colors.accent,
+                              true: currentTheme.colors.primary,
+                            }}
+                            thumbColor={friend.isEnabled ? "#fff" : "#f4f3f4"}
+                          />
+                          <TouchableOpacity
+                            style={[
+                              styles.removeContactButton,
+                              { backgroundColor: currentTheme.colors.error },
+                            ]}
+                            onPress={() =>
+                              handleRemoveEmergencyFriend(friend.id)
+                            }
+                          >
+                            <Text style={styles.removeContactButtonText}>
+                              Remove
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <View style={styles.emergencyContactsEmpty}>
+                      <Text
+                        style={[
+                          styles.emergencyContactsEmptyTitle,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        No Emergency Contacts
+                      </Text>
+                      <Text
+                        style={[
+                          styles.emergencyContactsEmptyText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Add emergency contacts who will receive alerts with your
+                        location in case of emergency during rides.
+                      </Text>
                     </View>
-                  </View>
-                ))
-              ) : (
-                <View style={styles.emergencyContactsEmpty}>
-                  <Text
-                    style={[
-                      styles.emergencyContactsEmptyTitle,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    No Emergency Contacts
-                  </Text>
-                  <Text
-                    style={[
-                      styles.emergencyContactsEmptyText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    Add emergency contacts who will receive alerts with your
-                    location in case of emergency during rides.
-                  </Text>
-                </View>
-              )}
+                  )}
                 </>
               ) : (
                 /* Add Friend View */
                 <>
-                {/* Search Bar */}
-                <TextInput
-                  style={[
-                    styles.searchInput,
-                    {
-                      backgroundColor: currentTheme.colors.surface,
-                      color: currentTheme.colors.text,
-                      borderColor: currentTheme.colors.accent,
-                    },
-                  ]}
-                  placeholder="Search friends..."
-                  placeholderTextColor={currentTheme.colors.textSecondary}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-
-                {/* Friends List */}
-                {loadingFriends ? (
-                <View style={styles.emergencyContactsLoading}>
-                  <ActivityIndicator
-                    color={currentTheme.colors.primary}
-                    size="small"
+                  {/* Search Bar */}
+                  <TextInput
+                    style={[
+                      styles.searchInput,
+                      {
+                        backgroundColor: currentTheme.colors.surface,
+                        color: currentTheme.colors.text,
+                        borderColor: currentTheme.colors.accent,
+                      },
+                    ]}
+                    placeholder="Search friends..."
+                    placeholderTextColor={currentTheme.colors.textSecondary}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
                   />
-                  <Text
-                    style={[
-                      styles.emergencyContactsLoadingText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    Loading friends...
-                  </Text>
-                </View>
-              ) : userFriends.filter(
-                  (friend) =>
-                    friend.name
-                      ?.toLowerCase()
-                      .includes(searchQuery.toLowerCase()) ||
-                    friend.username
-                      ?.toLowerCase()
-                      .includes(searchQuery.toLowerCase())
-                ).length > 0 ? (
-                userFriends
-                  .filter(
-                    (friend) =>
-                      friend.name
-                        ?.toLowerCase()
-                        .includes(searchQuery.toLowerCase()) ||
-                      friend.username
-                        ?.toLowerCase()
-                        .includes(searchQuery.toLowerCase())
-                  )
-                  .map((item) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={[
-                        styles.deviceContactItem,
-                        { backgroundColor: currentTheme.colors.surface },
-                      ]}
-                      onPress={() => handleAddEmergencyFriend(item)}
-                    >
-                      <View style={styles.deviceContactInfo}>
-                        <Text
+
+                  {/* Friends List */}
+                  {loadingFriends ? (
+                    <View style={styles.emergencyContactsLoading}>
+                      <ActivityIndicator
+                        color={currentTheme.colors.primary}
+                        size="small"
+                      />
+                      <Text
+                        style={[
+                          styles.emergencyContactsLoadingText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Loading friends...
+                      </Text>
+                    </View>
+                  ) : userFriends.filter(
+                      (friend) =>
+                        friend.name
+                          ?.toLowerCase()
+                          .includes(searchQuery.toLowerCase()) ||
+                        friend.username
+                          ?.toLowerCase()
+                          .includes(searchQuery.toLowerCase())
+                    ).length > 0 ? (
+                    userFriends
+                      .filter(
+                        (friend) =>
+                          friend.name
+                            ?.toLowerCase()
+                            .includes(searchQuery.toLowerCase()) ||
+                          friend.username
+                            ?.toLowerCase()
+                            .includes(searchQuery.toLowerCase())
+                      )
+                      .map((item) => (
+                        <TouchableOpacity
+                          key={item.id}
                           style={[
-                            styles.deviceContactName,
-                            { color: currentTheme.colors.text },
+                            styles.deviceContactItem,
+                            { backgroundColor: currentTheme.colors.surface },
                           ]}
+                          onPress={() => handleAddEmergencyFriend(item)}
                         >
-                          {item.name || item.username}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.deviceContactPhone,
-                            { color: currentTheme.colors.textSecondary },
-                          ]}
-                        >
-                          @{item.username}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
-              ) : (
-                <View style={styles.addContactNoPermission}>
-                  <Text
-                    style={[
-                      styles.addContactNoPermissionTitle,
-                      { color: currentTheme.colors.text },
-                    ]}
-                  >
-                    No friends found
-                  </Text>
-                  <Text
-                    style={[
-                      styles.addContactNoPermissionText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    Try adjusting your search or add friends first.
-                  </Text>
-                </View>
-              )}
+                          <View style={styles.deviceContactInfo}>
+                            <Text
+                              style={[
+                                styles.deviceContactName,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              {item.name || item.username}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.deviceContactPhone,
+                                { color: currentTheme.colors.textSecondary },
+                              ]}
+                            >
+                              @{item.username}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))
+                  ) : (
+                    <View style={styles.addContactNoPermission}>
+                      <Text
+                        style={[
+                          styles.addContactNoPermissionTitle,
+                          { color: currentTheme.colors.text },
+                        ]}
+                      >
+                        No friends found
+                      </Text>
+                      <Text
+                        style={[
+                          styles.addContactNoPermissionText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        Try adjusting your search or add friends first.
+                      </Text>
+                    </View>
+                  )}
                 </>
               )}
             </ScrollView>
@@ -2576,7 +2602,9 @@ ${
                 <Text style={styles.aboutSectionTitle}>
                   ✨ Key Features{"\n"}
                 </Text>
-                <Text style={styles.aboutFeatureItem}>🐴 Horse Management{"\n"}</Text>
+                <Text style={styles.aboutFeatureItem}>
+                  🐴 Horse Management{"\n"}
+                </Text>
                 Comprehensive profiles for all your horses with health records,
                 training progress, and care schedules.{"\n\n"}
                 <Text style={styles.aboutFeatureItem}>
@@ -2589,13 +2617,19 @@ ${
                 </Text>
                 Join global and stable-specific challenges to stay motivated and
                 connect with fellow riders.{"\n\n"}
-                <Text style={styles.aboutFeatureItem}>💬 Social Features{"\n"}</Text>
+                <Text style={styles.aboutFeatureItem}>
+                  💬 Social Features{"\n"}
+                </Text>
                 Share your achievements, connect with friends, and engage with
                 the equestrian community.{"\n\n"}
-                <Text style={styles.aboutFeatureItem}>🚨 Safety First{"\n"}</Text>
+                <Text style={styles.aboutFeatureItem}>
+                  🚨 Safety First{"\n"}
+                </Text>
                 Emergency contacts, first aid guidance, and safety features
                 designed specifically for equestrians.{"\n\n"}
-                <Text style={styles.aboutFeatureItem}>📚 Tips & Guides{"\n"}</Text>
+                <Text style={styles.aboutFeatureItem}>
+                  📚 Tips & Guides{"\n"}
+                </Text>
                 Expert advice, training tips, and educational content to improve
                 your horsemanship skills.{"\n\n\n"}
                 <Text style={styles.aboutSectionTitle}>

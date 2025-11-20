@@ -34,14 +34,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       (segments[0] && segments[0].startsWith("register"));
     const onWelcome = !segments[0] || segments[0] === "index"; // Root level (/) or /index is the welcome screen
     const inTabsGroup = segments[0] === "(tabs)";
-    
+
     // Check if we're on the OAuth callback route (allow without authentication)
     const onAuthCallback = segments[0] === "auth" && segments[1] === "callback";
-    
+
     // Check if we're on a valid standalone screen (not in auth, tabs, or welcome)
     const validStandaloneScreens = [
       "sessions",
-      "statistics", 
+      "statistics",
       "session-details",
       "session-summary",
       "subscription",
@@ -51,9 +51,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       "user-horses",
       "emergency-notification",
       "add-planned-session",
-      "calendar"
+      "calendar",
     ];
-    const onStandaloneScreen = validStandaloneScreens.includes(segments[0] || "");
+    const onStandaloneScreen = validStandaloneScreens.includes(
+      segments[0] || ""
+    );
 
     console.log(
       "ProtectedRoute: user=",
@@ -87,15 +89,23 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     };
 
     // Allow OAuth callback route without authentication
+    // Also allow it while loading (during authentication process)
     if (onAuthCallback) {
-      console.log("ProtectedRoute: OAuth callback - allowing access");
+      console.log(
+        "ProtectedRoute: OAuth callback - allowing access, loading=",
+        loading
+      );
       lastNavigationRef.current = null; // Reset navigation tracking
       return;
     }
 
     // NEW LOGIC: If user is authenticated, redirect to tabs (skip welcome)
-    if (user && (inAuthGroup || onWelcome)) {
-      navigateIfNeeded("/(tabs)/map", "User authenticated - redirecting to tabs/map");
+    // But NOT if we're still on the auth callback page (let it handle navigation)
+    if (user && (inAuthGroup || onWelcome) && !onAuthCallback) {
+      navigateIfNeeded(
+        "/(tabs)/map",
+        "User authenticated - redirecting to tabs/map"
+      );
       return;
     }
 
@@ -111,7 +121,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // If user is NOT authenticated but in protected areas, redirect to welcome
     if (!user && (inTabsGroup || onStandaloneScreen)) {
       navigateIfNeeded(
-        "/index",
+        "/",
         "Not authenticated in protected area - redirecting to welcome"
       );
       return;
@@ -119,7 +129,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
     // If not authenticated and not in auth/welcome, redirect to welcome
     if (!user && !inAuthGroup && !onWelcome) {
-      navigateIfNeeded("/index", "Redirecting to welcome screen");
+      navigateIfNeeded("/", "Redirecting to welcome screen");
     } else {
       console.log("ProtectedRoute: No action taken - staying on current route");
       lastNavigationRef.current = null; // Reset navigation tracking
