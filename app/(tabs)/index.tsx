@@ -25,6 +25,7 @@ import { useMetric } from "../../contexts/MetricContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { HorseAPI } from "../../lib/horseAPI";
 import PaymentService from "../../lib/paymentService";
+import * as pregnancyAPI from "../../lib/pregnancyAPI";
 import { PregnancyNotificationService } from "../../lib/pregnancyNotificationService";
 import { Horse } from "../../lib/supabase";
 import * as vaccinationAPI from "../../lib/vaccinationAPI";
@@ -117,6 +118,7 @@ interface FoalingDetails {
 interface Pregnancy {
   id: string;
   horseId: string;
+  horseName?: string;
   status: PregnancyStatus;
   coverDate: string;
   ovulationDate?: string;
@@ -1197,29 +1199,108 @@ const MyHorsesScreen = () => {
 
   // Pregnancy data persistence functions
   const loadPregnancies = async () => {
+    if (!user?.id) return;
+
     try {
-      const savedPregnancies = await AsyncStorage.getItem(
-        `pregnancies_${user?.id}`
-      );
-      if (savedPregnancies) {
-        setPregnancies(JSON.parse(savedPregnancies));
+      // Load with cloud sync
+      const result = await pregnancyAPI.loadPregnanciesWithSync(user.id);
+
+      if (result.success && result.pregnancies) {
+        setPregnancies(result.pregnancies);
+      } else {
+        // Fallback to local storage only
+        const savedPregnancies = await AsyncStorage.getItem(
+          `pregnancies_${user?.id}`
+        );
+        if (savedPregnancies) {
+          setPregnancies(JSON.parse(savedPregnancies));
+        }
       }
     } catch (error) {
       console.error("Error loading pregnancies:", error);
+      // Try local storage as fallback
+      try {
+        const savedPregnancies = await AsyncStorage.getItem(
+          `pregnancies_${user?.id}`
+        );
+        if (savedPregnancies) {
+          setPregnancies(JSON.parse(savedPregnancies));
+        }
+      } catch (localError) {
+        console.error("Error loading local pregnancies:", localError);
+      }
     }
   };
 
   const savePregnancies = async (pregnancyData: Record<string, Pregnancy>) => {
+    if (!user?.id) return;
+
     try {
+      // Ensure horseName is populated for all pregnancies before saving
+      const enrichedPregnancyData = { ...pregnancyData };
+      Object.keys(enrichedPregnancyData).forEach((horseId) => {
+        if (!enrichedPregnancyData[horseId].horseName) {
+          const horse = horses.find((h) => h.id === horseId);
+          if (horse) {
+            enrichedPregnancyData[horseId] = {
+              ...enrichedPregnancyData[horseId],
+              horseName: horse.name,
+            };
+          }
+        }
+      });
+
+      // Save to local storage first (immediate feedback)
       await AsyncStorage.setItem(
         `pregnancies_${user?.id}`,
-        JSON.stringify(pregnancyData)
+        JSON.stringify(enrichedPregnancyData)
       );
-      setPregnancies(pregnancyData);
+      setPregnancies(enrichedPregnancyData);
+
+      // Upload to cloud in background
+      const syncResult = await pregnancyAPI.syncPregnancies(
+        enrichedPregnancyData,
+        user.id
+      );
+
+      if (!syncResult.success) {
+        console.warn("Failed to sync pregnancies to cloud:", syncResult.error);
+        // Don't show error to user - local save succeeded
+      }
     } catch (error) {
       console.error("Error saving pregnancies:", error);
       showError("Failed to save pregnancy data");
     }
+  };
+
+  // Open pregnancy modal with cloud sync check
+  const openPregnancyModal = async () => {
+    if (!user?.id || !selectedHorseForRecords) return;
+
+    try {
+      // Check cloud for existing pregnancy data for this horse
+      const result = await pregnancyAPI.getPregnancyForHorse(
+        selectedHorseForRecords.id
+      );
+
+      if (result.success && result.pregnancy) {
+        // Found pregnancy in cloud - update local state
+        const updatedPregnancies = {
+          ...pregnancies,
+          [selectedHorseForRecords.id]: result.pregnancy,
+        };
+        setPregnancies(updatedPregnancies);
+        await AsyncStorage.setItem(
+          `pregnancies_${user.id}`,
+          JSON.stringify(updatedPregnancies)
+        );
+      }
+    } catch (error) {
+      console.error("Error checking cloud for pregnancy:", error);
+      // Continue opening modal anyway
+    }
+
+    setPregnancyModalVisible(true);
   };
 
   // Records modal functions
@@ -1406,14 +1487,16 @@ const MyHorsesScreen = () => {
   const createPregnancy = (
     horseId: string,
     coverDate: string,
+    horseName?: string,
     stallion?: string,
     method?: BreedingMethod
   ) => {
-    const pregnancyId = `pregnancy-${horseId}-${Date.now()}`;
+    const pregnancyId = pregnancyAPI.generateUUID();
     const plan = buildPregnancyPlan(coverDate);
     const newPregnancy: Pregnancy = {
       id: pregnancyId,
       horseId,
+      horseName,
       status: "active",
       ...plan,
       stallion,
@@ -1572,11 +1655,12 @@ const MyHorsesScreen = () => {
     const tempHorseName = selectedHorseForRecords.name;
 
     // Create the pregnancy object immediately to prevent flickering
-    const pregnancyId = `pregnancy-${tempHorseId}-${Date.now()}`;
+    const pregnancyId = pregnancyAPI.generateUUID();
     const plan = buildPregnancyPlan(coverDateStr);
     const newPregnancy: Pregnancy = {
       id: pregnancyId,
       horseId: tempHorseId,
+      horseName: tempHorseName,
       status: "active",
       ...plan,
       method: tempMethod,
@@ -1612,8 +1696,6 @@ const MyHorsesScreen = () => {
     }).catch((error) => {
       console.error("Failed to schedule pregnancy notifications:", error);
     });
-
-    showSuccess(`Pregnancy tracking started for ${tempHorseName}!`);
   };
 
   const handleCompleteNextAction = () => {
@@ -1622,9 +1704,11 @@ const MyHorsesScreen = () => {
     const nextAction = getNextAction(selectedPregnancy);
     if (!nextAction) return;
 
-    // Prevent completing future actions (only allow today or overdue)
-    if (nextAction.daysUntil > 0) {
-      showError("Cannot complete future actions. This action is not due yet.");
+    // Allow completing actions up to 20 days before due date
+    if (nextAction.daysUntil > 20) {
+      showError(
+        "This action cannot be completed more than 20 days before it's due."
+      );
       return;
     }
 
@@ -1684,8 +1768,6 @@ const MyHorsesScreen = () => {
     }).catch((error) => {
       console.error("Failed to update pregnancy notifications:", error);
     });
-
-    showSuccess("Action completed and added to Event Timeline!");
   };
 
   const handleAddEvent = () => {
@@ -1739,8 +1821,6 @@ const MyHorsesScreen = () => {
     setEventType("ultrasound");
     setAddEventModalVisible(false);
     setShowInlineAddEvent(false);
-
-    showSuccess("Event added successfully!");
   };
 
   const handleCapturePhoto = async () => {
@@ -1784,8 +1864,6 @@ const MyHorsesScreen = () => {
 
       // Save to AsyncStorage
       savePregnancies(updatedPregnancies);
-
-      showSuccess("Photo captured successfully!");
     }
   };
 
@@ -1831,8 +1909,6 @@ const MyHorsesScreen = () => {
 
       // Save to AsyncStorage
       savePregnancies(updatedPregnancies);
-
-      showSuccess("Photo added successfully!");
     }
   };
 
@@ -5821,10 +5897,7 @@ const MyHorsesScreen = () => {
                                       currentTheme.colors.primary,
                                   },
                                 ]}
-                                onPress={() => {
-                                  // Show inline pregnancy form
-                                  setPregnancyModalVisible(true);
-                                }}
+                                onPress={openPregnancyModal}
                               >
                                 <Text style={styles.startPregnancyButtonText}>
                                   Start Pregnancy
@@ -6269,7 +6342,7 @@ const MyHorsesScreen = () => {
                                   const nextAction =
                                     getNextAction(selectedPregnancy)!;
                                   const isFutureAction =
-                                    nextAction.daysUntil > 0;
+                                    nextAction.daysUntil > 20;
                                   return (
                                     <View
                                       style={[
