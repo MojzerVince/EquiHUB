@@ -4,6 +4,8 @@
  * Sessions are accessible across EquiHUB, EquiHUB Advisory, and EquiHUB Trainers apps
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { hasWiFiConnection } from './networkUtils';
 import { getSupabase } from './supabase';
 
 export interface TrackingSession {
@@ -36,6 +38,9 @@ export interface TrackingSession {
   avg_speed_kmh?: number;
   created_at?: string;
   updated_at?: string;
+  // For local pending sessions
+  pendingSync?: boolean;
+  localId?: string;
 }
 
 /**
@@ -308,4 +313,188 @@ export function getWeekStats(sessions: TrackingSession[]): {
     avgSpeed,
     maxSpeed,
   };
+}
+
+/**
+ * Save session to local storage (for offline/no WiFi scenarios)
+ */
+export async function savePendingSession(
+  session: Omit<TrackingSession, 'id' | 'created_at' | 'updated_at'>
+): Promise<{ success: boolean; localId?: string; error?: string }> {
+  try {
+    const localId = `pending_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const pendingSession: TrackingSession = {
+      ...session,
+      localId,
+      pendingSync: true,
+    };
+
+    // Get existing pending sessions
+    const existingData = await AsyncStorage.getItem('pending_sessions');
+    const existingSessions: TrackingSession[] = existingData ? JSON.parse(existingData) : [];
+
+    // Add new session
+    existingSessions.push(pendingSession);
+
+    // Save back to storage
+    await AsyncStorage.setItem('pending_sessions', JSON.stringify(existingSessions));
+
+    console.log('Session saved to local storage with ID:', localId);
+    return { success: true, localId };
+  } catch (error) {
+    console.error('Error saving pending session:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
+ * Get all pending sessions from local storage
+ */
+export async function getPendingSessions(): Promise<{
+  success: boolean;
+  sessions?: TrackingSession[];
+  error?: string;
+}> {
+  try {
+    const data = await AsyncStorage.getItem('pending_sessions');
+    const sessions: TrackingSession[] = data ? JSON.parse(data) : [];
+    return { success: true, sessions };
+  } catch (error) {
+    console.error('Error getting pending sessions:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
+ * Sync a specific pending session to the cloud
+ */
+export async function syncPendingSession(
+  localId: string
+): Promise<{ success: boolean; sessionId?: string; error?: string }> {
+  try {
+    // Get pending sessions
+    const { success, sessions, error } = await getPendingSessions();
+    if (!success || !sessions) {
+      return { success: false, error: error || 'Failed to get pending sessions' };
+    }
+
+    // Find the session to sync
+    const sessionToSync = sessions.find(s => s.localId === localId);
+    if (!sessionToSync) {
+      return { success: false, error: 'Session not found' };
+    }
+
+    // Check WiFi connection
+    const hasWiFi = await hasWiFiConnection();
+    if (!hasWiFi) {
+      return { success: false, error: 'WiFi connection required for sync' };
+    }
+
+    // Remove temporary fields
+    const { localId: _, pendingSync: __, ...sessionData } = sessionToSync;
+
+    // Upload to cloud
+    const uploadResult = await uploadSession(sessionData);
+    if (!uploadResult.success) {
+      return { success: false, error: uploadResult.error };
+    }
+
+    // Remove from pending sessions
+    const remainingSessions = sessions.filter(s => s.localId !== localId);
+    await AsyncStorage.setItem('pending_sessions', JSON.stringify(remainingSessions));
+
+    console.log('Session synced successfully:', uploadResult.sessionId);
+    return { success: true, sessionId: uploadResult.sessionId };
+  } catch (error) {
+    console.error('Error syncing pending session:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
+ * Delete a pending session from local storage
+ */
+export async function deletePendingSession(
+  localId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { success, sessions, error } = await getPendingSessions();
+    if (!success || !sessions) {
+      return { success: false, error: error || 'Failed to get pending sessions' };
+    }
+
+    const remainingSessions = sessions.filter(s => s.localId !== localId);
+    await AsyncStorage.setItem('pending_sessions', JSON.stringify(remainingSessions));
+
+    console.log('Pending session deleted:', localId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting pending session:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
+ * Smart session upload - checks WiFi and saves locally if needed
+ */
+export async function smartUploadSession(
+  userIdOrSession: string | Omit<TrackingSession, 'id' | 'created_at' | 'updated_at'>,
+  horseId?: string | null,
+  horseName?: string | null,
+  trainingType?: string,
+  sessionData?: any,
+  startedAt?: Date,
+  endedAt?: Date,
+  durationSeconds?: number,
+  distanceMeters?: number,
+  maxSpeedKmh?: number,
+  avgSpeedKmh?: number,
+  riderPerformance?: number,
+  horsePerformance?: number,
+  groundType?: string,
+  notes?: string | null
+): Promise<{ success: boolean; sessionId?: string; localId?: string; isPending?: boolean; error?: string }> {
+  try {
+    // Check WiFi connection
+    const hasWiFi = await hasWiFiConnection();
+
+    // Prepare session object
+    let sessionToSave: any;
+    if (typeof userIdOrSession === 'string') {
+      sessionToSave = {
+        user_id: userIdOrSession,
+        horse_id: horseId,
+        horse_name: horseName,
+        training_type: trainingType,
+        session_data: sessionData,
+        started_at: startedAt?.toISOString(),
+        ended_at: endedAt?.toISOString(),
+        duration_seconds: durationSeconds,
+        distance_meters: distanceMeters,
+        max_speed_kmh: maxSpeedKmh,
+        avg_speed_kmh: avgSpeedKmh,
+        rider_performance: riderPerformance,
+        horse_performance: horsePerformance,
+        ground_type: groundType,
+        notes: notes,
+      };
+    } else {
+      sessionToSave = userIdOrSession;
+    }
+
+    if (hasWiFi) {
+      // WiFi available - upload directly
+      console.log('WiFi available - uploading session to cloud');
+      const result = await uploadSession(sessionToSave);
+      return { ...result, isPending: false };
+    } else {
+      // No WiFi - save locally
+      console.log('No WiFi - saving session locally for later sync');
+      const result = await savePendingSession(sessionToSave);
+      return { ...result, isPending: true };
+    }
+  } catch (error) {
+    console.error('Error in smart upload:', error);
+    return { success: false, error: String(error) };
+  }
 }

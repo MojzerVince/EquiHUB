@@ -19,7 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useMetric } from "../contexts/MetricContext";
 import { useTheme } from "../contexts/ThemeContext";
-import { uploadSession } from "../lib/sessionAPI";
+import { smartUploadSession } from "../lib/sessionAPI";
 
 interface TrackingPoint {
   latitude: number;
@@ -231,8 +231,8 @@ const SessionSummaryScreen = () => {
           ? trimmedData.distance / trimmedData.duration
           : 0;
 
-      // Upload session
-      const result = await uploadSession(
+      // Upload session using smart upload (checks WiFi)
+      const result = await smartUploadSession(
         user.id,
         sessionData.horse?.id || null,
         sessionData.horse?.name || null,
@@ -263,11 +263,19 @@ const SessionSummaryScreen = () => {
           );
         }
 
-        Alert.alert("Success", "Session saved successfully!", [
+        // Show different message based on sync status
+        const message = result.isPending
+          ? "Session saved locally. It will sync to cloud when WiFi is available."
+          : "Session saved successfully!";
+
+        const title = result.isPending ? "Saved Locally" : "Success";
+
+        Alert.alert(title, message, [
           {
             text: "OK",
             onPress: () => {
-              router.replace("/sessions");
+              // Navigate to calendar instead of sessions
+              router.replace("/calendar");
             },
           },
         ]);

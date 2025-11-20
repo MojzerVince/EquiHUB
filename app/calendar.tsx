@@ -23,7 +23,13 @@ import {
   getPlannedSessions,
 } from "../lib/plannedSessionAPI";
 import { cancelSessionNotifications } from "../lib/plannedSessionNotifications";
-import { TrackingSession, getSessionsForWeek } from "../lib/sessionAPI";
+import {
+  TrackingSession,
+  deletePendingSession,
+  getPendingSessions,
+  getSessionsForWeek,
+  syncPendingSession,
+} from "../lib/sessionAPI";
 import * as vaccinationAPI from "../lib/vaccinationAPI";
 
 const CalendarScreen = () => {
@@ -38,6 +44,7 @@ const CalendarScreen = () => {
   const [completedSessions, setCompletedSessions] = useState<TrackingSession[]>(
     []
   );
+  const [pendingSessions, setPendingSessions] = useState<TrackingSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasHorses, setHasHorses] = useState(false);
   const screenWidth = Dimensions.get("window").width;
@@ -157,6 +164,20 @@ const CalendarScreen = () => {
           );
           setCompletedSessions([]);
         }
+      }
+
+      // Load pending sessions (not yet synced to cloud)
+      const pendingResult = await getPendingSessions();
+      if (pendingResult.success && pendingResult.sessions) {
+        // Filter pending sessions for current week
+        const filteredPending = pendingResult.sessions.filter((session) => {
+          const sessionDate = new Date(session.started_at);
+          return sessionDate >= startOfWeek && sessionDate <= endOfWeek;
+        });
+        setPendingSessions(filteredPending);
+      } else {
+        console.error("Error loading pending sessions:", pendingResult.error);
+        setPendingSessions([]);
       }
 
       // Load all vaccinations (we'll filter by date in the UI)
@@ -285,6 +306,82 @@ const CalendarScreen = () => {
     });
   };
 
+  // Get pending sessions for specific day
+  const getPendingSessionsForDay = (dayIndex: number) => {
+    const date = getDateForDay(dayIndex);
+    return pendingSessions.filter((session) => {
+      const sessionDate = new Date(session.started_at);
+      return (
+        sessionDate.getDate() === date.getDate() &&
+        sessionDate.getMonth() === date.getMonth() &&
+        sessionDate.getFullYear() === date.getFullYear()
+      );
+    });
+  };
+
+  // Handle syncing a pending session
+  const handleSyncSession = async (localId: string) => {
+    Alert.alert(
+      "Sync Session",
+      "This will upload the session to the cloud. Make sure you have a WiFi connection for best results.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sync Now",
+          onPress: async () => {
+            try {
+              const result = await syncPendingSession(localId);
+              if (result.success) {
+                Alert.alert("Success", "Session synced successfully!");
+                loadPlannedSessions(); // Reload to update UI
+              } else {
+                Alert.alert(
+                  "Sync Failed",
+                  result.error ||
+                    "Failed to sync session. Please check your WiFi connection."
+                );
+              }
+            } catch (error) {
+              console.error("Error syncing session:", error);
+              Alert.alert("Error", "An unexpected error occurred");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Handle deleting a pending session
+  const handleDeletePendingSession = async (localId: string) => {
+    Alert.alert(
+      "Delete Local Session",
+      "Are you sure you want to delete this locally saved session? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const result = await deletePendingSession(localId);
+              if (result.success) {
+                loadPlannedSessions(); // Reload to update UI
+              } else {
+                Alert.alert(
+                  "Error",
+                  result.error || "Failed to delete session"
+                );
+              }
+            } catch (error) {
+              console.error("Error deleting pending session:", error);
+              Alert.alert("Error", "An unexpected error occurred");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Delete session
   const handleDeleteSession = async (sessionId: string) => {
     Alert.alert(
@@ -342,6 +439,7 @@ const CalendarScreen = () => {
     const daySessions = getSessionsForDay(dayIndex);
     const dayVaccinations = getVaccinationsForDay(dayIndex);
     const dayCompletedSessions = getCompletedSessionsForDay(dayIndex);
+    const dayPendingSessions = getPendingSessionsForDay(dayIndex);
     const isTodayDay = isToday(dayIndex);
 
     return (
@@ -401,7 +499,8 @@ const CalendarScreen = () => {
         <View style={styles.daySessionsContainer}>
           {daySessions.length === 0 &&
           dayVaccinations.length === 0 &&
-          dayCompletedSessions.length === 0 ? (
+          dayCompletedSessions.length === 0 &&
+          dayPendingSessions.length === 0 ? (
             <Text
               style={[
                 styles.noSessionsText,
@@ -606,6 +705,92 @@ const CalendarScreen = () => {
                       </View>
                     </View>
                   </TouchableOpacity>
+                );
+              })}
+
+              {/* Render Pending Sessions (Not Synced) */}
+              {dayPendingSessions.map((session) => {
+                return (
+                  <View
+                    key={session.localId}
+                    style={[
+                      styles.pendingSessionItem,
+                      { backgroundColor: currentTheme.colors.surface },
+                    ]}
+                  >
+                    <TouchableOpacity
+                      style={styles.pendingSessionContent}
+                      onPress={() => {
+                        Alert.alert(
+                          "⚠️ Pending Sync",
+                          `${session.training_type}\n${
+                            session.horse_name || "No horse"
+                          } • ${(session.distance_meters / 1000).toFixed(
+                            2
+                          )} km • ${Math.floor(
+                            session.duration_seconds / 60
+                          )} min\n\nThis session hasn't been synced to the cloud yet. Tap the sync button to upload it when you have WiFi.`,
+                          [{ text: "OK" }]
+                        );
+                      }}
+                    >
+                      <View style={styles.pendingSessionHeader}>
+                        <Image
+                          source={require("../assets/in_app_icons/diary.png")}
+                          style={styles.pendingSessionIcon}
+                        />
+                        <View style={styles.pendingSessionTextContainer}>
+                          <View style={styles.pendingSessionTitleRow}>
+                            <Text
+                              style={[
+                                styles.pendingSessionTitle,
+                                { color: currentTheme.colors.text },
+                              ]}
+                            >
+                              {session.training_type}
+                            </Text>
+                            <View style={styles.pendingSyncBadge}>
+                              <Text style={styles.pendingSyncIcon}>⚠️</Text>
+                              <Text style={styles.pendingSyncText}>
+                                Sync Needed
+                              </Text>
+                            </View>
+                          </View>
+                          <Text
+                            style={[
+                              styles.pendingSessionType,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                          >
+                            {session.horse_name || "No horse"} •{" "}
+                            {(session.distance_meters / 1000).toFixed(2)} km •{" "}
+                            {Math.floor(session.duration_seconds / 60)} min
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+
+                    <View style={styles.pendingSessionActions}>
+                      <TouchableOpacity
+                        style={[
+                          styles.syncButton,
+                          { backgroundColor: currentTheme.colors.primary },
+                        ]}
+                        onPress={() => handleSyncSession(session.localId!)}
+                      >
+                        <Text style={styles.syncButtonIcon}>☁️</Text>
+                        <Text style={styles.syncButtonText}>Sync</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.deletePendingButton}
+                        onPress={() =>
+                          handleDeletePendingSession(session.localId!)
+                        }
+                      >
+                        <Text style={styles.deletePendingText}>🗑️</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 );
               })}
             </>
@@ -1012,6 +1197,100 @@ const styles = StyleSheet.create({
   },
   completedSessionType: {
     fontSize: 14,
+  },
+  pendingSessionItem: {
+    flexDirection: "column",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: "#FFA500",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  pendingSessionContent: {
+    flex: 1,
+  },
+  pendingSessionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  pendingSessionIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 12,
+    opacity: 0.7,
+  },
+  pendingSessionTextContainer: {
+    flex: 1,
+  },
+  pendingSessionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  pendingSessionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    flex: 1,
+  },
+  pendingSyncBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFA50020",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  pendingSyncIcon: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  pendingSyncText: {
+    fontSize: 11,
+    color: "#FFA500",
+    fontWeight: "600",
+  },
+  pendingSessionType: {
+    fontSize: 14,
+  },
+  pendingSessionActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0, 0, 0, 0.1)",
+  },
+  syncButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  syncButtonIcon: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  syncButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  deletePendingButton: {
+    padding: 8,
+  },
+  deletePendingText: {
+    fontSize: 16,
   },
   loadingContainer: {
     flex: 1,
