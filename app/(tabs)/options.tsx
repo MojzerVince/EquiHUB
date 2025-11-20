@@ -555,8 +555,8 @@ const OptionsScreen = () => {
         console.log("Starting logout process for user:", user?.email);
         await signOut();
         console.log("User logged out successfully");
-        // Explicitly navigate to welcome screen
-        router.replace("/");
+        // Explicitly navigate to login screen
+        router.push("/login");
       } catch (error) {
         console.error("Logout error:", error);
         showError("Failed to sign out. Please try again.");
